@@ -2130,11 +2130,14 @@ export const paymentRequestsService = {
       if (request.payment_type === 'accounts_payable' && request.supplier_id) {
         // Para CxP: Debito CxP, Credito Banco
         // Obtener cuenta de CxP del proveedor
-        const { data: supplier } = await supabase
+        const { data: supplier, error: supplierErr } = await supabase
           .from('suppliers')
           .select('ap_account_id')
           .eq('id', request.supplier_id)
+          .eq('user_id', tenantId)
           .single();
+
+        if (supplierErr) throw supplierErr;
 
         const apAccountId = supplier?.ap_account_id;
         if (!apAccountId) throw new Error('Proveedor sin cuenta de CxP configurada');
@@ -2158,11 +2161,14 @@ export const paymentRequestsService = {
       }
 
       // Obtener cuenta contable del banco
-      const { data: bank } = await supabase
+      const { data: bank, error: bankErr } = await supabase
         .from('bank_accounts')
         .select('chart_account_id')
         .eq('id', request.bank_id)
+        .eq('user_id', tenantId)
         .single();
+
+      if (bankErr) throw bankErr;
 
       if (!bank?.chart_account_id) throw new Error('Banco sin cuenta contable configurada');
 
@@ -2216,7 +2222,7 @@ export const paymentRequestsService = {
 
         for (const payment of invoicePayments) {
           // Registrar el pago en la factura
-          await supabase
+          const { error: invPayErr } = await supabase
             .from('ap_invoice_payments')
             .insert({
               user_id: tenantId,
@@ -2227,6 +2233,8 @@ export const paymentRequestsService = {
               reference: entryNumber,
               notes: `Pago desde solicitud ${requestId}`,
             });
+
+          if (invPayErr) throw invPayErr;
 
           // Actualizar saldo de la factura (alineado a esquema real)
           const { data: invoice } = await supabase
@@ -2250,7 +2258,7 @@ export const paymentRequestsService = {
             const newBalance = Math.max(remaining - amountToApply, 0);
             const newStatus = newBalance <= 0.01 ? 'paid' : newPaidAmount > 0 ? 'partial' : (invoice as any).status;
 
-            await supabase
+            const { error: invUpdErr } = await supabase
               .from('ap_invoices')
               .update({
                 paid_amount: newPaidAmount,
@@ -2260,13 +2268,22 @@ export const paymentRequestsService = {
               })
               .eq('id', payment.invoice_id)
               .eq('user_id', tenantId);
+
+            if (invUpdErr) throw invUpdErr;
           }
         }
       }
 
       return { request, entry };
     } catch (error) {
+      const e: any = error;
+      const details = e?.details ? ` | ${e.details}` : '';
+      const hint = e?.hint ? ` | ${e.hint}` : '';
+      const code = e?.code ? ` | code=${e.code}` : '';
       console.error('paymentRequestsService.approveAndCreateJournalEntry error', error);
+      if (e?.message && typeof e.message === 'string') {
+        throw new Error(`${e.message}${details}${hint}${code}`);
+      }
       throw error;
     }
   },
