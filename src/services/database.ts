@@ -1671,15 +1671,18 @@ export const bankTransfersService = {
   },
 
   async create(userId: string, transfer: {
+    transfer_type?: 'interna' | 'proveedor' | string;
     from_bank_id: string;
     from_bank_account_code: string;
     to_bank_id?: string | null;
     to_bank_account_code?: string | null;
+    supplier_id?: string | null;
     currency: string;
     amount: number;
     transfer_date: string;
     reference: string;
     description: string;
+    invoice_payments?: any;
   }) {
     try {
       const tenantId = await resolveTenantId(userId);
@@ -1701,56 +1704,201 @@ export const bankTransfersService = {
 
       if (error) throw error;
 
-      // Asiento contable automático para transferencias internas: Debe banco destino / Haber banco origen
+      const invoicePayments: any[] = Array.isArray((transfer as any).invoice_payments)
+        ? (transfer as any).invoice_payments
+        : [];
+
+      try {
+        if ((transfer as any).supplier_id && invoicePayments.length > 0) {
+          for (const payment of invoicePayments) {
+            try {
+              const invoiceId = String(payment?.invoice_id || '');
+              if (!invoiceId) continue;
+              const paymentAmount = Number(payment?.amount_to_pay) || 0;
+              if (paymentAmount <= 0) continue;
+
+              await supabase.from('ap_invoice_payments').insert({
+                user_id: tenantId,
+                invoice_id: invoiceId,
+                payment_date: (transfer as any).transfer_date,
+                amount: paymentAmount,
+                payment_method: 'bank_transfer',
+                reference: (transfer as any).reference || (data as any)?.id || null,
+                notes: `Pago con transferencia ${(transfer as any).reference || ''}`.trim(),
+              });
+
+              const { data: invoice } = await supabase
+                .from('ap_invoices')
+                .select('total_to_pay, paid_amount, balance_amount, status')
+                .eq('id', invoiceId)
+                .eq('user_id', tenantId)
+                .single();
+
+              if (invoice) {
+                const totalToPay = Number((invoice as any).total_to_pay) || 0;
+                const currentPaid = Number((invoice as any).paid_amount) || 0;
+
+                // DEBUG: Log valores para diagnóstico
+                console.log('=== PAGO FACTURA DEBUG ===');
+                console.log('Invoice ID:', invoiceId);
+                console.log('Invoice raw data:', invoice);
+                console.log('totalToPay:', totalToPay);
+                console.log('currentPaid:', currentPaid);
+                console.log('paymentAmount:', paymentAmount);
+
+                // Siempre calcular balance real como total - pagado para evitar inconsistencias
+                const realBalance = Math.max(totalToPay - currentPaid, 0);
+                console.log('realBalance (antes del pago):', realBalance);
+
+                const amountToApply = Math.min(paymentAmount, realBalance);
+                const newPaid = currentPaid + amountToApply;
+                const newBalance = Math.max(totalToPay - newPaid, 0);
+
+                console.log('amountToApply:', amountToApply);
+                console.log('newPaid:', newPaid);
+                console.log('newBalance:', newBalance);
+
+                // Determinar status: solo 'paid' si el balance es prácticamente 0
+                const newStatus = newBalance <= 0.01
+                  ? 'paid'
+                  : 'partial';
+
+                console.log('newStatus:', newStatus);
+                console.log('=== FIN DEBUG ===');
+
+                const { error: updateError } = await supabase
+                  .from('ap_invoices')
+                  .update({
+                    paid_amount: newPaid,
+                    balance_amount: newBalance,
+                    status: newStatus,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq('id', invoiceId)
+                  .eq('user_id', tenantId);
+
+                if (updateError) {
+                  console.error('Error en UPDATE ap_invoices:', updateError);
+                }
+              }
+            } catch (err) {
+              console.error('Error updating invoice:', err);
+            }
+          }
+        }
+      } catch (invErr) {
+        console.error('bankTransfersService.create invoice update error', invErr);
+      }
+
+      // Asiento contable automático
       try {
         const amount = Number(transfer.amount) || 0;
-        if (amount > 0 && transfer.to_bank_id) {
+        if (amount > 0) {
           const { data: originBank, error: originError } = await supabase
             .from('bank_accounts')
             .select('chart_account_id, bank_name')
             .eq('id', transfer.from_bank_id)
             .maybeSingle();
 
-          const { data: destBank, error: destError } = await supabase
-            .from('bank_accounts')
-            .select('chart_account_id, bank_name')
-            .eq('id', transfer.to_bank_id)
-            .maybeSingle();
+          if (originError || !originBank?.chart_account_id) {
+            throw new Error('Banco origen sin cuenta contable configurada');
+          } else if ((transfer as any).transfer_type === 'proveedor' || (transfer as any).supplier_id) {
+            // === TRANSFERENCIA A PROVEEDOR (CxP) ===
+            // Débito: CxP | Crédito: Banco
+            const settings = await accountingSettingsService.get(tenantId);
+            const apAccountId = settings?.ap_account_id;
+            
+            if (!apAccountId) {
+              throw new Error('Cuenta de CxP no configurada en settings');
+            } else {
+              // Obtener nombre del proveedor
+              const { data: supplier } = await supabase
+                .from('suppliers')
+                .select('legal_name')
+                .eq('id', (transfer as any).supplier_id)
+                .eq('user_id', tenantId)
+                .maybeSingle();
+              
+              const supplierName = supplier?.legal_name || 'Proveedor';
+              
+              const entryPayload = {
+                entry_number: `TRF-${new Date(transfer.transfer_date).toISOString().slice(0, 10)}-${(data.id || '').toString().slice(0, 6)}`,
+                entry_date: String(transfer.transfer_date),
+                description: transfer.description || `Pago a proveedor ${supplierName}`,
+                reference: data.id ? String(data.id) : null,
+                status: 'posted' as const,
+              };
 
-          if (!originError && !destError && originBank?.chart_account_id && destBank?.chart_account_id) {
-            const entryPayload = {
-              entry_number: `TRF-${new Date(transfer.transfer_date).toISOString().slice(0, 10)}-${(data.id || '').toString().slice(0, 6)}`,
-              entry_date: String(transfer.transfer_date),
-              description: transfer.description || 'Transferencia bancaria interna',
-              reference: data.id ? String(data.id) : null,
-              status: 'posted' as const,
-            };
+              const lines = [
+                {
+                  account_id: apAccountId,
+                  description: `Pago a proveedor - ${supplierName}`,
+                  debit_amount: amount,
+                  credit_amount: 0,
+                },
+                {
+                  account_id: originBank.chart_account_id as string,
+                  description: `Transferencia - ${originBank.bank_name || ''}`,
+                  debit_amount: 0,
+                  credit_amount: amount,
+                },
+              ];
 
-            const lines = [
-              {
-                account_id: destBank.chart_account_id as string,
-                description: `Transferencia recibida - Banco ${destBank.bank_name || ''}`.trim(),
-                debit_amount: amount,
-                credit_amount: 0,
-              },
-              {
-                account_id: originBank.chart_account_id as string,
-                description: `Transferencia enviada - Banco ${originBank.bank_name || ''}`.trim(),
-                debit_amount: 0,
-                credit_amount: amount,
-              },
-            ];
+              await journalEntriesService.createWithLines(userId, entryPayload, lines);
+              console.log('Asiento contable creado para pago a proveedor:', entryPayload.entry_number);
+            }
+          } else if (transfer.to_bank_id) {
+            // === TRANSFERENCIA INTERNA ===
+            // Débito: Banco destino | Crédito: Banco origen
+            const { data: destBank, error: destError } = await supabase
+              .from('bank_accounts')
+              .select('chart_account_id, bank_name')
+              .eq('id', transfer.to_bank_id)
+              .maybeSingle();
 
-            await journalEntriesService.createWithLines(userId, entryPayload, lines);
+            if (!destError && destBank?.chart_account_id) {
+              const entryPayload = {
+                entry_number: `TRF-${new Date(transfer.transfer_date).toISOString().slice(0, 10)}-${(data.id || '').toString().slice(0, 6)}`,
+                entry_date: String(transfer.transfer_date),
+                description: transfer.description || 'Transferencia bancaria interna',
+                reference: data.id ? String(data.id) : null,
+                status: 'posted' as const,
+              };
+
+              const lines = [
+                {
+                  account_id: destBank.chart_account_id as string,
+                  description: `Transferencia recibida - Banco ${destBank.bank_name || ''}`.trim(),
+                  debit_amount: amount,
+                  credit_amount: 0,
+                },
+                {
+                  account_id: originBank.chart_account_id as string,
+                  description: `Transferencia enviada - Banco ${originBank.bank_name || ''}`.trim(),
+                  debit_amount: 0,
+                  credit_amount: amount,
+                },
+              ];
+
+              await journalEntriesService.createWithLines(userId, entryPayload, lines);
+            }
           }
         }
       } catch (jeError) {
         console.error('bankTransfersService.create journal entry error', jeError);
+        throw jeError;
       }
 
       return data;
     } catch (error) {
+      const e: any = error;
+      const details = e?.details ? ` | ${e.details}` : '';
+      const hint = e?.hint ? ` | ${e.hint}` : '';
+      const code = e?.code ? ` | code=${e.code}` : '';
       console.error('bankTransfersService.create error', error);
+      if (e?.message && typeof e.message === 'string') {
+        throw new Error(`${e.message}${details}${hint}${code}`);
+      }
       throw error;
     }
   },
