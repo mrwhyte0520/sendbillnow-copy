@@ -244,22 +244,29 @@ export default function Report608Page() {
   const exportToTXT = () => {
     if (cancelledDocuments.length === 0) return;
 
-    const txtContent = cancelledDocuments.map(doc => [
-      doc.ncf,
-      doc.document_type,
-      doc.issue_date,
-      doc.cancellation_date,
-      doc.amount,
-      doc.tax_amount,
-      doc.customer_rnc,
-      doc.reason
-    ].join('|')).join('\n');
+    const toYyyymmdd = (dateStr: string) => {
+      const d = String(dateStr || '').slice(0, 10);
+      return d.replace(/-/g, '');
+    };
+
+    // TXT oficial DGII (608):
+    // NUMERO_COMPROBANTE|FECHA_ANULACION|TIPO_ANULACION
+    // Tipos de anulación (DGII): 01,02,03,04
+    const txtContent = (cancelledDocuments || [])
+      .map((doc) => {
+        const ncf = String(doc.ncf || '').trim();
+        const fechaAnulacion = toYyyymmdd(doc.cancellation_date);
+        // Por defecto: 01 (Error de facturación). Si luego quieres mapear por doc.reason, lo hacemos.
+        const tipoAnulacion = '01';
+        return [ncf, fechaAnulacion, tipoAnulacion].join('|');
+      })
+      .join('\n');
 
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `reporte_608_${selectedPeriod}.txt`);
+    link.setAttribute('download', `DGII_608_${String(selectedPeriod || '').replace('-', '')}.TXT`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

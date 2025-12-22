@@ -4,7 +4,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
 import * as XLSX from 'xlsx';
 import { exportToPdf } from '../../../utils/exportImportUtils';
-import { formatDateEsDO } from '../../../utils/date';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface Report607Data {
@@ -227,36 +226,68 @@ export default function Report607Page() {
   const exportToTXT = () => {
     if (reportData.length === 0) return;
 
-    const totals = getTotals();
+    const toYyyymmdd = (dateStr: string) => {
+      const d = String(dateStr || '').slice(0, 10);
+      return d.replace(/-/g, '');
+    };
+    const toMoney = (n: any) => {
+      const val = Number(n) || 0;
+      return val.toFixed(2);
+    };
+    const toTipoId = (rncOrCed: string) => {
+      const digits = String(rncOrCed || '').replace(/[^0-9]/g, '');
+      // DGII: 1=RNC, 2=Cédula
+      return digits.length === 11 ? '2' : '1';
+    };
 
-    let txtContent = `REPORTE 607 - VENTAS Y SERVICIOS\n`;
-    txtContent += `Período: ${selectedPeriod}\n`;
-    txtContent += `Fecha de generación: ${formatDateEsDO(new Date())}\n\n`;
+    // TXT oficial DGII (607): sin encabezados, una línea por registro
+    // Estructura:
+    // RNC_CEDULA|TIPO_ID|NUMERO_COMPROBANTE|NUMERO_COMPROBANTE_MODIFICADO|TIPO_INGRESO|FECHA_COMPROBANTE|FECHA_RETENCION|MONTO_FACTURADO|ITBIS_FACTURADO|ITBIS_RETENIDO|ITBIS_PERCIBIDO|RETENCION_RENTA|ISR_PERCIBIDO|IMPUESTO_SELECTIVO_CONSUMO|OTROS_IMPUESTOS_TASAS|MONTO_PROPINA_LEGAL
+    const txtContent = (reportData || [])
+      .map((row) => {
+        const rnc = String(row.rnc_cedula || '').trim();
+        const tipoId = toTipoId(rnc);
+        const ncf = String(row.numero_comprobante_fiscal || '').trim();
+        const ncfMod = '';
+        const tipoIngreso = '01';
+        const fechaComp = toYyyymmdd(row.fecha_comprobante);
+        const fechaRet = '';
 
-    txtContent += `RESUMEN:\n`;
-    txtContent += `Total vendido: ${formatMoney(totals.monto_facturado, 'RD$')}\n`;
-    txtContent += `ITBIS cobrado: ${formatMoney(totals.itbis_facturado, 'RD$')}\n`;
-    txtContent += `ITBIS retenido: ${formatMoney(totals.itbis_retenido, 'RD$')}\n`;
-    txtContent += `ISR retenido: ${formatMoney(totals.retencion_renta_terceros, 'RD$')}\n\n`;
+        const montoFact = toMoney(row.monto_facturado);
+        const itbisFact = toMoney(row.itbis_facturado);
+        const itbisRet = toMoney(row.itbis_retenido);
+        const itbisPerc = toMoney(row.itbis_percibido_ventas);
+        const retRenta = toMoney(row.retencion_renta_terceros);
+        const isrPerc = toMoney(row.isr_percibido_ventas);
+        const isc = toMoney(row.impuesto_selectivo_consumo);
+        const otros = toMoney(row.otros_impuestos_tasas);
+        const propina = toMoney(row.monto_propina_legal);
 
-    txtContent += `DETALLE:\n`;
-    txtContent += `${'='.repeat(120)}\n`;
-
-    reportData.forEach((row, index) => {
-      txtContent += `${index + 1}. RNC/Cédula: ${row.rnc_cedula || 'N/A'}\n`;
-      txtContent += `   NCF: ${row.numero_comprobante_fiscal}\n`;
-      txtContent += `   Fecha: ${new Date(row.fecha_comprobante).toLocaleDateString('es-DO')}\n`;
-      txtContent += `   Monto facturado: ${formatMoney(row.monto_facturado, 'RD$')}\n`;
-      txtContent += `   ITBIS facturado: ${formatMoney(row.itbis_facturado, 'RD$')}\n`;
-      txtContent += `   ITBIS retenido: ${formatMoney(row.itbis_retenido, 'RD$')}\n`;
-      txtContent += `   ISR retenido: ${formatMoney(row.retencion_renta_terceros, 'RD$')}\n`;
-      txtContent += `${'-'.repeat(80)}\n`;
-    });
+        return [
+          rnc,
+          tipoId,
+          ncf,
+          ncfMod,
+          tipoIngreso,
+          fechaComp,
+          fechaRet,
+          montoFact,
+          itbisFact,
+          itbisRet,
+          itbisPerc,
+          retRenta,
+          isrPerc,
+          isc,
+          otros,
+          propina,
+        ].join('|');
+      })
+      .join('\n');
 
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `reporte_607_${selectedPeriod}.txt`;
+    link.download = `DGII_607_${String(selectedPeriod || '').replace('-', '')}.TXT`;
     link.click();
   };
 

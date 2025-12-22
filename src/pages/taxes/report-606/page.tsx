@@ -3,7 +3,6 @@ import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
 import * as XLSX from 'xlsx';
 import { exportToPdf } from '../../../utils/exportImportUtils';
-import { formatDateEsDO } from '../../../utils/date';
 import { formatAmount } from '../../../utils/numberFormat';
 
 interface Report606Data {
@@ -353,35 +352,76 @@ export default function Report606Page() {
   const exportToTXT = () => {
     if (reportData.length === 0) return;
 
-    let txtContent = `REPORTE 606 - COMPRAS Y SERVICIOS\n`;
-    txtContent += `Período: ${selectedPeriod}\n`;
-    txtContent += `Fecha de generación: ${formatDateEsDO(new Date())}\n\n`;
+    const toYyyymmdd = (dateStr: string) => {
+      const d = String(dateStr || '').slice(0, 10);
+      return d.replace(/-/g, '');
+    };
+    const toMoney = (n: any) => {
+      const val = Number(n) || 0;
+      return val.toFixed(2);
+    };
+    const toTipoId = (rncOrCed: string) => {
+      const digits = String(rncOrCed || '').replace(/[^0-9]/g, '');
+      // DGII: 1=RNC, 2=Cédula
+      return digits.length === 11 ? '2' : '1';
+    };
 
-    if (summary) {
-      txtContent += `RESUMEN:\n`;
-      txtContent += `Total de registros: ${summary.totalRecords}\n`;
-      txtContent += `Monto total: RD$ ${formatAmount(summary.totalAmount)}\n`;
-      txtContent += `Total ITBIS: RD$ ${formatAmount(summary.totalItbis)}\n`;
-      txtContent += `Total retenciones: RD$ ${formatAmount(summary.totalRetention)}\n\n`;
-    }
+    // TXT oficial DGII (606): sin encabezados, una línea por registro
+    const txtContent = (reportData || [])
+      .map((row) => {
+        const rnc = String(row.rnc_cedula || '').trim();
+        const tipoId = toTipoId(rnc);
+        const ncf = String(row.ncf || '').trim();
+        const ncfMod = String(row.ncf_modificado || '').trim();
 
-    txtContent += `DETALLE:\n`;
-    txtContent += `${'='.repeat(120)}\n`;
+        const fechaComp = toYyyymmdd(row.fecha_comprobante);
+        const fechaPago = toYyyymmdd(row.fecha_pago);
 
-    reportData.forEach((row, index) => {
-      txtContent += `${index + 1}. RNC/Cédula: ${row.rnc_cedula}\n`;
-      txtContent += `   NCF: ${row.ncf}\n`;
-      txtContent += `   Fecha: ${row.fecha_comprobante}\n`;
-      txtContent += `   Monto: RD$ ${formatAmount(row.monto_facturado)}\n`;
-      txtContent += `   ITBIS: RD$ ${formatAmount(row.itbis_facturado)}\n`;
-      txtContent += `   Forma de pago: ${row.forma_pago}\n`;
-      txtContent += `${'-'.repeat(80)}\n`;
-    });
+        const montoFact = toMoney(row.monto_facturado);
+        const itbisFact = toMoney(row.itbis_facturado);
+        const itbisRet = toMoney(row.itbis_retenido);
+
+        // Campos no manejados actualmente: exportar en 0.00 / 0
+        const itbisSujProp = toMoney(0);
+        const itbisLlevCosto = toMoney(0);
+        const itbisPorAdel = toMoney(row.itbis_facturado);
+        const itbisPerc = toMoney(0);
+
+        const tipoRetIsr = '0';
+        const montoRetRenta = toMoney(row.retencion_renta);
+        const isrPerc = toMoney(row.isr_percibido);
+        const isc = toMoney(row.impuesto_selectivo_consumo);
+        const otros = toMoney(row.otros_impuestos);
+        const propina = toMoney(row.monto_propina_legal);
+
+        return [
+          rnc,
+          tipoId,
+          ncf,
+          ncfMod,
+          fechaComp,
+          fechaPago,
+          montoFact,
+          itbisFact,
+          itbisRet,
+          itbisSujProp,
+          itbisLlevCosto,
+          itbisPorAdel,
+          itbisPerc,
+          tipoRetIsr,
+          montoRetRenta,
+          isrPerc,
+          isc,
+          otros,
+          propina,
+        ].join('|');
+      })
+      .join('\n');
 
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `reporte_606_${selectedPeriod}.txt`;
+    link.download = `DGII_606_${String(selectedPeriod || '').replace('-', '')}.TXT`;
     link.click();
   };
 
