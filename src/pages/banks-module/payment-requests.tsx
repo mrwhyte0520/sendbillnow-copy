@@ -101,10 +101,9 @@ export default function BankPaymentRequestsPage() {
   }, [user?.id, form.supplier_id, form.payment_type]);
 
   useEffect(() => {
-    if (form.payment_type === 'accounts_payable' && selectedInvoices.size > 0) {
-      const total = Array.from(selectedInvoices.values()).reduce((s, a) => s + a, 0);
-      setForm(p => ({ ...p, amount: total.toFixed(2) }));
-    }
+    if (form.payment_type !== 'accounts_payable') return;
+    const total = Array.from(selectedInvoices.values()).reduce((s, a) => s + a, 0);
+    setForm(p => ({ ...p, amount: total.toFixed(2) }));
   }, [selectedInvoices, form.payment_type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
