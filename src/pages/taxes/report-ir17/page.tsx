@@ -4,7 +4,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
 import * as XLSX from 'xlsx';
 import { exportToPdf } from '../../../utils/exportImportUtils';
-import { formatDateEsDO } from '../../../utils/date';
 import { formatMoney } from '../../../utils/numberFormat';
 
 export default function ReportIR17Page() {
@@ -77,16 +76,16 @@ export default function ReportIR17Page() {
   const exportToExcel = () => {
     if (withholdingData.length === 0) return;
 
-    const excelData = withholdingData.map(item => ({
-      'RNC Proveedor': item.supplier_rnc,
-      'Nombre Proveedor': item.supplier_name,
-      'Fecha Pago': item.payment_date,
-      'Tipo Servicio': item.service_type,
-      'Número Factura': item.invoice_number,
-      'Monto Bruto': item.gross_amount,
-      'Tasa Retención (%)': item.withholding_rate,
-      'Monto Retenido': item.withheld_amount,
-      'Monto Neto': item.net_amount
+    const excelData = [
+      { Sección: 'A', Concepto: 'Total ISR retenido a empleados', Valor: totalIsrEmpleados },
+      { Sección: 'B', Concepto: 'Total ISR retenido a proveedores/terceros', Valor: totalIsrProveedores },
+      { Sección: 'B', Concepto: 'Total ITBIS retenido a proveedores/terceros', Valor: totalItbisProveedores },
+      { Sección: 'TOTAL', Concepto: 'Total ISR', Valor: totalIsrRetenido },
+      { Sección: 'TOTAL', Concepto: 'Total ITBIS', Valor: totalItbisRetenido },
+      { Sección: 'TOTAL', Concepto: 'Total general a pagar DGII', Valor: totalPagarDgii },
+    ].map(r => ({
+      ...r,
+      Valor: formatMoney(Number(r.Valor ?? 0) || 0, 'RD$'),
     }));
 
     const companyName =
@@ -162,15 +161,9 @@ export default function ReportIR17Page() {
 
     // Ancho de columnas de la tabla de datos
     ws['!cols'] = [
-      { wch: 15 }, // RNC
-      { wch: 30 }, // Nombre proveedor
-      { wch: 15 }, // Fecha pago
-      { wch: 28 }, // Tipo servicio (más ancho para ver el texto completo)
-      { wch: 22 }, // Número factura (más ancho para NCF largos)
-      { wch: 15 }, // Monto bruto
-      { wch: 18 }, // Tasa retención
-      { wch: 15 }, // Monto retenido
-      { wch: 15 }  // Monto neto
+      { wch: 15 }, // Sección
+      { wch: 30 }, // Concepto
+      { wch: 15 }, // Valor
     ];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Reporte IR-17');
@@ -183,15 +176,9 @@ export default function ReportIR17Page() {
     const separator = ';';
 
     const headers = [
-      'RNC Proveedor',
-      'Nombre Proveedor',
-      'Fecha Pago',
-      'Monto Bruto',
-      'Tasa Retención',
-      'Monto Retenido',
-      'Monto Neto',
-      'Tipo Servicio',
-      'Número Factura'
+      'Sección',
+      'Concepto',
+      'Valor'
     ];
 
     const companyName =
@@ -216,20 +203,19 @@ export default function ReportIR17Page() {
     headerLines.push(['Período', reportPeriod || selectedPeriod].join(separator));
     headerLines.push('');
 
+    const rows = [
+      ['A', 'Total ISR retenido a empleados', formatMoney(totalIsrEmpleados, 'RD$')],
+      ['B', 'Total ISR retenido a proveedores/terceros', formatMoney(totalIsrProveedores, 'RD$')],
+      ['B', 'Total ITBIS retenido a proveedores/terceros', formatMoney(totalItbisProveedores, 'RD$')],
+      ['TOTAL', 'Total ISR', formatMoney(totalIsrRetenido, 'RD$')],
+      ['TOTAL', 'Total ITBIS', formatMoney(totalItbisRetenido, 'RD$')],
+      ['TOTAL', 'Total general a pagar DGII', formatMoney(totalPagarDgii, 'RD$')],
+    ];
+
     const csvContent = [
       ...headerLines,
       headers.join(separator),
-      ...withholdingData.map(item => [
-        item.supplier_rnc,
-        `"${item.supplier_name}"`,
-        item.payment_date,
-        formatMoney(item.gross_amount, 'RD$'),
-        item.withholding_rate,
-        formatMoney(item.withheld_amount, 'RD$'),
-        formatMoney(item.net_amount, 'RD$'),
-        `"${item.service_type}"`,
-        item.invoice_number
-      ].join(separator))
+      ...rows.map(r => r.join(separator)),
     ].join('\n');
 
     const csvForExcel = '\uFEFF' + csvContent.replace(/\n/g, '\r\n');
@@ -247,33 +233,19 @@ export default function ReportIR17Page() {
   const exportToTXT = () => {
     if (withholdingData.length === 0) return;
 
-    const totals = getTotals();
+    const periodLabel = reportPeriod || selectedPeriod;
+    const periodCompact = String(periodLabel || '').replace('-', '');
+    const lines = [
+      `IR17|${periodCompact}`,
+      `A|TOTAL_ISR_EMPLEADOS|${Number(totalIsrEmpleados).toFixed(2)}`,
+      `B|TOTAL_ISR_PROVEEDORES|${Number(totalIsrProveedores).toFixed(2)}`,
+      `B|TOTAL_ITBIS_PROVEEDORES|${Number(totalItbisProveedores).toFixed(2)}`,
+      `T|TOTAL_ISR|${Number(totalIsrRetenido).toFixed(2)}`,
+      `T|TOTAL_ITBIS|${Number(totalItbisRetenido).toFixed(2)}`,
+      `T|TOTAL_PAGAR_DGII|${Number(totalPagarDgii).toFixed(2)}`,
+    ];
 
-    let txtContent = `REPORTE IR-17 - RETENCIONES ISR\n`;
-    txtContent += `Período: ${reportPeriod || selectedPeriod}\n`;
-    txtContent += `Fecha de generación: ${formatDateEsDO(new Date())}\n\n`;
-
-    txtContent += `RESUMEN:\n`;
-    txtContent += `Cantidad de retenciones: ${totals.count}\n`;
-    txtContent += `Monto bruto total: ${formatMoney(totals.total_gross, 'RD$')}\n`;
-    txtContent += `Monto retenido total: ${formatMoney(totals.total_withheld, 'RD$')}\n`;
-    txtContent += `Monto neto total: ${formatMoney(totals.total_net, 'RD$')}\n\n`;
-
-    txtContent += `DETALLE:\n`;
-    txtContent += `${'='.repeat(120)}\n`;
-
-    withholdingData.forEach((item, index) => {
-      txtContent += `${index + 1}. RNC Proveedor: ${item.supplier_rnc || 'N/A'}\n`;
-      txtContent += `   Nombre: ${item.supplier_name || ''}\n`;
-      txtContent += `   Fecha Pago: ${new Date(item.payment_date).toLocaleDateString('es-DO')}\n`;
-      txtContent += `   Tipo Servicio: ${item.service_type || ''}\n`;
-      txtContent += `   Número Factura: ${item.invoice_number || ''}\n`;
-      txtContent += `   Monto Bruto: ${formatMoney(item.gross_amount, 'RD$')}\n`;
-      txtContent += `   Tasa Retención: ${item.withholding_rate}%\n`;
-      txtContent += `   Monto Retenido: ${formatMoney(item.withheld_amount, 'RD$')}\n`;
-      txtContent += `   Monto Neto: ${formatMoney(item.net_amount, 'RD$')}\n`;
-      txtContent += `${'-'.repeat(80)}\n`;
-    });
+    const txtContent = lines.join('\n');
 
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
@@ -286,28 +258,19 @@ export default function ReportIR17Page() {
     if (withholdingData.length === 0) return;
 
     try {
-      const data = withholdingData.map(item => ({
-        rnc_proveedor: item.supplier_rnc,
-        nombre: item.supplier_name,
-        fecha_pago: new Date(item.payment_date).toLocaleDateString('es-DO'),
-        tipo_servicio: item.service_type,
-        numero_factura: item.invoice_number,
-        monto_bruto: item.gross_amount,
-        tasa: item.withholding_rate,
-        monto_retenido: item.withheld_amount,
-        monto_neto: item.net_amount,
-      }));
+      const data = [
+        { seccion: 'A', concepto: 'Total ISR retenido a empleados', valor: formatMoney(totalIsrEmpleados, 'RD$') },
+        { seccion: 'B', concepto: 'Total ISR retenido a proveedores/terceros', valor: formatMoney(totalIsrProveedores, 'RD$') },
+        { seccion: 'B', concepto: 'Total ITBIS retenido a proveedores/terceros', valor: formatMoney(totalItbisProveedores, 'RD$') },
+        { seccion: 'TOTAL', concepto: 'Total ISR', valor: formatMoney(totalIsrRetenido, 'RD$') },
+        { seccion: 'TOTAL', concepto: 'Total ITBIS', valor: formatMoney(totalItbisRetenido, 'RD$') },
+        { seccion: 'TOTAL', concepto: 'Total general a pagar DGII', valor: formatMoney(totalPagarDgii, 'RD$') },
+      ];
 
       const columns = [
-        { key: 'rnc_proveedor', label: 'RNC Proveedor' },
-        { key: 'nombre', label: 'Nombre' },
-        { key: 'fecha_pago', label: 'Fecha Pago' },
-        { key: 'tipo_servicio', label: 'Tipo Servicio' },
-        { key: 'numero_factura', label: 'Número Factura' },
-        { key: 'monto_bruto', label: 'Monto Bruto' },
-        { key: 'tasa', label: 'Tasa %' },
-        { key: 'monto_retenido', label: 'Retenido' },
-        { key: 'monto_neto', label: 'Monto Neto' },
+        { key: 'seccion', label: 'Sección' },
+        { key: 'concepto', label: 'Concepto' },
+        { key: 'valor', label: 'Valor' },
       ];
 
       await exportToPdf(
@@ -323,21 +286,28 @@ export default function ReportIR17Page() {
     }
   };
 
-  const getTotals = () => {
-    return withholdingData.reduce((totals, item) => ({
-      total_gross: totals.total_gross + item.gross_amount,
-      total_withheld: totals.total_withheld + item.withheld_amount,
-      total_net: totals.total_net + item.net_amount,
-      count: totals.count + 1
-    }), {
-      total_gross: 0,
-      total_withheld: 0,
-      total_net: 0,
-      count: 0
-    });
-  };
+  const employeesRows = withholdingData.filter((r: any) =>
+    String(r?.beneficiary_type || '').toUpperCase() === 'EMPLEADO' ||
+    String(r?.source || '').toLowerCase() === 'payroll'
+  );
 
-  const totals = getTotals();
+  const totalIsrEmpleados = employeesRows
+    .filter((r: any) => String(r?.retention_type || '').toUpperCase() === 'ISR')
+    .reduce((sum: number, r: any) => sum + (Number(r?.withheld_amount) || 0), 0);
+
+  const supplierRows = withholdingData.filter((r: any) => !employeesRows.includes(r));
+
+  const totalIsrProveedores = supplierRows
+    .filter((r: any) => String(r?.retention_type || '').toUpperCase() === 'ISR')
+    .reduce((sum: number, r: any) => sum + (Number(r?.withheld_amount) || 0), 0);
+
+  const totalItbisProveedores = supplierRows
+    .filter((r: any) => String(r?.retention_type || '').toUpperCase() === 'ITBIS')
+    .reduce((sum: number, r: any) => sum + (Number(r?.withheld_amount) || 0), 0);
+
+  const totalIsrRetenido = totalIsrEmpleados + totalIsrProveedores;
+  const totalItbisRetenido = totalItbisProveedores;
+  const totalPagarDgii = totalIsrRetenido + totalItbisRetenido;
 
   return (
     <DashboardLayout>
@@ -427,145 +397,60 @@ export default function ReportIR17Page() {
           </div>
         </div>
 
-        {/* Summary */}
+        {/* Resumen DGII */}
         {withholdingData.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100 mr-4">
-                  <i className="ri-file-list-line text-xl text-blue-600"></i>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Resumen IR-17 (DGII) - {formatPeriodLabel(reportPeriod || selectedPeriod)}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Sección A (Empleados) / Sección B (Proveedores-Terceros) / Totales finales
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <div className="text-sm text-gray-600">Sección A — Empleados</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="text-gray-800 font-medium">Total ISR retenido a empleados</div>
+                    <div className="text-xl font-bold text-blue-700">{formatMoney(totalIsrEmpleados, 'RD$')}</div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Retenciones</p>
-                  <p className="text-2xl font-bold text-gray-900">{totals.count}</p>
+
+                <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+                  <div className="text-sm text-gray-600">Sección B — Proveedores / Terceros</div>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-gray-800 font-medium">Total ISR retenido a proveedores</div>
+                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalIsrProveedores, 'RD$')}</div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-gray-800 font-medium">Total ITBIS retenido (30%)</div>
+                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalItbisProveedores, 'RD$')}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100 mr-4">
-                  <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-sm text-gray-600">Total ISR</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalIsrRetenido, 'RD$')}</div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Monto Bruto</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_gross, 'RD$')}
-                  </p>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-sm text-gray-600">Total ITBIS</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalItbisRetenido, 'RD$')}</div>
                 </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100 mr-4">
-                  <i className="ri-percent-line text-xl text-orange-600"></i>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Retenido</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_withheld, 'RD$')}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100 mr-4">
-                  <i className="ri-calculator-line text-xl text-purple-600"></i>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Monto Neto</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_net, 'RD$')}
-                  </p>
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div className="text-sm text-gray-600">Total general a pagar DGII</div>
+                  <div className="text-2xl font-bold text-green-700">{formatMoney(totalPagarDgii, 'RD$')}</div>
                 </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* Report Data */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Detalle del Reporte IR-17 - {formatPeriodLabel(reportPeriod || selectedPeriod)}
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    RNC Proveedor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nombre
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Pago
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo Servicio
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Número Factura
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto Bruto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tasa %
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Retenido
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto Neto
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {withholdingData.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {item.supplier_rnc}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.supplier_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(item.payment_date).toLocaleDateString('es-DO')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.service_type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.invoice_number || ''}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(item.gross_amount, 'RD$')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {item.withholding_rate}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(item.withheld_amount, 'RD$')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(item.net_amount, 'RD$')}
-                    </td>
-                  </tr>
-                ))}
-                {withholdingData.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                      {generating ? 'Generando reporte...' : 'No hay datos para mostrar. Seleccione un período y genere el reporte.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </DashboardLayout>
   );

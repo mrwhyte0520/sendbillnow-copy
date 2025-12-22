@@ -12209,83 +12209,180 @@ export const taxService = {
 
       let rows: any[] = [];
 
-      // 1) Intentar usar retenciones reales desde ap_invoices (total_isr_withheld)
-      const { data: apInvoices, error: apErr } = await supabase
-        .from('ap_invoices')
-        .select(
-          `*,
-           suppliers (name, tax_id)`
-        )
-        .eq('user_id', tenantId)
-        .gte('invoice_date', startDate)
-        .lte('invoice_date', endDate)
-        .gt('total_isr_withheld', 0);
+      const pushRow = (r: any) => {
+        rows.push({
+          ...r,
+          // Backward-compatible fields used by existing UI/exports
+          supplier_rnc: r.supplier_rnc ?? null,
+          supplier_name: r.supplier_name ?? null,
+          payment_date: r.payment_date ?? null,
+          service_type: r.service_type ?? null,
+          invoice_number: r.invoice_number ?? r.document_ref ?? null,
+          gross_amount: Number(r.gross_amount ?? r.base_amount ?? 0) || 0,
+          withholding_rate: Number(r.withholding_rate ?? 0) || 0,
+          withheld_amount: Number(r.withheld_amount ?? 0) || 0,
+          net_amount: Number(r.net_amount ?? 0) || 0,
+        });
+      };
 
-      if (apErr) throw apErr;
+      // ==========================================================
+      // 1) Retenciones a EMPLEADOS (Nómina)
+      // ==========================================================
+      try {
+        const { data: payrollPeriods, error: ppErr } = await supabase
+          .from('payroll_periods')
+          .select('id, pay_date, start_date, end_date')
+          .eq('user_id', tenantId)
+          .gte('pay_date', startDate)
+          .lte('pay_date', endDate);
 
-      if (apInvoices && apInvoices.length > 0) {
-        rows = (apInvoices as any[]).map((inv: any) => {
-          const supplierName = inv.legal_name || inv.suppliers?.name || 'Proveedor';
-          const supplierRnc = inv.tax_id || inv.suppliers?.tax_id || null;
-          const totalGross = Number(inv.total_gross) || 0;
-          const totalDiscount = Number(inv.total_discount) || 0;
-          const gross = Math.max(0, totalGross - totalDiscount);
-          const withheld = Number(inv.total_isr_withheld) || 0;
+        if (!ppErr && payrollPeriods && payrollPeriods.length > 0) {
+          const periodIds = payrollPeriods.map((p: any) => p.id);
+          const { data: entries, error: peErr } = await supabase
+            .from('payroll_entries')
+            .select('payroll_period_id, employee_id, gross_salary, isr_deductions')
+            .in('payroll_period_id', periodIds)
+            .eq('user_id', tenantId);
 
-          const rate =
-            gross > 0 && withheld > 0 ? (withheld / gross) * 100 : retentionRate;
-          const net = gross - withheld;
+          if (!peErr && entries && entries.length > 0) {
+            const employeeIds = Array.from(new Set(entries.map((e: any) => e.employee_id).filter(Boolean)));
+            const { data: employees, error: empErr } = await supabase
+              .from('employees')
+              .select('id, first_name, last_name, employee_code, tax_id, cedula, document_number')
+              .eq('user_id', tenantId)
+              .in('id', employeeIds);
 
-          return {
+            const employeeById = new Map<string, any>();
+            if (!empErr && employees) {
+              (employees as any[]).forEach((e: any) => employeeById.set(String(e.id), e));
+            }
+
+            const payDateByPayrollId = new Map<string, string>();
+            (payrollPeriods as any[]).forEach((p: any) => {
+              payDateByPayrollId.set(String(p.id), String(p.pay_date || p.end_date || p.start_date || startDate));
+            });
+
+            (entries as any[]).forEach((entry: any) => {
+              const withheld = Number(entry?.isr_deductions ?? 0) || 0;
+              if (withheld <= 0) return;
+              const gross = Number(entry?.gross_salary ?? 0) || 0;
+              const emp = employeeById.get(String(entry.employee_id)) || {};
+
+              const rncCedula =
+                (emp.tax_id as string) ||
+                (emp.cedula as string) ||
+                (emp.document_number as string) ||
+                null;
+
+              const empName = [emp.first_name, emp.last_name].filter(Boolean).join(' ') || 'Empleado';
+              const rate = gross > 0 ? (withheld / gross) * 100 : 0;
+              const net = gross - withheld;
+
+              pushRow({
+                user_id: tenantId,
+                period,
+                beneficiary_type: 'EMPLEADO',
+                retention_type: 'ISR',
+                rnc_cedula: rncCedula,
+                beneficiary_name: empName,
+                base_amount: gross,
+                payment_date: payDateByPayrollId.get(String(entry.payroll_period_id)) || startDate,
+                service_type: 'Nómina',
+                document_ref: emp.employee_code || String(entry.employee_id),
+                source: 'payroll',
+                gross_amount: gross,
+                withholding_rate: rate,
+                withheld_amount: withheld,
+                net_amount: net,
+              });
+            });
+          }
+        }
+      } catch (payrollError) {
+        console.error('Error building IR-17 employee section from payroll:', payrollError);
+      }
+
+      // ==========================================================
+      // 2) Retenciones a PROVEEDORES / TERCEROS (desde 606)
+      // ==========================================================
+      try {
+        await this.buildReport606(period);
+      } catch (e) {
+        console.error('Error building Report 606 before IR-17:', e);
+      }
+
+      const { data: report606, error: r606Err } = await supabase
+        .from('report_606_data')
+        .select('*')
+        .eq('period', period)
+        .eq('user_id', tenantId);
+
+      if (r606Err) throw r606Err;
+
+      (report606 || []).forEach((row: any) => {
+        const base = Number(row?.monto_facturado ?? 0) || 0;
+        const supplierRnc = String(row?.rnc_cedula || row?.rnc_cedula_proveedor || '').trim() || null;
+        const supplierName = row?.nombre_proveedor || row?.supplier_name || null;
+        const paymentDate = row?.fecha_pago || row?.fecha_comprobante || startDate;
+        const docRef = row?.ncf || row?.invoice_number || null;
+        const serviceType = row?.tipo_gasto || row?.tipo_bienes_servicios || null;
+
+        const isrWithheld = Number(row?.monto_retencion_renta ?? row?.retencion_renta ?? 0) || 0;
+        const itbisWithheld = Number(row?.itbis_retenido ?? 0) || 0;
+
+        if (isrWithheld > 0) {
+          const rate = base > 0 ? (isrWithheld / base) * 100 : retentionRate;
+          const net = base - isrWithheld;
+
+          pushRow({
             user_id: tenantId,
             period,
+            beneficiary_type: 'PROVEEDOR',
+            retention_type: 'ISR',
+            rnc_cedula: supplierRnc,
+            beneficiary_name: supplierName,
+            base_amount: base,
+            payment_date: paymentDate,
+            service_type: serviceType,
+            document_ref: docRef,
+            source: '606',
             supplier_rnc: supplierRnc,
             supplier_name: supplierName,
-            payment_date: inv.invoice_date,
-            service_type: (inv.expense_type_606 as string) || inv.document_type || null,
-            invoice_number: (inv.invoice_number as string) || (inv.document_number as string) || String(inv.id),
-            gross_amount: gross,
+            invoice_number: docRef,
+            gross_amount: base,
             withholding_rate: rate,
-            withheld_amount: withheld,
+            withheld_amount: isrWithheld,
             net_amount: net,
-          };
-        });
-      } else {
-        // 2) Fallback: usar lógica anterior basada en pagos a suplidores
-        const { data: payments, error: payErr } = await supabase
-          .from('supplier_payments')
-          .select(
-            `*,
-             suppliers (name, tax_id)`
-          )
-          .eq('user_id', tenantId)
-          .gte('payment_date', startDate)
-          .lte('payment_date', endDate)
-          .in('status', ['completed', 'Completado']);
+          });
+        }
 
-        if (payErr) throw payErr;
+        if (itbisWithheld > 0) {
+          // En DGII es común 30% para ITBIS retenido, pero aquí usamos lo real registrado.
+          const rate = base > 0 ? (itbisWithheld / base) * 100 : 0;
+          const net = base - itbisWithheld;
 
-        rows = (payments || []).map((p: any) => {
-          const gross = Number(p.amount || 0);
-          const rate = retentionRate;
-          const withheld = (gross * rate) / 100;
-          const net = gross - withheld;
-
-          return {
+          pushRow({
             user_id: tenantId,
             period,
-            supplier_rnc: p.suppliers?.tax_id || null,
-            supplier_name: p.suppliers?.name || null,
-            payment_date: p.payment_date,
-            service_type: p.description || p.method || null,
-            invoice_number: (p.invoice_number as string) || null,
-            gross_amount: gross,
+            beneficiary_type: 'PROVEEDOR',
+            retention_type: 'ITBIS',
+            rnc_cedula: supplierRnc,
+            beneficiary_name: supplierName,
+            base_amount: base,
+            payment_date: paymentDate,
+            service_type: serviceType,
+            document_ref: docRef,
+            source: '606',
+            supplier_rnc: supplierRnc,
+            supplier_name: supplierName,
+            invoice_number: docRef,
+            gross_amount: base,
             withholding_rate: rate,
-            withheld_amount: withheld,
+            withheld_amount: itbisWithheld,
             net_amount: net,
-          };
-        });
-      }
+          });
+        }
+      });
 
       // Limpiar datos anteriores del período para este usuario
       const { error: delErr } = await supabase
@@ -12386,15 +12483,19 @@ export const taxService = {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) return null;
 
-      // Verificar si ya existe una declaración para este período
+      // 1) Si ya existe snapshot (it1_resumen), devolverlo.
+      //    generateReportIT1 funciona como PREVIEW + carga del snapshot existente.
       const { data: existing, error: existingError } = await supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .select('*')
         .eq('period', period)
         .eq('user_id', tenantId)
+        .eq('tipo_declaracion', 'normal')
         .maybeSingle();
 
-      const existingId = !existingError && existing?.id ? String((existing as any).id) : '';
+      if (!existingError && existing?.id) {
+        return existing;
+      }
 
       // Mantener IT-1 conectado a los reportes base (607 ventas / 606 compras).
       // Best-effort: si falla, igual intentamos con lo que exista en BD.
@@ -12424,65 +12525,135 @@ export const taxService = {
           .eq('user_id', tenantId),
       ]);
 
-      // Calcular totales de ventas
-      const totalSales = salesResponse.data?.reduce(
-        (sum, item) => sum + (item.monto_facturado || 0),
-        0
-      ) || 0;
-      
-      const itbisCollected = salesResponse.data?.reduce(
-        (sum, item) => sum + (item.itbis_facturado || 0),
-        0
-      ) || 0;
+      const totalSales =
+        salesResponse.data?.reduce((sum, item) => {
+          const gross = Number(item?.monto_facturado ?? 0) || 0;
+          const itbis = Number(item?.itbis_facturado ?? 0) || 0;
+          // En 607, monto_facturado viene del total con ITBIS (total_amount).
+          // Para IT-1 necesitamos la base imponible => total - itbis.
+          return sum + Math.max(gross - itbis, 0);
+        }, 0) || 0;
 
-      // Calcular totales de compras
-      const totalPurchases = purchasesResponse.data?.reduce(
-        (sum, item) => sum + (item.monto_facturado || 0),
-        0
-      ) || 0;
-      
-      const itbisPaid = purchasesResponse.data?.reduce(
-        (sum, item) => sum + (item.itbis_facturado || 0),
-        0
-      ) || 0;
+      const itbisCollected =
+        salesResponse.data?.reduce((sum, item) => sum + (Number(item?.itbis_facturado ?? 0) || 0), 0) || 0;
 
-      // Calcular ITBIS neto a pagar
-      const netItbisDue = itbisCollected - itbisPaid;
+      const itbisWithheld =
+        salesResponse.data?.reduce((sum, item) => sum + (Number(item?.itbis_retenido ?? 0) || 0), 0) || 0;
 
-      // Construir la declaración SIEMPRE con datos reales (o ceros si no hay datos)
-      const reportData = {
+      const totalPurchases =
+        purchasesResponse.data?.reduce((sum, item) => sum + (Number(item?.monto_facturado ?? 0) || 0), 0) || 0;
+
+      const itbisPaid =
+        purchasesResponse.data?.reduce((sum, item) => sum + (Number(item?.itbis_facturado ?? 0) || 0), 0) || 0;
+
+      // ITBIS neto a pagar (considerando ITBIS retenido por clientes)
+      const netItbisDue = (itbisCollected - itbisWithheld) - itbisPaid;
+
+      // Preview (no persiste): el snapshot se guarda al "Cerrar mes".
+      return {
+        id: null,
         user_id: tenantId,
         period,
+        tipo_declaracion: 'normal',
         total_sales: totalSales,
         itbis_collected: itbisCollected,
+        itbis_withheld: itbisWithheld,
         total_purchases: totalPurchases,
         itbis_paid: itbisPaid,
         net_itbis_due: netItbisDue,
-        generated_date: new Date().toISOString()
-      };
+        generated_date: new Date().toISOString(),
+        locked: false,
+        locked_at: null,
+      } as any;
+    } catch (error) {
+      console.error('Error generating Report IT-1:', error);
+      throw error;
+    }
+  },
 
-      // Guardar la declaración en la base de datos (update si existe, insert si no)
-      if (existingId) {
-        const { data, error } = await supabase
-          .from('report_it1_data')
-          .update(reportData)
-          .eq('user_id', tenantId)
-          .eq('id', existingId)
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
+  async closeReportIT1(period: string, tipoDeclaracion: 'normal' | 'rectificativa' = 'normal') {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('Tenant no válido');
+
+      const { data: existing, error: existingError } = await supabase
+        .from('it1_resumen')
+        .select('id, locked')
+        .eq('user_id', tenantId)
+        .eq('period', period)
+        .eq('tipo_declaracion', tipoDeclaracion)
+        .maybeSingle();
+
+      if (!existingError && existing?.locked) {
+        throw new Error('Este período ya está bloqueado y no puede regenerarse');
       }
 
+      const preview = await this.generateReportIT1(period);
+      if (!preview) throw new Error('No se pudo generar el IT-1');
+
+      const payload: any = {
+        user_id: tenantId,
+        period,
+        tipo_declaracion: tipoDeclaracion,
+        total_sales: Number((preview as any).total_sales ?? 0) || 0,
+        itbis_collected: Number((preview as any).itbis_collected ?? 0) || 0,
+        itbis_withheld: Number((preview as any).itbis_withheld ?? 0) || 0,
+        total_purchases: Number((preview as any).total_purchases ?? 0) || 0,
+        itbis_paid: Number((preview as any).itbis_paid ?? 0) || 0,
+        net_itbis_due: Number((preview as any).net_itbis_due ?? 0) || 0,
+        generated_date: new Date().toISOString(),
+        locked: false,
+        locked_at: null,
+        updated_at: new Date().toISOString(),
+      };
+
       const { data, error } = await supabase
-        .from('report_it1_data')
-        .insert(reportData)
+        .from('it1_resumen')
+        .upsert(payload, { onConflict: 'user_id,period,tipo_declaracion' })
         .select()
         .single();
+
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error generating Report IT-1:', error);
+      console.error('Error closing Report IT-1:', error);
+      throw error;
+    }
+  },
+
+  async lockReportIT1(id: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('Tenant no válido');
+
+      const patch: any = {
+        locked: true,
+        locked_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from('it1_resumen')
+        .update(patch)
+        .eq('id', id)
+        .eq('user_id', tenantId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error locking Report IT-1:', error);
       throw error;
     }
   },
@@ -12518,7 +12689,7 @@ export const taxService = {
       }
 
       const { data, error } = await supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .select('*')
         .eq('user_id', tenantId)
         .order('period', { ascending: false })
@@ -12568,7 +12739,7 @@ export const taxService = {
       if (!tenantId) return [];
 
       let query = supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .select('*')
         .eq('user_id', tenantId)
         .order('period', { ascending: false });
@@ -12590,7 +12761,7 @@ export const taxService = {
   async updateReportIT1(id: string, reportData: any) {
     try {
       const { data, error } = await supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .update(reportData)
         .eq('id', id)
         .select()
@@ -12607,7 +12778,7 @@ export const taxService = {
   async deleteReportIT1(id: string) {
     try {
       const { error } = await supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .delete()
         .eq('id', id);
 
@@ -12621,8 +12792,8 @@ export const taxService = {
   async saveReportIT1Data(reportData: any) {
     try {
       const { data, error } = await supabase
-        .from('report_it1_data')
-        .upsert(reportData, { onConflict: 'period' })
+        .from('it1_resumen')
+        .upsert(reportData, { onConflict: 'user_id,period,tipo_declaracion' })
         .select()
         .single();
 
@@ -12641,12 +12812,16 @@ export const taxService = {
       } = await supabase.auth.getUser();
       if (!user?.id) return null;
 
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return null;
+
       const { data, error } = await supabase
-        .from('report_it1_data')
+        .from('it1_resumen')
         .select('*')
         .eq('period', period)
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', tenantId)
+        .eq('tipo_declaracion', 'normal')
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data || null;

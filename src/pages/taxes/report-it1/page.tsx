@@ -12,10 +12,13 @@ interface IT1Data {
   period: string;
   total_sales: number;
   itbis_collected: number;
+  itbis_withheld?: number;
   total_purchases: number;
   itbis_paid: number;
   net_itbis_due: number;
   generated_date: string;
+  locked?: boolean;
+  locked_at?: string | null;
 }
 
 interface IT1Summary {
@@ -45,6 +48,8 @@ export default function ReportIT1Page() {
   const [selectedPeriod, setSelectedPeriod] = useState('');
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [locking, setLocking] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
@@ -107,6 +112,62 @@ export default function ReportIT1Page() {
       alert('Error al generar el reporte IT-1. Por favor intente nuevamente.');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const closeMonth = async () => {
+    if (!selectedPeriod) {
+      alert('Por favor seleccione un período');
+      return;
+    }
+
+    const confirmClose = confirm(
+      '¿Deseas cerrar el mes? Esto guardará un snapshot del IT-1 para este período.'
+    );
+    if (!confirmClose) return;
+
+    setSaving(true);
+    try {
+      const saved = await (taxService as any).closeReportIT1(selectedPeriod, 'normal');
+      setReportData(saved);
+      await loadHistoricalData();
+      await loadDashboardData();
+      alert('Mes cerrado: IT-1 guardado correctamente.');
+    } catch (error: any) {
+      console.error('Error closing IT-1 month:', error);
+      alert(error?.message || 'Error al cerrar el mes (guardar IT-1).');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const lockDeclaration = async () => {
+    if (!reportData?.id) {
+      alert('Primero debes cerrar el mes para poder bloquearlo.');
+      return;
+    }
+    if (reportData.locked) {
+      alert('Este período ya está bloqueado.');
+      return;
+    }
+
+    const confirmLock = confirm(
+      '¿Seguro que deseas BLOQUEAR esta declaración? Luego no se podrá regenerar ni modificar.'
+    );
+    if (!confirmLock) return;
+
+    setLocking(true);
+    try {
+      const locked = await (taxService as any).lockReportIT1(reportData.id);
+      setReportData(locked);
+      await loadHistoricalData();
+      await loadDashboardData();
+      alert('Declaración bloqueada correctamente.');
+    } catch (error: any) {
+      console.error('Error locking IT-1:', error);
+      alert(error?.message || 'Error al bloquear la declaración IT-1.');
+    } finally {
+      setLocking(false);
     }
   };
 
@@ -639,6 +700,42 @@ Cumple con las normativas de la DGII
                   {reportData && (
                     <div className="flex space-x-2">
                       <button
+                        onClick={closeMonth}
+                        disabled={saving || reportData?.locked}
+                        className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {saving ? (
+                          <>
+                            <i className="ri-loader-4-line animate-spin mr-2"></i>
+                            Guardando...
+                          </>
+                        ) : (
+                          <>
+                            <i className="ri-lock-unlock-line mr-2"></i>
+                            Cerrar mes
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={lockDeclaration}
+                        disabled={locking || !reportData?.id || reportData?.locked}
+                        className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {locking ? (
+                          <>
+                            <i className="ri-loader-4-line animate-spin mr-2"></i>
+                            Bloqueando...
+                          </>
+                        ) : (
+                          <>
+                            <i className="ri-lock-line mr-2"></i>
+                            Bloquear
+                          </>
+                        )}
+                      </button>
+
+                      <button
                         onClick={exportToExcel}
                         className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
                       >
@@ -675,9 +772,27 @@ Cumple con las normativas de la DGII
               {reportData && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                   <div className="p-6 border-b border-gray-200 bg-blue-50">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <h3 className="text-lg font-semibold text-gray-900">
                       Declaración Jurada del ITBIS (IT-1) - {getMonthName(reportData.period)}
-                    </h3>
+                      </h3>
+
+                      <div className="flex items-center gap-2">
+                        {reportData.locked ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-900 text-white">
+                            Bloqueado
+                          </span>
+                        ) : reportData.id ? (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                            Cerrado (guardado)
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            Preview (no guardado)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-600 mt-1">
                       Formulario oficial según normativas de la DGII
                     </p>
@@ -745,6 +860,10 @@ Cumple con las normativas de la DGII
                             <span className="font-semibold">{formatCurrency(reportData.itbis_collected)}</span>
                           </div>
                           <div className="flex justify-between items-center">
+                            <span className="text-gray-700">(-) ITBIS Retenido por Clientes:</span>
+                            <span className="font-semibold">{formatCurrency(reportData.itbis_withheld || 0)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
                             <span className="text-gray-700">(-) ITBIS Pagado en Compras:</span>
                             <span className="font-semibold">{formatCurrency(reportData.itbis_paid)}</span>
                           </div>
@@ -798,6 +917,12 @@ Cumple con las normativas de la DGII
                     {/* Footer */}
                     <div className="text-center text-sm text-gray-500 border-t border-gray-200 pt-4">
                       Declaración generada el {new Date(reportData.generated_date).toLocaleDateString('es-DO')} a las {new Date(reportData.generated_date).toLocaleTimeString('es-DO')}
+                      {reportData.locked && reportData.locked_at ? (
+                        <>
+                          <br />
+                          Bloqueado el {new Date(reportData.locked_at).toLocaleDateString('es-DO')}
+                        </>
+                      ) : null}
                       <br />
                       <span className="text-xs">Sistema de Contabilidad - Cumple con normativas DGII</span>
                     </div>
@@ -936,15 +1061,26 @@ Cumple con las normativas de la DGII
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              record.net_itbis_due > 0 
-                                ? 'bg-red-100 text-red-800' 
-                                : record.net_itbis_due < 0 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {getStatusText(record.net_itbis_due)}
-                            </span>
+                            <div className="flex flex-col gap-1">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                record.net_itbis_due > 0 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : record.net_itbis_due < 0 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {getStatusText(record.net_itbis_due)}
+                              </span>
+                              {record.locked ? (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-900 text-white w-fit">
+                                  Bloqueado
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 w-fit">
+                                  Cerrado
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {new Date(record.generated_date).toLocaleDateString('es-DO')}
