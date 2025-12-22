@@ -101,7 +101,10 @@ export default function BankChecksPage() {
   }, [user?.id, form.supplier_id, form.payment_type]);
 
   useEffect(() => {
-    if (form.payment_type === 'accounts_payable' && selectedInvoices.size > 0) {
+    if (form.payment_type !== 'accounts_payable') return;
+    if (selectedInvoices.size === 0) {
+      setForm(p => ({ ...p, amount: '0.00' }));
+    } else {
       const total = Array.from(selectedInvoices.values()).reduce((s, a) => s + a, 0);
       setForm(p => ({ ...p, amount: total.toFixed(2) }));
     }

@@ -24,8 +24,10 @@ export default function ReferralsPage() {
   }>>([]);
 
   const baseUrl = useMemo(() => {
+    const configured = (import.meta as any)?.env?.VITE_PUBLIC_SITE_URL as string | undefined;
+    if (configured && typeof configured === 'string') return configured.replace(/\/$/, '');
     if (typeof window !== 'undefined') return window.location.origin;
-    return 'https://contabi.rd';
+    return 'https://www.contabird.com';
   }, []);
 
   const referralLink = stats.code ? `${baseUrl}/?ref=${stats.code}#pricing` : '';

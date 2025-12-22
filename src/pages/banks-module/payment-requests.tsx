@@ -23,7 +23,7 @@ interface Invoice {
   id: string;
   invoice_number: string;
   invoice_date: string;
-  total_amount: number;
+  total_to_pay: number;
   paid_amount: number;
   balance: number;
 }
@@ -73,24 +73,37 @@ export default function BankPaymentRequestsPage() {
         return;
       }
       const invs = await apInvoicesService.getAll(user.id);
-      const pending = (invs || []).filter((i: any) => i.supplier_id === form.supplier_id && i.payment_status !== 'paid' && i.status === 'posted').map((i: any) => ({
-        id: i.id,
-        invoice_number: i.invoice_number,
-        invoice_date: i.invoice_date,
-        total_amount: i.total_amount || 0,
-        paid_amount: i.paid_amount || 0,
-        balance: (i.total_amount || 0) - (i.paid_amount || 0),
-      }));
+      const pending = (invs || [])
+        .filter((i: any) => {
+          const st = String(i.status || '').toLowerCase();
+          if (i.supplier_id !== form.supplier_id) return false;
+          if (st === 'paid') return false;
+          if (st === 'cancelled' || st === 'cancelada' || st === 'void' || st === 'anulada' || st === 'draft') return false;
+          return true;
+        })
+        .map((i: any) => {
+          const totalToPay = Number(i.total_to_pay) || 0;
+          const paid = Number(i.paid_amount) || 0;
+          const balRaw = Number(i.balance_amount);
+          const balance = Number.isFinite(balRaw) ? Math.max(balRaw, 0) : Math.max(totalToPay - paid, 0);
+          return {
+            id: i.id,
+            invoice_number: i.invoice_number,
+            invoice_date: i.invoice_date,
+            total_to_pay: totalToPay,
+            paid_amount: paid,
+            balance,
+          };
+        });
       setPendingInvoices(pending);
     };
     loadInv();
   }, [user?.id, form.supplier_id, form.payment_type]);
 
   useEffect(() => {
-    if (form.payment_type === 'accounts_payable' && selectedInvoices.size > 0) {
-      const total = Array.from(selectedInvoices.values()).reduce((s, a) => s + a, 0);
-      setForm(p => ({ ...p, amount: total.toFixed(2) }));
-    }
+    if (form.payment_type !== 'accounts_payable') return;
+    const total = Array.from(selectedInvoices.values()).reduce((s, a) => s + a, 0);
+    setForm(p => ({ ...p, amount: total.toFixed(2) }));
   }, [selectedInvoices, form.payment_type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +119,7 @@ export default function BankPaymentRequestsPage() {
       const supplier = suppliers.find(s => s.id === form.supplier_id);
       const invoicePayments = form.payment_type === 'accounts_payable' ? Array.from(selectedInvoices.entries()).map(([id, amount]) => {
         const inv = pendingInvoices.find(i => i.id === id);
-        return { invoice_id: id, invoice_number: inv?.invoice_number || '', amount_to_pay: amount, invoice_total: inv?.total_amount || 0 };
+        return { invoice_id: id, invoice_number: inv?.invoice_number || '', amount_to_pay: amount, invoice_total: inv?.total_to_pay || 0 };
       }) : undefined;
       await paymentRequestsService.create(user.id, {
         bank_id: form.bank_id,

@@ -174,8 +174,8 @@ export default function BankTransfersPage() {
         }).map((i: any) => {
           const totalToPay = Number(i.total_to_pay) || 0;
           const paid = Number(i.paid_amount) || 0;
-          const balRaw = Number(i.balance_amount);
-          const balance = Number.isFinite(balRaw) ? Math.max(balRaw, 0) : Math.max(totalToPay - paid, 0);
+          // Calcular balance real como total - pagado
+          const balance = Math.max(totalToPay - paid, 0);
           return {
             id: i.id,
             invoice_number: i.invoice_number,
@@ -184,7 +184,7 @@ export default function BankTransfersPage() {
             paid_amount: paid,
             balance,
           };
-        });
+        }).filter((inv: any) => inv.balance > 0.01); // Solo mostrar facturas con saldo pendiente
         setPendingInvoices(pending);
       } catch (error) {
         console.error('Error loading pending invoices for supplier', error);
@@ -226,6 +226,24 @@ export default function BankTransfersPage() {
     loadOriginBalance();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, form.bancoOrigen, form.fecha, banks]);
+
+  useEffect(() => {
+    if (form.tipo !== 'proveedor') return;
+    const entries = Object.entries(selectedInvoices).filter(([, v]) => (Number(v) || 0) > 0);
+    if (entries.length === 0) {
+      setForm(prev => ({ ...prev, monto: '' }));
+      return;
+    }
+
+    if (entries.length === 1) {
+      const onlyAmount = Number(entries[0][1]) || 0;
+      setForm(prev => (prev.monto === '' ? { ...prev, monto: String(onlyAmount) } : prev));
+      return;
+    }
+
+    const total = entries.reduce((sum, [, amount]) => sum + (Number(amount) || 0), 0);
+    setForm(prev => ({ ...prev, monto: total.toFixed(2) }));
+  }, [form.tipo, selectedInvoices]);
 
   const handleAddTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,10 +305,18 @@ export default function BankTransfersPage() {
         transfer_date: form.fecha,
         reference: form.referencia.trim(),
         description: form.descripcion.trim(),
-        invoice_payments: form.tipo === 'proveedor' ? Object.entries(selectedInvoices).map(([id, amount]) => ({
-          invoice_id: id,
-          amount_to_pay: amount
-        })) : [],
+        invoice_payments: form.tipo === 'proveedor' ? (() => {
+          const entries = Object.entries(selectedInvoices).filter(([, v]) => (Number(v) || 0) > 0);
+          // Si hay exactamente 1 factura seleccionada, usar form.monto como amount_to_pay
+          if (entries.length === 1) {
+            return [{ invoice_id: entries[0][0], amount_to_pay: montoNumber }];
+          }
+          // Si hay múltiples, usar los montos individuales de selectedInvoices
+          return entries.map(([id, amount]) => ({
+            invoice_id: id,
+            amount_to_pay: Number(amount) || 0
+          }));
+        })() : [],
       });
 
       const supplierName = form.tipo === 'proveedor' 
@@ -316,12 +342,42 @@ export default function BankTransfersPage() {
 
       setTransfers(prev => [mapped, ...prev]);
       setSelectedInvoices({});
+
+      if (form.tipo === 'proveedor' && form.proveedor) {
+        try {
+          const invs = await apInvoicesService.getAll(user.id);
+          const pending = (invs || []).filter((i: any) => {
+            const st = String(i.status || '').toLowerCase();
+            if (i.supplier_id !== form.proveedor) return false;
+            if (st === 'paid') return false;
+            if (st === 'cancelled' || st === 'cancelada' || st === 'void' || st === 'anulada' || st === 'draft') return false;
+            return true;
+          }).map((i: any) => {
+            const totalToPay = Number(i.total_to_pay) || 0;
+            const paid = Number(i.paid_amount) || 0;
+            // Calcular balance real como total - pagado
+            const balance = Math.max(totalToPay - paid, 0);
+            return {
+              id: i.id,
+              invoice_number: i.invoice_number,
+              invoice_date: i.invoice_date,
+              total_to_pay: totalToPay,
+              paid_amount: paid,
+              balance,
+            };
+          }).filter((inv: any) => inv.balance > 0.01); // Solo mostrar facturas con saldo pendiente
+          setPendingInvoices(pending);
+        } catch (reloadErr) {
+          console.error('Error reloading pending invoices after transfer', reloadErr);
+        }
+      }
+
       setForm(prev => ({
         ...prev,
         monto: '',
         referencia: '',
         descripcion: '',
-        proveedor: '',
+        proveedor: prev.tipo === 'proveedor' ? prev.proveedor : '',
         bancoDestino: '',
         cuentaDestino: '',
       }));
@@ -493,17 +549,19 @@ export default function BankTransfersPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
-              <input
-                type="number" min="0"
-                step="0.01"
-                value={form.monto}
-                onChange={(e) => handleChange('monto', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-              />
-            </div>
+            {form.tipo === 'interna' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                <input
+                  type="number" min="0"
+                  step="0.01"
+                  value={form.monto}
+                  onChange={(e) => handleChange('monto', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de la Transferencia</label>
@@ -539,47 +597,121 @@ export default function BankTransfersPage() {
           </div>
 
           {/* Facturas pendientes para pago a proveedor */}
-          {form.tipo === 'proveedor' && form.proveedor && pendingInvoices.length > 0 && (
+          {form.tipo === 'proveedor' && form.proveedor && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Facturas Pendientes del Proveedor (opcional)
+                Facturas Pendientes del Proveedor
               </h3>
               <p className="text-xs text-gray-600 mb-3">
                 Puede asignar el pago a facturas específicas. Si no selecciona ninguna, se registrará como pago general.
               </p>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {pendingInvoices.map((inv) => (
-                  <div key={inv.id} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">{inv.invoice_number}</div>
-                      <div className="text-xs text-gray-500">
-                        Fecha: {inv.invoice_date} | Saldo: {form.moneda} {inv.balance.toLocaleString()}
-                      </div>
-                    </div>
-                    <input
-                      type="number"
-                      min="0"
-                      max={inv.balance}
-                      step="0.01"
-                      value={selectedInvoices[inv.id] || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        setSelectedInvoices(prev => {
-                          if (val <= 0) {
-                            const { [inv.id]: _, ...rest } = prev;
-                            return rest;
+
+              {pendingInvoices.length === 0 ? (
+                <div className="text-xs text-gray-700">
+                  No hay facturas pendientes para este proveedor.
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="flex items-center text-xs text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={
+                          pendingInvoices.length > 0 &&
+                          pendingInvoices
+                            .filter(inv => (Number(inv.balance) || 0) > 0)
+                            .every(inv => (Number((selectedInvoices as any)[inv.id]) || 0) > 0)
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            const next: Record<string, number> = {};
+                            pendingInvoices.forEach(inv => {
+                              const bal = Number(inv.balance) || 0;
+                              if (bal > 0) next[inv.id] = bal;
+                            });
+                            setSelectedInvoices(next);
+                          } else {
+                            setSelectedInvoices({});
                           }
-                          return { ...prev, [inv.id]: Math.min(val, inv.balance) };
-                        });
-                      }}
-                      placeholder="Monto"
-                      className="w-32 border border-gray-300 rounded px-2 py-1 text-sm"
-                    />
+                        }}
+                        className="mr-2"
+                      />
+                      Seleccionar todas
+                    </label>
+                    <div className="text-xs text-gray-600">
+                      Total asignado: {form.moneda} {Object.values(selectedInvoices).reduce((sum, val) => sum + val, 0).toLocaleString()}
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-2 text-xs text-gray-600">
-                Total asignado: {form.moneda} {Object.values(selectedInvoices).reduce((sum, val) => sum + val, 0).toLocaleString()}
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {pendingInvoices.map((inv) => (
+                      <div key={inv.id} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                        <div className="pr-2">
+                          <input
+                            type="checkbox"
+                            checked={(Number((selectedInvoices as any)[inv.id]) || 0) > 0}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setSelectedInvoices(prev => {
+                                if (!checked) {
+                                  const { [inv.id]: _, ...rest } = prev;
+                                  return rest;
+                                }
+                                const bal = Number(inv.balance) || 0;
+                                if (bal <= 0) return prev;
+                                return { ...prev, [inv.id]: bal };
+                              });
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">{inv.invoice_number}</div>
+                          <div className="text-xs text-gray-500">
+                            Fecha: {inv.invoice_date} | Saldo: {form.moneda} {inv.balance.toLocaleString()}
+                          </div>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max={inv.balance}
+                          step="0.01"
+                          value={(Number((selectedInvoices as any)[inv.id]) || 0) > 0 ? ((selectedInvoices as any)[inv.id] ?? '') : ''}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            setSelectedInvoices(prev => {
+                              if (val <= 0) {
+                                const { [inv.id]: _, ...rest } = prev;
+                                return rest;
+                              }
+                              return { ...prev, [inv.id]: Math.min(val, inv.balance) };
+                            });
+                          }}
+                          placeholder="Monto"
+                          className={`w-32 border border-gray-300 rounded px-2 py-1 text-sm ${(Number((selectedInvoices as any)[inv.id]) || 0) > 0 ? '' : 'bg-gray-50 text-gray-700'}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {form.tipo === 'proveedor' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
+                <input
+                  type="number" min="0"
+                  step="0.01"
+                  value={form.monto}
+                  disabled={Object.entries(selectedInvoices).filter(([, v]) => (Number(v) || 0) > 0).length > 1}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    handleChange('monto', nextValue);
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                />
               </div>
             </div>
           )}
@@ -621,14 +753,6 @@ export default function BankTransfersPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {transfers.map(tr => {
-                    const currencyLabel =
-                      tr.moneda === 'DOP'
-                        ? 'Peso Dominicano'
-                        : tr.moneda === 'USD'
-                        ? 'Dólar Estadounidense'
-                        : tr.moneda === 'EUR'
-                        ? 'Euro'
-                        : tr.moneda;
                     const statusLabel =
                       tr.estado === 'issued'
                         ? 'Emitida'
