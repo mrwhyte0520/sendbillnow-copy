@@ -259,7 +259,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Facturación Recurrente', href: '/billing/recurring' },
         { name: 'Cierre de Caja', href: '/billing/cash-closing' },
         { name: 'Cotizaciones', href: '/billing/quotes' },
-        { name: 'Autorizaciones', href: '/billing/authorizations' },
       ]
     },
     // 6. Punto de ventas

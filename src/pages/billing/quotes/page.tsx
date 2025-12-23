@@ -14,37 +14,57 @@ import {
   taxService,
   salesRepsService,
   storesService,
+  inventoryService,
+  settingsService,
 } from '../../../services/database';
 
 // Tipos de datos
-type StatusType = 'pending' | 'approved' | 'under_review' | 'rejected' | 'expired';
+type StatusType = 'pending' | 'approved' | 'under_review' | 'rejected' | 'expired' | 'invoiced';
 
 interface QuoteItem {
+  item_id?: string | null;
   description: string;
   quantity: number;
   price: number;
   total: number;
 }
 
+interface ProductOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
 interface NewQuoteFormProps {
-  customers: Array<{ id: string; name: string; email: string; phone: string }>;
+  customers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    document?: string | null;
+    address?: string | null;
+    documentType?: string | null;
+    ncfType?: string | null;
+  }>;
   paymentTerms: Array<{ id: string; name: string; days?: number }>;
   currencies: Array<{ code: string; name: string; symbol: string; is_base?: boolean; is_active?: boolean }>;
   salesReps: Array<{ id: string; name: string; is_active: boolean }>;
   stores: Array<{ id: string; name: string; is_active?: boolean }>;
+  products: ProductOption[];
   onCancel: () => void;
   onSaved: () => void;
   userId?: string;
 }
 
-function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, onCancel, onSaved, userId }: NewQuoteFormProps) {
+function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, products, onCancel, onSaved, userId }: NewQuoteFormProps) {
   const [customerId, setCustomerId] = useState('');
   const [project, setProject] = useState('');
   const [validUntil, setValidUntil] = useState<string>(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
   const [probability, setProbability] = useState<number>(50);
   const [paymentTermId, setPaymentTermId] = useState<string | null>(null);
+
   const [items, setItems] = useState<QuoteItem[]>([
-    { description: '', quantity: 1, price: 0, total: 0 }
+    { item_id: null, description: '', quantity: 1, price: 0, total: 0 }
   ]);
   const baseCurrency = currencies.find(c => c.is_base) || currencies[0];
   const [currencyCode, setCurrencyCode] = useState<string>(baseCurrency?.code || 'DOP');
@@ -77,7 +97,9 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
   const currentCurrency = currencies.find(c => c.code === currencyCode) || baseCurrency;
   const currencyLabel = currentCurrency?.symbol || currentCurrency?.code || 'RD$';
 
-  const addRow = () => setItems(prev => [...prev, { description: '', quantity: 1, price: 0, total: 0 }]);
+  const selectedCustomer = customers.find((c) => String(c.id) === String(customerId));
+
+  const addRow = () => setItems(prev => [...prev, { item_id: null, description: '', quantity: 1, price: 0, total: 0 }]);
   const removeRow = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
   const updateRow = (idx: number, field: keyof QuoteItem, value: any) => {
     setItems(prev => {
@@ -87,6 +109,30 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
       copy[idx] = row;
       return recomputeTotals(copy);
     });
+  };
+
+  const handleProductSelect = (idx: number, itemId: string) => {
+    const normalizedId = itemId ? String(itemId) : '';
+    if (!normalizedId) {
+      updateRow(idx, 'item_id', null);
+      return;
+    }
+
+    const match = products.find((p) => String(p.id) === normalizedId);
+    updateRow(idx, 'item_id', normalizedId);
+    if (match) {
+      updateRow(idx, 'description', match.name);
+      updateRow(idx, 'price', match.price);
+    }
+  };
+
+  const handleDescriptionChange = (idx: number, value: string) => {
+    updateRow(idx, 'description', value);
+    const match = products.find((p) => String(p.name || '').toLowerCase() === String(value || '').toLowerCase());
+    if (match) {
+      updateRow(idx, 'item_id', match.id);
+      updateRow(idx, 'price', match.price);
+    }
   };
 
   const save = async () => {
@@ -154,6 +200,20 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+
+          {selectedCustomer && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+              <div className="font-medium text-gray-900">{selectedCustomer.name}</div>
+              <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
+                <div>{selectedCustomer.email ? `Email: ${selectedCustomer.email}` : 'Email: -'}</div>
+                <div>{selectedCustomer.phone ? `Tel: ${selectedCustomer.phone}` : 'Tel: -'}</div>
+                <div>{selectedCustomer.document ? `Documento/RNC: ${selectedCustomer.document}` : 'Documento/RNC: -'}</div>
+                <div>{selectedCustomer.address ? `Dirección: ${selectedCustomer.address}` : 'Dirección: -'}</div>
+                <div>{selectedCustomer.documentType ? `Tipo doc: ${selectedCustomer.documentType}` : 'Tipo doc: -'}</div>
+                <div>{selectedCustomer.ncfType ? `NCF: ${selectedCustomer.ncfType}` : 'NCF: -'}</div>
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
@@ -299,10 +359,22 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               {items.map((row, idx) => (
                 <tr key={idx}>
                   <td className="px-4 py-3">
+                    <select
+                      value={row.item_id ?? ''}
+                      onChange={(e) => handleProductSelect(idx, e.target.value)}
+                      className="w-full mb-2 px-2 py-1 border border-gray-300 rounded text-sm bg-white"
+                    >
+                      <option value="">-- Seleccionar ítem de inventario (opcional) --</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="text"
                       value={row.description}
-                      onChange={e => updateRow(idx, 'description', e.target.value)}
+                      onChange={e => handleDescriptionChange(idx, e.target.value)}
                       placeholder="Descripción del producto/servicio"
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                     />
@@ -447,11 +519,13 @@ export default function QuotesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+
   const [customers, setCustomers] = useState<Array<{
     id: string;
     name: string;
     email: string;
     phone: string;
+    address: string;
     documentType?: string | null;
     ncfType?: string | null;
     document?: string | null;
@@ -461,6 +535,7 @@ export default function QuotesPage() {
   const [currencies, setCurrencies] = useState<Array<{ code: string; name: string; symbol: string; is_base?: boolean; is_active?: boolean }>>([]);
   const [salesReps, setSalesReps] = useState<Array<{ id: string; name: string; is_active: boolean }>>([]);
   const [stores, setStores] = useState<Array<{ id: string; name: string; is_active?: boolean }>>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
 
   // Estado para las cotizaciones
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -481,13 +556,14 @@ export default function QuotesPage() {
           return;
         }
 
-        const [cust, qts, terms, currs, reps, storesData] = await Promise.all([
+        const [cust, qts, terms, currs, reps, storesData, invItems] = await Promise.all([
           customersService.getAll(user.id),
           quotesService.getAll(user.id),
           paymentTermsService.getAll(user.id),
           bankCurrenciesService.getAll(user.id),
           salesRepsService.getAll(user.id),
           storesService.getAll(user.id),
+          inventoryService.getItems(user.id),
         ]);
 
         setCustomers((cust || []).map((c: any) => ({
@@ -495,11 +571,11 @@ export default function QuotesPage() {
           name: c.name || c.customer_name || c.full_name || c.fullname || c.company || c.company_name || 'Cliente',
           email: c.email || c.contact_email || '',
           phone: c.phone || c.contact_phone || '',
+          address: c.address || c.company_address || c.billing_address || c.address_line || '',
           documentType: (c as any).documentType || null,
           ncfType: (c as any).ncfType || null,
           document: c.document || null,
         })));
-
 
         const mapped = (qts || []).map((q: any) => {
           // Procesar items primero para calcular totales
@@ -562,6 +638,21 @@ export default function QuotesPage() {
 
         setSalesReps((reps || []).filter((r: any) => r.is_active));
         setStores((storesData || []).filter((s: any) => s.is_active !== false));
+
+        const mappedProducts = (invItems || []).map((p: any) => {
+          const rawPrice =
+            p.selling_price ??
+            p.sale_price ??
+            p.unit_price ??
+            p.price ??
+            0;
+          return {
+            id: String(p.id),
+            name: String(p.name || p.description || '').trim(),
+            price: Number(rawPrice) || 0,
+          };
+        }).filter((p: any) => p.name);
+        setProducts(mappedProducts);
       } catch (error) {
         console.error('Error al cargar datos:', error);
         toast.error('Error al cargar los datos');
@@ -577,6 +668,7 @@ export default function QuotesPage() {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'under_review': return 'bg-blue-100 text-blue-800';
       case 'approved': return 'bg-green-100 text-green-800';
+      case 'invoiced': return 'bg-emerald-100 text-emerald-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'expired': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -588,6 +680,7 @@ export default function QuotesPage() {
       'pending': 'Pendiente',
       'under_review': 'En Revisión',
       'approved': 'Aprobada',
+      'invoiced': 'Facturada',
       'rejected': 'Rechazada',
       'expired': 'Expirada'
     };
@@ -603,7 +696,7 @@ export default function QuotesPage() {
 
   // Depuración: Mostrar los datos de cotizaciones
   console.log('Cotizaciones cargadas:', quotes);
-  
+
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = quote.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          quote.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -615,7 +708,7 @@ export default function QuotesPage() {
     }
     return shouldShow;
   });
-  
+
   console.log('Total de cotizaciones filtradas:', filteredQuotes.length);
 
   const totalQuoteValue = quotes.reduce((sum, quote) => sum + quote.total, 0);
@@ -718,6 +811,50 @@ export default function QuotesPage() {
       qrDataUrl = '';
     }
 
+    const fullCustomer = quote.customerId
+      ? customers.find((c) => String(c.id) === String(quote.customerId))
+      : undefined;
+
+    const customerDocument = (fullCustomer as any)?.document || '';
+    const customerPhone = (fullCustomer as any)?.phone || '';
+    const customerEmail = (fullCustomer as any)?.email || quote.customerEmail || '';
+    const customerAddress = (fullCustomer as any)?.address || '';
+
+    let companyInfo: any = null;
+    try {
+      companyInfo = await settingsService.getCompanyInfo();
+    } catch {
+      companyInfo = null;
+    }
+
+    const companyName =
+      companyInfo?.name ||
+      companyInfo?.company_name ||
+      'ContaBi';
+
+    const companyRnc =
+      companyInfo?.rnc ||
+      companyInfo?.tax_id ||
+      companyInfo?.ruc ||
+      '';
+
+    const companyPhone =
+      companyInfo?.phone ||
+      companyInfo?.company_phone ||
+      companyInfo?.contact_phone ||
+      '';
+
+    const companyEmail =
+      companyInfo?.email ||
+      companyInfo?.company_email ||
+      companyInfo?.contact_email ||
+      '';
+
+    const companyAddress =
+      companyInfo?.address ||
+      companyInfo?.company_address ||
+      '';
+
     const itemsHtml = (quote.items || [])
       .map(
         (item, idx) => `
@@ -753,7 +890,7 @@ export default function QuotesPage() {
             .company-name { font-weight: 800; font-size: 18px; letter-spacing: 0.2px; color: var(--primary); }
             .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
             .doc { text-align: right; }
-            .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
+            .doc-title { font-size: 34px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
             .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
             .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
             .qr { margin-top: 10px; width: 110px; height: 110px; }
@@ -792,7 +929,11 @@ export default function QuotesPage() {
           <div class="page">
             <div class="top">
               <div class="company">
-                <div class="company-name">ContaBi</div>
+                <div class="company-name">${companyName}</div>
+                ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+                ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
               </div>
               <div class="doc">
                 <div class="doc-title">COTIZACIÓN</div>
@@ -809,13 +950,15 @@ export default function QuotesPage() {
               <div class="card">
                 <div class="card-head">
                   <div class="card-head-title">Cliente</div>
-                  <div class="badge">ID: ${quote.customerId || ''}</div>
+                  <div class="badge">${quote.customer}</div>
                 </div>
                 <div class="card-body">
                   <div class="kv">
-                    <div class="k">Nombre</div>
-                    <div class="v">${quote.customer}</div>
-                    ${quote.project ? `<div class="k">Cotización</div><div class="v">${quote.project}</div>` : ''}
+                    ${customerDocument ? `<div class="k">Documento/RNC</div><div class="v">${customerDocument}</div>` : ''}
+                    ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
+                    ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
+                    ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
+                    ${quote.project ? `<div class="k">Nombre</div><div class="v">${quote.project}</div>` : ''}
                     <div class="k">Probabilidad</div>
                     <div class="v">${quote.probability}%</div>
                   </div>
@@ -826,6 +969,8 @@ export default function QuotesPage() {
                 <div class="totals-head">Resumen</div>
                 <div class="totals-body">
                   <div class="totals-row"><div class="label">Subtotal</div><div class="value">${quote.currency} ${formatAmount(quote.amount)}</div></div>
+                  <div class="totals-row"><div class="label">Descuento</div><div class="value">- ${quote.currency} ${formatAmount(quote.total - quote.amount)}</div></div>
+                  <div class="totals-row"><div class="label">ITBIS (18%):</div><div class="value">${quote.currency} ${formatAmount(quote.tax)}</div></div>
                   <div class="totals-row"><div class="label">Impuestos</div><div class="value">${quote.currency} ${formatAmount(quote.tax)}</div></div>
                   <div class="totals-row total"><div class="label">Total</div><div class="value">${quote.currency} ${formatAmount(quote.total)}</div></div>
                 </div>
@@ -873,6 +1018,11 @@ export default function QuotesPage() {
     const quote = quotes.find((q) => q.id === quoteId);
     if (!quote || quote.status === 'rejected') return;
 
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede cancelar. Debes duplicarla para crear otra.');
+      return;
+    }
+
     if (!confirm(`¿Rechazar la cotización ${quoteId}?`)) return;
 
     try {
@@ -880,13 +1030,17 @@ export default function QuotesPage() {
       setQuotes((prev) => prev.map((q) => q.id === quoteId ? { ...q, status: 'rejected' } : q));
       toast.success(`Cotización ${quoteId} rechazada`);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error al rechazar cotización', error);
       toast.error('Error al rechazar la cotización');
     }
   };
 
   const handleDeleteQuote = async (quoteId: string) => {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (quote?.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede eliminar. Debes duplicarla para crear otra.');
+      return;
+    }
     if (!confirm(`¿Está seguro de eliminar la cotización ${quoteId}?`)) return;
 
     try {
@@ -894,7 +1048,6 @@ export default function QuotesPage() {
       setQuotes((prev) => prev.filter((q) => q.id !== quoteId));
       toast.success(`Cotización ${quoteId} eliminada`);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error al eliminar cotización', error);
       toast.error('Error al eliminar la cotización');
     }
@@ -905,6 +1058,11 @@ export default function QuotesPage() {
     if (!quote) return;
     if (!user?.id) {
       toast.error('Debes iniciar sesión para convertir en factura');
+      return;
+    }
+
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue convertida a factura. Si necesitas otra, duplica la cotización.');
       return;
     }
 
@@ -980,12 +1138,11 @@ export default function QuotesPage() {
 
         await invoicesService.create(user.id, invoicePayload, linesPayload);
 
-        await quotesService.update(quote.id, { status: 'approved' });
-        setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'approved' } : q));
+        await quotesService.update(quote.id, { status: 'invoiced' });
+        setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'invoiced' } : q));
 
         toast.success(`Factura ${invoiceNumber} creada exitosamente`);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('Error converting quote to invoice:', error);
         toast.error('Error al convertir la cotización en factura');
       }
@@ -1067,7 +1224,6 @@ export default function QuotesPage() {
       setQuotes((prev) => [duplicated, ...prev]);
       toast.success(`Cotización duplicada (${duplicated.id})`);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error al duplicar cotización', error);
       toast.error('Error al duplicar la cotización');
     }
@@ -1216,6 +1372,7 @@ export default function QuotesPage() {
                 <option value="pending">Pendientes</option>
                 <option value="under_review">En Revisión</option>
                 <option value="approved">Aprobadas</option>
+                <option value="invoiced">Facturadas</option>
                 <option value="rejected">Rechazadas</option>
                 <option value="expired">Expiradas</option>
               </select>
@@ -1326,16 +1483,16 @@ export default function QuotesPage() {
                         </button>
                         <button
                           onClick={() => handleApproveQuote(quote.id)}
-                          disabled={quote.status === 'approved'}
-                          className={`p-1 ${quote.status === 'approved' ? 'text-green-300 cursor-not-allowed' : 'text-green-600 hover:text-green-900'}`}
+                          disabled={quote.status === 'approved' || quote.status === 'invoiced'}
+                          className={`p-1 ${(quote.status === 'approved' || quote.status === 'invoiced') ? 'text-green-300 cursor-not-allowed' : 'text-green-600 hover:text-green-900'}`}
                           title="Aprobar cotización"
                         >
                           <i className="ri-check-line"></i>
                         </button>
                         <button
                           onClick={() => handleRejectQuote(quote.id)}
-                          disabled={quote.status === 'rejected'}
-                          className={`p-1 ${quote.status === 'rejected' ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
+                          disabled={quote.status === 'rejected' || quote.status === 'invoiced'}
+                          className={`p-1 ${(quote.status === 'rejected' || quote.status === 'invoiced') ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
                           title="Rechazar cotización"
                         >
                           <i className="ri-close-circle-line"></i>
@@ -1358,7 +1515,8 @@ export default function QuotesPage() {
                         </button>
                         <button
                           onClick={() => handleDeleteQuote(quote.id)}
-                          className="text-red-600 hover:text-red-900 p-1"
+                          disabled={quote.status === 'invoiced'}
+                          className={`p-1 ${quote.status === 'invoiced' ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
                           title="Eliminar cotización"
                         >
                           <i className="ri-delete-bin-line"></i>
@@ -1514,6 +1672,7 @@ export default function QuotesPage() {
                       <option value="pending">Pendiente</option>
                       <option value="under_review">En Revisión</option>
                       <option value="approved">Aprobada</option>
+                      <option value="invoiced">Facturada</option>
                       <option value="rejected">Rechazada</option>
                       <option value="expired">Expirada</option>
                     </select>
@@ -1555,7 +1714,6 @@ export default function QuotesPage() {
                         toast.success(`Cotización ${editingQuote.id} actualizada`);
                         setEditingQuote(null);
                       } catch (error) {
-                        // eslint-disable-next-line no-console
                         console.error('Error al actualizar cotización', error);
                         toast.error('Error al actualizar la cotización');
                       }
@@ -1593,6 +1751,7 @@ export default function QuotesPage() {
                   currencies={currencies}
                   salesReps={salesReps}
                   stores={stores}
+                  products={products}
                   onCancel={() => setShowNewQuoteModal(false)}
                   onSaved={async () => {
                     setShowNewQuoteModal(false);
