@@ -37,6 +37,8 @@ interface InvoiceOption {
 interface BankAccountOption {
   id: string;
   name: string;
+  accountNumber?: string | null;
+  isActive?: boolean;
   chartAccountId?: string | null;
 }
 
@@ -70,6 +72,8 @@ export default function PaymentsPage() {
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentItbisWithheld, setPaymentItbisWithheld] = useState<number>(0);
   const [paymentIsrWithheld, setPaymentIsrWithheld] = useState<number>(0);
+  const [invoiceHasServiceLines, setInvoiceHasServiceLines] = useState<Record<string, boolean>>({});
+  const [isrServiceRatePct] = useState<number>(0);
 
   const receivableAccounts = accounts.filter((acc) => {
     if (!acc.allowPosting) return false;
@@ -147,11 +151,25 @@ export default function PaymentsPage() {
           });
         setInvoices(mappedInvoices);
 
-        const mappedBankAccounts: BankAccountOption[] = (bankAccountsData || []).map((b: any) => ({
-          id: String(b.id),
-          name: String(b.name || ''),
-          chartAccountId: b.chart_account_id ? String(b.chart_account_id) : null,
-        }));
+        const mappedBankAccounts: BankAccountOption[] = (bankAccountsData || [])
+          .map((b: any) => {
+            const id = String(b.id);
+            const name = String(b.bank_name || b.name || b.account_name || '').trim();
+            const accountNumber = b.account_number ? String(b.account_number) : null;
+            const fallback = accountNumber
+              ? `Cuenta (${accountNumber})`
+              : `Cuenta ${id.slice(0, 8)}`;
+
+            return {
+              id,
+              name: name || fallback,
+              accountNumber,
+              isActive: b.is_active !== false,
+              chartAccountId: b.chart_account_id ? String(b.chart_account_id) : null,
+            };
+          })
+          .filter((b: BankAccountOption) => b.isActive !== false)
+          .sort((a: BankAccountOption, c: BankAccountOption) => String(a.name || '').localeCompare(String(c.name || '')));
         setBankAccounts(mappedBankAccounts);
 
         const mappedCustomerArAccounts = (customersData || []).reduce((acc: Record<string, string>, c: any) => {
@@ -1335,7 +1353,7 @@ export default function PaymentsPage() {
                             const itemType = String((ln as any)?.inventory_items?.item_type || '').toLowerCase();
                             return itemType === 'service';
                           });
-                          setInvoiceHasServiceLines((prev) => ({ ...prev, [next]: hasServices }));
+                          setInvoiceHasServiceLines((prev: Record<string, boolean>) => ({ ...prev, [next]: hasServices }));
                           // Recompute after caching
                           const inv = invoices.find((i) => i.id === next);
                           const invNumber = String(inv?.invoiceNumber || '');
@@ -1357,7 +1375,7 @@ export default function PaymentsPage() {
                             recomputeWithheldDefaults(next, paymentAmount);
                           }
                         } catch {
-                          setInvoiceHasServiceLines((prev) => ({ ...prev, [next]: false }));
+                          setInvoiceHasServiceLines((prev: Record<string, boolean>) => ({ ...prev, [next]: false }));
                           recomputeWithheldDefaults(next, paymentAmount);
                         }
                       } else {
@@ -1384,11 +1402,20 @@ export default function PaymentsPage() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                   >
                     <option value="">Seleccionar cuenta</option>
-                    {bankAccounts.map((ba) => (
-                      <option key={ba.id} value={ba.id}>
-                        {ba.name}
-                      </option>
-                    ))}
+                    {bankAccounts
+                      .map((ba) => {
+                        const baseName = String(ba.name || '').trim();
+                        const label = baseName
+                          ? (ba.accountNumber ? `${baseName} (${ba.accountNumber})` : baseName)
+                          : `Cuenta ${String(ba.id || '').slice(0, 8)}`;
+                        return { ...ba, __label: label };
+                      })
+                      .filter((ba: any) => String(ba.__label || '').trim() !== '')
+                      .map((ba: any) => (
+                        <option key={ba.id} value={ba.id}>
+                          {ba.__label}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
