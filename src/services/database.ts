@@ -8004,6 +8004,10 @@ export const invoicesService = {
         tax_amount: taxAmount,
       };
 
+      // fiscal_documents.document_type es NOT NULL. Si no podemos inferirlo,
+      // omitimos el upsert para no romper el flujo de creación de factura.
+      if (!payload.document_type) return;
+
       await this.upsertFiscalDocumentRow(tenantId, payload);
     } catch (error) {
       console.error('invoicesService.upsertFiscalDocumentForInvoice error', describeSupabaseError(error));
@@ -8190,12 +8194,55 @@ export const invoicesService = {
         invoice_id: invoiceData.id,
       }));
 
-      const { data: linesData, error: linesError } = await supabase
-        .from('invoice_lines')
-        .insert(linesWithInvoice)
-        .select();
+      const tryInsertLines = async (payload: any[]) => {
+        const { data: linesData, error: linesError } = await supabase
+          .from('invoice_lines')
+          .insert(payload)
+          .select();
+        if (linesError) {
+          const wrapped: any = new Error(describeSupabaseError(linesError));
+          wrapped.code = (linesError as any)?.code;
+          wrapped.details = (linesError as any)?.details;
+          wrapped.hint = (linesError as any)?.hint;
+          throw wrapped;
+        }
+        return linesData;
+      };
 
-      if (linesError) throw linesError;
+      let linesData: any[] = [];
+      let payloadToInsert: any[] = linesWithInvoice;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          linesData = (await tryInsertLines(payloadToInsert)) as any[];
+          break;
+        } catch (error: any) {
+          // Compatibilidad: la BD puede no tener algunas columnas (ej: tax_amount, user_id, etc.)
+          if (error?.code === 'PGRST204') {
+            const msg = String(error?.message || '');
+            const m = msg.match(/Could not find the '([^']+)' column/i);
+            const missingCol = m?.[1] ? String(m[1]) : null;
+
+            const colsToDrop = [missingCol].filter(Boolean) as string[];
+            // Fallbacks conocidos: instalaciones sin estos campos
+            colsToDrop.push('tax_amount');
+            colsToDrop.push('user_id');
+
+            payloadToInsert = (payloadToInsert || []).map((ln: any) => {
+              const clean = { ...ln };
+              colsToDrop.forEach((c) => {
+                delete (clean as any)[c];
+              });
+              return clean;
+            });
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!linesData || linesData.length === 0) {
+        throw new Error('No se pudieron insertar las líneas de la factura (invoice_lines)');
+      }
 
       // Best-effort: crear solicitud de autorización para descuento en factura si aplica
       try {
@@ -11017,14 +11064,28 @@ export const recurringSubscriptionsService = {
         ...payload,
         user_id: userId,
       };
-      const { data, error } = await supabase
-        .from('recurring_subscriptions')
-        .insert(body)
-        .select('*')
-        .single();
+      const tryInsert = async (insertBody: any) => {
+        const { data, error } = await supabase
+          .from('recurring_subscriptions')
+          .insert(insertBody)
+          .select('*')
+          .single();
+        if (error) throw error;
+        return data;
+      };
 
-      if (error) throw error;
-      return data;
+      try {
+        return await tryInsert(body);
+      } catch (error: any) {
+        if (error?.code === 'PGRST204') {
+          const fallbackBody = { ...body };
+          delete fallbackBody.apply_itbis;
+          delete fallbackBody.itbis_rate;
+          delete fallbackBody.last_billed_date;
+          return await tryInsert(fallbackBody);
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('recurringSubscriptionsService.create error', error);
       throw error;
@@ -11033,83 +11094,132 @@ export const recurringSubscriptionsService = {
 
   async update(id: string, patch: any) {
     try {
-      const { data, error } = await supabase
-        .from('recurring_subscriptions')
-        .update({
-          ...patch,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select('*')
-        .single();
-      if (error) throw error;
-      return data;
+      const tryUpdate = async (updatePatch: any) => {
+        const { data, error } = await supabase
+          .from('recurring_subscriptions')
+          .update({
+            ...updatePatch,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .select('*')
+          .single();
+        if (error) throw error;
+        return data;
+      };
+
+      try {
+        return await tryUpdate(patch);
+      } catch (error: any) {
+        if (error?.code === 'PGRST204') {
+          const fallbackPatch = { ...patch };
+          delete fallbackPatch.apply_itbis;
+          delete fallbackPatch.itbis_rate;
+          delete fallbackPatch.last_billed_date;
+          return await tryUpdate(fallbackPatch);
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('recurringSubscriptionsService.update error', error);
       throw error;
     }
   },
 
-  async processPending(userId: string) {
+  async processPending(userId: string): Promise<{ processed: number; skipped: number; errors: string[] }> {
+    const result = { processed: 0, skipped: 0, errors: [] as string[] };
+
     try {
-      if (!userId) return { processed: 0 };
+      if (!userId) return result;
+
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return result;
 
       const todayStr = new Date().toISOString().slice(0, 10);
 
+      // 1. VALIDAR PERÍODO CONTABLE ABIERTO
+      const openPeriod = await accountingPeriodsService.getOpenPeriodForDate(tenantId, todayStr);
+      if (!openPeriod) {
+        result.errors.push(`No existe un período contable abierto para la fecha ${todayStr}. Debe crear y abrir el período contable antes de procesar facturación recurrente.`);
+        return result;
+      }
+
+      // 2. OBTENER SUSCRIPCIONES PENDIENTES
       const { data: subs, error } = await supabase
         .from('recurring_subscriptions')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', tenantId)
         .eq('status', 'active')
         .lte('next_billing_date', todayStr);
 
       if (error) throw error;
       const list = subs ?? [];
-      if (list.length === 0) return { processed: 0 };
-
-      let processed = 0;
+      if (list.length === 0) return result;
 
       for (const sub of list) {
-        // Respetar fecha de fin si existe
-        if (sub.end_date && sub.end_date < todayStr) {
-          await this.update(sub.id, { status: 'expired' });
-          continue;
-        }
-
-        const amount = Number(sub.amount) || 0;
-        if (!amount || !sub.customer_id) continue;
-
-        const invoicePayload = {
-          customer_id: sub.customer_id as string,
-          invoice_number: `SUB-${Date.now()}-${processed + 1}`,
-          invoice_date: todayStr,
-          due_date: todayStr,
-          currency: 'DOP',
-          subtotal: amount,
-          tax_amount: 0,
-          total_amount: amount,
-          paid_amount: 0,
-          status: 'pending',
-          notes: `Factura recurrente para: ${sub.service_name || 'Suscripción'}`,
-        };
-
-        const linesPayload = [
-          {
-            description: sub.service_name || 'Servicio recurrente',
-            quantity: 1,
-            unit_price: amount,
-            line_total: amount,
-            line_number: 1,
-          },
-        ];
-
         try {
-          const { invoice } = await invoicesService.create(userId, invoicePayload, linesPayload);
+          // Respetar fecha de fin si existe
+          if (sub.end_date && sub.end_date < todayStr) {
+            await this.update(sub.id, { status: 'expired' });
+            result.skipped += 1;
+            continue;
+          }
 
-          // Calcular próxima fecha de facturación
+          // 3. EVITAR DUPLICADOS: verificar si ya se facturó esta fecha
+          const billingDate = sub.next_billing_date as string;
+          if (sub.last_billed_date === billingDate) {
+            // Ya se facturó este período, saltar
+            result.skipped += 1;
+            continue;
+          }
+
+          const amount = Number(sub.amount) || 0;
+          if (!amount || !sub.customer_id) {
+            result.skipped += 1;
+            continue;
+          }
+
+          // 4. CALCULAR ITBIS SI APLICA
+          const applyItbis = sub.apply_itbis !== false; // Por defecto aplica
+          const itbisRate = Number(sub.itbis_rate) || 18;
+          const taxAmount = applyItbis ? Number((amount * itbisRate / 100).toFixed(2)) : 0;
+          const totalAmount = Number((amount + taxAmount).toFixed(2));
+
+          // 5. GENERAR NÚMERO DE FACTURA ÚNICO
+          const invoiceNumber = `REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
+
+          const invoicePayload = {
+            customer_id: sub.customer_id as string,
+            invoice_number: invoiceNumber,
+            invoice_date: todayStr,
+            due_date: todayStr,
+            currency: 'DOP',
+            subtotal: amount,
+            tax_amount: taxAmount,
+            total_amount: totalAmount,
+            paid_amount: 0,
+            status: 'pending',
+            notes: `Factura recurrente - Suscripción ID: ${sub.id} | ${sub.service_name || 'Servicio'}`,
+          };
+
+          const linesPayload = [
+            {
+              description: sub.service_name || 'Servicio recurrente',
+              quantity: 1,
+              unit_price: amount,
+              tax_amount: taxAmount,
+              line_total: totalAmount,
+              line_number: 1,
+            },
+          ];
+
+          // 6. CREAR FACTURA (invoicesService.create ya valida período y crea asiento)
+          const { invoice } = await invoicesService.create(tenantId, invoicePayload, linesPayload);
+
+          // 7. CALCULAR PRÓXIMA FECHA DE FACTURACIÓN
           let nextDate: string | null = null;
-          if (sub.next_billing_date) {
-            const d = new Date(sub.next_billing_date as string);
+          if (billingDate) {
+            const d = new Date(billingDate);
             if (sub.frequency === 'weekly') d.setDate(d.getDate() + 7);
             else if (sub.frequency === 'monthly') d.setMonth(d.getMonth() + 1);
             else if (sub.frequency === 'quarterly') d.setMonth(d.getMonth() + 3);
@@ -11117,22 +11227,27 @@ export const recurringSubscriptionsService = {
             nextDate = d.toISOString().slice(0, 10);
           }
 
+          // 8. ACTUALIZAR SUSCRIPCIÓN
           await this.update(sub.id, {
             last_invoice_id: invoice.id,
+            last_billed_date: billingDate, // Marcar como facturado para evitar duplicados
             next_billing_date: nextDate,
           });
 
-          processed += 1;
-        } catch (e) {
+          result.processed += 1;
+        } catch (e: any) {
           // No detener todo el lote por un error individual
+          const errorMsg = e?.message || String(e);
           console.error('recurringSubscriptionsService.processPending item error', e);
+          result.errors.push(`Suscripción ${sub.id}: ${errorMsg}`);
         }
       }
 
-      return { processed };
-    } catch (error) {
+      return result;
+    } catch (error: any) {
       console.error('recurringSubscriptionsService.processPending error', error);
-      return { processed: 0 };
+      result.errors.push(error?.message || 'Error desconocido al procesar facturación recurrente');
+      return result;
     }
   },
 };

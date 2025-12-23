@@ -20,6 +20,8 @@ export default function RecurringBillingPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
+  const [applyItbis, setApplyItbis] = useState(true);
+  const [itbisRate, setItbisRate] = useState<number>(18);
 
   const [formErrors, setFormErrors] = useState<{ customer?: string; service?: string; amount?: string; frequency?: string; startDate?: string }>({});
 
@@ -86,6 +88,17 @@ export default function RecurringBillingPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const formatActionError = (error: any) => {
+    const code = error?.code ? String(error.code) : '';
+    const msg = error?.message ? String(error.message) : '';
+    const hint = error?.hint ? String(error.hint) : '';
+    const details = error?.details ? String(error.details) : '';
+
+    const parts = [msg, details, hint].filter(Boolean);
+    const base = parts.length > 0 ? parts.join(' | ') : 'Error desconocido';
+    return code ? `[${code}] ${base}` : base;
+  };
+
   const handleCreateSubscription = () => {
     setEditingSubscriptionId(null);
     setSelectedCustomerId('');
@@ -95,13 +108,19 @@ export default function RecurringBillingPage() {
     setStartDate('');
     setEndDate('');
     setDescription('');
+    setApplyItbis(true);
+    setItbisRate(18);
     setFormErrors({});
     setShowNewSubscriptionModal(true);
+    toast.info('📝 Creando nueva suscripción');
   };
 
   const handleViewSubscription = (subscriptionId: string) => {
     const sub = subscriptions.find(s => s.id === subscriptionId);
-    if (!sub) return;
+    if (!sub) {
+      toast.error('No se encontró la suscripción');
+      return;
+    }
 
     setEditingSubscriptionId(subscriptionId);
     setSelectedCustomerId(sub.customer_id || '');
@@ -111,8 +130,11 @@ export default function RecurringBillingPage() {
     setStartDate(sub.start_date || '');
     setEndDate(sub.end_date || '');
     setDescription(sub.description || '');
+    setApplyItbis(sub.apply_itbis !== false);
+    setItbisRate(Number(sub.itbis_rate) || 18);
     setFormErrors({});
     setShowNewSubscriptionModal(true);
+    toast.info(`📋 Editando suscripción: ${sub.service_name || 'Sin nombre'}`);
   };
 
   const handleEditSubscription = (subscriptionId: string) => {
@@ -125,14 +147,15 @@ export default function RecurringBillingPage() {
       return;
     }
     if (!confirm(`¿Pausar suscripción ${subscriptionId}?`)) return;
+    const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'paused' });
       await loadData();
-      toast.success(`Suscripción ${subscriptionId} pausada`);
-    } catch (error) {
+      toast.success(`⏸️ Suscripción pausada: ${sub?.service_name || subscriptionId}`);
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error pausing subscription:', error);
-      toast.error('Error al pausar la suscripción');
+      toast.error(`❌ Error al pausar: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
@@ -142,14 +165,15 @@ export default function RecurringBillingPage() {
       return;
     }
     if (!confirm(`¿Reanudar suscripción ${subscriptionId}?`)) return;
+    const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'active' });
       await loadData();
-      toast.success(`Suscripción ${subscriptionId} reanudada`);
-    } catch (error) {
+      toast.success(`▶️ Suscripción reanudada: ${sub?.service_name || subscriptionId}`);
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error resuming subscription:', error);
-      toast.error('Error al reanudar la suscripción');
+      toast.error(`❌ Error al reanudar: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
@@ -159,14 +183,15 @@ export default function RecurringBillingPage() {
       return;
     }
     if (!confirm(`¿Cancelar suscripción ${subscriptionId}? Esta acción no se puede deshacer.`)) return;
+    const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'cancelled' });
       await loadData();
-      toast.success(`Suscripción ${subscriptionId} cancelada`);
-    } catch (error) {
+      toast.success(`🚫 Suscripción cancelada: ${sub?.service_name || subscriptionId}`);
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error cancelling subscription:', error);
-      toast.error('Error al cancelar la suscripción');
+      toast.error(`❌ Error al cancelar: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
@@ -185,20 +210,31 @@ export default function RecurringBillingPage() {
     if (!confirm(`¿Generar factura para suscripción ${subscriptionId}?`)) return;
 
     try {
+      const loadingId = toast.loading('Generando factura...');
       const today = new Date().toISOString().slice(0, 10);
       const amt = Number(sub.amount) || 0;
+
+      // Calcular ITBIS si aplica
+      const subApplyItbis = sub.apply_itbis !== false;
+      const subItbisRate = Number(sub.itbis_rate) || 18;
+      const taxAmount = subApplyItbis ? Number((amt * subItbisRate / 100).toFixed(2)) : 0;
+      const totalAmount = Number((amt + taxAmount).toFixed(2));
+
+      // Generar número de factura único
+      const invoiceNumber = `REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
+
       const invoicePayload = {
         customer_id: sub.customer_id,
-        invoice_number: `SUB-${Date.now()}`,
+        invoice_number: invoiceNumber,
         invoice_date: today,
         due_date: today,
         currency: 'DOP',
         subtotal: amt,
-        tax_amount: 0,
-        total_amount: amt,
+        tax_amount: taxAmount,
+        total_amount: totalAmount,
         paid_amount: 0,
         status: 'pending',
-        notes: `Factura recurrente para: ${sub.service_name || 'Suscripción'}`,
+        notes: `Factura recurrente - Suscripción ID: ${sub.id} | ${sub.service_name || 'Servicio'}`,
       };
 
       const linesPayload = [
@@ -213,10 +249,11 @@ export default function RecurringBillingPage() {
 
       const { invoice } = await invoicesService.create(user.id, invoicePayload, linesPayload);
 
-      // Avanzar próxima fecha usando el helper de processPending (aquí lo calculamos manualmente)
+      // Avanzar próxima fecha
       let nextDate: string | null = null;
-      if (sub.next_billing_date) {
-        const d = new Date(sub.next_billing_date as string);
+      const billingDate = sub.next_billing_date as string;
+      if (billingDate) {
+        const d = new Date(billingDate);
         if (sub.frequency === 'weekly') d.setDate(d.getDate() + 7);
         else if (sub.frequency === 'monthly') d.setMonth(d.getMonth() + 1);
         else if (sub.frequency === 'quarterly') d.setMonth(d.getMonth() + 3);
@@ -226,41 +263,54 @@ export default function RecurringBillingPage() {
 
       await recurringSubscriptionsService.update(subscriptionId, {
         last_invoice_id: invoice.id,
+        last_billed_date: billingDate || today,
         next_billing_date: nextDate,
       });
 
       await loadData();
-      toast.success(`Factura generada para suscripción ${subscriptionId}`);
-    } catch (error) {
+      toast.dismiss(loadingId);
+      toast.success(`✅ Factura generada: ${invoiceNumber}${taxAmount > 0 ? ` (incluye ITBIS: RD$ ${taxAmount.toLocaleString()})` : ''}`);
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating invoice for subscription:', error);
-      toast.error('Error al generar la factura de la suscripción');
+      toast.error(`❌ No se pudo generar la factura: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
   const handleViewInvoices = async (subscriptionId: string) => {
     const sub = subscriptions.find(s => s.id === subscriptionId);
-    if (!sub) return;
+    if (!sub) {
+      toast.error('No se encontró la suscripción');
+      return;
+    }
     if (!user?.id) {
       toast.error('Debes iniciar sesión para ver facturas');
       return;
     }
 
+    if (!sub.customer_id) {
+      toast.error('La suscripción no tiene un cliente válido');
+      return;
+    }
+
     try {
+      const loadingId = toast.loading('Buscando facturas...');
       const allInvoices = await invoicesService.getAll(user.id);
       const customerInvoices = allInvoices.filter((inv: any) => inv.customer_id === sub.customer_id);
 
       if (customerInvoices.length === 0) {
+        toast.dismiss(loadingId);
         toast.info('No hay facturas registradas para esta suscripción (cliente)');
         return;
       }
 
       const total = customerInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
+      toast.dismiss(loadingId);
       toast.info(`Facturas para este cliente/suscripción: ${customerInvoices.length} | Total: RD$ ${total.toLocaleString()}`);
-    } catch (error) {
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error loading invoices for subscription:', error);
-      toast.error('Error al cargar las facturas de la suscripción');
+      toast.error(`❌ No se pudieron cargar las facturas: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
@@ -273,11 +323,26 @@ export default function RecurringBillingPage() {
     try {
       const result = await recurringSubscriptionsService.processPending(user.id);
       await loadData();
-      toast.success(`Facturaciones procesadas: ${result?.processed ?? 0}`);
-    } catch (error) {
+
+      // Mostrar resultados detallados
+      if (result.errors && result.errors.length > 0) {
+        // Si hay errores, mostrarlos
+        result.errors.forEach((err: string) => {
+          toast.error(err, { duration: 8000 });
+        });
+      }
+
+      if (result.processed > 0) {
+        toast.success(`✅ Facturas generadas: ${result.processed}`);
+      } else if (result.skipped > 0) {
+        toast.info(`ℹ️ Suscripciones omitidas: ${result.skipped} (ya facturadas o expiradas)`);
+      } else if (result.errors.length === 0) {
+        toast.info('No hay suscripciones pendientes de facturar');
+      }
+    } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error processing pending recurring billing:', error);
-      toast.error('Error al procesar las facturaciones pendientes');
+      toast.error(error?.message || 'Error al procesar las facturaciones pendientes');
     }
   };
 
@@ -468,8 +533,13 @@ export default function RecurringBillingPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{subscription.service_name}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD$ {Number(subscription.amount || 0).toLocaleString()}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="font-medium">RD$ {Number(subscription.amount || 0).toLocaleString()}</div>
+                      {subscription.apply_itbis !== false && (
+                        <div className="text-xs text-green-600">
+                          +ITBIS ({Number(subscription.itbis_rate) || 18}%)
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {getFrequencyText(subscription.frequency)}
@@ -660,6 +730,44 @@ export default function RecurringBillingPage() {
                     placeholder="Descripción detallada del servicio..."
                   ></textarea>
                 </div>
+
+                {/* Configuración de ITBIS */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Configuración de Impuestos</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="applyItbis"
+                        checked={applyItbis}
+                        onChange={(e) => setApplyItbis(e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="applyItbis" className="ml-2 text-sm text-gray-700">
+                        Aplicar ITBIS automáticamente
+                      </label>
+                    </div>
+                    {applyItbis && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tasa ITBIS (%)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={itbisRate}
+                          onChange={(e) => setItbisRate(Number(e.target.value) || 0)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {applyItbis && amount !== '' && Number(amount) > 0 && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      <span className="font-medium">Vista previa:</span> Monto: RD$ {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%): RD$ {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900">RD$ {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
                 <button
@@ -695,6 +803,8 @@ export default function RecurringBillingPage() {
                           start_date: startDate,
                           end_date: endDate || null,
                           description: description || null,
+                          apply_itbis: applyItbis,
+                          itbis_rate: applyItbis ? itbisRate : 0,
                         });
                       } else {
                         await recurringSubscriptionsService.create(user.id, {
@@ -707,15 +817,17 @@ export default function RecurringBillingPage() {
                           next_billing_date: startDate,
                           status: 'active',
                           description: description || null,
+                          apply_itbis: applyItbis,
+                          itbis_rate: applyItbis ? itbisRate : 0,
                         });
                       }
 
                       await loadData();
                       setShowNewSubscriptionModal(false);
                       toast.success(editingSubscriptionId ? 'Suscripción actualizada correctamente' : 'Suscripción creada correctamente');
-                    } catch (error) {
+                    } catch (err) {
                       // eslint-disable-next-line no-console
-                      console.error('Error saving subscription:', error);
+                      console.error('Error saving subscription:', err);
                       toast.error('Error al guardar la suscripción');
                     }
                   }}
