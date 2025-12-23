@@ -12,6 +12,7 @@ interface AccountingPeriod {
   end_date: string;
   status: 'open' | 'closed' | 'locked';
   fiscal_year: string;
+  period_type?: 'fiscal' | 'accounting';
   created_at: string;
   closed_at?: string;
   closed_by?: string;
@@ -31,6 +32,7 @@ const AccountingPeriodsPage: FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('');
+  const [activeTab, setActiveTab] = useState<'fiscal' | 'accounting'>('accounting');
 
   // Formulario para nuevo período
   const [formData, setFormData] = useState({
@@ -208,6 +210,7 @@ const AccountingPeriodsPage: FC = () => {
         end_date: endDateStr,
         status: 'open',
         fiscal_year: formData.year,
+        period_type: 'accounting',
         created_at: new Date().toISOString(),
         entries_count: 0,
         total_debits: 0,
@@ -230,17 +233,22 @@ const AccountingPeriodsPage: FC = () => {
             end_date: newPeriod.end_date,
             status: newPeriod.status,
             fiscal_year: newPeriod.fiscal_year
+            // period_type se detecta automáticamente por getPeriodType()
           }])
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          alert('Error al guardar el período en la base de datos');
+          return;
+        }
         
         setPeriods(prev => [{ ...newPeriod, id: data.id }, ...prev]);
       } catch (supabaseError) {
         console.error('Supabase error:', supabaseError);
-        // Crear localmente si Supabase falla
-        setPeriods(prev => [newPeriod, ...prev]);
+        alert('Error al guardar el período');
+        return;
       }
       
       // Resetear formulario
@@ -370,10 +378,21 @@ const AccountingPeriodsPage: FC = () => {
     try {
       const year = fiscalYearForm.year;
       
-      // Verificar si ya existen períodos para este año
-      const existingPeriodsForYear = periods.filter(p => p.fiscal_year === year);
-      if (existingPeriodsForYear.length > 0) {
-        if (!confirm(`Ya existen ${existingPeriodsForYear.length} períodos para el año ${year}. ¿Desea continuar creando más períodos?`)) {
+      // Verificar si ya existe el período fiscal para este año
+      const existingFiscalYear = periods.find(p => 
+        p.name === `Año Fiscal ${year}` || 
+        (p.fiscal_year === year && p.start_date === `${year}-01-01` && p.end_date === `${year}-12-31`)
+      );
+      
+      if (existingFiscalYear) {
+        alert(`Ya existe el Año Fiscal ${year}. No se puede crear duplicado.`);
+        return;
+      }
+
+      // Verificar si ya existen períodos mensuales para este año
+      const existingMonthlyPeriods = periods.filter(p => p.fiscal_year === year && !p.name.includes('Año Fiscal'));
+      if (existingMonthlyPeriods.length > 0) {
+        if (!confirm(`Ya existen ${existingMonthlyPeriods.length} períodos mensuales para el año ${year}. ¿Desea crear el año fiscal de todas formas?`)) {
           return;
         }
       }
@@ -385,13 +404,54 @@ const AccountingPeriodsPage: FC = () => {
       }
 
       if (fiscalYearForm.autoGenerateMonths) {
-        // Generar automáticamente los 12 períodos mensuales
+        // Primero crear el período fiscal anual
+        const fiscalPeriod: AccountingPeriod = {
+          id: `${Date.now()}-fiscal`,
+          name: `Año Fiscal ${year}`,
+          start_date: `${year}-01-01`,
+          end_date: `${year}-12-31`,
+          status: 'open',
+          fiscal_year: year,
+          period_type: 'fiscal',
+          created_at: new Date().toISOString(),
+          entries_count: 0,
+          total_debits: 0,
+          total_credits: 0
+        };
+
+        console.log('Creando período fiscal anual:', fiscalPeriod.name);
+        
+        const { data: fiscalData, error: fiscalError } = await supabase
+          .from('accounting_periods')
+          .insert([{
+            user_id: tenantId,
+            name: fiscalPeriod.name,
+            start_date: fiscalPeriod.start_date,
+            end_date: fiscalPeriod.end_date,
+            status: fiscalPeriod.status,
+            fiscal_year: fiscalPeriod.fiscal_year
+          }])
+          .select()
+          .single();
+
+        if (fiscalError) {
+          console.error('ERROR creando período fiscal:', fiscalError);
+          alert(`Error al crear período fiscal anual: ${fiscalError.message}`);
+          return;
+        }
+        
+        if (fiscalData) {
+          fiscalPeriod.id = fiscalData.id;
+          console.log('✓ Período fiscal anual creado con ID:', fiscalData.id);
+        }
+
+        // Luego generar los 12 períodos mensuales (contables)
         const monthNames = [
           'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
         ];
 
-        const newPeriods: AccountingPeriod[] = [];
+        const newPeriods: AccountingPeriod[] = [fiscalPeriod];
         
         for (let month = 0; month < 12; month++) {
           const startDate = new Date(parseInt(year), month, 1);
@@ -408,6 +468,7 @@ const AccountingPeriodsPage: FC = () => {
             end_date: endDateStr,
             status: 'open',
             fiscal_year: year,
+            period_type: 'accounting',
             created_at: new Date().toISOString(),
             entries_count: 0,
             total_debits: 0,
@@ -424,6 +485,7 @@ const AccountingPeriodsPage: FC = () => {
                 end_date: newPeriod.end_date,
                 status: newPeriod.status,
                 fiscal_year: newPeriod.fiscal_year
+                // period_type se detecta automáticamente por getPeriodType()
               }])
               .select()
               .single();
@@ -432,12 +494,13 @@ const AccountingPeriodsPage: FC = () => {
             newPeriods.push({ ...newPeriod, id: data.id });
           } catch (supabaseError) {
             console.error('Supabase error creating period:', supabaseError);
-            newPeriods.push(newPeriod);
+            // No agregamos período local si falló en BD
           }
         }
 
-        setPeriods(prev => [...newPeriods, ...prev]);
-        alert(`Año fiscal ${year} creado exitosamente con 12 períodos mensuales`);
+        // Recargar períodos desde la BD para asegurar sincronización
+        await loadPeriods();
+        alert(`Año fiscal ${year} creado exitosamente con ${newPeriods.length} períodos`);
       } else {
         // Crear solo el período fiscal anual
         const startDate = `${year}-01-01`;
@@ -450,6 +513,7 @@ const AccountingPeriodsPage: FC = () => {
           end_date: endDate,
           status: 'open',
           fiscal_year: year,
+          period_type: 'fiscal',
           created_at: new Date().toISOString(),
           entries_count: 0,
           total_debits: 0,
@@ -457,7 +521,7 @@ const AccountingPeriodsPage: FC = () => {
         };
 
         try {
-          const { data, error } = await supabase
+          const { error } = await supabase
             .from('accounting_periods')
             .insert([{
               user_id: tenantId,
@@ -466,15 +530,19 @@ const AccountingPeriodsPage: FC = () => {
               end_date: newPeriod.end_date,
               status: newPeriod.status,
               fiscal_year: newPeriod.fiscal_year
-            }])
-            .select()
-            .single();
+            }]);
 
-          if (error) throw error;
-          setPeriods(prev => [{ ...newPeriod, id: data.id }, ...prev]);
-        } catch (supabaseError) {
+          if (error) {
+            console.error('Supabase error:', error);
+            alert(`Error al guardar el año fiscal: ${error.message}`);
+            return;
+          }
+          // Recargar períodos desde la BD
+          await loadPeriods();
+        } catch (supabaseError: any) {
           console.error('Supabase error:', supabaseError);
-          setPeriods(prev => [newPeriod, ...prev]);
+          alert(`Error al guardar el año fiscal: ${supabaseError?.message || 'Error desconocido'}`);
+          return;
         }
 
         alert(`Año fiscal ${year} creado exitosamente`);
@@ -491,13 +559,50 @@ const AccountingPeriodsPage: FC = () => {
     }
   };
 
+  // Función para detectar tipo de período (compatibilidad con períodos sin period_type)
+  const getPeriodType = (period: AccountingPeriod): 'fiscal' | 'accounting' => {
+    // Extraer solo la parte de fecha (YYYY-MM-DD) - las fechas de Supabase pueden incluir timestamp
+    const startStr = (period.start_date || '').substring(0, 10);
+    const endStr = (period.end_date || '').substring(0, 10);
+
+    // Heurística fiscal: si el nombre contiene 'fiscal' o el rango es anual
+    const nameLower = (period.name || '').toLowerCase();
+    const looksFiscalByName = nameLower.includes('fiscal');
+    const looksFiscalByDates = startStr.endsWith('-01-01') && endStr.endsWith('-12-31');
+
+    // Si es claramente fiscal por nombre/fechas, priorizarlo incluso si BD trae period_type='accounting'
+    if (looksFiscalByName || looksFiscalByDates) {
+      return 'fiscal';
+    }
+
+    // Si ya tiene period_type definido (y no cae en fiscal por heurística), usarlo
+    if (period.period_type === 'fiscal' || period.period_type === 'accounting') {
+      return period.period_type;
+    }
+
+    // Fallback por duración (12 meses aprox = fiscal)
+    const start = new Date(period.start_date);
+    const end = new Date(period.end_date);
+    const diffMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (diffMonths >= 11 && start.getDate() === 1 && end.getDate() >= 28) {
+      return 'fiscal';
+    }
+
+    return 'accounting';
+  };
+
   const filteredPeriods = periods.filter(period => {
     const matchesSearch = period.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || period.status === statusFilter;
-    const matchesYear = !yearFilter || period.fiscal_year === yearFilter;
+    const periodFiscalYear = String((period as any).fiscal_year ?? '');
+    const matchesYear = !yearFilter || periodFiscalYear === String(yearFilter);
+    const matchesType = getPeriodType(period) === activeTab;
     
-    return matchesSearch && matchesStatus && matchesYear;
+    return matchesSearch && matchesStatus && matchesYear && matchesType;
   });
+
+  const fiscalPeriods = periods.filter(p => getPeriodType(p) === 'fiscal');
+  const accountingPeriods = periods.filter(p => getPeriodType(p) === 'accounting');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -525,7 +630,10 @@ const AccountingPeriodsPage: FC = () => {
     }
   };
 
-  const uniqueYears = [...new Set(periods.map(p => p.fiscal_year))].sort().reverse();
+  const uniqueYears = [...new Set(periods.map(p => String((p as any).fiscal_year ?? '')))]
+    .filter(Boolean)
+    .sort()
+    .reverse();
 
   if (loading) {
     return (
@@ -548,8 +656,8 @@ const AccountingPeriodsPage: FC = () => {
             Volver a Contabilidad
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Períodos Contables</h1>
-            <p className="text-gray-600">Gestión de períodos fiscales</p>
+            <h1 className="text-2xl font-bold text-gray-900">Períodos Contables / Fiscales</h1>
+            <p className="text-gray-600">Gestión de períodos contables y fiscales</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -643,6 +751,36 @@ const AccountingPeriodsPage: FC = () => {
         </div>
       </div>
 
+      {/* Tabs: Períodos Contables / Fiscales */}
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('accounting')}
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'accounting'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <i className="ri-calendar-line mr-2"></i>
+              Períodos Contables ({accountingPeriods.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('fiscal')}
+              className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'fiscal'
+                  ? 'border-green-600 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <i className="ri-calendar-check-line mr-2"></i>
+              Períodos Fiscales ({fiscalPeriods.length})
+            </button>
+          </nav>
+        </div>
+      </div>
+
       {/* Filters and Actions */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-6 border-b border-gray-200">
@@ -652,7 +790,7 @@ const AccountingPeriodsPage: FC = () => {
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar períodos..."
+                  placeholder={`Buscar ${activeTab === 'accounting' ? 'períodos contables' : 'períodos fiscales'}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

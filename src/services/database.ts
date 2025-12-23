@@ -211,6 +211,109 @@ export const referralsService = {
 };
 
 /* ==========================================================
+   Accounting Periods Service
+   Valida y gestiona períodos contables/fiscales
+========================================================== */
+export const accountingPeriodsService = {
+  /**
+   * Obtiene el período contable abierto para una fecha dada
+   * @returns El período abierto o null si no existe
+   */
+  async getOpenPeriodForDate(userId: string, date: string | Date): Promise<any | null> {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return null;
+
+      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('accounting_periods')
+        .select('*')
+        .eq('user_id', tenantId)
+        .eq('status', 'open')
+        .eq('period_type', 'accounting')
+        .lte('start_date', dateStr)
+        .gte('end_date', dateStr)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('accountingPeriodsService.getOpenPeriodForDate error', error);
+        return null;
+      }
+      return data;
+    } catch (e) {
+      console.error('accountingPeriodsService.getOpenPeriodForDate error', e);
+      return null;
+    }
+  },
+
+  /**
+   * Verifica si existe un período contable abierto para una fecha
+   * @returns true si hay período abierto, false si no
+   */
+  async hasOpenPeriodForDate(userId: string, date: string | Date): Promise<boolean> {
+    const period = await this.getOpenPeriodForDate(userId, date);
+    return period !== null;
+  },
+
+  /**
+   * Valida que exista un período abierto para una fecha, lanza error si no existe
+   * @throws Error si no hay período abierto
+   */
+  async requireOpenPeriod(userId: string, date: string | Date): Promise<void> {
+    const period = await this.getOpenPeriodForDate(userId, date);
+    if (!period) {
+      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
+      throw new Error(`No existe un período contable abierto para la fecha ${dateStr}. Debe crear y abrir el período contable antes de registrar operaciones.`);
+    }
+  },
+
+  /**
+   * Obtiene todos los períodos contables del usuario
+   */
+  async getAll(userId: string): Promise<any[]> {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('accounting_periods')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('start_date', { ascending: false });
+
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (e) {
+      return handleDatabaseError(e, []);
+    }
+  },
+
+  /**
+   * Obtiene períodos abiertos (para selección en formularios)
+   */
+  async getOpenPeriods(userId: string, periodType: 'accounting' | 'fiscal' = 'accounting'): Promise<any[]> {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('accounting_periods')
+        .select('*')
+        .eq('user_id', tenantId)
+        .eq('status', 'open')
+        .eq('period_type', periodType)
+        .order('start_date', { ascending: false });
+
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (e) {
+      return handleDatabaseError(e, []);
+    }
+  }
+};
+
+/* ==========================================================
    AP Invoice Notes Service (Notas Débito/Crédito Proveedores)
    Tabla: ap_invoice_notes
 ========================================================== */
@@ -1418,6 +1521,7 @@ export const journalEntriesService = {
     description: string;
     reference?: string | null;
     status?: 'draft' | 'posted' | 'reversed';
+    skipPeriodValidation?: boolean;
   }, lines: Array<{
     account_id: string;
     description?: string;
@@ -1430,6 +1534,11 @@ export const journalEntriesService = {
 
     const tenantId = await resolveTenantId(userId);
     if (!tenantId) throw new Error('userId required');
+
+    // Validar que exista un período contable abierto para la fecha del asiento
+    if (!entry.skipPeriodValidation) {
+      await accountingPeriodsService.requireOpenPeriod(tenantId, entry.entry_date);
+    }
 
     const normalizedLines = lines.map((l, idx) => ({
       account_id: l.account_id,
@@ -1683,10 +1792,16 @@ export const bankTransfersService = {
     reference: string;
     description: string;
     invoice_payments?: any;
-  }) {
+  }, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        await accountingPeriodsService.requireOpenPeriod(tenantId, transfer.transfer_date);
+      }
+
       const now = new Date().toISOString();
       const payload = {
         ...transfer,
@@ -3983,10 +4098,17 @@ export const pettyCashService = {
     }
   },
 
-  async createFund(userId: string, fund: any) {
+  async createFund(userId: string, fund: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        const fundDate = fund.created_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, fundDate);
+      }
+
       const initialAmount = Number(fund.initial_amount) || 0;
       const payload = {
         ...fund,
@@ -4075,10 +4197,17 @@ export const pettyCashService = {
     }
   },
 
-  async createExpense(userId: string, expense: any) {
+  async createExpense(userId: string, expense: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        const expenseDate = expense.expense_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, expenseDate);
+      }
+
       const payload = {
         ...expense,
         user_id: tenantId,
@@ -4228,10 +4357,17 @@ export const pettyCashService = {
     }
   },
 
-  async createReimbursement(userId: string, reimbursement: any) {
+  async createReimbursement(userId: string, reimbursement: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        const reimbDate = reimbursement.reimbursement_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, reimbDate);
+      }
+
       const payload = {
         ...reimbursement,
         user_id: tenantId,
@@ -6462,10 +6598,17 @@ export const payrollService = {
     }
   },
 
-  async createPeriod(userId: string, period: any) {
+  async createPeriod(userId: string, period: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto para la fecha de pago de nómina
+      if (!options?.skipPeriodValidation) {
+        const paymentDate = period.payment_date || period.end_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, paymentDate);
+      }
+
       const { data, error } = await supabase
         .from('payroll_periods')
         .insert({ ...period, user_id: tenantId })
@@ -7847,10 +7990,16 @@ export const invoicesService = {
     }
   },
 
-  async create(userId: string, invoice: any, lines: any[]) {
+  async create(userId: string, invoice: any, lines: any[], options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar que exista un período contable abierto para la fecha de la factura
+      if (!options?.skipPeriodValidation) {
+        const invoiceDate = invoice.invoice_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, invoiceDate);
+      }
 
       // Validar stock disponible antes de crear la factura
       const itemsToValidate = lines
@@ -9446,10 +9595,17 @@ export const apInvoicesService = {
     }
   },
 
-  async create(userId: string, invoice: any) {
+  async create(userId: string, invoice: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar que exista un período contable abierto para la fecha de la factura
+      if (!options?.skipPeriodValidation) {
+        const invoiceDate = invoice.invoice_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, invoiceDate);
+      }
+
       const now = new Date().toISOString();
       const payload = {
         ...invoice,
@@ -10359,10 +10515,16 @@ export const supplierPaymentsService = {
     bank_account?: string | null;
     bank_account_id?: string | null;
     invoice_number?: string | null;
-  }) {
+  }, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        await accountingPeriodsService.requireOpenPeriod(tenantId, payload.payment_date);
+      }
+
       const body = {
         user_id: tenantId,
         supplier_id: payload.supplier_id,
@@ -10628,10 +10790,17 @@ export const customerPaymentsService = {
     }
   },
 
-  async create(userId: string, payload: any) {
+  async create(userId: string, payload: any, options?: { skipPeriodValidation?: boolean }) {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
+
+      // Validar período contable abierto
+      if (!options?.skipPeriodValidation) {
+        const paymentDate = payload.payment_date || new Date().toISOString().split('T')[0];
+        await accountingPeriodsService.requireOpenPeriod(tenantId, paymentDate);
+      }
+
       const body = {
         ...payload,
         user_id: tenantId,
