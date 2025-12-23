@@ -221,7 +221,8 @@ export const accountingPeriodsService = {
    */
   async getOpenPeriodForDate(userId: string, date: string | Date): Promise<any | null> {
     try {
-      const tenantId = await resolveTenantId(userId);
+      const resolvedTenantId = await resolveTenantId(userId);
+      const tenantId = resolvedTenantId || userId;
       if (!tenantId) return null;
 
       const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
@@ -231,16 +232,29 @@ export const accountingPeriodsService = {
         .select('*')
         .eq('user_id', tenantId)
         .eq('status', 'open')
-        .eq('period_type', 'accounting')
         .lte('start_date', dateStr)
         .gte('end_date', dateStr)
-        .maybeSingle();
+        .order('start_date', { ascending: false });
 
       if (error) {
         console.warn('accountingPeriodsService.getOpenPeriodForDate error', error);
         return null;
       }
-      return data;
+
+      const rows = (data as any[]) ?? [];
+      if (rows.length === 0) return null;
+
+      const isFiscalPeriod = (p: any) => {
+        const nameLower = String(p?.name || '').toLowerCase();
+        const startStr = String(p?.start_date || '').substring(0, 10);
+        const endStr = String(p?.end_date || '').substring(0, 10);
+        const looksFiscalByName = nameLower.includes('fiscal');
+        const looksFiscalByDates = startStr.endsWith('-01-01') && endStr.endsWith('-12-31');
+        return looksFiscalByName || looksFiscalByDates;
+      };
+
+      const accountingCandidate = rows.find((p) => !isFiscalPeriod(p));
+      return accountingCandidate ?? rows[0] ?? null;
     } catch (e) {
       console.error('accountingPeriodsService.getOpenPeriodForDate error', e);
       return null;
