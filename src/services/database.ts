@@ -6168,6 +6168,146 @@ export const salaryTypesService = {
 };
 
 /* ==========================================================
+   Salary Changes Service
+========================================================== */
+export const salaryChangesService = {
+  async getAll(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('salary_changes')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('created_at', { ascending: false });
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async create(userId: string, change: any) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      const payload = {
+        ...change,
+        user_id: tenantId,
+      };
+      const { data, error } = await supabase
+        .from('salary_changes')
+        .insert(payload)
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('salaryChangesService.create error', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, change: any) {
+    try {
+      const { data, error } = await supabase
+        .from('salary_changes')
+        .update(change)
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('salaryChangesService.update error', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { error } = await supabase
+        .from('salary_changes')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('salaryChangesService.delete error', error);
+      throw error;
+    }
+  }
+};
+
+/* ==========================================================
+   Employee Exits Service
+========================================================== */
+export const employeeExitsService = {
+  async getAll(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('employee_exits')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('exit_date', { ascending: false });
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async create(userId: string, exit: any) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      const payload = {
+        ...exit,
+        user_id: tenantId,
+      };
+      const { data, error } = await supabase
+        .from('employee_exits')
+        .insert(payload)
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('employeeExitsService.create error', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, exit: any) {
+    try {
+      const { data, error } = await supabase
+        .from('employee_exits')
+        .update(exit)
+        .eq('id', id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('employeeExitsService.update error', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { error } = await supabase
+        .from('employee_exits')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('employeeExitsService.delete error', error);
+      throw error;
+    }
+  }
+};
+
+/* ==========================================================
    Commission Types Service
 ========================================================== */
 export const commissionTypesService = {
@@ -11489,11 +11629,15 @@ export const taxService = {
       if (!userId) throw new Error('userId requerido para generar NCF');
       if (!documentType) throw new Error('documentType requerido para generar NCF');
 
+      // Resolver tenantId para multi-tenant
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant para NCF');
+
       // Buscar la primera serie activa para ese tipo de documento con números disponibles
       const { data: series, error } = await supabase
         .from('ncf_series')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', tenantId)
         .eq('document_type', documentType)
         .eq('status', 'active')
         .order('created_at', { ascending: true });
@@ -11506,8 +11650,9 @@ export const taxService = {
 
       const nextNumber: number = active.current_number || active.start_number || 1;
       const fullNumber = String(nextNumber).padStart(8, '0');
-      const prefix = active.series_prefix || '';
-      const ncf = `${prefix}${fullNumber}`;
+      // El NCF se construye con el tipo de documento (ej: B01) + número secuencial de 8 dígitos
+      const docType = active.document_type || 'B01';
+      const ncf = `${docType}${fullNumber}`;
 
       // Avanzar current_number
       const newCurrent = nextNumber + 1;
@@ -11524,7 +11669,7 @@ export const taxService = {
         documentType: active.document_type as string,
       };
     } catch (error) {
-      console.error('Error getting next NCF:', error);
+      // No log error - es esperado cuando no hay series configuradas
       throw error;
     }
   },
@@ -14402,6 +14547,225 @@ export const assetDisposalService = {
       if (error) throw error;
     } catch (error) {
       console.error('assetDisposalService.delete error', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Aprobar retiro de activo y generar asiento contable
+   * Asiento:
+   * - Dr: Caja/Banco (precio de venta, si aplica)
+   * - Dr: Depreciación Acumulada (eliminar)
+   * - Dr: Pérdida en venta de activo fijo (si precio < valor en libros)
+   * - Cr: Activo Fijo (costo original)
+   * - Cr: Ganancia en venta de activo fijo (si precio > valor en libros)
+   */
+  async approveWithJournalEntry(userId: string, disposalId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
+
+      // Obtener datos del retiro
+      const { data: disposal, error: dispError } = await supabase
+        .from('fixed_asset_disposals')
+        .select('*')
+        .eq('id', disposalId)
+        .single();
+
+      if (dispError || !disposal) throw new Error('Retiro no encontrado');
+
+      // Obtener datos del activo y su tipo
+      const { data: asset, error: assetError } = await supabase
+        .from('fixed_assets')
+        .select('*')
+        .eq('id', disposal.asset_id)
+        .single();
+
+      if (assetError || !asset) throw new Error('Activo no encontrado');
+
+      // Obtener tipo de activo para las cuentas contables
+      const { data: assetTypes } = await supabase
+        .from('fixed_asset_types')
+        .select('*')
+        .eq('user_id', tenantId);
+
+      const assetType = (assetTypes || []).find((t: any) => t.name === asset.category);
+
+      // Obtener catálogo de cuentas
+      const { data: accounts } = await supabase
+        .from('chart_accounts')
+        .select('id, code, name, type')
+        .eq('user_id', tenantId);
+
+      const accountsByCode: Map<string, string> = new Map();
+      (accounts || []).forEach((acc: any) => {
+        accountsByCode.set(acc.code, acc.id);
+      });
+
+      // Función para extraer código de cuenta
+      const extractAccountCode = (accountStr: string | null): string | null => {
+        if (!accountStr) return null;
+        const match = accountStr.match(/^(\d+)/);
+        return match ? match[1] : null;
+      };
+
+      // Valores del retiro
+      const originalCost = Number(disposal.original_cost) || Number(asset.purchase_cost) || 0;
+      const accumulatedDepreciation = Number(disposal.accumulated_depreciation) || Number(asset.accumulated_depreciation) || 0;
+      const bookValue = originalCost - accumulatedDepreciation;
+      const salePrice = Number(disposal.sale_price) || 0;
+      const gainLoss = salePrice - bookValue;
+
+      // Buscar cuentas contables
+      let assetAccountId: string | null = null;
+      let accumulatedDepAccountId: string | null = null;
+      let cashAccountId: string | null = null;
+      let gainAccountId: string | null = null;
+      let lossAccountId: string | null = null;
+
+      if (assetType) {
+        const assetCode = extractAccountCode(assetType.account);
+        const accDepCode = extractAccountCode(assetType.accumulated_depreciation_account);
+        const gainCode = extractAccountCode(assetType.revaluation_gain_account);
+        const lossCode = extractAccountCode(assetType.revaluation_loss_account);
+
+        if (assetCode) assetAccountId = accountsByCode.get(assetCode) || null;
+        if (accDepCode) accumulatedDepAccountId = accountsByCode.get(accDepCode) || null;
+        if (gainCode) gainAccountId = accountsByCode.get(gainCode) || null;
+        if (lossCode) lossAccountId = accountsByCode.get(lossCode) || null;
+      }
+
+      // Buscar cuenta de caja por defecto (100101)
+      cashAccountId = accountsByCode.get('100101') || accountsByCode.get('1001') || null;
+      if (!cashAccountId) {
+        const cashAcc = (accounts || []).find((a: any) => 
+          a.name?.toLowerCase().includes('caja') || a.name?.toLowerCase().includes('efectivo')
+        );
+        if (cashAcc) cashAccountId = cashAcc.id;
+      }
+
+      // Buscar cuentas de ganancia/pérdida si no están en el tipo
+      if (!gainAccountId) {
+        const gainAcc = (accounts || []).find((a: any) => 
+          a.name?.toLowerCase().includes('ganancia') && a.name?.toLowerCase().includes('activo')
+        );
+        if (gainAcc) gainAccountId = gainAcc.id;
+      }
+      if (!lossAccountId) {
+        const lossAcc = (accounts || []).find((a: any) => 
+          a.name?.toLowerCase().includes('pérdida') && a.name?.toLowerCase().includes('activo')
+        );
+        if (lossAcc) lossAccountId = lossAcc.id;
+      }
+
+      // Crear líneas del asiento contable
+      const entryLines: any[] = [];
+      let lineNumber = 1;
+
+      // 1. Dr: Caja/Banco (si hay venta)
+      if (salePrice > 0 && cashAccountId) {
+        entryLines.push({
+          account_id: cashAccountId,
+          description: `Venta de activo fijo: ${asset.name}`,
+          debit_amount: salePrice,
+          credit_amount: 0,
+          line_number: lineNumber++,
+        });
+      }
+
+      // 2. Dr: Depreciación Acumulada (eliminar)
+      if (accumulatedDepreciation > 0 && accumulatedDepAccountId) {
+        entryLines.push({
+          account_id: accumulatedDepAccountId,
+          description: `Baja depreciación acumulada: ${asset.name}`,
+          debit_amount: accumulatedDepreciation,
+          credit_amount: 0,
+          line_number: lineNumber++,
+        });
+      }
+
+      // 3. Dr: Pérdida en venta (si hay pérdida)
+      if (gainLoss < 0 && lossAccountId) {
+        entryLines.push({
+          account_id: lossAccountId,
+          description: `Pérdida en baja de activo: ${asset.name}`,
+          debit_amount: Math.abs(gainLoss),
+          credit_amount: 0,
+          line_number: lineNumber++,
+        });
+      }
+
+      // 4. Cr: Activo Fijo (costo original)
+      if (assetAccountId) {
+        entryLines.push({
+          account_id: assetAccountId,
+          description: `Baja de activo fijo: ${asset.name}`,
+          debit_amount: 0,
+          credit_amount: originalCost,
+          line_number: lineNumber++,
+        });
+      }
+
+      // 5. Cr: Ganancia en venta (si hay ganancia)
+      if (gainLoss > 0 && gainAccountId) {
+        entryLines.push({
+          account_id: gainAccountId,
+          description: `Ganancia en venta de activo: ${asset.name}`,
+          debit_amount: 0,
+          credit_amount: gainLoss,
+          line_number: lineNumber++,
+        });
+      }
+
+      // Generar asiento contable si hay líneas válidas
+      let journalEntry = null;
+      if (entryLines.length >= 2) {
+        try {
+          const entryPayload = {
+            entry_number: `DISP-${disposal.asset_code || asset.code}`,
+            entry_date: disposal.disposal_date || new Date().toISOString().split('T')[0],
+            description: `Baja de activo fijo: ${asset.name} (${disposal.disposal_method})`,
+            reference: disposal.asset_code || asset.code,
+            status: 'posted' as const,
+          };
+
+          journalEntry = await journalEntriesService.createWithLines(tenantId, entryPayload, entryLines);
+        } catch (jeError) {
+          console.error('Error creating disposal journal entry:', jeError);
+        }
+      }
+
+      // Actualizar estado del retiro a Completado
+      const { data: updatedDisposal, error: updateError } = await supabase
+        .from('fixed_asset_disposals')
+        .update({
+          status: 'Completado',
+          gain_loss: gainLoss,
+          original_cost: originalCost,
+          accumulated_depreciation: accumulatedDepreciation,
+          book_value: bookValue,
+        })
+        .eq('id', disposalId)
+        .select('*')
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Actualizar estado del activo a 'disposed'
+      await supabase
+        .from('fixed_assets')
+        .update({ status: 'disposed' })
+        .eq('id', disposal.asset_id);
+
+      return {
+        disposal: updatedDisposal,
+        journalEntry,
+        message: journalEntry 
+          ? `Retiro aprobado y asiento contable generado correctamente`
+          : `Retiro aprobado (no se pudo generar asiento contable - verifique la configuración de cuentas)`,
+      };
+    } catch (error) {
+      console.error('assetDisposalService.approveWithJournalEntry error', error);
       throw error;
     }
   }

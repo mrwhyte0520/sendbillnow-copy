@@ -710,30 +710,36 @@ export default function EmployeesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
                     <input
                       type="tel"
                       value={formData.phone || ''}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="809-000-0000"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia *</label>
                     <input
                       type="text"
                       value={formData.emergency_contact || ''}
                       onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nombre del contacto"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia *</label>
                     <input
                       type="tel"
                       value={formData.emergency_phone || ''}
                       onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="809-000-0000"
+                      required
                     />
                   </div>
                 </div>
@@ -744,19 +750,34 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
-                    <select
+                    <input
+                      type="text"
+                      list="bancos-list"
                       value={formData.bank_name || ''}
                       onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Seleccionar banco</option>
-                      <option value="Banco Popular">Banco Popular</option>
-                      <option value="Banco BHD">Banco BHD</option>
-                      <option value="Banco Reservas">Banco Reservas</option>
-                      <option value="Banco León">Banco León</option>
-                      <option value="Banco Promerica">Banco Promerica</option>
-                      <option value="Banco Santa Cruz">Banco Santa Cruz</option>
-                    </select>
+                      placeholder="Escriba o seleccione el banco"
+                    />
+                    <datalist id="bancos-list">
+                      <option value="Banco Popular Dominicano" />
+                      <option value="Banco BHD Leon" />
+                      <option value="Banco de Reservas" />
+                      <option value="Banco Promerica" />
+                      <option value="Banco Santa Cruz" />
+                      <option value="Banco Caribe" />
+                      <option value="Banco Vimenca" />
+                      <option value="Banco Lopez de Haro" />
+                      <option value="Banco BDI" />
+                      <option value="Banco Ademi" />
+                      <option value="Banco Adopem" />
+                      <option value="Asociacion Popular" />
+                      <option value="Asociacion Cibao" />
+                      <option value="Asociacion La Nacional" />
+                      <option value="Asociacion Duarte" />
+                      <option value="Banreservas" />
+                      <option value="Scotiabank" />
+                      <option value="Citibank" />
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Número de Cuenta</label>

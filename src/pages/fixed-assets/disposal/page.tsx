@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { fixedAssetsService, assetDisposalService, settingsService } from '../../../services/database';
+import { assetDisposalService, fixedAssetsService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -155,38 +155,30 @@ export default function AssetDisposalPage() {
     if (!user) return;
     const disposal = disposals.find(d => d.id === disposalId);
     if (!disposal) return;
-    if (!confirm('¿Está seguro de que desea aprobar esta baja de activo?')) return;
+    if (!confirm('¿Está seguro de que desea aprobar esta baja de activo? Se generará el asiento contable correspondiente.')) return;
 
     try {
-      const payload: any = {
-        asset_id: disposal.assetId,
-        asset_code: disposal.assetCode,
-        asset_name: disposal.assetName,
-        category: disposal.category,
-        original_cost: disposal.originalCost,
-        accumulated_depreciation: disposal.accumulatedDepreciation,
-        book_value: disposal.bookValue,
-        disposal_date: disposal.disposalDate,
-        disposal_method: disposal.disposalMethod,
-        disposal_reason: disposal.disposalReason,
-        sale_price: disposal.salePrice,
-        gain_loss: disposal.gainLoss,
-        authorized_by: disposal.authorizedBy || null,
+      // Usar el nuevo método que genera el asiento contable automáticamente
+      const result = await assetDisposalService.approveWithJournalEntry(user.id, disposalId);
+
+      // Actualizar la lista con los nuevos valores calculados
+      setDisposals(prev => prev.map(d => d.id === disposalId ? {
+        ...d,
         status: 'Completado',
-        notes: disposal.notes || null,
-        buyer: disposal.buyer || null,
-      };
-      const updated = await assetDisposalService.update(disposalId, payload);
+        gainLoss: result.disposal?.gain_loss ?? d.gainLoss,
+        originalCost: result.disposal?.original_cost ?? d.originalCost,
+        accumulatedDepreciation: result.disposal?.accumulated_depreciation ?? d.accumulatedDepreciation,
+        bookValue: result.disposal?.book_value ?? d.bookValue,
+      } : d));
 
-      // opcional: actualizar el estado del activo a 'disposed'
-      await fixedAssetsService.update(disposal.assetId, {
-        status: 'disposed',
-      });
-
-      setDisposals(prev => prev.map(d => d.id === disposalId ? { ...d, status: updated.status || 'Completado' } : d));
-    } catch (error) {
+      // Mostrar mensaje de resultado
+      if (result.message) {
+        alert(result.message);
+      }
+    } catch (error: any) {
       console.error('Error approving disposal:', error);
-      alert('Error al aprobar la baja de activo');
+      const msg = error?.message || 'Error al aprobar la baja de activo';
+      alert(msg);
     }
   };
 

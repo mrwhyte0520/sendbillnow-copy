@@ -1962,6 +1962,48 @@ export default function PayrollPage() {
             <i className="ri-award-line"></i>
             <span>Regalías</span>
           </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/deductions')}
+            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-subtract-line"></i>
+            <span>Deducciones</span>
+          </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/absences')}
+            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-user-unfollow-line"></i>
+            <span>Ausencias</span>
+          </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/salary-changes')}
+            className="flex items-center space-x-2 bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-exchange-dollar-line"></i>
+            <span>Cambios de Salario</span>
+          </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/employee-exits')}
+            className="flex items-center space-x-2 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-logout-box-line"></i>
+            <span>Salida de Empleados</span>
+          </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/payroll-process')}
+            className="flex items-center space-x-2 bg-green-100 hover:bg-green-200 text-green-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-play-circle-line"></i>
+            <span>Procesar Nómina</span>
+          </button>
+          <button
+            onClick={() => window.REACT_APP_NAVIGATE('/payroll/journal-entry')}
+            className="flex items-center space-x-2 bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-3 rounded-lg transition-colors"
+          >
+            <i className="ri-book-2-line"></i>
+            <span>Entrada al Diario</span>
+          </button>
         </div>
       </div>
 

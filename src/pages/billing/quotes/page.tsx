@@ -173,12 +173,12 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Nombre del Proyecto</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de Cotización</label>
           <input
             type="text"
             value={project}
             onChange={e => setProject(e.target.value)}
-            placeholder="Nombre descriptivo del proyecto"
+            placeholder="Nombre descriptivo de la cotización"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -500,11 +500,9 @@ export default function QuotesPage() {
           document: c.document || null,
         })));
 
-        const mapped = (qts || []).map((q: any) => {
-          const subtotal = Number(q.subtotal) || 0;
-          const tax = Number(q.tax_amount) || 0;
-          const total = Number(q.total_amount) || subtotal + tax;
 
+        const mapped = (qts || []).map((q: any) => {
+          // Procesar items primero para calcular totales
           const items = (q.quote_lines || q.items || []).map((it: any) => {
             const qty = Number(it.quantity) || 0;
             const unitPrice = Number(it.unit_price) || 0;
@@ -516,6 +514,12 @@ export default function QuotesPage() {
               total: lineTotal,
             };
           });
+
+          // Calcular totales: usar BD si tiene valor, sino calcular desde items
+          const itemsSum = items.reduce((acc: number, item: { total: number }) => acc + item.total, 0);
+          const subtotal = Number(q.subtotal) || Number(q.amount) || itemsSum;
+          const tax = Number(q.tax_amount) || 0;
+          const total = Number(q.total_amount) || (subtotal + tax) || itemsSum;
 
           return {
             id: q.id,
@@ -811,7 +815,7 @@ export default function QuotesPage() {
                   <div class="kv">
                     <div class="k">Nombre</div>
                     <div class="v">${quote.customer}</div>
-                    ${quote.project ? `<div class="k">Proyecto</div><div class="v">${quote.project}</div>` : ''}
+                    ${quote.project ? `<div class="k">Cotización</div><div class="v">${quote.project}</div>` : ''}
                     <div class="k">Probabilidad</div>
                     <div class="v">${quote.probability}%</div>
                   </div>
@@ -919,16 +923,20 @@ export default function QuotesPage() {
         const customer = customers.find((c) => c.id === quote.customerId);
         const documentType = customer?.documentType || customer?.ncfType || 'B02';
 
-        // Obtener NCF desde la serie configurada
-        let invoiceNumber = `FAC-${Date.now()}`;
+        // Obtener NCF desde la serie configurada - obligatorio
+        let invoiceNumber = '';
         try {
           const nextNcf = await taxService.getNextNcf(user.id as string, documentType);
           if (nextNcf?.ncf) {
             invoiceNumber = nextNcf.ncf;
           }
-        } catch (ncfError) {
-          // eslint-disable-next-line no-console
-          console.error('No se pudo obtener NCF para factura desde cotización, usando número interno:', ncfError);
+        } catch {
+          // No hay series NCF disponibles
+        }
+
+        if (!invoiceNumber) {
+          toast.error(`No hay series NCF activas para tipo ${documentType}. Configure las series en Impuestos → NCF/E-CF antes de convertir a factura.`);
+          return;
         }
 
         // Calcular fecha de vencimiento en base a la condición de pago, si existe
@@ -975,7 +983,7 @@ export default function QuotesPage() {
         await quotesService.update(quote.id, { status: 'approved' });
         setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'approved' } : q));
 
-        toast.success(`Cotización ${quote.id} convertida en factura ${invoiceNumber}`);
+        toast.success(`Factura ${invoiceNumber} creada exitosamente`);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error converting quote to invoice:', error);
@@ -1189,7 +1197,7 @@ export default function QuotesPage() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por cliente, proyecto o ID..."
+                  placeholder="Buscar por cliente, nombre o ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -1239,13 +1247,10 @@ export default function QuotesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Número
+                    Nombre
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cliente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Proyecto
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fecha
@@ -1271,14 +1276,11 @@ export default function QuotesPage() {
                 {filteredQuotes.map((quote) => (
                   <tr key={quote.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{quote.id}</div>
+                      <div className="text-sm font-medium text-gray-900">{quote.project || 'Sin nombre'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{quote.customer}</div>
                       <div className="text-sm text-gray-500">{quote.customerEmail}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{quote.project}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(quote.date).toLocaleDateString('es-DO')}
@@ -1386,13 +1388,10 @@ export default function QuotesPage() {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                   <div>
-                    <p><span className="font-medium">Número:</span> {viewQuote.id}</p>
+                    <p><span className="font-medium">Nombre:</span> {viewQuote.project || 'Sin nombre'}</p>
                     <p><span className="font-medium">Cliente:</span> {viewQuote.customer}</p>
                     {viewQuote.customerEmail && (
                       <p><span className="font-medium">Email:</span> {viewQuote.customerEmail}</p>
-                    )}
-                    {viewQuote.project && (
-                      <p><span className="font-medium">Proyecto:</span> {viewQuote.project}</p>
                     )}
                   </div>
                   <div>
@@ -1477,7 +1476,7 @@ export default function QuotesPage() {
               <div className="p-6 space-y-4 text-sm text-gray-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Proyecto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                     <input
                       type="text"
                       value={editingQuote.project}

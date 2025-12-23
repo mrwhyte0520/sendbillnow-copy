@@ -14,7 +14,16 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 export const formatDate = (value: string | Date | null | undefined): string => {
   if (!value) return '';
 
-  const d = value instanceof Date ? value : new Date(value);
+  let d: Date;
+  
+  // Si es un string en formato ISO (YYYY-MM-DD), parsearlo manualmente para evitar problemas de zona horaria
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const [year, month, day] = value.split('T')[0].split('-').map(Number);
+    d = new Date(year, month - 1, day);
+  } else {
+    d = value instanceof Date ? value : new Date(value);
+  }
+  
   if (Number.isNaN(d.getTime())) return '';
 
   const yyyy = d.getFullYear();

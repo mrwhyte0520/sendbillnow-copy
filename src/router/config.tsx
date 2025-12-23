@@ -37,6 +37,8 @@ import PayrollOtherDeductionsPage from '../pages/payroll/other-deductions/page';
 import PayrollAbsencesPage from '../pages/payroll/absences/page';
 import PayrollProcessPage from '../pages/payroll/payroll-process/page';
 import PayrollJournalEntryPage from '../pages/payroll/journal-entry/page';
+import PayrollSalaryChangesPage from '../pages/payroll/salary-changes/page';
+import PayrollEmployeeExitsPage from '../pages/payroll/employee-exits/page';
 
 const PublicDocumentPage = lazy(() => import('../pages/public-document/page'));
 
@@ -369,6 +371,14 @@ const routes: RouteObject[] = [
   {
     path: '/payroll/journal-entry',
     element: <PayrollJournalEntryPage />
+  },
+  {
+    path: '/payroll/salary-changes',
+    element: <PayrollSalaryChangesPage />
+  },
+  {
+    path: '/payroll/employee-exits',
+    element: <PayrollEmployeeExitsPage />
   },
   {
     path: '/pos',

@@ -4,6 +4,18 @@ import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { resolveTenantId } from '../../../services/database';
 import { formatDate } from '../../../utils/dateFormat';
+import { formatAmount } from '../../../utils/numberFormat';
+import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+
+interface JournalEntry {
+  id: string;
+  entry_number: string;
+  entry_date: string;
+  description: string;
+  total_debit: number;
+  total_credit: number;
+  status: string;
+}
 
 interface AccountingPeriod {
   id: string;
@@ -33,6 +45,8 @@ const AccountingPeriodsPage: FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('');
   const [activeTab, setActiveTab] = useState<'fiscal' | 'accounting'>('accounting');
+  const [periodEntries, setPeriodEntries] = useState<JournalEntry[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
 
   // Formulario para nuevo período
   const [formData, setFormData] = useState({
@@ -63,18 +77,95 @@ const AccountingPeriodsPage: FC = () => {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) return;
       
-      // Intentar cargar desde Supabase
+      // Cargar períodos desde Supabase
       const { data: periodsData, error } = await supabase
         .from('accounting_periods')
         .select('*')
         .eq('user_id', tenantId)
         .order('start_date', { ascending: false });
 
-      if (!error && periodsData) {
-        setPeriods(periodsData);
-      } else {
+      if (error) {
         throw new Error('Error loading from Supabase');
       }
+
+      // DEBUG: Mostrar TODOS los asientos existentes para verificar fechas
+      const { data: allEntries } = await supabase
+        .from('journal_entries')
+        .select('id, entry_date, entry_number, status')
+        .eq('user_id', tenantId)
+        .eq('status', 'posted')
+        .order('entry_date', { ascending: true });
+      
+      console.log('📊 TODOS LOS ASIENTOS EN LA BASE DE DATOS:');
+      console.log('Total asientos:', allEntries?.length || 0);
+      if (allEntries && allEntries.length > 0) {
+        allEntries.forEach(entry => {
+          console.log(`  - Asiento ${entry.entry_number}: ${entry.entry_date}`);
+        });
+      }
+
+      // Calcular estadísticas para cada período consultando el Diario General
+      const periodsWithStats = await Promise.all((periodsData || []).map(async (period) => {
+        try {
+          console.log(`🔍 Consultando asientos para: ${period.name} (${period.start_date} - ${period.end_date})`);
+          
+          // Obtener asientos contables dentro del rango de fechas del período
+          const { data: entries, error: entriesError } = await supabase
+            .from('journal_entries')
+            .select(`
+              id,
+              entry_date,
+              total_debit,
+              total_credit,
+              status
+            `)
+            .eq('user_id', tenantId)
+            .eq('status', 'posted')
+            .gte('entry_date', period.start_date)
+            .lte('entry_date', period.end_date);
+
+          if (entriesError) {
+            console.error('Error loading entries for period:', entriesError);
+            return {
+              ...period,
+              entries_count: 0,
+              total_debits: 0,
+              total_credits: 0
+            };
+          }
+
+          // Calcular totales
+          const entriesCount = entries?.length || 0;
+          const totalDebits = entries?.reduce((sum, entry) => sum + (Number(entry.total_debit) || 0), 0) || 0;
+          const totalCredits = entries?.reduce((sum, entry) => sum + (Number(entry.total_credit) || 0), 0) || 0;
+
+          // Log de depuración
+          if (entriesCount > 0) {
+            console.log(`Período: ${period.name} (${period.start_date} - ${period.end_date})`);
+            console.log(`  Asientos encontrados: ${entriesCount}`);
+            console.log(`  Total Débitos: ${totalDebits}`);
+            console.log(`  Total Créditos: ${totalCredits}`);
+            console.log('  Fechas de asientos:', entries.map(e => e.entry_date));
+          }
+
+          return {
+            ...period,
+            entries_count: entriesCount,
+            total_debits: totalDebits,
+            total_credits: totalCredits
+          };
+        } catch (err) {
+          console.error('Error calculating period stats:', err);
+          return {
+            ...period,
+            entries_count: 0,
+            total_debits: 0,
+            total_credits: 0
+          };
+        }
+      }));
+
+      setPeriods(periodsWithStats);
     } catch (error) {
       console.error('Error loading periods:', error);
       // Cargar datos de ejemplo
@@ -90,47 +181,50 @@ const AccountingPeriodsPage: FC = () => {
 
   const downloadExcel = () => {
     try {
-      // Crear contenido CSV
-      let csvContent = 'Períodos Contables\n';
-      csvContent += `Generado: ${formatDate(new Date())}\n\n`;
-      csvContent += 'Período,Fecha Inicio,Fecha Fin,Año Fiscal,Estado,Asientos,Total Débitos,Total Créditos,Fecha Cierre,Cerrado Por\n';
-      
-      filteredPeriods.forEach(period => {
-        const row = [
-          `"${period.name}"`,
-          formatDate(period.start_date),
-          formatDate(period.end_date),
-          period.fiscal_year,
-          period.status === 'open' ? 'Abierto' : period.status === 'closed' ? 'Cerrado' : 'Bloqueado',
-          period.entries_count || 0,
-          `RD$${(period.total_debits || 0).toLocaleString()}`,
-          `RD$${(period.total_credits || 0).toLocaleString()}`,
-          period.closed_at ? formatDate(period.closed_at) : '',
-          period.closed_by || ''
-        ].join(',');
-        csvContent += row + '\n';
-      });
+      if (filteredPeriods.length === 0) {
+        alert('No hay periodos para exportar.');
+        return;
+      }
 
-      // Agregar resumen
-      csvContent += '\nResumen:\n';
-      csvContent += `Total Períodos:,${filteredPeriods.length}\n`;
-      csvContent += `Períodos Abiertos:,${filteredPeriods.filter(p => p.status === 'open').length}\n`;
-      csvContent += `Períodos Cerrados:,${filteredPeriods.filter(p => p.status === 'closed').length}\n`;
-      csvContent += `Períodos Bloqueados:,${filteredPeriods.filter(p => p.status === 'locked').length}\n`;
-      csvContent += `Total Asientos:,${filteredPeriods.reduce((sum, p) => sum + (p.entries_count || 0), 0)}\n`;
-      csvContent += `Total Débitos:,RD$${filteredPeriods.reduce((sum, p) => sum + (p.total_debits || 0), 0).toLocaleString()}\n`;
-      csvContent += `Total Créditos:,RD$${filteredPeriods.reduce((sum, p) => sum + (p.total_credits || 0), 0).toLocaleString()}\n`;
+      const rows = filteredPeriods.map(period => ({
+        nombre: period.name,
+        fechaInicio: formatDate(period.start_date),
+        fechaFin: formatDate(period.end_date),
+        anoFiscal: period.fiscal_year,
+        estado: period.status === 'open' ? 'Abierto' : period.status === 'closed' ? 'Cerrado' : 'Bloqueado',
+        asientos: period.entries_count || 0,
+        totalDebitos: period.total_debits || 0,
+        totalCreditos: period.total_credits || 0,
+        fechaCierre: period.closed_at ? formatDate(period.closed_at) : '',
+        cerradoPor: period.closed_by || ''
+      }));
 
-      // Crear y descargar archivo
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `periodos_contables_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const headers = [
+        { key: 'nombre', title: 'Periodo' },
+        { key: 'fechaInicio', title: 'Fecha Inicio' },
+        { key: 'fechaFin', title: 'Fecha Fin' },
+        { key: 'anoFiscal', title: 'Ano Fiscal' },
+        { key: 'estado', title: 'Estado' },
+        { key: 'asientos', title: 'Asientos' },
+        { key: 'totalDebitos', title: 'Total Debitos' },
+        { key: 'totalCreditos', title: 'Total Creditos' },
+        { key: 'fechaCierre', title: 'Fecha Cierre' },
+        { key: 'cerradoPor', title: 'Cerrado Por' }
+      ];
+
+      const fileBase = `periodos_contables_${new Date().toISOString().split('T')[0]}`;
+
+      exportToExcelWithHeaders(
+        rows,
+        headers,
+        fileBase,
+        'Periodos',
+        [30, 14, 14, 12, 12, 10, 18, 18, 14, 20],
+        {
+          title: 'Periodos Contables',
+          companyName: 'ContaBi'
+        }
+      );
     } catch (error) {
       console.error('Error downloading Excel:', error);
       alert('Error al descargar el archivo');
@@ -146,8 +240,14 @@ const AccountingPeriodsPage: FC = () => {
       return 'La fecha de inicio debe ser anterior a la fecha de fin';
     }
 
-    // Verificar solapamiento con períodos existentes
+    // Verificar solapamiento con períodos existentes ABIERTOS solamente
+    // Permitir crear períodos si el existente está cerrado o bloqueado
     const hasOverlap = periods.some(period => {
+      // Solo validar solapamiento con períodos abiertos
+      if (period.status !== 'open') {
+        return false;
+      }
+
       const periodStart = new Date(period.start_date);
       const periodEnd = new Date(period.end_date);
       const newStart = new Date(startDate);
@@ -157,7 +257,7 @@ const AccountingPeriodsPage: FC = () => {
     });
 
     if (hasOverlap) {
-      return 'El período se solapa con un período existente';
+      return 'El período se solapa con un período existente que está abierto';
     }
 
     return null;
@@ -372,29 +472,89 @@ const AccountingPeriodsPage: FC = () => {
     }
   };
 
+  const handleDeletePeriod = async (periodId: string) => {
+    const period = periods.find(p => p.id === periodId);
+    if (!period) return;
+
+    if (period.entries_count && period.entries_count > 0) {
+      alert('No se puede eliminar un período que tiene asientos contables registrados.');
+      return;
+    }
+
+    if (!confirm(`¿Está seguro de que desea eliminar el período "${period.name}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('accounting_periods')
+        .delete()
+        .eq('id', periodId);
+
+      if (error) throw error;
+
+      setPeriods(prev => prev.filter(p => p.id !== periodId));
+      alert('Período eliminado exitosamente');
+    } catch (error) {
+      console.error('Error deleting period:', error);
+      alert('Error al eliminar el período');
+    }
+  };
+
+  const loadPeriodEntries = async (period: AccountingPeriod) => {
+    if (!user) return;
+    
+    try {
+      setLoadingEntries(true);
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+
+      const { data: entries, error } = await supabase
+        .from('journal_entries')
+        .select('id, entry_number, entry_date, description, total_debit, total_credit, status')
+        .eq('user_id', tenantId)
+        .eq('status', 'posted')
+        .gte('entry_date', period.start_date)
+        .lte('entry_date', period.end_date)
+        .order('entry_date', { ascending: true })
+        .order('entry_number', { ascending: true });
+
+      if (error) throw error;
+      setPeriodEntries(entries || []);
+    } catch (error) {
+      console.error('Error loading period entries:', error);
+      setPeriodEntries([]);
+    } finally {
+      setLoadingEntries(false);
+    }
+  };
+
+  const handleViewPeriod = async (period: AccountingPeriod) => {
+    setSelectedPeriod(period);
+    await loadPeriodEntries(period);
+  };
+
+  const navigateToJournal = (period: AccountingPeriod) => {
+    // Navegar al diario general con filtro de fechas
+    navigate(`/accounting/general-journal?from=${period.start_date}&to=${period.end_date}`);
+  };
+
   const handleCreateFiscalYear = async () => {
     if (!user) return;
 
     try {
       const year = fiscalYearForm.year;
       
-      // Verificar si ya existe el período fiscal para este año
-      const existingFiscalYear = periods.find(p => 
-        p.name === `Año Fiscal ${year}` || 
-        (p.fiscal_year === year && p.start_date === `${year}-01-01` && p.end_date === `${year}-12-31`)
+      // Verificar si ya existe el período fiscal ABIERTO para este año
+      const existingOpenFiscalYear = periods.find(p => 
+        p.status === 'open' &&
+        (p.name === `Año Fiscal ${year}` || 
+        (p.fiscal_year === year && p.start_date === `${year}-01-01` && p.end_date === `${year}-12-31`))
       );
       
-      if (existingFiscalYear) {
-        alert(`Ya existe el Año Fiscal ${year}. No se puede crear duplicado.`);
+      if (existingOpenFiscalYear) {
+        alert(`Ya existe el Año Fiscal ${year} en estado abierto. No se puede crear duplicado. Cierre el período existente primero.`);
         return;
-      }
-
-      // Verificar si ya existen períodos mensuales para este año
-      const existingMonthlyPeriods = periods.filter(p => p.fiscal_year === year && !p.name.includes('Año Fiscal'));
-      if (existingMonthlyPeriods.length > 0) {
-        if (!confirm(`Ya existen ${existingMonthlyPeriods.length} períodos mensuales para el año ${year}. ¿Desea crear el año fiscal de todas formas?`)) {
-          return;
-        }
       }
 
       const tenantId = await resolveTenantId(user.id);
@@ -403,11 +563,70 @@ const AccountingPeriodsPage: FC = () => {
         return;
       }
 
+      // Si existe un período fiscal cerrado o bloqueado, eliminarlo primero
+      const existingClosedFiscalYear = periods.find(p => 
+        p.status !== 'open' &&
+        (p.name === `Año Fiscal ${year}` || 
+        (p.fiscal_year === year && p.start_date === `${year}-01-01` && p.end_date === `${year}-12-31`))
+      );
+
+      if (existingClosedFiscalYear) {
+        console.log('Eliminando período fiscal cerrado existente:', existingClosedFiscalYear.name);
+        const { error: deleteError } = await supabase
+          .from('accounting_periods')
+          .delete()
+          .eq('id', existingClosedFiscalYear.id);
+
+        if (deleteError) {
+          console.error('Error eliminando período cerrado:', deleteError);
+          alert('Error al eliminar el período cerrado existente');
+          return;
+        }
+      }
+
+      // Verificar si ya existen períodos mensuales cerrados para este año y eliminarlos
+      const existingClosedMonthlyPeriods = periods.filter(p => 
+        p.fiscal_year === year && 
+        !p.name.includes('Año Fiscal') && 
+        p.status !== 'open'
+      );
+
+      if (existingClosedMonthlyPeriods.length > 0) {
+        console.log(`Eliminando ${existingClosedMonthlyPeriods.length} períodos mensuales cerrados`);
+        for (const period of existingClosedMonthlyPeriods) {
+          await supabase
+            .from('accounting_periods')
+            .delete()
+            .eq('id', period.id);
+        }
+      }
+
+      // Verificar si ya existen períodos mensuales abiertos para este año
+      const existingOpenMonthlyPeriods = periods.filter(p => 
+        p.fiscal_year === year && 
+        !p.name.includes('Año Fiscal') && 
+        p.status === 'open'
+      );
+
+      if (existingOpenMonthlyPeriods.length > 0) {
+        if (!confirm(`Ya existen ${existingOpenMonthlyPeriods.length} períodos mensuales abiertos para el año ${year}. ¿Desea crear el año fiscal de todas formas?`)) {
+          return;
+        }
+      }
+
       if (fiscalYearForm.autoGenerateMonths) {
-        // Primero crear el período fiscal anual
+        // Verificar si ya existe el período fiscal anual
+        const fiscalPeriodName = `Año Fiscal ${year}`;
+        const { data: existingFiscalPeriod } = await supabase
+          .from('accounting_periods')
+          .select('id, name')
+          .eq('user_id', tenantId)
+          .eq('name', fiscalPeriodName)
+          .maybeSingle();
+
         const fiscalPeriod: AccountingPeriod = {
-          id: `${Date.now()}-fiscal`,
-          name: `Año Fiscal ${year}`,
+          id: existingFiscalPeriod?.id || `${Date.now()}-fiscal`,
+          name: fiscalPeriodName,
           start_date: `${year}-01-01`,
           end_date: `${year}-12-31`,
           status: 'open',
@@ -419,30 +638,53 @@ const AccountingPeriodsPage: FC = () => {
           total_credits: 0
         };
 
-        console.log('Creando período fiscal anual:', fiscalPeriod.name);
+        console.log(existingFiscalPeriod ? 'Actualizando período fiscal anual:' : 'Creando período fiscal anual:', fiscalPeriod.name);
         
-        const { data: fiscalData, error: fiscalError } = await supabase
-          .from('accounting_periods')
-          .insert([{
-            user_id: tenantId,
-            name: fiscalPeriod.name,
-            start_date: fiscalPeriod.start_date,
-            end_date: fiscalPeriod.end_date,
-            status: fiscalPeriod.status,
-            fiscal_year: fiscalPeriod.fiscal_year
-          }])
-          .select()
-          .single();
+        let fiscalData;
+        let fiscalError;
+
+        if (existingFiscalPeriod) {
+          // Actualizar el período fiscal existente
+          const result = await supabase
+            .from('accounting_periods')
+            .update({
+              start_date: fiscalPeriod.start_date,
+              end_date: fiscalPeriod.end_date,
+              status: fiscalPeriod.status,
+              fiscal_year: fiscalPeriod.fiscal_year
+            })
+            .eq('id', existingFiscalPeriod.id)
+            .select()
+            .single();
+          fiscalData = result.data;
+          fiscalError = result.error;
+        } else {
+          // Crear nuevo período fiscal
+          const result = await supabase
+            .from('accounting_periods')
+            .insert([{
+              user_id: tenantId,
+              name: fiscalPeriod.name,
+              start_date: fiscalPeriod.start_date,
+              end_date: fiscalPeriod.end_date,
+              status: fiscalPeriod.status,
+              fiscal_year: fiscalPeriod.fiscal_year
+            }])
+            .select()
+            .single();
+          fiscalData = result.data;
+          fiscalError = result.error;
+        }
 
         if (fiscalError) {
-          console.error('ERROR creando período fiscal:', fiscalError);
+          console.error('ERROR creando/actualizando período fiscal:', fiscalError);
           alert(`Error al crear período fiscal anual: ${fiscalError.message}`);
           return;
         }
         
         if (fiscalData) {
           fiscalPeriod.id = fiscalData.id;
-          console.log('✓ Período fiscal anual creado con ID:', fiscalData.id);
+          console.log('✓ Período fiscal anual procesado con ID:', fiscalData.id);
         }
 
         // Luego generar los 12 períodos mensuales (contables)
@@ -461,8 +703,16 @@ const AccountingPeriodsPage: FC = () => {
           const startDateStr = startDate.toISOString().split('T')[0];
           const endDateStr = endDate.toISOString().split('T')[0];
 
+          // Verificar si ya existe un período con este nombre exacto
+          const { data: existingPeriod } = await supabase
+            .from('accounting_periods')
+            .select('id, name')
+            .eq('user_id', tenantId)
+            .eq('name', periodName)
+            .maybeSingle();
+
           const newPeriod: AccountingPeriod = {
-            id: `${Date.now()}-${month}`,
+            id: existingPeriod?.id || `${Date.now()}-${month}`,
             name: periodName,
             start_date: startDateStr,
             end_date: endDateStr,
@@ -476,25 +726,48 @@ const AccountingPeriodsPage: FC = () => {
           };
 
           try {
-            const { data, error } = await supabase
-              .from('accounting_periods')
-              .insert([{
-                user_id: tenantId,
-                name: newPeriod.name,
-                start_date: newPeriod.start_date,
-                end_date: newPeriod.end_date,
-                status: newPeriod.status,
-                fiscal_year: newPeriod.fiscal_year
-                // period_type se detecta automáticamente por getPeriodType()
-              }])
-              .select()
-              .single();
+            let data;
+            let error;
+
+            if (existingPeriod) {
+              // Actualizar el período existente
+              const result = await supabase
+                .from('accounting_periods')
+                .update({
+                  start_date: newPeriod.start_date,
+                  end_date: newPeriod.end_date,
+                  status: newPeriod.status,
+                  fiscal_year: newPeriod.fiscal_year
+                })
+                .eq('id', existingPeriod.id)
+                .select()
+                .single();
+              data = result.data;
+              error = result.error;
+              console.log(`✓ Período actualizado: ${periodName}`);
+            } else {
+              // Crear nuevo período
+              const result = await supabase
+                .from('accounting_periods')
+                .insert([{
+                  user_id: tenantId,
+                  name: newPeriod.name,
+                  start_date: newPeriod.start_date,
+                  end_date: newPeriod.end_date,
+                  status: newPeriod.status,
+                  fiscal_year: newPeriod.fiscal_year
+                }])
+                .select()
+                .single();
+              data = result.data;
+              error = result.error;
+              console.log(`✓ Período creado: ${periodName}`);
+            }
 
             if (error) throw error;
-            newPeriods.push({ ...newPeriod, id: data.id });
+            if (data) newPeriods.push({ ...newPeriod, id: data.id });
           } catch (supabaseError) {
-            console.error('Supabase error creating period:', supabaseError);
-            // No agregamos período local si falló en BD
+            console.error('Supabase error creating/updating period:', supabaseError);
           }
         }
 
@@ -505,10 +778,19 @@ const AccountingPeriodsPage: FC = () => {
         // Crear solo el período fiscal anual
         const startDate = `${year}-01-01`;
         const endDate = `${year}-12-31`;
+        const fiscalOnlyName = `Año Fiscal ${year}`;
+
+        // Verificar si ya existe
+        const { data: existingFiscalOnly } = await supabase
+          .from('accounting_periods')
+          .select('id, name')
+          .eq('user_id', tenantId)
+          .eq('name', fiscalOnlyName)
+          .maybeSingle();
         
         const newPeriod: AccountingPeriod = {
-          id: Date.now().toString(),
-          name: `Año Fiscal ${year}`,
+          id: existingFiscalOnly?.id || Date.now().toString(),
+          name: fiscalOnlyName,
           start_date: startDate,
           end_date: endDate,
           status: 'open',
@@ -521,16 +803,34 @@ const AccountingPeriodsPage: FC = () => {
         };
 
         try {
-          const { error } = await supabase
-            .from('accounting_periods')
-            .insert([{
-              user_id: tenantId,
-              name: newPeriod.name,
-              start_date: newPeriod.start_date,
-              end_date: newPeriod.end_date,
-              status: newPeriod.status,
-              fiscal_year: newPeriod.fiscal_year
-            }]);
+          let error;
+
+          if (existingFiscalOnly) {
+            // Actualizar existente
+            const result = await supabase
+              .from('accounting_periods')
+              .update({
+                start_date: newPeriod.start_date,
+                end_date: newPeriod.end_date,
+                status: newPeriod.status,
+                fiscal_year: newPeriod.fiscal_year
+              })
+              .eq('id', existingFiscalOnly.id);
+            error = result.error;
+          } else {
+            // Crear nuevo
+            const result = await supabase
+              .from('accounting_periods')
+              .insert([{
+                user_id: tenantId,
+                name: newPeriod.name,
+                start_date: newPeriod.start_date,
+                end_date: newPeriod.end_date,
+                status: newPeriod.status,
+                fiscal_year: newPeriod.fiscal_year
+              }]);
+            error = result.error;
+          }
 
           if (error) {
             console.error('Supabase error:', error);
@@ -545,7 +845,7 @@ const AccountingPeriodsPage: FC = () => {
           return;
         }
 
-        alert(`Año fiscal ${year} creado exitosamente`);
+        alert(`Año fiscal ${year} ${existingFiscalOnly ? 'actualizado' : 'creado'} exitosamente`);
       }
 
       setFiscalYearForm({
@@ -785,7 +1085,7 @@ const AccountingPeriodsPage: FC = () => {
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-6 border-b border-gray-200">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
@@ -819,6 +1119,13 @@ const AccountingPeriodsPage: FC = () => {
                 ))}
               </select>
             </div>
+            <button
+              onClick={downloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <i className="ri-file-excel-line"></i>
+              Exportar
+            </button>
           </div>
         </div>
 
@@ -846,7 +1153,7 @@ const AccountingPeriodsPage: FC = () => {
                   Asientos
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Movimientos
+                  Volumen contable
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
@@ -877,12 +1184,12 @@ const AccountingPeriodsPage: FC = () => {
                     {period.entries_count || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${((period.total_debits || 0) + (period.total_credits || 0)).toLocaleString()}
+                    RD${formatAmount(period.total_debits || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => setSelectedPeriod(period)}
+                        onClick={() => handleViewPeriod(period)}
                         className="text-blue-600 hover:text-blue-900"
                         title="Ver detalles"
                       >
@@ -895,19 +1202,12 @@ const AccountingPeriodsPage: FC = () => {
                           className="text-yellow-600 hover:text-yellow-900"
                           title="Cerrar período"
                         >
-                          <i className="ri-calendar-close-line"></i>
+                          <i className="ri-lock-line"></i>
                         </button>
                       )}
                       
                       {period.status === 'closed' && (
                         <>
-                          <button
-                            onClick={() => handleLockPeriod(period.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Bloquear período"
-                          >
-                            <i className="ri-lock-line"></i>
-                          </button>
                           <button
                             onClick={() => handleReopenPeriod(period.id)}
                             className="text-green-600 hover:text-green-900"
@@ -916,6 +1216,17 @@ const AccountingPeriodsPage: FC = () => {
                             <i className="ri-calendar-check-line"></i>
                           </button>
                         </>
+                      )}
+
+                      {/* Botón eliminar - solo si no tiene asientos */}
+                      {(period.entries_count || 0) === 0 && (
+                        <button
+                          onClick={() => handleDeletePeriod(period.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Eliminar período"
+                        >
+                          <i className="ri-delete-bin-line"></i>
+                        </button>
                       )}
                     </div>
                   </td>
@@ -1114,15 +1425,15 @@ const AccountingPeriodsPage: FC = () => {
 
       {/* Period Detail Modal */}
       {selectedPeriod && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div className="p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">
                   Detalles del Período: {selectedPeriod.name}
                 </h2>
                 <button
-                  onClick={() => setSelectedPeriod(null)}
+                  onClick={() => { setSelectedPeriod(null); setPeriodEntries([]); }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="ri-close-line text-2xl"></i>
@@ -1176,13 +1487,13 @@ const AccountingPeriodsPage: FC = () => {
                     <div>
                       <span className="text-sm font-medium text-gray-500">Total Débitos:</span>
                       <span className="ml-2 text-sm font-bold text-green-600">
-                        RD${(selectedPeriod.total_debits || 0).toLocaleString()}
+                        RD${formatAmount(selectedPeriod.total_debits || 0)}
                       </span>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-500">Total Créditos:</span>
                       <span className="ml-2 text-sm font-bold text-red-600">
-                        RD${(selectedPeriod.total_credits || 0).toLocaleString()}
+                        RD${formatAmount(selectedPeriod.total_credits || 0)}
                       </span>
                     </div>
                     <div>
@@ -1209,19 +1520,111 @@ const AccountingPeriodsPage: FC = () => {
                 </div>
               </div>
 
+              {/* Asientos del Período */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Asientos Contables del Período
+                  </h3>
+                  <button
+                    onClick={() => navigateToJournal(selectedPeriod)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <i className="ri-external-link-line"></i>
+                    Ver en Diario General
+                  </button>
+                </div>
+
+                {loadingEntries ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Cargando asientos...</span>
+                  </div>
+                ) : periodEntries.length === 0 ? (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <i className="ri-file-list-3-line text-4xl text-gray-400 mb-2"></i>
+                    <p className="text-gray-500">No hay asientos contables en este período</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">No.</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Débito</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crédito</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {periodEntries.slice(0, 20).map((entry) => (
+                          <tr key={entry.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                              {entry.entry_number}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(entry.entry_date)}
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-900 max-w-xs truncate" title={entry.description}>
+                              {entry.description || 'Sin descripción'}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-green-600">
+                              RD${formatAmount(entry.total_debit || 0)}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-red-600">
+                              RD${formatAmount(entry.total_credit || 0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      {periodEntries.length > 0 && (
+                        <tfoot className="bg-gray-100">
+                          <tr>
+                            <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                              Totales:
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-right text-green-700">
+                              RD${formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_debit) || 0), 0))}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-right text-red-700">
+                              RD${formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_credit) || 0), 0))}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                    {periodEntries.length > 20 && (
+                      <div className="p-3 bg-blue-50 text-center">
+                        <p className="text-sm text-blue-700">
+                          Mostrando 20 de {periodEntries.length} asientos. 
+                          <button
+                            onClick={() => navigateToJournal(selectedPeriod)}
+                            className="ml-2 underline hover:no-underline"
+                          >
+                            Ver todos en el Diario General
+                          </button>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Actions */}
               <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="flex justify-between">
-                  <div className="space-x-2">
+                <div className="flex justify-between flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {selectedPeriod.status === 'open' && (
                       <button
                         onClick={() => {
                           handleClosePeriod(selectedPeriod.id);
                           setSelectedPeriod(null);
+                          setPeriodEntries([]);
                         }}
                         className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
                       >
-                        <i className="ri-calendar-close-line mr-2"></i>
+                        <i className="ri-lock-line mr-2"></i>
                         Cerrar Período
                       </button>
                     )}
@@ -1230,30 +1633,40 @@ const AccountingPeriodsPage: FC = () => {
                       <>
                         <button
                           onClick={() => {
-                            handleLockPeriod(selectedPeriod.id);
-                            setSelectedPeriod(null);
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <i className="ri-lock-line mr-2"></i>
-                          Bloquear Período
-                        </button>
-                        <button
-                          onClick={() => {
                             handleReopenPeriod(selectedPeriod.id);
                             setSelectedPeriod(null);
+                            setPeriodEntries([]);
                           }}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                         >
                           <i className="ri-calendar-check-line mr-2"></i>
                           Reabrir Período
                         </button>
+                        <button
+                          onClick={() => {
+                            handleLockPeriod(selectedPeriod.id);
+                            setSelectedPeriod(null);
+                            setPeriodEntries([]);
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          <i className="ri-lock-line mr-2"></i>
+                          Bloquear Período
+                        </button>
                       </>
                     )}
+
+                    <button
+                      onClick={() => navigateToJournal(selectedPeriod)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <i className="ri-book-2-line mr-2"></i>
+                      Ir al Diario General
+                    </button>
                   </div>
                   
                   <button
-                    onClick={() => setSelectedPeriod(null)}
+                    onClick={() => { setSelectedPeriod(null); setPeriodEntries([]); }}
                     className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     Cerrar

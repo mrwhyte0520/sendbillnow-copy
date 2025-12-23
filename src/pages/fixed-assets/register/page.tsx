@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
-import { fixedAssetsService, assetTypesService, suppliersService, settingsService } from '../../../services/database';
+import { fixedAssetsService, assetTypesService, suppliersService, settingsService, journalEntriesService, chartAccountsService, bankAccountsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface Asset {
@@ -40,15 +40,22 @@ export default function AssetRegisterPage() {
   const [formCategory, setFormCategory] = useState('');
   const [usefulLifeValue, setUsefulLifeValue] = useState('');
   const [depreciationMethodValue, setDepreciationMethodValue] = useState('');
+  const [acquisitionMethod, setAcquisitionMethod] = useState<'cash' | 'bank' | 'credit'>('cash');
+  const [selectedBankId, setSelectedBankId] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [chartAccounts, setChartAccounts] = useState<any[]>([]);
+  const [generateJournalEntry, setGenerateJournalEntry] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
       try {
-        const [assetsData, typesData, suppliersData] = await Promise.all([
+        const [assetsData, typesData, suppliersData, banksData, accountsData] = await Promise.all([
           fixedAssetsService.getAll(user.id),
           assetTypesService.getAll(user.id),
           suppliersService.getAll(user.id),
+          bankAccountsService.getAll(user.id),
+          chartAccountsService.getAll(user.id),
         ]);
 
         const mappedAssets: Asset[] = (assetsData || []).map((a: any) => ({
@@ -75,6 +82,8 @@ export default function AssetRegisterPage() {
         setCategories(mappedCategories);
 
         setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+        setBankAccounts(Array.isArray(banksData) ? banksData : []);
+        setChartAccounts(Array.isArray(accountsData) ? accountsData : []);
       } catch (error) {
         console.error('Error loading fixed assets data:', error);
       }
@@ -210,6 +219,89 @@ export default function AssetRegisterPage() {
           description: created.description || '',
         };
         setAssets(prev => [...prev, mapped]);
+
+        // Generar asiento contable si está habilitado
+        if (generateJournalEntry && payload.purchase_cost > 0) {
+          try {
+            // Obtener el tipo de activo para encontrar la cuenta contable
+            const assetType = assetTypes.find((t: any) => String(t.name || '') === payload.category);
+            if (assetType && assetType.account) {
+              // Extraer código de cuenta del formato "150101 - Edificaciones"
+              const accountCodeMatch = assetType.account.match(/^(\d+)/);
+              const assetAccountCode = accountCodeMatch ? accountCodeMatch[1] : null;
+              
+              // Buscar la cuenta del activo fijo
+              const assetAccount = chartAccounts.find((acc: any) => 
+                acc.code === assetAccountCode || acc.code?.startsWith(assetAccountCode)
+              );
+
+              // Determinar la cuenta de contrapartida según el método de adquisición
+              let creditAccountId: string | null = null;
+              let creditAccountName = '';
+
+              if (acquisitionMethod === 'bank' && selectedBankId) {
+                const bank = bankAccounts.find((b: any) => b.id === selectedBankId);
+                if (bank && bank.account_id) {
+                  creditAccountId = bank.account_id;
+                  creditAccountName = bank.name || 'Banco';
+                }
+              } else if (acquisitionMethod === 'credit') {
+                // Buscar cuenta de Cuentas por Pagar (200101 o similar)
+                const apAccount = chartAccounts.find((acc: any) => 
+                  acc.code === '200101' || acc.code === '2001' || 
+                  (acc.name && acc.name.toLowerCase().includes('cuentas por pagar'))
+                );
+                if (apAccount) {
+                  creditAccountId = apAccount.id;
+                  creditAccountName = 'Cuentas por Pagar';
+                }
+              } else {
+                // Efectivo - buscar cuenta de Caja (100101 o similar)
+                const cashAccount = chartAccounts.find((acc: any) => 
+                  acc.code === '100101' || acc.code === '1001' || 
+                  (acc.name && acc.name.toLowerCase().includes('caja'))
+                );
+                if (cashAccount) {
+                  creditAccountId = cashAccount.id;
+                  creditAccountName = 'Caja';
+                }
+              }
+
+              if (assetAccount && creditAccountId) {
+                const entryLines = [
+                  {
+                    account_id: assetAccount.id,
+                    description: `Adquisición activo fijo: ${payload.name}`,
+                    debit_amount: payload.purchase_cost,
+                    credit_amount: 0,
+                  },
+                  {
+                    account_id: creditAccountId,
+                    description: `Adquisición activo fijo: ${payload.name}`,
+                    debit_amount: 0,
+                    credit_amount: payload.purchase_cost,
+                  },
+                ];
+
+                await journalEntriesService.createWithLines(user.id, {
+                  entry_number: `AF-${payload.code}`,
+                  entry_date: payload.purchase_date,
+                  description: `Adquisición activo fijo: ${payload.name} (${payload.code})`,
+                  reference: payload.code,
+                  status: 'posted',
+                }, entryLines);
+
+                console.log('✓ Asiento contable creado para activo fijo:', payload.code);
+              } else {
+                console.warn('No se pudo crear asiento contable: cuenta de activo o contrapartida no encontrada');
+              }
+            }
+          } catch (journalError) {
+            console.error('Error creando asiento contable para activo fijo:', journalError);
+            // No fallar el guardado del activo si el asiento falla
+            alert('Activo guardado, pero hubo un error al crear el asiento contable. Verifique la configuración de cuentas.');
+          }
+        }
       }
 
       setShowModal(false);

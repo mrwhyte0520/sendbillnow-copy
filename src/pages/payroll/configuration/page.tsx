@@ -28,7 +28,15 @@ interface PayrollConfig {
   tss_payable_account_id?: string;
   isr_payable_account_id?: string;
   other_deductions_payable_account_id?: string;
+  overtime_payable_account_id?: string;
+  incentives_payable_account_id?: string;
+  vacation_payable_account_id?: string;
+  infotep_payable_account_id?: string;
   salary_expense_account_id?: string;
+  overtime_expense_account_id?: string;
+  incentives_expense_account_id?: string;
+  vacation_expense_account_id?: string;
+  infotep_expense_account_id?: string;
 }
 
 interface TaxBracket {
@@ -114,7 +122,15 @@ export default function PayrollConfigurationPage() {
           tss_payable_account_id: data.tss_payable_account_id || undefined,
           isr_payable_account_id: data.isr_payable_account_id || undefined,
           other_deductions_payable_account_id: data.other_deductions_payable_account_id || undefined,
+          overtime_payable_account_id: data.overtime_payable_account_id || undefined,
+          incentives_payable_account_id: data.incentives_payable_account_id || undefined,
+          vacation_payable_account_id: data.vacation_payable_account_id || undefined,
+          infotep_payable_account_id: data.infotep_payable_account_id || undefined,
           salary_expense_account_id: data.salary_expense_account_id || undefined,
+          overtime_expense_account_id: data.overtime_expense_account_id || undefined,
+          incentives_expense_account_id: data.incentives_expense_account_id || undefined,
+          vacation_expense_account_id: data.vacation_expense_account_id || undefined,
+          infotep_expense_account_id: data.infotep_expense_account_id || undefined,
         };
         setConfig(normalized);
       } else {
@@ -141,7 +157,15 @@ export default function PayrollConfigurationPage() {
           tss_payable_account_id: undefined,
           isr_payable_account_id: undefined,
           other_deductions_payable_account_id: undefined,
+          overtime_payable_account_id: undefined,
+          incentives_payable_account_id: undefined,
+          vacation_payable_account_id: undefined,
+          infotep_payable_account_id: undefined,
           salary_expense_account_id: undefined,
+          overtime_expense_account_id: undefined,
+          incentives_expense_account_id: undefined,
+          vacation_expense_account_id: undefined,
+          infotep_expense_account_id: undefined,
         });
       }
 
@@ -193,7 +217,15 @@ export default function PayrollConfigurationPage() {
         tss_payable_account_id: config.tss_payable_account_id || null,
         isr_payable_account_id: config.isr_payable_account_id || null,
         other_deductions_payable_account_id: config.other_deductions_payable_account_id || null,
+        overtime_payable_account_id: config.overtime_payable_account_id || null,
+        incentives_payable_account_id: config.incentives_payable_account_id || null,
+        vacation_payable_account_id: config.vacation_payable_account_id || null,
+        infotep_payable_account_id: config.infotep_payable_account_id || null,
         salary_expense_account_id: config.salary_expense_account_id || null,
+        overtime_expense_account_id: config.overtime_expense_account_id || null,
+        incentives_expense_account_id: config.incentives_expense_account_id || null,
+        vacation_expense_account_id: config.vacation_expense_account_id || null,
+        infotep_expense_account_id: config.infotep_expense_account_id || null,
       };
 
       const saved = await settingsService.savePayrollSettings(payload);
@@ -765,6 +797,94 @@ export default function PayrollConfigurationPage() {
                 Cuenta para otras deducciones a empleados (ej: 2103 - Otras Deducciones por Pagar)
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-time-line mr-2"></i>
+                Horas Extras por Pagar
+              </label>
+              <select
+                value={config?.overtime_payable_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, overtime_payable_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {liabilityAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para horas extras pendientes de pago
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-gift-line mr-2"></i>
+                Incentivos por Pagar
+              </label>
+              <select
+                value={config?.incentives_payable_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, incentives_payable_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {liabilityAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para incentivos y bonificaciones por pagar
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-sun-line mr-2"></i>
+                Vacaciones por Pagar
+              </label>
+              <select
+                value={config?.vacation_payable_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, vacation_payable_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {liabilityAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para vacaciones pendientes de pago
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-building-2-line mr-2"></i>
+                INFOTEP por Pagar
+              </label>
+              <select
+                value={config?.infotep_payable_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, infotep_payable_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {liabilityAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para aportes al INFOTEP por pagar (1% del empleador)
+              </p>
+            </div>
           </div>
         </div>
 
@@ -794,6 +914,94 @@ export default function PayrollConfigurationPage() {
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 Cuenta para gastos de sueldos y salarios brutos (ej: 6101 - Sueldos y Salarios)
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-time-line mr-2"></i>
+                Gastos de Horas Extras
+              </label>
+              <select
+                value={config?.overtime_expense_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, overtime_expense_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {expenseAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para gastos por horas extras trabajadas
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-gift-line mr-2"></i>
+                Gastos de Incentivos
+              </label>
+              <select
+                value={config?.incentives_expense_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, incentives_expense_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {expenseAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para gastos por incentivos y bonificaciones
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-sun-line mr-2"></i>
+                Gastos de Vacaciones
+              </label>
+              <select
+                value={config?.vacation_expense_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, vacation_expense_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {expenseAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para gastos por vacaciones pagadas
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <i className="ri-building-2-line mr-2"></i>
+                Gastos de INFOTEP
+              </label>
+              <select
+                value={config?.infotep_expense_account_id || ''}
+                onChange={(e) => setConfig(prev => prev ? { ...prev, infotep_expense_account_id: e.target.value || undefined } : null)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Seleccionar Cuenta --</option>
+                {expenseAccounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.code} - {acc.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Cuenta para gastos por aportes al INFOTEP
               </p>
             </div>
           </div>

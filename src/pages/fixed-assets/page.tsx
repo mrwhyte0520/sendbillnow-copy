@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { fixedAssetsService, assetDepreciationService } from '../../services/database';
+import { formatMoney } from '../../utils/numberFormat';
 
 export default function FixedAssetsPage() {
   const navigate = useNavigate();
@@ -48,21 +49,21 @@ export default function FixedAssetsPage() {
         setAssetsStats([
           {
             title: 'Valor Total de Activos',
-            value: `RD$ ${totalValue.toLocaleString('es-DO')}`,
+            value: formatMoney(totalValue, 'RD$'),
             change: '',
             icon: 'ri-building-line',
             color: 'blue',
           },
           {
             title: 'Depreciación Acumulada',
-            value: `RD$ ${totalDepreciation.toLocaleString('es-DO')}`,
+            value: formatMoney(totalDepreciation, 'RD$'),
             change: '',
             icon: 'ri-line-chart-line',
             color: 'red',
           },
           {
             title: 'Valor Neto',
-            value: `RD$ ${netValue.toLocaleString('es-DO')}`,
+            value: formatMoney(netValue, 'RD$'),
             change: '',
             icon: 'ri-money-dollar-circle-line',
             color: 'green',
@@ -90,7 +91,7 @@ export default function FixedAssetsPage() {
         const categoriesData = Object.entries(categoryMap).map(([category, data]) => ({
           category,
           count: data.count,
-          value: `RD$ ${data.value.toLocaleString('es-DO')}`,
+          value: formatMoney(data.value, 'RD$'),
           depreciation: '',
         }));
 
@@ -113,7 +114,7 @@ export default function FixedAssetsPage() {
             return {
               asset: assetName,
               code: assetCode,
-              monthlyDepreciation: `RD$ ${depAmount.toLocaleString('es-DO')}`,
+              monthlyDepreciation: formatMoney(depAmount, 'RD$'),
               accumulatedDepreciation: '',
               date: dateStr ? new Date(dateStr).toLocaleDateString('es-DO') : '',
             };
@@ -255,7 +256,7 @@ export default function FixedAssetsPage() {
 
   // Navigation Functions
   const handleViewAllDepreciations = () => {
-    alert('Viewing all depreciations...');
+    navigate('/fixed-assets/depreciation');
   };
 
   return (

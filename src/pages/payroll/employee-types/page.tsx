@@ -29,12 +29,13 @@ export default function EmployeeTypesPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    benefits: '',
+    benefits: [] as string[],
     workingHours: 8,
     overtimeEligible: true,
     vacationDays: 14,
     status: 'active' as 'active' | 'inactive'
   });
+  const [newBenefit, setNewBenefit] = useState('');
 
   useEffect(() => {
     const loadTypes = async () => {
@@ -78,11 +79,10 @@ export default function EmployeeTypesPage() {
       return;
     }
 
-    const benefitsArray = formData.benefits.split(',').map(b => b.trim()).filter(b => b);
     const payload = {
       name: formData.name,
       description: formData.description,
-      benefits: benefitsArray,
+      benefits: formData.benefits,
       working_hours: formData.workingHours,
       overtime_eligible: formData.overtimeEligible,
       vacation_days: formData.vacationDays,
@@ -138,12 +138,13 @@ export default function EmployeeTypesPage() {
     setFormData({
       name: '',
       description: '',
-      benefits: '',
+      benefits: [],
       workingHours: 8,
       overtimeEligible: true,
       vacationDays: 14,
       status: 'active'
     });
+    setNewBenefit('');
     setEditingType(null);
     setShowForm(false);
   };
@@ -153,13 +154,31 @@ export default function EmployeeTypesPage() {
     setFormData({
       name: type.name,
       description: type.description,
-      benefits: type.benefits.join(', '),
+      benefits: [...type.benefits],
       workingHours: type.workingHours,
       overtimeEligible: type.overtimeEligible,
       vacationDays: type.vacationDays,
       status: type.status
     });
+    setNewBenefit('');
     setShowForm(true);
+  };
+
+  const addBenefit = () => {
+    if (newBenefit.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        benefits: [...prev.benefits, newBenefit.trim()]
+      }));
+      setNewBenefit('');
+    }
+  };
+
+  const removeBenefit = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      benefits: prev.benefits.filter((_, i) => i !== index)
+    }));
   };
 
   const handleDelete = async (id: string) => {
@@ -510,15 +529,46 @@ export default function EmployeeTypesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Beneficios (separados por comas)
+                    Beneficios
                   </label>
-                  <textarea
-                    value={formData.benefits}
-                    onChange={(e) => setFormData({...formData, benefits: e.target.value})}
-                    rows={2}
-                    placeholder="Seguro médico, Vacaciones pagadas, Bonificación navideña..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newBenefit}
+                        onChange={(e) => setNewBenefit(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
+                        placeholder="Escriba un beneficio y presione Agregar"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={addBenefit}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        <i className="ri-add-line"></i>
+                      </button>
+                    </div>
+                    {formData.benefits.length > 0 && (
+                      <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg">
+                        {formData.benefits.map((benefit, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                          >
+                            {benefit}
+                            <button
+                              type="button"
+                              onClick={() => removeBenefit(index)}
+                              className="text-blue-600 hover:text-red-600 transition-colors"
+                            >
+                              <i className="ri-close-line"></i>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -1105,8 +1105,8 @@ export default function InvoicingPage() {
         if (nextNcf?.ncf) {
           invoiceNumber = nextNcf.ncf;
         }
-      } catch (ncfError) {
-        console.error('[Billing] No se pudo obtener NCF, usando número interno FAC-*', ncfError);
+      } catch {
+        // NCF no disponible - se usará número interno
       }
     }
 

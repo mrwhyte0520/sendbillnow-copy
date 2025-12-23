@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { resolveTenantId, settingsService } from '../../../services/database';
 import { formatAmount } from '../../../utils/numberFormat';
@@ -90,6 +90,7 @@ const getEntryDocumentType = (entry: JournalEntry): string => {
 const GeneralJournalPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [periods, setPeriods] = useState<AccountingPeriod[]>([]);
@@ -99,8 +100,8 @@ const GeneralJournalPage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(searchParams.get('from') || '');
+  const [dateTo, setDateTo] = useState(searchParams.get('to') || '');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [documentTypeFilter, setDocumentTypeFilter] = useState('all');

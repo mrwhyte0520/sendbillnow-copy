@@ -38,13 +38,15 @@ export default function PositionsPage() {
     title: '',
     department: '',
     description: '',
-    requirements: '',
-    responsibilities: '',
+    requirements: [] as string[],
+    responsibilities: [] as string[],
     salaryMin: 0,
     salaryMax: 0,
     level: 'junior' as 'junior' | 'mid' | 'senior' | 'executive',
     status: 'active' as 'active' | 'inactive'
   });
+  const [newRequirement, setNewRequirement] = useState('');
+  const [newResponsibility, setNewResponsibility] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -64,7 +66,7 @@ export default function PositionsPage() {
         const employees = (empData || []) as any[];
 
         const mappedPositions: Position[] = (posData || []).map((p: any) => {
-          const dept = mappedDepartments.find(d => d.id === p.department_id);
+          const dept = mappedDepartments.find((d: { id: string; name: string }) => d.id === p.department_id);
           const employeeCount = employees.filter(e => e.position_id === p.id).length;
           return {
             id: p.id,
@@ -115,15 +117,12 @@ export default function PositionsPage() {
       return;
     }
 
-    const requirementsArray = formData.requirements.split(',').map((r: string) => r.trim()).filter((r: string) => r);
-    const responsibilitiesArray = formData.responsibilities.split(',').map((r: string) => r.trim()).filter((r: string) => r);
-
     const payload: any = {
       title: formData.title,
       description: formData.description,
       department_id: formData.department || null,
-      requirements: requirementsArray,
-      responsibilities: responsibilitiesArray,
+      requirements: formData.requirements,
+      responsibilities: formData.responsibilities,
       min_salary: formData.salaryMin || 0,
       max_salary: formData.salaryMax || 0,
       level: formData.level,
@@ -199,13 +198,15 @@ export default function PositionsPage() {
       title: '',
       department: '',
       description: '',
-      requirements: '',
-      responsibilities: '',
+      requirements: [],
+      responsibilities: [],
       salaryMin: 0,
       salaryMax: 0,
       level: 'junior',
       status: 'active'
     });
+    setNewRequirement('');
+    setNewResponsibility('');
     setEditingPosition(null);
     setShowForm(false);
   };
@@ -216,14 +217,38 @@ export default function PositionsPage() {
       title: position.title,
       department: position.department_id,
       description: position.description,
-      requirements: position.requirements.join(', '),
-      responsibilities: position.responsibilities.join(', '),
+      requirements: [...position.requirements],
+      responsibilities: [...position.responsibilities],
       salaryMin: position.salaryRange.min,
       salaryMax: position.salaryRange.max,
       level: position.level,
       status: position.status
     });
+    setNewRequirement('');
+    setNewResponsibility('');
     setShowForm(true);
+  };
+
+  const addRequirement = () => {
+    if (newRequirement.trim()) {
+      setFormData(prev => ({ ...prev, requirements: [...prev.requirements, newRequirement.trim()] }));
+      setNewRequirement('');
+    }
+  };
+
+  const removeRequirement = (index: number) => {
+    setFormData(prev => ({ ...prev, requirements: prev.requirements.filter((_, i) => i !== index) }));
+  };
+
+  const addResponsibility = () => {
+    if (newResponsibility.trim()) {
+      setFormData(prev => ({ ...prev, responsibilities: [...prev.responsibilities, newResponsibility.trim()] }));
+      setNewResponsibility('');
+    }
+  };
+
+  const removeResponsibility = (index: number) => {
+    setFormData(prev => ({ ...prev, responsibilities: prev.responsibilities.filter((_, i) => i !== index) }));
   };
 
   const handleDelete = (id: string) => {
@@ -614,28 +639,60 @@ export default function PositionsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Requisitos (separados por comas)
-                    </label>
-                    <textarea
-                      value={formData.requirements}
-                      onChange={(e) => setFormData({...formData, requirements: e.target.value})}
-                      rows={3}
-                      placeholder="Licenciatura en..., 3+ años experiencia, Conocimiento en..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Requisitos</label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newRequirement}
+                          onChange={(e) => setNewRequirement(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addRequirement())}
+                          placeholder="Escriba un requisito"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button type="button" onClick={addRequirement} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                          <i className="ri-add-line"></i>
+                        </button>
+                      </div>
+                      {formData.requirements.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
+                          {formData.requirements.map((req, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                              {req}
+                              <button type="button" onClick={() => removeRequirement(i)} className="text-blue-600 hover:text-red-600"><i className="ri-close-line"></i></button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Responsabilidades (separadas por comas)
-                    </label>
-                    <textarea
-                      value={formData.responsibilities}
-                      onChange={(e) => setFormData({...formData, responsibilities: e.target.value})}
-                      rows={3}
-                      placeholder="Gestión de equipos, Análisis de datos, Reportes..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Responsabilidades</label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newResponsibility}
+                          onChange={(e) => setNewResponsibility(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addResponsibility())}
+                          placeholder="Escriba una responsabilidad"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button type="button" onClick={addResponsibility} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                          <i className="ri-add-line"></i>
+                        </button>
+                      </div>
+                      {formData.responsibilities.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
+                          {formData.responsibilities.map((resp, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                              {resp}
+                              <button type="button" onClick={() => removeResponsibility(i)} className="text-purple-600 hover:text-red-600"><i className="ri-close-line"></i></button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
