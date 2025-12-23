@@ -6,6 +6,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { quotesService, invoicesService, customersService, inventoryService, paymentTermsService } from '../../../services/database';
 
 interface UiQuoteItem {
+  productId?: string;
   description: string;
   quantity: number;
   price: number;
@@ -21,7 +22,7 @@ interface UiQuote {
   amount: number;
   tax: number;
   total: number;
-  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'expired';
+  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'expired' | 'invoiced';
   date: string;
   validUntil: string;
   items: UiQuoteItem[];
@@ -34,7 +35,16 @@ export default function PreInvoicingPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [quotes, setQuotes] = useState<UiQuote[]>([]);
   const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<Array<{ id: string; name: string; email?: string }>>([]);
+  const [customers, setCustomers] = useState<Array<{
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    document?: string | null;
+    address?: string | null;
+    documentType?: string | null;
+    ncfType?: string | null;
+  }>>([]);
   const [products, setProducts] = useState<Array<{ id: string; name: string; price: number }>>([]);
   const [paymentTerms, setPaymentTerms] = useState<Array<{ id: string; name: string; days?: number }>>([]);
 
@@ -43,6 +53,7 @@ export default function PreInvoicingPage() {
   const [newQuoteTerms, setNewQuoteTerms] = useState('');
   const [newQuotePaymentTermId, setNewQuotePaymentTermId] = useState<string | null>(null);
   const [quoteItems, setQuoteItems] = useState<UiQuoteItem[]>([{
+    productId: undefined,
     description: '',
     quantity: 1,
     price: 0,
@@ -63,6 +74,7 @@ export default function PreInvoicingPage() {
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'expired': return 'bg-gray-100 text-gray-800';
+      case 'invoiced': return 'bg-emerald-100 text-emerald-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -74,9 +86,10 @@ export default function PreInvoicingPage() {
 
     const items = (quote.items && quote.items.length > 0)
       ? quote.items
-      : [{ description: 'Línea', quantity: 1, price: quote.total, total: quote.total }];
+      : [{ productId: undefined, description: 'Línea', quantity: 1, price: quote.total, total: quote.total }];
 
     setQuoteItems(items.map(it => ({
+      productId: undefined,
       description: it.description,
       quantity: it.quantity,
       price: it.price,
@@ -111,6 +124,7 @@ export default function PreInvoicingPage() {
 
       if (field === 'product') {
         const product = products.find(p => p.id === value);
+        current.productId = value || undefined;
         current.description = product?.name || '';
         current.price = product?.price || 0;
       } else if (field === 'quantity') {
@@ -130,7 +144,7 @@ export default function PreInvoicingPage() {
 
   const handleAddItem = () => {
     setQuoteItems(prev => {
-      const next = [...prev, { description: '', quantity: 1, price: 0, total: 0 }];
+      const next = [...prev, { productId: undefined, description: '', quantity: 1, price: 0, total: 0 }];
       return next;
     });
   };
@@ -139,7 +153,7 @@ export default function PreInvoicingPage() {
     setQuoteItems(prev => {
       const next = prev.filter((_, i) => i !== index);
       if (next.length === 0) {
-        next.push({ description: '', quantity: 1, price: 0, total: 0 });
+        next.push({ productId: undefined, description: '', quantity: 1, price: 0, total: 0 });
       }
       recalcTotals(next);
       return next;
@@ -153,6 +167,7 @@ export default function PreInvoicingPage() {
       case 'approved': return 'Aprobada';
       case 'rejected': return 'Rechazada';
       case 'expired': return 'Expirada';
+      case 'invoiced': return 'Facturada';
       default: return 'Desconocido';
     }
   };
@@ -162,7 +177,8 @@ export default function PreInvoicingPage() {
     setLoading(true);
     try {
       const data = await quotesService.getAll(user.id);
-      const mapped: UiQuote[] = (data as any[]).map((q) => {
+      const list = Array.isArray(data) ? (data as any[]) : [];
+      const mapped: UiQuote[] = list.map((q) => {
         const subtotal = Number(q.subtotal) || 0;
         const tax = Number(q.tax_amount) || 0;
         const total = Number(q.total_amount) || subtotal + tax;
@@ -172,6 +188,7 @@ export default function PreInvoicingPage() {
           const unitPrice = Number(line.unit_price) || 0;
           const lineTotal = Number(line.line_total) || qty * unitPrice;
           return {
+            productId: undefined,
             description: line.description || 'Ítem',
             quantity: qty,
             price: unitPrice,
@@ -181,6 +198,7 @@ export default function PreInvoicingPage() {
 
         if (items.length === 0) {
           items.push({
+            productId: undefined,
             description: q.description || 'Cotización',
             quantity: 1,
             price: total,
@@ -194,6 +212,7 @@ export default function PreInvoicingPage() {
         else if (statusDb === 'under_review') status = 'under_review';
         else if (statusDb === 'rejected') status = 'rejected';
         else if (statusDb === 'expired') status = 'expired';
+        else if (statusDb === 'invoiced') status = 'invoiced';
         else status = 'pending';
 
         return {
@@ -226,7 +245,16 @@ export default function PreInvoicingPage() {
     if (!user?.id) return;
     try {
       const list = await customersService.getAll(user.id);
-      setCustomers(list.map((c: any) => ({ id: c.id, name: c.name, email: c.email })));
+      setCustomers(list.map((c: any) => ({
+        id: c.id,
+        name: c.name || c.customer_name || c.full_name || c.fullname || c.company || c.company_name || 'Cliente',
+        email: c.email || c.contact_email || '',
+        phone: c.phone || c.contact_phone || '',
+        address: c.address || c.company_address || c.billing_address || c.address_line || '',
+        documentType: (c as any).documentType || null,
+        ncfType: (c as any).ncfType || null,
+        document: c.document || null,
+      })));
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading customers for quotes:', error);
@@ -256,8 +284,8 @@ export default function PreInvoicingPage() {
       const mapped = (list as any[]).map((p) => ({
         id: String(p.id),
         name: p.name as string,
-        // Tomar un precio de venta razonable: sale_price, unit_price o price
-        price: Number((p as any).sale_price ?? (p as any).unit_price ?? (p as any).price ?? 0) || 0,
+        // Tomar un precio de venta razonable: selling_price, sale_price, unit_price o price
+        price: Number((p as any).selling_price ?? (p as any).sale_price ?? (p as any).unit_price ?? (p as any).price ?? 0) || 0,
       }));
       setProducts(mapped);
     } catch (error) {
@@ -289,7 +317,7 @@ export default function PreInvoicingPage() {
     setNewQuoteValidUntil('');
     setNewQuoteTerms('');
     setNewQuotePaymentTermId(null);
-    setQuoteItems([{ description: '', quantity: 1, price: 0, total: 0 }]);
+    setQuoteItems([{ productId: undefined, description: '', quantity: 1, price: 0, total: 0 }]);
     setQuoteSubtotal(0);
     setQuoteTax(0);
     setQuoteTotal(0);
@@ -302,6 +330,10 @@ export default function PreInvoicingPage() {
   const handleViewQuote = (quoteId: string) => {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede modificar. Debes duplicarla para crear otra.');
+      return;
+    }
     populateFormFromQuote(quote);
     setShowNewQuoteModal(true);
   };
@@ -309,6 +341,10 @@ export default function PreInvoicingPage() {
   const handleEditQuote = (quoteId: string) => {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede modificar. Debes duplicarla para crear otra.');
+      return;
+    }
     populateFormFromQuote(quote);
     setShowNewQuoteModal(true);
   };
@@ -316,6 +352,10 @@ export default function PreInvoicingPage() {
   const handleDeleteQuote = async (quoteId: string) => {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede eliminar. Debes duplicarla para crear otra.');
+      return;
+    }
     if (!confirm(`¿Está seguro de eliminar la cotización ${quoteId}?`)) return;
 
     try {
@@ -329,47 +369,37 @@ export default function PreInvoicingPage() {
     }
   };
 
-  const handleSendQuote = (quoteId: string, customerEmail: string) => {
-    alert(`Enviando cotización ${quoteId} a ${customerEmail}`);
-  };
-
   const handleExportToPdf = () => {
-    // Mostrar mensaje de carga
     const loadingToast = toast.loading('Generando PDF...');
-    
-    // Usar setTimeout para asegurar que el mensaje de carga se muestre
+
     setTimeout(async () => {
       try {
-        // Verificar si hay cotizaciones para exportar
         if (!quotes || quotes.length === 0) {
-          toast.warning('No hay cotizaciones para exportar');
+          toast.warning('No hay cotizaciones para exportar', { id: loadingToast });
           return;
         }
-        
-        // Preparar los datos para la exportación
+
         const columns = [
           { key: 'id', label: 'Número' },
           { key: 'customer', label: 'Cliente' },
           { key: 'date', label: 'Fecha' },
           { key: 'validUntil', label: 'Válida Hasta' },
           { key: 'total', label: 'Total' },
-          { key: 'status', label: 'Estado' }
+          { key: 'status', label: 'Estado' },
         ];
 
-        // Formatear los datos para la exportación
-        const dataToExport = quotes.map(quote => ({
+        const dataToExport = quotes.map((quote) => ({
           id: quote.id,
-          customer: quote.customer,
+          customer: quote.customerId
+            ? customers.find((c) => c.id === quote.customerId)?.name || quote.customer
+            : quote.customer,
           date: new Date(quote.date).toLocaleDateString('es-DO'),
           validUntil: new Date(quote.validUntil).toLocaleDateString('es-DO'),
-          total: `RD$ ${quote.total.toLocaleString()}`,
-          status: getStatusText(quote.status)
+          total: `RD$ ${quote.total.toLocaleString('es-DO')}`,
+          status: getStatusText(quote.status),
         }));
 
-        // Llamar a la función de exportación
         await exportToPdf(dataToExport, columns, 'cotizaciones', 'Reporte de Cotizaciones');
-        
-        // Mostrar mensaje de éxito
         toast.success('PDF generado correctamente', { id: loadingToast });
       } catch (error) {
         console.error('Error al generar el PDF:', error);
@@ -387,6 +417,11 @@ export default function PreInvoicingPage() {
     if (!quote) return;
     if (!user?.id) {
       toast.error('Debes iniciar sesión para convertir en factura');
+      return;
+    }
+
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue convertida a factura. Si necesitas otra, duplica la cotización.');
       return;
     }
 
@@ -426,9 +461,8 @@ export default function PreInvoicingPage() {
 
         await invoicesService.create(user.id, invoicePayload, linesPayload);
 
-        // Marcar cotización como aprobada/convertida
-        await quotesService.update(quote.dbId, { status: 'approved' });
-        await loadQuotes();
+        await quotesService.update(quote.dbId, { status: 'invoiced' });
+        setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, status: 'invoiced' } : q)));
 
         toast.success(`Cotización ${quote.id} convertida en factura ${invoiceNumber}`);
       } catch (error) {
@@ -486,6 +520,11 @@ export default function PreInvoicingPage() {
       return;
     }
 
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede aprobar. Debes duplicarla para crear otra.');
+      return;
+    }
+
     if (!confirm(`¿Aprobar cotización ${quoteId}?`)) return;
 
     (async () => {
@@ -506,6 +545,11 @@ export default function PreInvoicingPage() {
     if (!quote) return;
     if (!user?.id) {
       toast.error('Debes iniciar sesión para rechazar cotizaciones');
+      return;
+    }
+
+    if (quote.status === 'invoiced') {
+      toast.error('Esta cotización ya fue facturada y no se puede cancelar. Debes duplicarla para crear otra.');
       return;
     }
 
@@ -622,7 +666,7 @@ export default function PreInvoicingPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -690,6 +734,20 @@ export default function PreInvoicingPage() {
               </div>
             </div>
           </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Facturadas</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {quotes.filter(q => q.status === 'invoiced').length}
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-100">
+                <i className="ri-file-transfer-line text-xl text-emerald-600"></i>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Filters */}
@@ -719,6 +777,7 @@ export default function PreInvoicingPage() {
                 <option value="pending">Pendientes</option>
                 <option value="under_review">En Revisión</option>
                 <option value="approved">Aprobadas</option>
+                <option value="invoiced">Facturadas</option>
                 <option value="rejected">Rechazadas</option>
                 <option value="expired">Expiradas</option>
               </select>
@@ -783,87 +842,93 @@ export default function PreInvoicingPage() {
 
                   return (
                     <tr key={quote.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{quote.id}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{customerName}</div>
-                      <div className="text-sm text-gray-500">{customerEmail}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(quote.date).toLocaleDateString('es-DO')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(quote.validUntil).toLocaleDateString('es-DO')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD$ {quote.total.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(quote.status)}`}>
-                        {getStatusText(quote.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleViewQuote(quote.id)}
-                          className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Ver cotización"
-                        >
-                          <i className="ri-eye-line"></i>
-                        </button>
-                        <button
-                          onClick={() => handleEditQuote(quote.id)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Editar cotización"
-                        >
-                          <i className="ri-edit-line"></i>
-                        </button>
-                        {quote.status === 'approved' && (
-                          <button
-                            onClick={() => handleConvertToInvoice(quote.id)}
-                            className="text-green-600 hover:text-green-900 p-1"
-                            title="Convertir a factura"
-                          >
-                            <i className="ri-file-transfer-line"></i>
-                          </button>
-                        )}
-                        {quote.status === 'pending' && (
-                          <>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{quote.id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{customerName}</div>
+                        <div className="text-sm text-gray-500">{customerEmail}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(quote.date).toLocaleDateString('es-DO')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(quote.validUntil).toLocaleDateString('es-DO')}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        RD$ {quote.total.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(quote.status)}`}>
+                          {getStatusText(quote.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          {quote.status !== 'invoiced' && (
                             <button
-                              onClick={() => handleApproveQuote(quote.id)}
+                              onClick={() => handleViewQuote(quote.id)}
+                              className="text-blue-600 hover:text-blue-900 p-1"
+                              title="Ver cotización"
+                            >
+                              <i className="ri-eye-line"></i>
+                            </button>
+                          )}
+                          {quote.status !== 'invoiced' && (
+                            <button
+                              onClick={() => handleEditQuote(quote.id)}
                               className="text-green-600 hover:text-green-900 p-1"
-                              title="Aprobar cotización"
+                              title="Editar cotización"
                             >
-                              <i className="ri-check-line"></i>
+                              <i className="ri-edit-line"></i>
                             </button>
+                          )}
+                          {quote.status === 'approved' && (
                             <button
-                              onClick={() => handleRejectQuote(quote.id)}
-                              className="text-red-600 hover:text-red-900 p-1"
-                              title="Rechazar cotización"
+                              onClick={() => handleConvertToInvoice(quote.id)}
+                              className="text-green-600 hover:text-green-900 p-1"
+                              title="Convertir a factura"
                             >
-                              <i className="ri-close-line"></i>
+                              <i className="ri-file-transfer-line"></i>
                             </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => handleDuplicateQuote(quote.id)}
-                          className="text-orange-600 hover:text-orange-900 p-1"
-                          title="Duplicar cotización"
-                        >
-                          <i className="ri-file-copy-line"></i>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteQuote(quote.id)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Eliminar cotización"
-                        >
-                          <i className="ri-delete-bin-line"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          )}
+                          {quote.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleApproveQuote(quote.id)}
+                                className="text-green-600 hover:text-green-900 p-1"
+                                title="Aprobar cotización"
+                              >
+                                <i className="ri-check-line"></i>
+                              </button>
+                              <button
+                                onClick={() => handleRejectQuote(quote.id)}
+                                className="text-red-600 hover:text-red-900 p-1"
+                                title="Rechazar cotización"
+                              >
+                                <i className="ri-close-line"></i>
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleDuplicateQuote(quote.id)}
+                            className="text-orange-600 hover:text-orange-900 p-1"
+                            title="Duplicar cotización"
+                          >
+                            <i className="ri-file-copy-line"></i>
+                          </button>
+                          {quote.status !== 'invoiced' && (
+                            <button
+                              onClick={() => handleDeleteQuote(quote.id)}
+                              className="text-red-600 hover:text-red-900 p-1"
+                              title="Eliminar cotización"
+                            >
+                              <i className="ri-delete-bin-line"></i>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -887,6 +952,23 @@ export default function PreInvoicingPage() {
                 </div>
               </div>
               <div className="p-6">
+                {(() => {
+                  const selectedCustomer = customers.find((c) => String(c.id) === String(newQuoteCustomerId));
+                  if (!selectedCustomer) return null;
+                  return (
+                    <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                      <div className="font-medium text-gray-900">{selectedCustomer.name}</div>
+                      <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
+                        <div>{selectedCustomer.email ? `Email: ${selectedCustomer.email}` : 'Email: -'}</div>
+                        <div>{selectedCustomer.phone ? `Tel: ${selectedCustomer.phone}` : 'Tel: -'}</div>
+                        <div>{selectedCustomer.document ? `Documento/RNC: ${selectedCustomer.document}` : 'Documento/RNC: -'}</div>
+                        <div>{selectedCustomer.address ? `Dirección: ${selectedCustomer.address}` : 'Dirección: -'}</div>
+                        <div>{selectedCustomer.documentType ? `Tipo doc: ${selectedCustomer.documentType}` : 'Tipo doc: -'}</div>
+                        <div>{selectedCustomer.ncfType ? `NCF: ${selectedCustomer.ncfType}` : 'NCF: -'}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
@@ -952,6 +1034,7 @@ export default function PreInvoicingPage() {
                             <td className="px-4 py-3">
                               <select
                                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm pr-8"
+                                value={item.productId ?? ''}
                                 onChange={(e) => handleItemChange(index, 'product', e.target.value)}
                               >
                                 <option value="">Seleccionar producto...</option>
