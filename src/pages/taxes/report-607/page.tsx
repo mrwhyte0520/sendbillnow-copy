@@ -463,6 +463,11 @@ export default function Report607Page() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Reporte 607</h1>
             <p className="text-gray-600">Reporte de Ventas y Servicios</p>
+            {!!((companyInfo as any)?.rnc || (companyInfo as any)?.tax_id) && (
+              <p className="text-gray-600 text-sm">
+                RNC: {String((companyInfo as any)?.rnc || (companyInfo as any)?.tax_id)}
+              </p>
+            )}
           </div>
           <button
             onClick={() => navigate('/taxes')}

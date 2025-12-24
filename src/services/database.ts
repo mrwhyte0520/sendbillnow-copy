@@ -12293,7 +12293,7 @@ export const taxService = {
         .from('invoices')
         .select(
           `*,
-           customers (name, tax_id)`
+           customers (name, document, tax_id)`
         )
         .eq('user_id', tenantId)
         .gte('invoice_date', startDate)
@@ -12338,7 +12338,12 @@ export const taxService = {
 
       const rows = (invoices || []).map((inv: any) => {
         const customerName = inv.customers?.name || inv.customer_name || 'Cliente';
-        const customerRnc = inv.customers?.tax_id || inv.tax_id || '';
+        const customerRnc =
+          inv.customers?.document ||
+          inv.customers?.tax_id ||
+          inv.customer_document ||
+          inv.tax_id ||
+          '';
         const fecha = inv.invoice_date;
         const monto = Number(inv.total_amount ?? inv.subtotal ?? 0);
         const itbis = Number(inv.tax_amount ?? 0);
@@ -12414,23 +12419,37 @@ export const taxService = {
 
       if (error) throw error;
 
-      const mappedData = data?.map(item => ({
-        rnc_cedula: item.rnc_cedula || item.rnc_cedula_cliente || '',
-        tipo_identificacion: (item.rnc_cedula || item.rnc_cedula_cliente || '').length === 11 ? 'RNC' : 'Cédula',
-        numero_comprobante_fiscal: item.numero_comprobante_fiscal || item.numero_comprobante || item.ncf || '',
-        fecha_comprobante: item.fecha_comprobante || item.fecha_factura || '',
-        monto_facturado: item.monto_facturado || 0,
-        itbis_facturado: item.itbis_facturado || item.itbis_cobrado || 0,
-        itbis_retenido: item.itbis_retenido || 0,
-        monto_propina_legal: item.monto_propina_legal || 0,
-        itbis_retenido_propina: item.itbis_retenido_propina || 0,
-        itbis_percibido_ventas: item.itbis_percibido_ventas || item.itbis_percibido || 0,
-        retencion_renta_terceros: item.retencion_renta_terceros || 0,
-        isr_percibido_ventas: item.isr_percibido_ventas || 0,
-        impuesto_selectivo_consumo: item.impuesto_selectivo_consumo || 0,
-        otros_impuestos_tasas: item.otros_impuestos_tasas || 0,
-        monto_propina_legal_2: item.monto_propina_legal_2 || 0,
-      })) || [];
+      const mappedData = (data || []).map((item: any) => {
+        const rawRnc: string = String(item.rnc_cedula_cliente ?? item.tax_id ?? '').trim();
+        const digits = rawRnc.replace(/[^0-9]/g, '');
+
+        // DGII: 1=RNC, 2=Cédula, 3=Pasaporte (aquí inferimos 1/2)
+        let tipoIdentificacion = item.tipo_identificacion as string;
+        if (!tipoIdentificacion) {
+          if (digits.length === 11) tipoIdentificacion = '2';
+          else if (digits.length === 9) tipoIdentificacion = '1';
+          else if (rawRnc) tipoIdentificacion = '1';
+          else tipoIdentificacion = '';
+        }
+
+        return {
+          rnc_cedula: rawRnc,
+          tipo_identificacion: tipoIdentificacion,
+          numero_comprobante_fiscal: item.numero_comprobante_fiscal || item.numero_comprobante || item.ncf || '',
+          fecha_comprobante: item.fecha_comprobante || item.fecha_factura || '',
+          monto_facturado: item.monto_facturado || 0,
+          itbis_facturado: item.itbis_facturado || item.itbis_cobrado || 0,
+          itbis_retenido: item.itbis_retenido || 0,
+          monto_propina_legal: item.monto_propina_legal || 0,
+          itbis_retenido_propina: item.itbis_retenido_propina || 0,
+          itbis_percibido_ventas: item.itbis_percibido_ventas || item.itbis_percibido || 0,
+          retencion_renta_terceros: item.retencion_renta_terceros || 0,
+          isr_percibido_ventas: item.isr_percibido_ventas || 0,
+          impuesto_selectivo_consumo: item.impuesto_selectivo_consumo || 0,
+          otros_impuestos_tasas: item.otros_impuestos_tasas || 0,
+          monto_propina_legal_2: item.monto_propina_legal_2 || 0,
+        };
+      });
 
       return mappedData;
     } catch (error) {
