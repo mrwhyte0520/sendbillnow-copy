@@ -101,7 +101,10 @@ export default function PayrollProcessPage() {
 
       // Obtener empleados activos
       const employees = await employeesService.getAll(user.id);
-      const activeEmployees = employees.filter((e: any) => e.status === 'active');
+      const activeEmployees = employees.filter((e: any) => {
+        const status = String(e.status || '').toLowerCase();
+        return status === 'active' || status === 'activo';
+      });
 
       if (activeEmployees.length === 0) {
         alert('No hay empleados activos para procesar');
@@ -116,7 +119,7 @@ export default function PayrollProcessPage() {
         if (deptEmployees.length === 0) return;
 
         const deptPayroll = deptEmployees.reduce(
-          (sum: number, e: any) => sum + (Number(e.base_salary || e.salary) || 0),
+          (sum: number, e: any) => sum + (Number(e.base_salary) || Number(e.salary) || 0),
           0
         );
         const budget = Number(dept.budget) || 0;
