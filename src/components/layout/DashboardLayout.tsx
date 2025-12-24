@@ -42,6 +42,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [isOwner, setIsOwner] = useState(true); // Por defecto true hasta verificar
+  const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; moduleName: string; requiredPlan: string }>({
+    show: false,
+    moduleName: '',
+    requiredPlan: ''
+  });
 
   useEffect(() => {
     setUserProfile(prev => ({
@@ -407,9 +412,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const handleRestrictedClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (confirm(`Este módulo requiere el plan "${requiredPlan}". ¿Deseas ver los planes disponibles?`)) {
-        navigate('/plans');
-      }
+      setRestrictedModal({
+        show: true,
+        moduleName: item.name,
+        requiredPlan: requiredPlan
+      });
     };
 
     return (
@@ -462,9 +469,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     key={subItem.name}
                     onClick={(e) => {
                       e.preventDefault();
-                      if (confirm(`Este módulo requiere el plan "${subRequiredPlan}". ¿Deseas ver los planes disponibles?`)) {
-                        navigate('/plans');
-                      }
+                      setRestrictedModal({
+                        show: true,
+                        moduleName: subItem.name,
+                        requiredPlan: subRequiredPlan
+                      });
                     }}
                     className="flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 text-slate-500 hover:bg-slate-700/30 cursor-pointer"
                     title={`Requiere ${subRequiredPlan}`}
@@ -1012,6 +1021,87 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             setNotificationsOpen(false);
           }} 
         />
+      )}
+
+      {/* Modal de módulo restringido */}
+      {restrictedModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setRestrictedModal({ show: false, moduleName: '', requiredPlan: '' })}
+          />
+          
+          {/* Modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header con gradiente */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-center">
+              <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
+                <i className="ri-lock-2-line text-4xl text-white"></i>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-1">Módulo Premium</h3>
+              <p className="text-amber-100 text-sm">Acceso restringido</p>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-gray-600 mb-4">
+                  El módulo <span className="font-semibold text-gray-900">"{restrictedModal.moduleName}"</span> no está disponible en tu plan actual.
+                </p>
+                
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                  <div className="flex items-center justify-center mb-2">
+                    <i className="ri-vip-crown-2-fill text-amber-500 text-2xl mr-2"></i>
+                    <span className="text-sm text-gray-600">Plan requerido:</span>
+                  </div>
+                  <p className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    {restrictedModal.requiredPlan}
+                  </p>
+                </div>
+              </div>
+
+              {/* Beneficios */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Al actualizar obtienes:</p>
+                <ul className="space-y-2">
+                  <li className="flex items-center text-sm text-gray-700">
+                    <i className="ri-check-line text-green-500 mr-2"></i>
+                    Acceso completo a {restrictedModal.moduleName}
+                  </li>
+                  <li className="flex items-center text-sm text-gray-700">
+                    <i className="ri-check-line text-green-500 mr-2"></i>
+                    Todas las funcionalidades premium
+                  </li>
+                  <li className="flex items-center text-sm text-gray-700">
+                    <i className="ri-check-line text-green-500 mr-2"></i>
+                    Soporte prioritario
+                  </li>
+                </ul>
+              </div>
+
+              {/* Botones */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRestrictedModal({ show: false, moduleName: '', requiredPlan: '' })}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setRestrictedModal({ show: false, moduleName: '', requiredPlan: '' });
+                    navigate('/plans');
+                  }}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+                >
+                  <i className="ri-arrow-up-circle-line mr-2"></i>
+                  Ver Planes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
