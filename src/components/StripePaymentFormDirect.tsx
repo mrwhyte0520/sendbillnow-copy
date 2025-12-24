@@ -12,12 +12,8 @@ interface StripePaymentFormProps {
   userEmail: string;
 }
 
-// Precios en centavos
-const PLAN_PRICES: Record<string, number> = {
-  pyme: 1997,
-  pro: 4997,
-  plus: 9997
-};
+// El precio se recibe como prop directamente en RD$
+// Se convierte a centavos para Stripe
 
 export default function StripePaymentFormDirect({
   planId,
@@ -81,13 +77,13 @@ export default function StripePaymentFormDirect({
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          amount: PLAN_PRICES[planId].toString(),
-          currency: 'usd',
+          amount: Math.round(amount * 100).toString(),
+          currency: 'dop',
           'automatic_payment_methods[enabled]': 'true',
           'metadata[planId]': planId,
           'metadata[userId]': userId,
           'metadata[userEmail]': userEmail,
-          description: `Suscripción ${planId.toUpperCase()} - ${userEmail}`,
+          description: `Suscripción ${planName} - ${userEmail}`,
         }),
       });
 
@@ -159,7 +155,7 @@ export default function StripePaymentFormDirect({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-700 font-medium">Monto a pagar:</span>
-          <span className="text-2xl font-bold text-blue-600">${amount.toFixed(2)} USD</span>
+          <span className="text-2xl font-bold text-blue-600">RD${amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
 
@@ -231,7 +227,7 @@ export default function StripePaymentFormDirect({
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pagar ${amount.toFixed(2)}
+              Pagar RD${amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
             </>
           )}
         </button>

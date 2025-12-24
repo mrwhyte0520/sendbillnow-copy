@@ -11,20 +11,20 @@ import StripePaymentFormDirect from '../../components/StripePaymentFormDirect';
 interface Plan {
   id: string;
   name: string;
-  price: number;
-  originalPrice?: number;
-  period: string;
+  priceMonthly: number;
+  priceAnnual: number;
   description: string;
   features: string[];
   popular: boolean;
   color: string;
   icon: string;
+  category: 'facturacion' | 'pos';
 }
 
 export default function PlansPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [stripePromise] = useState(() => getStripe());
   const { user } = useAuth();
   
@@ -38,69 +38,113 @@ export default function PlansPage() {
 
   const plans: Plan[] = [
     {
-      id: 'pyme',
-      name: 'PYME',
-      price: 19.97,
-      period: '/mes',
-      description: 'Perfecto para pequeñas empresas',
+      id: 'facturacion-simple',
+      name: 'Facturación Simple',
+      priceMonthly: 349.97,
+      priceAnnual: 2400,
+      description: 'Ideal para negocios que inician con facturación básica',
       features: [
-        'Una empresa',
-        'Facturación básica con NCF',
-        'Reportes DGII básicos',
-        'Inventario hasta 500 productos',
-        'Dashboard KPI avanzado',
-        'Soporte por email',
-        'Backup diario',
-        'Gestion de activos fijos'
+        '1 Usuario',
+        '100 Facturas al mes',
+        'Cotizaciones',
+        '2 Plantillas de factura',
+        'Código de barra',
+        'Notas de crédito/débito',
+        'Reportes básicos'
       ],
       popular: false,
       color: 'from-blue-500 to-blue-600',
-      icon: 'ri-building-2-line'
+      icon: 'ri-file-text-line',
+      category: 'facturacion'
     },
     {
-      id: 'pro',
-      name: 'PRO',
-      price: 49.97,
-      period: '/mes',
-      description: 'Para empresas en crecimiento',
+      id: 'facturacion-premium',
+      name: 'Facturación Premium',
+      priceMonthly: 549.97,
+      priceAnnual: 3700,
+      description: 'Para empresas que necesitan más capacidad de facturación',
       features: [
-        'Hasta 3 empresas',
-        'Contabilidad completa',
-        'Todos los reportes DGII',
-        'Inventario hasta 2,000 productos',
-        'Dashboard KPI avanzado',
-        'Gestión bancaria básica',
-        'Nómina básica (hasta 10 empleados)',
-        'Soporte prioritario',
-        'Gestión de activos fijos '
-      ],
-      popular: true,
-      color: 'from-indigo-500 to-indigo-600',
-      icon: 'ri-rocket-line'
-    },
-    {
-      id: 'plus',
-      name: 'PLUS',
-      price: 99.97,
-      period: '/mes',
-      description: 'Solución empresarial completa',
-      features: [
-        'Empresas ilimitadas',
-        'Todas las funciones contables',
-        'Dashboard KPI avanzado',
-        'Inventario ilimitado',
-        'Nómina completa (empleados ilimitados)',
-        'Reportes avanzados',
-        'Soporte prioritario',
-        'Backup automático',
-        'Multi-sucursal',
-        'Facturación electrónica',
-        'Conciliación bancaria',
-        'Gestión de activos fijos'
+        '8 Usuarios',
+        '500 Facturas al mes',
+        'Cotizaciones',
+        '2 Plantillas de factura',
+        'Código de barra',
+        '1 Almacén de inventario',
+        'Notas de crédito/débito',
+        'Reportes completos'
       ],
       popular: false,
+      color: 'from-indigo-500 to-indigo-600',
+      icon: 'ri-file-list-3-line',
+      category: 'facturacion'
+    },
+    {
+      id: 'pos-premium',
+      name: 'POS Premium',
+      priceMonthly: 1299.97,
+      priceAnnual: 10000,
+      description: 'Solución completa para puntos de venta y gestión empresarial',
+      features: [
+        'Dashboard completo',
+        'Sistema POS',
+        '80 Usuarios',
+        'Productos ilimitados',
+        '2 Almacenes de inventario',
+        'Gestión de clientes',
+        '2,000 Facturas electrónicas',
+        'Backup cada 48 horas',
+        'Caja chica',
+        'Cálculo de comisiones',
+        'Compras y gastos',
+        'Proveedores',
+        'Cuentas por cobrar',
+        'Cuentas por pagar',
+        'Nómina completa',
+        'Multisucursal',
+        'Multimoneda',
+        'Servicio de reparaciones',
+        'Cotizaciones',
+        'Devoluciones',
+        'Notificaciones WhatsApp (adicional)'
+      ],
+      popular: true,
       color: 'from-purple-500 to-purple-600',
-      icon: 'ri-vip-crown-line'
+      icon: 'ri-store-2-line',
+      category: 'pos'
+    },
+    {
+      id: 'pos-super-plus',
+      name: 'POS Super Plus',
+      priceMonthly: 15000,
+      priceAnnual: 150000,
+      description: 'La solución más completa para grandes empresas',
+      features: [
+        'Dashboard completo',
+        'Sistema POS',
+        '300 Usuarios',
+        'Productos ilimitados',
+        '5 Almacenes de inventario',
+        'Gestión de clientes',
+        'Factura electrónica ilimitada',
+        'Backup cada 48 horas',
+        'Caja chica',
+        'Cálculo de comisiones',
+        'Compras y gastos',
+        'Proveedores',
+        'Cuentas por cobrar',
+        'Cuentas por pagar',
+        'Nómina completa',
+        'Multisucursal',
+        'Multimoneda',
+        'Servicio de reparaciones',
+        'Cotizaciones',
+        'Devoluciones',
+        'Notificaciones WhatsApp (adicional)'
+      ],
+      popular: false,
+      color: 'from-amber-500 to-orange-600',
+      icon: 'ri-vip-crown-line',
+      category: 'pos'
     }
   ];
 
@@ -110,6 +154,20 @@ export default function PlansPage() {
     }
     setSelectedPlan(planId);
     setShowPaymentModal(true);
+  };
+
+  const getPrice = (plan: Plan) => {
+    return billingPeriod === 'monthly' ? plan.priceMonthly : plan.priceAnnual;
+  };
+
+  const getPeriodLabel = () => {
+    return billingPeriod === 'monthly' ? '/mes' : '/año';
+  };
+
+  const getSavingsPercent = (plan: Plan) => {
+    const annualIfMonthly = plan.priceMonthly * 12;
+    const savings = ((annualIfMonthly - plan.priceAnnual) / annualIfMonthly) * 100;
+    return Math.round(savings);
   };
 
   const handlePaymentSuccess = async () => {
@@ -123,30 +181,29 @@ export default function PlansPage() {
         alert('¡Suscripción exitosa! Bienvenido a Contabi RD.');
         try {
           const plan = plans.find(p => p.id === selectedPlan);
+          const price = plan ? getPrice(plan) : 0;
           await notifyPlanPurchase({
             to: '+18299411224',
             userEmail: user?.email || 'desconocido',
             planId: selectedPlan,
             planName: plan?.name || selectedPlan,
-            amount: plan?.price ?? 0,
+            amount: price,
             method: 'stripe',
             purchasedAt: new Date().toISOString(),
           });
-          // Atribuir comisión por referido (15%) si aplica
           try {
             const ref = localStorage.getItem('ref_code') || '';
             const buyerId = user?.id || '';
-            const planAmount = plan?.price ?? 0;
-            if (ref && buyerId && planAmount > 0) {
+            if (ref && buyerId && price > 0) {
               const refRow = await referralsService.getReferrerByCode(ref);
               if (refRow && refRow.user_id !== buyerId) {
-                const commission = Number((planAmount * 0.15).toFixed(2));
+                const commission = Number((price * 0.15).toFixed(2));
                 await referralsService.createCommission({
                   ref_code: ref,
                   referee_user_id: buyerId,
                   plan_id: selectedPlan,
                   amount: commission,
-                  currency: 'USD'
+                  currency: 'DOP'
                 });
               }
             }
@@ -162,8 +219,9 @@ export default function PlansPage() {
   };
 
   const trialStatus = getTrialStatus();
-  const visiblePlans = plans.filter(plan => plan.id !== 'student');
   const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
+  const facturacionPlans = plans.filter(p => p.category === 'facturacion');
+  const posPlans = plans.filter(p => p.category === 'pos');
 
   const formatTimeLeft = () => {
     if (trialInfo.daysLeft > 0) {
@@ -177,12 +235,77 @@ export default function PlansPage() {
     }
   };
 
+  const formatMoney = (amount: number) => {
+    return amount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const renderPlanCard = (plan: Plan) => (
+    <div
+      key={plan.id}
+      className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-xl ${
+        plan.popular ? 'border-purple-500 scale-105 z-10' : 'border-gray-200 hover:border-navy-300'
+      } ${!canSelectPlan() ? 'opacity-75' : ''}`}
+    >
+      {plan.popular && (
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-center py-2 text-sm font-semibold">
+          <i className="ri-star-fill mr-1"></i> Más Popular
+        </div>
+      )}
+
+      <div className={`bg-gradient-to-r ${plan.color} p-6 text-white ${plan.popular ? 'pt-12' : ''}`}>
+        <div className="text-center">
+          <i className={`${plan.icon} text-4xl mb-3`}></i>
+          <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+          <div className="flex items-baseline justify-center mb-2">
+            <span className="text-sm">RD$</span>
+            <span className="text-3xl font-bold mx-1">{formatMoney(getPrice(plan))}</span>
+            <span className="text-sm">{getPeriodLabel()}</span>
+          </div>
+          {billingPeriod === 'annual' && getSavingsPercent(plan) > 0 && (
+            <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block">
+              Ahorra {getSavingsPercent(plan)}%
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-6">
+        <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
+        
+        <div className="max-h-64 overflow-y-auto mb-4">
+          <ul className="space-y-2">
+            {plan.features.map((feature, index) => (
+              <li key={index} className="flex items-start">
+                <i className="ri-check-line text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>
+                <span className="text-sm text-gray-700">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <button
+          onClick={() => handleSelectPlan(plan.id)}
+          disabled={!canSelectPlan()}
+          className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
+            !canSelectPlan()
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : plan.popular
+              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700'
+              : 'bg-gradient-to-r from-navy-600 to-navy-700 text-white hover:from-navy-700 hover:to-navy-800'
+          }`}
+        >
+          {!canSelectPlan() ? 'Pago Requerido' : currentPlan?.active ? 'Cambiar Plan' : 'Seleccionar Plan'}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-navy-700 to-navy-800 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">Planes y Suscripciones</h1>
               <p className="text-navy-200">Elige el plan perfecto para tu empresa</p>
@@ -219,6 +342,35 @@ export default function PlansPage() {
           </div>
         </div>
 
+        {/* Billing Toggle */}
+        <div className="flex justify-center">
+          <div className="bg-white rounded-lg p-1 shadow-lg inline-flex">
+            <button
+              onClick={() => setBillingPeriod('monthly')}
+              className={`px-6 py-2 rounded-md font-medium transition-all ${
+                billingPeriod === 'monthly'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-gray-600 hover:text-navy-600'
+              }`}
+            >
+              Mensual
+            </button>
+            <button
+              onClick={() => setBillingPeriod('annual')}
+              className={`px-6 py-2 rounded-md font-medium transition-all flex items-center ${
+                billingPeriod === 'annual'
+                  ? 'bg-navy-600 text-white'
+                  : 'text-gray-600 hover:text-navy-600'
+              }`}
+            >
+              Anual
+              <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
+                Ahorra más
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Trial Status Alerts */}
         {trialStatus === 'warning' && (
           <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-4 text-white">
@@ -239,12 +391,9 @@ export default function PlansPage() {
             <i className="ri-lock-line text-4xl mb-3"></i>
             <h3 className="text-xl font-bold mb-2">Prueba gratuita expirada</h3>
             <p className="mb-4">
-              Tu período de prueba de 15 días ha terminado. Para continuar usando Contabi RD, 
+              Tu período de prueba ha terminado. Para continuar usando Contabi RD, 
               selecciona un plan de suscripción y completa el pago.
             </p>
-            <div className="bg-red-600/50 rounded-lg p-3 text-sm">
-              <strong>Importante:</strong> Todas las funciones están bloqueadas hasta que completes tu suscripción.
-            </div>
           </div>
         )}
 
@@ -262,78 +411,38 @@ export default function PlansPage() {
           </div>
         )}
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-xl ${
-                plan.popular ? 'border-indigo-500 scale-105' : 'border-gray-200 hover:border-navy-300'
-              } ${!canSelectPlan() ? 'opacity-75' : ''}`}
-            >
-              {plan.popular && (
-                <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white text-center py-2 text-sm font-semibold">
-                  Más Popular
-                </div>
-              )}
-
-              <div className={`bg-gradient-to-r ${plan.color} p-6 text-white ${plan.popular ? 'pt-12' : ''}`}>
-                <div className="text-center">
-                  <i className={`${plan.icon} text-4xl mb-3`}></i>
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center mb-2">
-                    <span className="text-3xl font-bold">${plan.price}</span>
-                    <span className="text-lg ml-1">{plan.period}</span>
-                  </div>
-                  {plan.originalPrice && (
-                    <div className="text-sm opacity-75">
-                      <span className="line-through">${plan.originalPrice}</span>
-                      <span className="ml-2 bg-white/20 px-2 py-1 rounded">80% OFF</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-6">
-                <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
-                
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start">
-                      <i className="ri-check-line text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>
-                      <span className="text-sm text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => handleSelectPlan(plan.id)}
-                  disabled={!canSelectPlan()}
-                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 whitespace-nowrap ${
-                    !canSelectPlan()
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : plan.popular
-                      ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700'
-                      : 'bg-gradient-to-r from-navy-600 to-navy-700 text-white hover:from-navy-700 hover:to-navy-800'
-                  }`}
-                >
-                  {!canSelectPlan() ? 'Pago Requerido' : currentPlan?.active ? 'Cambiar Plan' : 'Seleccionar Plan'}
-                </button>
-
-                <div className="text-center mt-3">
-                  <span className="text-xs text-gray-500">
-                    {!canSelectPlan() ? 'Completa el pago para continuar' : '15 días de prueba gratuita'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Facturación Plans Section */}
+        <div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <i className="ri-file-text-line mr-2 text-blue-600"></i>
+              Planes de Facturación
+            </h2>
+            <p className="text-gray-600">Soluciones para facturación y cotizaciones</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {facturacionPlans.map(renderPlanCard)}
+          </div>
         </div>
 
-        {/* Features Comparison */}
+        {/* POS Plans Section */}
+        <div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <i className="ri-store-2-line mr-2 text-purple-600"></i>
+              Planes POS Empresarial
+            </h2>
+            <p className="text-gray-600">Solución completa para puntos de venta y gestión empresarial</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {posPlans.map(renderPlanCard)}
+          </div>
+        </div>
+
+        {/* Features Comparison for POS */}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-            Comparación de Características
+            Comparación de Planes POS
           </h2>
           
           <div className="overflow-x-auto">
@@ -341,71 +450,98 @@ export default function PlansPage() {
               <thead>
                 <tr className="border-b-2 border-gray-200">
                   <th className="text-left py-3 px-4 font-semibold text-gray-900">Características</th>
-                  {visiblePlans.map((plan) => (
-                    <th key={plan.id} className="text-center py-3 px-4 font-semibold text-gray-900">
-                      {plan.name}
-                    </th>
-                  ))}
+                  <th className="text-center py-3 px-4 font-semibold text-purple-600">POS Premium</th>
+                  <th className="text-center py-3 px-4 font-semibold text-orange-600">POS Super Plus</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Número de empresas</td>
-                  <td className="py-3 px-4 text-center">1</td>
-                  <td className="py-3 px-4 text-center">3</td>
-                  <td className="py-3 px-4 text-center">Ilimitadas</td>
-                </tr>
-                <tr className="border-b border-gray-100">
                   <td className="py-3 px-4 font-medium">Usuarios</td>
+                  <td className="py-3 px-4 text-center">80</td>
+                  <td className="py-3 px-4 text-center font-bold text-orange-600">300</td>
+                </tr>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <td className="py-3 px-4 font-medium">Almacenes de Inventario</td>
                   <td className="py-3 px-4 text-center">2</td>
-                  <td className="py-3 px-4 text-center">5</td>
-                  <td className="py-3 px-4 text-center">Ilimitados</td>
+                  <td className="py-3 px-4 text-center font-bold text-orange-600">5</td>
                 </tr>
                 <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Productos en inventario</td>
-                  <td className="py-3 px-4 text-center">500</td>
-                  <td className="py-3 px-4 text-center">2,000</td>
-                  <td className="py-3 px-4 text-center">Ilimitados</td>
+                  <td className="py-3 px-4 font-medium">Facturas Electrónicas</td>
+                  <td className="py-3 px-4 text-center">2,000/mes</td>
+                  <td className="py-3 px-4 text-center font-bold text-orange-600">Ilimitadas</td>
                 </tr>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 bg-gray-50">
                   <td className="py-3 px-4 font-medium">Dashboard</td>
-                  <td className="py-3 px-4 text-center">KPI Avanzado</td>
-                  <td className="py-3 px-4 text-center">KPI Avanzado</td>
-                  <td className="py-3 px-4 text-center">KPI Avanzado</td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Empleados en nómina</td>
-                  <td className="py-3 px-4 text-center">N/A</td>
-                  <td className="py-3 px-4 text-center">10</td>
-                  <td className="py-3 px-4 text-center">Ilimitados</td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Gestión Bancaria</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-close-line text-red-500"></i></td>
                   <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
                   <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
                 </tr>
                 <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Análisis financiero avanzado</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-close-line text-red-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-close-line text-red-500"></i></td>
+                  <td className="py-3 px-4 font-medium">Sistema POS</td>
                   <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <td className="py-3 px-4 font-medium">Nómina</td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-3 px-4 font-medium">Multisucursal</td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <td className="py-3 px-4 font-medium">Multimoneda</td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-3 px-4 font-medium">Backup cada 48 horas</td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <td className="py-3 px-4 font-medium">Servicio de Reparaciones</td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
+                </tr>
+                <tr className="border-b border-gray-100">
+                  <td className="py-3 px-4 font-medium">Notificaciones WhatsApp</td>
+                  <td className="py-3 px-4 text-center text-sm text-gray-500">Módulo adicional</td>
+                  <td className="py-3 px-4 text-center text-sm text-gray-500">Módulo adicional</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
+        {/* Contact Section */}
+        <div className="bg-gradient-to-r from-navy-600 to-navy-700 rounded-lg p-6 text-white text-center">
+          <i className="ri-customer-service-2-line text-4xl mb-3"></i>
+          <h3 className="text-xl font-bold mb-2">¿Necesitas ayuda para elegir?</h3>
+          <p className="text-navy-200 mb-4">
+            Contáctanos y te ayudaremos a encontrar el plan perfecto para tu negocio
+          </p>
+          <a 
+            href="https://wa.me/18299411224" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-semibold transition-colors"
+          >
+            <i className="ri-whatsapp-line mr-2 text-xl"></i>
+            Contactar por WhatsApp
+          </a>
+        </div>
+
         {/* Payment Modal */}
         {showPaymentModal && selectedPlanData && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-900">Confirmar Suscripción</h3>
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  disabled={isProcessingPayment}
-                  className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
@@ -415,7 +551,29 @@ export default function PlansPage() {
                 <div className="text-center">
                   <i className={`${selectedPlanData.icon} text-3xl mb-2`}></i>
                   <h4 className="text-lg font-bold">{selectedPlanData.name}</h4>
-                  <div className="text-2xl font-bold">${selectedPlanData.price}{selectedPlanData.period}</div>
+                  <div className="text-2xl font-bold">
+                    RD${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
+                  </div>
+                  {billingPeriod === 'annual' && getSavingsPercent(selectedPlanData) > 0 && (
+                    <div className="text-sm mt-1 bg-white/20 px-3 py-1 rounded-full inline-block">
+                      Ahorra {getSavingsPercent(selectedPlanData)}% anual
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Features del plan seleccionado */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h5 className="font-semibold text-gray-900 mb-3">Tu plan incluye:</h5>
+                <div className="max-h-40 overflow-y-auto">
+                  <ul className="space-y-2">
+                    {selectedPlanData.features.map((feature, index) => (
+                      <li key={index} className="flex items-start text-sm">
+                        <i className="ri-check-line text-green-500 mr-2 mt-0.5 flex-shrink-0"></i>
+                        <span className="text-gray-700">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
 
@@ -435,7 +593,7 @@ export default function PlansPage() {
                 <StripePaymentFormDirect
                   planId={selectedPlan}
                   planName={selectedPlanData.name}
-                  amount={selectedPlanData.price}
+                  amount={getPrice(selectedPlanData)}
                   onSuccess={handlePaymentSuccess}
                   onCancel={() => setShowPaymentModal(false)}
                   userId={user?.id || ''}

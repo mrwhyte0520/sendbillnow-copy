@@ -13,17 +13,27 @@ export const getStripe = () => {
   return stripePromise;
 };
 
-// Configuración de precios por plan (en centavos)
-export const PLAN_PRICES = {
-  pyme: 1997, // $19.97
-  pro: 4997,  // $49.97
-  plus: 9997  // $99.97
+// Configuración de precios por plan (en centavos - RD$)
+// Los precios se pasan directamente desde el componente, aquí solo para referencia
+export const PLAN_PRICES_MONTHLY = {
+  'facturacion-simple': 34997,   // RD$349.97
+  'facturacion-premium': 54997,  // RD$549.97
+  'pos-premium': 129997,         // RD$1,299.97
+  'pos-super-plus': 1500000      // RD$15,000
+};
+
+export const PLAN_PRICES_ANNUAL = {
+  'facturacion-simple': 240000,   // RD$2,400
+  'facturacion-premium': 370000,  // RD$3,700
+  'pos-premium': 1000000,         // RD$10,000
+  'pos-super-plus': 15000000      // RD$150,000
 };
 
 export const PLAN_NAMES = {
-  pyme: 'Plan PYME',
-  pro: 'Plan PRO',
-  plus: 'Plan PLUS'
+  'facturacion-simple': 'Facturación Simple',
+  'facturacion-premium': 'Facturación Premium',
+  'pos-premium': 'POS Premium',
+  'pos-super-plus': 'POS Super Plus'
 };
 
 interface CreatePaymentIntentParams {
@@ -46,7 +56,7 @@ export const createPaymentIntent = async ({ planId, userId, userEmail }: CreateP
         planId,
         userId,
         userEmail,
-        amount: PLAN_PRICES[planId as keyof typeof PLAN_PRICES],
+        amount: PLAN_PRICES_MONTHLY[planId as keyof typeof PLAN_PRICES_MONTHLY] || 0,
       }),
     });
 
