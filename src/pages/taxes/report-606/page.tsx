@@ -220,76 +220,117 @@ export default function Report606Page() {
       '';
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Reporte 606');
+    const ws = wb.addWorksheet('Formato 606');
 
+    // Formato oficial DGII: 23 columnas
     const headers = [
-      { key: 'rnc', title: 'RNC/Cédula', width: 15 },
-      { key: 'tipoId', title: 'Tipo ID', width: 10 },
-      { key: 'tipoBien', title: 'Tipo Bien/Serv.', width: 22 },
-      { key: 'ncf', title: 'NCF', width: 22 },
-      { key: 'ncfMod', title: 'NCF Mod.', width: 22 },
-      { key: 'fComp', title: 'F. Comp.', width: 12 },
-      { key: 'fPago', title: 'F. Pago', width: 12 },
-      { key: 'servFact', title: 'Serv. Fact.', width: 14 },
-      { key: 'bienesFact', title: 'Bienes Fact.', width: 14 },
-      { key: 'montoFact', title: 'Monto Fact.', width: 14 },
-      { key: 'itbisFact', title: 'ITBIS Fact.', width: 14 },
-      { key: 'itbisRet', title: 'ITBIS Ret.', width: 14 },
-      { key: 'retRenta', title: 'Ret. Renta', width: 14 },
-      { key: 'formaPago', title: 'Forma Pago', width: 12 },
+      { num: 1, title: 'RNC o\nCédula', width: 14 },
+      { num: 2, title: 'Tipo Id', width: 8 },
+      { num: 3, title: 'Tipo Bienes y Servicios Comprados', width: 38 },
+      { num: 4, title: 'NCF', width: 20 },
+      { num: 5, title: 'NCF ó Documento\nModificado', width: 20 },
+      { num: 6, title: 'Fecha\nComprobante', width: 12 },
+      { num: 7, title: 'Fecha Pago', width: 12 },
+      { num: 8, title: 'Monto Facturado\nen Servicios', width: 16 },
+      { num: 9, title: 'Monto Facturado\nen Bienes', width: 16 },
+      { num: 10, title: 'Total Monto\nFacturado', width: 16 },
+      { num: 11, title: 'ITBIS Facturado', width: 14 },
+      { num: 12, title: 'ITBIS Retenido', width: 14 },
+      { num: 13, title: 'ITBIS sujeto a\nProporcionalidad\n(Art. 349)', width: 16 },
+      { num: 14, title: 'ITBIS llevado al\nCosto', width: 14 },
+      { num: 15, title: 'ITBIS por\nAdelantar', width: 14 },
+      { num: 16, title: 'ITBIS percibido\nen compras', width: 14 },
+      { num: 17, title: 'Tipo de\nRetención en\nISR', width: 12 },
+      { num: 18, title: 'Monto Retención\nRenta', width: 16 },
+      { num: 19, title: 'ISR Percibido en\ncompras', width: 14 },
+      { num: 20, title: 'Impuesto Selectivo\nal Consumo', width: 16 },
+      { num: 21, title: 'Otros\nImpuestos/Tasas', width: 14 },
+      { num: 22, title: 'Monto Propina\nLegal', width: 14 },
+      { num: 23, title: 'Forma de Pago', width: 16 },
     ];
 
-    let currentRow = 1;
     const totalColumns = headers.length;
+    const blueColor = 'FF1E3A5F'; // Azul oscuro (en lugar de verde DGII)
+    const lightBlueColor = 'FF4472C4'; // Azul más claro para detalles
 
-    // Encabezado: empresa
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const companyCell = ws.getCell(currentRow, 1);
-    companyCell.value = companyName;
-    companyCell.font = { bold: true, size: 14 };
-    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    let currentRow = 1;
+
+    // Encabezado institucional (estilo DGII pero azul)
+    ws.mergeCells(currentRow, 1, currentRow, 6);
+    const dgiiCell = ws.getCell(currentRow, 1);
+    dgiiCell.value = companyName || 'Dirección General de Impuestos Internos';
+    dgiiCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    dgiiCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    dgiiCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+    ws.mergeCells(currentRow, 7, currentRow, totalColumns);
+    const toolCell = ws.getCell(currentRow, 7);
+    toolCell.value = 'Herramienta de Distribución Gratuita';
+    toolCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    toolCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    toolCell.alignment = { horizontal: 'right', vertical: 'middle' };
     currentRow++;
 
-    // RNC (si existe)
-    if (companyRnc) {
-      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-      const rncCell = ws.getCell(currentRow, 1);
-      rncCell.value = `RNC: ${companyRnc}`;
-      rncCell.font = { bold: true };
-      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
-      currentRow++;
-    }
-
-    // Título del reporte
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const titleCell = ws.getCell(currentRow, 1);
-    titleCell.value = 'Reporte 606 - Compras y Servicios';
-    titleCell.font = { bold: true, size: 16 };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // Subtítulo
+    ws.mergeCells(currentRow, 1, currentRow, 6);
+    const subtitleCell = ws.getCell(currentRow, 1);
+    subtitleCell.value = 'Formato de Envío de Compras de Bienes y Servicios';
+    subtitleCell.font = { bold: true, size: 11 };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    subtitleCell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     currentRow++;
 
-    // Período
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const periodCell = ws.getCell(currentRow, 1);
-    periodCell.value = `Período: ${selectedPeriod}`;
-    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // Info empresa y período
+    ws.getCell(currentRow, 1).value = 'RNC o Cédula';
+    ws.getCell(currentRow, 2).value = companyRnc;
+    ws.getCell(currentRow, 2).font = { bold: true };
     currentRow++;
 
-    // Fila vacía
+    ws.getCell(currentRow, 1).value = 'Período';
+    ws.getCell(currentRow, 2).value = selectedPeriod.replace('-', '');
+    ws.getCell(currentRow, 2).font = { bold: true };
     currentRow++;
 
-    // Fila de encabezados de columnas (azul marino + texto blanco)
+    ws.getCell(currentRow, 1).value = 'Cantidad Registros';
+    ws.getCell(currentRow, 2).value = reportData.length;
+    ws.getCell(currentRow, 2).font = { bold: true };
+    currentRow++;
+
+    // Línea vacía
+    currentRow++;
+
+    // Fila de números de columna (1-23)
+    const numRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = numRow.getCell(idx + 1);
+      cell.value = h.num;
+      cell.font = { bold: true, size: 9 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2F3' } };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+    currentRow++;
+
+    // Fila de encabezados de columnas (azul + texto blanco)
     const headerRow = ws.getRow(currentRow);
+    headerRow.height = 45;
     headers.forEach((h, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = h.title;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
+      cell.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
       };
-      cell.alignment = { vertical: 'middle' };
     });
     currentRow++;
 
@@ -303,13 +344,37 @@ export default function Report606Page() {
       dataRow.getCell(5).value = row.ncf_modificado || '';
       dataRow.getCell(6).value = row.fecha_comprobante;
       dataRow.getCell(7).value = row.fecha_pago;
-      dataRow.getCell(8).value = row.servicios_facturados;
-      dataRow.getCell(9).value = row.bienes_facturados;
-      dataRow.getCell(10).value = row.monto_facturado;
-      dataRow.getCell(11).value = row.itbis_facturado;
-      dataRow.getCell(12).value = row.itbis_retenido;
-      dataRow.getCell(13).value = row.retencion_renta;
-      dataRow.getCell(14).value = row.forma_pago;
+      dataRow.getCell(8).value = row.servicios_facturados || 0;
+      dataRow.getCell(9).value = row.bienes_facturados || 0;
+      dataRow.getCell(10).value = row.monto_facturado || 0;
+      dataRow.getCell(11).value = row.itbis_facturado || 0;
+      dataRow.getCell(12).value = row.itbis_retenido || 0;
+      dataRow.getCell(13).value = 0; // ITBIS proporcionalidad
+      dataRow.getCell(14).value = 0; // ITBIS al costo
+      dataRow.getCell(15).value = 0; // ITBIS por adelantar
+      dataRow.getCell(16).value = 0; // ITBIS percibido
+      dataRow.getCell(17).value = ''; // Tipo retención ISR
+      dataRow.getCell(18).value = row.retencion_renta || 0;
+      dataRow.getCell(19).value = row.isr_percibido || 0;
+      dataRow.getCell(20).value = row.impuesto_selectivo_consumo || 0;
+      dataRow.getCell(21).value = row.otros_impuestos || 0;
+      dataRow.getCell(22).value = row.monto_propina_legal || 0;
+      dataRow.getCell(23).value = row.forma_pago;
+
+      // Bordes y formato numérico
+      for (let c = 1; c <= totalColumns; c++) {
+        const cell = dataRow.getCell(c);
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+        };
+        // Formato numérico para columnas de montos (8-22 excepto 17 y 23)
+        if (c >= 8 && c <= 22 && c !== 17) {
+          cell.numFmt = '#,##0.00';
+        }
+      }
       currentRow++;
     }
 

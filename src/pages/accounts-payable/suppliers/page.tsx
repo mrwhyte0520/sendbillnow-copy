@@ -109,12 +109,12 @@ export default function SuppliersPage() {
     '03 - Arrendamientos',
     '04 - Gastos de Activos Fijos',
     '05 - Gastos de Representación',
-    '06 - Gastos Financieros',
-    '07 - Gastos de Seguros',
-    '08 - Gastos por Provisión de Bienes y Servicios',
-    '09 - Gastos por Otros Conceptos',
-    '10 - Compras de Bienes',
-    '11 - Gastos por Servicios Profesionales',
+    '06 - Otras Deducciones Admitidas',
+    '07 - Gastos Financieros',
+    '08 - Gastos Extraordinarios',
+    '09 - Compras y Gastos que formarán parte del Costo de Venta',
+    '10 - Adquisiciones de Activos',
+    '11 - Gastos de Seguros',
   ];
   const taxRegimes = ['Régimen Normal', 'RST', 'ONG', 'Fundación', 'Sin fines de lucro', 'Otro'];
   const invoiceTypes = ['CREDITO_FISCAL', 'INFORMAL', 'INTERNACIONAL'];
@@ -142,12 +142,28 @@ export default function SuppliersPage() {
     const raw = String(value || '').trim();
     if (!raw) return '';
     const needle = raw.toLowerCase();
+
+    // Compatibilidad con valores antiguos que usaban otra codificación o descripciones
+    if (needle.includes('gastos de seguros')) {
+      return '11 - Gastos de Seguros';
+    }
+
+    const legacyCodeMap: Record<string, string> = {
+      '06': '07', // antes: financieros
+      '07': '11', // antes: seguros
+      '08': '02', // antes: provisión bienes/servicios
+      '09': '08', // antes: otros conceptos
+      '10': '09', // antes: compras de bienes
+      '11': '02', // antes: servicios profesionales
+    };
+
     const match = expenseTypes606.find((opt) => opt.toLowerCase() === needle);
     if (match) return match;
     const codeMatch = needle.match(/^\s*(\d{2})\s*-/);
     if (codeMatch) {
       const code = codeMatch[1];
-      const byCode = expenseTypes606.find((opt) => opt.startsWith(`${code} -`));
+      const mappedCode = legacyCodeMap[code] ?? code;
+      const byCode = expenseTypes606.find((opt) => opt.startsWith(`${mappedCode} -`));
       if (byCode) return byCode;
     }
     return raw;

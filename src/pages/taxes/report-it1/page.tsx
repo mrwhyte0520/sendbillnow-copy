@@ -186,85 +186,226 @@ export default function ReportIT1Page() {
       '';
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Declaración IT-1');
+    const ws = wb.addWorksheet('IT-1');
 
-    const headers = [
-      { title: 'Campo', width: 45 },
-      { title: 'Valor', width: 22 },
-    ];
+    const blueColor = 'FF1E3A5F'; // Azul marino oscuro
+
+    // Helper para agregar sección azul marino
+    const addGreenSection = (text: string) => {
+      ws.mergeCells(currentRow, 1, currentRow, 3);
+      const cell = ws.getCell(currentRow, 1);
+      cell.value = text;
+      cell.font = { bold: true, size: 10, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+      cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    };
+
+    // Helper para agregar fila de datos
+    const addDataRow = (num: string, desc: string, value: number | string = 0) => {
+      ws.getCell(currentRow, 1).value = num;
+      ws.getCell(currentRow, 1).alignment = { horizontal: 'center' };
+      ws.getCell(currentRow, 2).value = desc;
+      ws.getCell(currentRow, 3).value = typeof value === 'number' ? value : value;
+      if (typeof value === 'number') {
+        ws.getCell(currentRow, 3).numFmt = '#,##0.00';
+      }
+      ws.getCell(currentRow, 3).alignment = { horizontal: 'right' };
+      currentRow++;
+    };
 
     let currentRow = 1;
-    const totalColumns = headers.length;
 
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const companyCell = ws.getCell(currentRow, 1);
-    companyCell.value = companyName;
-    companyCell.font = { bold: true, size: 14 };
-    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // === ENCABEZADO AZUL ===
+    ws.mergeCells(currentRow, 1, currentRow, 2);
+    const dgiiCell = ws.getCell(currentRow, 1);
+    dgiiCell.value = companyName;
+    dgiiCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    dgiiCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    dgiiCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+    ws.getCell(currentRow, 3).value = 'IT-1';
+    ws.getCell(currentRow, 3).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    ws.getCell(currentRow, 3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    ws.getCell(currentRow, 3).alignment = { horizontal: 'right', vertical: 'middle' };
     currentRow++;
 
-    if (companyRnc) {
-      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-      const rncCell = ws.getCell(currentRow, 1);
-      rncCell.value = `RNC: ${companyRnc}`;
-      rncCell.font = { bold: true };
-      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
-      currentRow++;
-    }
-
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const titleCell = ws.getCell(currentRow, 1);
-    titleCell.value = 'Declaración Jurada del ITBIS (IT-1)';
-    titleCell.font = { bold: true, size: 16 };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // Subtítulo
+    ws.mergeCells(currentRow, 1, currentRow, 3);
+    const subtitleCell = ws.getCell(currentRow, 1);
+    subtitleCell.value = 'DECLARACIÓN JURADA Y/O PAGO DEL IMPUESTO SOBRE LAS TRANSFERENCIAS DE BIENES INDUSTRIALIZADOS Y SERVICIOS (ITBIS)';
+    subtitleCell.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    subtitleCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+    ws.getRow(currentRow).height = 25;
     currentRow++;
 
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const periodCell = ws.getCell(currentRow, 1);
-    periodCell.value = `Período: ${periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })}`;
-    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // === I. DATOS GENERALES ===
+    addGreenSection('I.    DATOS GENERALES');
+    addDataRow('', 'RNC/CÉDULA', companyRnc);
+    addDataRow('', 'RAZÓN SOCIAL/NOMBRE', companyName);
+    addDataRow('', 'PERIODO (MES/AÑO)', reportData.period.replace('-', '/'));
+    currentRow++;
+
+    // === II. INGRESOS POR OPERACIONES ===
+    addGreenSection('II.   INGRESOS POR OPERACIONES');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+    ws.getCell(currentRow - 1, 3).alignment = { horizontal: 'right' };
+
+    addDataRow('1', 'TOTAL DE OPERACIONES DEL PERIODO (Proviene de la casilla 11 del Anexo A)', reportData.total_sales || 0);
+    currentRow++;
+
+    // II.A NO GRAVADAS
+    addGreenSection('II.A   NO GRAVADAS');
+    addDataRow('2', 'INGRESOS POR EXPORTACIONES DE BIENES SEGÚN Art. 342 CT', (reportData as any).exportaciones_bienes || 0);
+    addDataRow('3', 'INGRESOS POR EXPORTACIONES DE SERVICIOS SEGÚN Art. 344 CT y Art. 14 Literal j), Reglamento 293-11', (reportData as any).exportaciones_servicios || 0);
+    addDataRow('4', 'INGRESOS POR VENTAS LOCALES DE BIENES O SERVICIOS EXENTOS Art. 343 y Art. 344 CT', (reportData as any).ventas_exentas || 0);
+    addDataRow('5', 'INGRESOS POR VENTAS DE BIENES O SERVICIOS EXENTOS POR DESTINO', (reportData as any).ventas_exentas_destino || 0);
+    addDataRow('6', 'NO SUJETAS A ITBIS POR SERVICIOS DE CONSTRUCCIÓN (Proviene de la casilla 38 del Anexo A)', 0);
+    addDataRow('7', 'NO SUJETAS A ITBIS POR COMISIONES (Proviene de la casilla 42 del Anexo A)', 0);
+    addDataRow('8', 'INGRESOS POR VENTAS LOCALES DE BIENES EXENTOS SEGÚN Párrafos III y IV, Art. 343 CT', 0);
+    addDataRow('9', 'TOTAL INGRESOS POR OPERACIONES NO GRAVADAS (Sumar casillas 2+3+4+5+6+7+8)', (reportData as any).total_no_gravadas || 0);
+    currentRow++;
+
+    // II.B GRAVADAS
+    addGreenSection('II.B   GRAVADAS');
+    addDataRow('10', 'TOTAL INGRESOS POR OPERACIONES GRAVADAS (Restar casillas 1-9)', (reportData as any).total_gravadas || reportData.total_sales || 0);
+    addDataRow('11', 'OPERACIONES GRAVADAS AL 18%', (reportData as any).ventas_gravadas_18 || reportData.total_sales || 0);
+    addDataRow('12', 'OPERACIONES GRAVADAS AL 16%', (reportData as any).ventas_gravadas_16 || 0);
+    addDataRow('13', 'OPERACIONES GRAVADAS AL 9% (Ley No. 690-16)', 0);
+    addDataRow('14', 'OPERACIONES GRAVADAS AL 8% (Ley No. 690-16)', 0);
+    addDataRow('15', 'OPERACIONES GRAVADAS POR VENTAS DE ACTIVOS DEPRECIABLES (Categoría 2 y 3)', 0);
+    currentRow++;
+
+    // === III. LIQUIDACIÓN ===
+    addGreenSection('III.   LIQUIDACIÓN');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+
+    addDataRow('16', 'ITBIS COBRADO (18% de la casilla 11)', reportData.itbis_collected || 0);
+    addDataRow('17', 'ITBIS COBRADO (16% de la casilla 12)', 0);
+    addDataRow('18', 'ITBIS COBRADO (9% de la casilla 13) (Ley No. 690-16)', 0);
+    addDataRow('19', 'ITBIS COBRADO (8% de la casilla 14) (Ley No. 690-16)', 0);
+    addDataRow('20', 'ITBIS COBRADO POR VENTAS DE ACTIVOS DEPRECIABLES (Categoría 2 y 3) (18% de la casilla 15)', 0);
+    addDataRow('21', 'TOTAL ITBIS COBRADO (Sumar casillas 16+17+18+19+20)', reportData.itbis_collected || 0);
+    addDataRow('22', 'ITBIS PAGADO EN COMPRAS LOCALES (Proviene de la casilla 56 del Anexo A)', reportData.itbis_paid || 0);
+    addDataRow('23', 'ITBIS PAGADO POR SERVICIOS DEDUCIBLES (Proviene de la casilla 56 del Anexo A)', 0);
+    addDataRow('24', 'ITBIS PAGADO EN IMPORTACIONES (Proviene de la casilla 56 del Anexo A)', 0);
+    addDataRow('25', 'TOTAL ITBIS DEDUCIBLE (Sumar casillas 22+23+24)', reportData.itbis_paid || 0);
+    addDataRow('26', 'IMPUESTO A PAGAR (Si el valor de las casillas 21-25 es Positivo)', reportData.net_itbis_due > 0 ? reportData.net_itbis_due : 0);
+    addDataRow('27', 'SALDO A FAVOR (Si el valor de las casillas 21-25 es Negativo)', reportData.net_itbis_due < 0 ? Math.abs(reportData.net_itbis_due) : 0);
+    addDataRow('28', 'SALDOS COMPENSABLES AUTORIZADOS (Otros Impuestos) Y/O REEMBOLSOS', 0);
+    addDataRow('29', 'SALDO A FAVOR ANTERIOR', 0);
+    addDataRow('30', 'TOTAL PAGOS COMPUTABLES POR RETENCIONES (Proviene de la casilla 33 del Anexo A)', 0);
+    addDataRow('31', 'OTROS PAGOS COMPUTABLES A CUENTA', 0);
+    addDataRow('32', 'COMPENSACIONES Y/O REEMBOLSOS AUTORIZADOS', 0);
+    addDataRow('33', 'DIFERENCIA A PAGAR (Si el valor de las casillas 26-28-29-30-31-32 es Positivo)', reportData.net_itbis_due > 0 ? reportData.net_itbis_due : 0);
+    addDataRow('34', 'NUEVO SALDO A FAVOR (Si el valor de las casillas (26-28-29-30-31-32 es Negativo) ó (27+28+29+30+31+32))', reportData.net_itbis_due < 0 ? Math.abs(reportData.net_itbis_due) : 0);
+    currentRow++;
+
+    // === IV. PENALIDADES ===
+    addGreenSection('IV.   PENALIDADES');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+
+    addDataRow('35', 'RECARGOS', 0);
+    addDataRow('36', 'INTERÉS INDEMNIZATORIO', 0);
+    addDataRow('37', 'SANCIONES', 0);
+    currentRow++;
+
+    // === V. MONTO A PAGAR ===
+    addGreenSection('V.   MONTO A PAGAR');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+
+    addDataRow('38', 'TOTAL A PAGAR (Sumar casillas 33+35+36+37)', reportData.net_itbis_due > 0 ? reportData.net_itbis_due : 0);
+    currentRow++;
+
+    // === A. ITBIS RETENIDO / ITBIS PERCIBIDO ===
+    addGreenSection('A.   ITBIS RETENIDO / ITBIS PERCIBIDO');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+
+    addDataRow('39', 'SERVICIOS SUJETOS A RETENCIÓN PERSONAS FÍSICAS', 0);
+    addDataRow('40', 'SERVICIOS SUJETOS A RETENCIÓN ENTIDADES NO LUCRATIVAS (Norma No. 01-11)', 0);
+    addDataRow('41', 'TOTAL SERVICIOS SUJETOS A RETENCIÓN A PERSONAS FÍSICAS Y ENTIDADES NO LUCRATIVAS', 0);
+    addDataRow('42', 'SERVICIOS SUJETOS A RETENCIÓN SOCIEDADES (Norma No. 07-09)', 0);
+    addDataRow('43', 'SERVICIOS SUJETOS A RETENCIÓN SOCIEDADES (Norma No. 02-05 y 07-07)', 0);
+    addDataRow('44', 'BIENES O SERVICIOS SUJETOS A RETENCIÓN A CONTRIBUYENTES ACOGIDOS AL RST (Operaciones Gravadas al 18%)', 0);
+    addDataRow('45', 'BIENES O SERVICIOS SUJETOS A RETENCIÓN A CONTRIBUYENTES ACOGIDOS AL RST (Operaciones Gravadas al 16%)', 0);
+    addDataRow('46', 'TOTAL BIENES O SERVICIOS SUJETOS A RETENCIÓN A CONTRIBUYENTES ACOGIDOS AL RST (Sumar casillas 44+45)', 0);
+    addDataRow('47', 'BIENES SUJETOS A RETENCIÓN DE COMPROBANTE DE COMPRAS (Operaciones Gravadas al 18%) (Norma No. 08-10 y 05-19)', 0);
+    addDataRow('48', 'BIENES SUJETOS A RETENCIÓN DE COMPROBANTE DE COMPRAS (Operaciones Gravadas al 16%) (Norma No. 08-10 y 05-19)', 0);
+    addDataRow('49', 'TOTAL BIENES SUJETOS A RETENCIÓN COMPROBANTES DE COMPRAS (Sumar casillas 47+48)', 0);
+    addDataRow('50', 'ITBIS POR SERVICIOS SUJETOS A RETENCIÓN PERSONAS FÍSICAS Y ENTIDADES NO LUCRATIVAS (18% de la casilla 41)', 0);
+    addDataRow('51', 'ITBIS POR SERVICIOS SUJETOS A RETENCIÓN SOCIEDADES (18% de la casilla 42) (Norma No. 07-09)', 0);
+    addDataRow('52', 'ITBIS POR SERVICIOS SUJETOS A RETENCIÓN SOCIEDADES (18% de la casilla 43 por 0.30) (Norma No. 02-05 y 07-07)', 0);
+    addDataRow('53', 'ITBIS RETENIDO A CONTRIBUYENTES ACOGIDOS AL RST (18% de la casilla 44)', 0);
+    addDataRow('54', 'ITBIS RETENIDO A CONTRIBUYENTES ACOGIDOS AL RST (16% de la casilla 45)', 0);
+    addDataRow('55', 'TOTAL ITBIS RETENIDO A CONTRIBUYENTES ACOGIDOS AL RST (Sumar casillas 53+54)', 0);
+    addDataRow('56', 'ITBIS POR BIENES SUJETOS A RETENCIÓN DE COMPROBANTE DE COMPRAS (18% de la casilla 47) (Norma No. 08-10 y 05-19)', 0);
+    addDataRow('57', 'ITBIS POR BIENES SUJETOS A RETENCIÓN DE COMPROBANTE DE COMPRAS (16% de la casilla 48) (Norma No. 08-10 y 05-19)', 0);
+    addDataRow('58', 'TOTAL POR BIENES SUJETOS A RETENCIÓN COMPROBANTE DE COMPRAS (Sumar casillas 56+57)', 0);
+    addDataRow('59', 'TOTAL ITBIS PERCIBIDO EN VENTA', 0);
+    addDataRow('60', 'IMPUESTO A PAGAR (Sumar casillas 50+51+52+55+58+59)', 0);
+    addDataRow('61', 'PAGOS COMPUTABLES A CUENTA', 0);
+    addDataRow('62', 'DIFERENCIA A PAGAR (Si el valor de las casillas 60-61 es Positivo)', 0);
+    addDataRow('63', 'NUEVO SALDO A FAVOR (Si el valor de las casillas 60-61 es Negativo)', 0);
+    currentRow++;
+
+    // === B. PENALIDADES ===
+    addGreenSection('B.   PENALIDADES');
+    addDataRow('64', 'RECARGOS', 0);
+    addDataRow('65', 'INTERÉS INDEMNIZATORIO', 0);
+    addDataRow('66', 'SANCIONES', 0);
+    currentRow++;
+
+    // === C. MONTO A PAGAR ===
+    addGreenSection('C.   MONTO A PAGAR');
+    ws.getCell(currentRow - 1, 3).value = 'MONTO';
+    ws.getCell(currentRow - 1, 3).font = { bold: true };
+
+    addDataRow('67', 'TOTAL A PAGAR (Sumar casillas 62+64+65+66)', 0);
+    currentRow++;
+
+    // === TOTAL GENERAL ===
+    addGreenSection('68   TOTAL GENERAL (Sumar casillas 38+67)');
+    ws.getCell(currentRow, 1).value = '';
+    ws.getCell(currentRow, 2).value = 'TOTAL';
+    ws.getCell(currentRow, 2).font = { bold: true };
+    ws.getCell(currentRow, 3).value = reportData.net_itbis_due > 0 ? reportData.net_itbis_due : 0;
+    ws.getCell(currentRow, 3).numFmt = '#,##0.00';
+    ws.getCell(currentRow, 3).font = { bold: true, size: 12 };
+    ws.getCell(currentRow, 3).alignment = { horizontal: 'right' };
     currentRow++;
     currentRow++;
 
-    const headerRow = ws.getRow(currentRow);
-    headers.forEach((h, idx) => {
-      const cell = headerRow.getCell(idx + 1);
-      cell.value = h.title;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
-      cell.alignment = { vertical: 'middle' };
-    });
+    // === JURAMENTO ===
+    addGreenSection('JURAMENTO');
+    ws.mergeCells(currentRow, 1, currentRow, 3);
+    ws.getCell(currentRow, 1).value = 'Yo, ________________________________ en mi calidad de ________________ por la presente afirmo bajo juramento que los datos consignados en la presente declaración son correctos y completos y que no he omitido ni falseado dato alguno que la misma deba contener, siendo en consecuencia todo su contenido la fiel expresión de la verdad.';
+    ws.getCell(currentRow, 1).alignment = { wrapText: true, vertical: 'top' };
+    ws.getRow(currentRow).height = 40;
+    currentRow++;
     currentRow++;
 
-    const dataRows = [
-      ['Período', periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })],
-      ['', ''],
-      ['I. VENTAS Y SERVICIOS GRAVADOS', ''],
-      ['Total de Ventas y Servicios Gravados', formatMoney(reportData.total_sales)],
-      ['ITBIS Cobrado en Ventas', formatMoney(reportData.itbis_collected)],
-      ['', ''],
-      ['II. COMPRAS Y GASTOS GRAVADOS', ''],
-      ['Total de Compras y Gastos Gravados', formatMoney(reportData.total_purchases)],
-      ['ITBIS Pagado en Compras', formatMoney(reportData.itbis_paid)],
-      ['', ''],
-      ['III. LIQUIDACIÓN DEL IMPUESTO', ''],
-      ['ITBIS Cobrado en Ventas', formatMoney(reportData.itbis_collected)],
-      ['(-) ITBIS Pagado en Compras', formatMoney(reportData.itbis_paid)],
-      ['ITBIS NETO A PAGAR', formatMoney(reportData.net_itbis_due)],
-      ['', ''],
-      ['Fecha de Generación', new Date(reportData.generated_date).toLocaleDateString('es-DO')],
-    ];
+    ws.getCell(currentRow, 1).value = 'Fecha';
+    ws.getCell(currentRow, 2).value = 'Firma';
+    currentRow++;
+    currentRow++;
 
-    for (const [campo, valor] of dataRows) {
-      const dataRow = ws.getRow(currentRow);
-      dataRow.getCell(1).value = campo;
-      dataRow.getCell(2).value = valor;
-      currentRow++;
-    }
+    // === PARA USO DE LA DGII ===
+    addGreenSection('PARA USO DE LA DGII');
+    ws.getCell(currentRow, 1).value = 'Fecha de Pago';
+    ws.getCell(currentRow, 2).value = 'No. Recibo de Pago';
+    ws.getCell(currentRow, 3).value = 'Fecha Límite de Pago';
+    currentRow++;
 
-    headers.forEach((h, idx) => {
-      ws.getColumn(idx + 1).width = h.width;
-    });
+    // Anchos de columna
+    ws.getColumn(1).width = 10;
+    ws.getColumn(2).width = 90;
+    ws.getColumn(3).width = 18;
 
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

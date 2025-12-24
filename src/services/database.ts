@@ -7010,6 +7010,36 @@ export const payrollService = {
         taxBrackets = [];
       }
 
+      // Cargar bonificaciones activas (aplican a todos los empleados)
+      let activeBonuses: any[] = [];
+      try {
+        const { data: bonusesData } = await supabase
+          .from('bonuses')
+          .select('*')
+          .eq('user_id', tenantId)
+          .eq('is_active', true);
+        activeBonuses = bonusesData || [];
+      } catch (e) {
+        console.error('Error loading bonuses for payroll:', e);
+        activeBonuses = [];
+      }
+
+      // Cargar horas extra aprobadas del período
+      let approvedOvertime: any[] = [];
+      try {
+        const { data: overtimeData } = await supabase
+          .from('overtime_records')
+          .select('*')
+          .eq('user_id', tenantId)
+          .eq('status', 'approved')
+          .gte('date', periodStart)
+          .lte('date', periodEnd);
+        approvedOvertime = overtimeData || [];
+      } catch (e) {
+        console.error('Error loading overtime for payroll:', e);
+        approvedOvertime = [];
+      }
+
       const calculateIsrForIncome = (taxableIncome: number): number => {
         if (!taxBrackets || taxBrackets.length === 0 || !Number.isFinite(taxableIncome) || taxableIncome <= 0) {
           return 0;
@@ -7045,18 +7075,42 @@ export const payrollService = {
       };
 
       for (const employee of employees) {
-        const grossSalary = Number(employee.base_salary) || Number(employee.salary) || 0;
+        const baseSalaryAmount = Number(employee.base_salary) || Number(employee.salary) || 0;
+
+        // ========== HORAS EXTRA ==========
+        // Obtener horas extra aprobadas de este empleado en el período
+        const employeeOvertime = approvedOvertime.filter((ot: any) => ot.employee_id === employee.id);
+        const overtimeHours = employeeOvertime.reduce((sum: number, ot: any) => sum + (Number(ot.total_hours) || 0), 0);
+        const overtimeAmount = employeeOvertime.reduce((sum: number, ot: any) => sum + (Number(ot.total_amount) || 0), 0);
+
+        // ========== BONIFICACIONES ==========
+        // Calcular bonificaciones aplicables (mensuales o según frecuencia)
+        let bonusesTotal = 0;
+        for (const bonus of activeBonuses) {
+          // Solo aplicar bonificaciones mensuales o únicas por ahora
+          if (bonus.frequency === 'mensual' || bonus.frequency === 'unico') {
+            if (bonus.type === 'fijo') {
+              bonusesTotal += Number(bonus.amount) || 0;
+            } else if (bonus.type === 'porcentaje') {
+              bonusesTotal += (baseSalaryAmount * (Number(bonus.percentage) || 0)) / 100;
+            }
+          }
+        }
+
+        // ========== INGRESO BRUTO TOTAL ==========
+        // Salario base + Horas extra + Bonificaciones
+        const grossSalary = baseSalaryAmount + overtimeAmount + bonusesTotal;
 
         // Obtener deducciones del empleado
         const deductions = await this.getEmployeeDeductions(userId, employee.id, periodStart, periodEnd);
         
-        // Calcular total de deducciones periódicas
+        // Calcular total de deducciones periódicas (sobre salario base)
         let periodicDeductionsTotal = 0;
         for (const ded of deductions.periodic) {
           if (ded.type === 'fijo') {
             periodicDeductionsTotal += Number(ded.amount) || 0;
           } else if (ded.type === 'porcentaje') {
-            periodicDeductionsTotal += (grossSalary * (Number(ded.percentage) || 0)) / 100;
+            periodicDeductionsTotal += (baseSalaryAmount * (Number(ded.percentage) || 0)) / 100;
           }
         }
 
@@ -7069,12 +7123,13 @@ export const payrollService = {
         const unpaidAbsences = absences.filter((a: any) => !a.is_paid);
         const unpaidDays = unpaidAbsences.reduce((sum: number, a: any) => sum + (Number(a.days_count) || 0), 0);
 
-        // Calcular descuento por ausencias (asumiendo mes de 30 días)
-        const dailyRate = grossSalary / 30;
+        // Calcular descuento por ausencias (asumiendo mes de 30 días, sobre salario base)
+        const dailyRate = baseSalaryAmount / 30;
         const absenceDeduction = dailyRate * unpaidDays;
 
-        // Calcular deducciones TSS
-        let baseSalary = grossSalary;
+        // ========== DEDUCCIONES TSS ==========
+        // TSS se calcula sobre el ingreso bruto total (salario + horas extra + bonos gravables)
+        let tssBaseSalary = grossSalary;
         let employeeRate = 0;
 
         if (tssConfig) {
@@ -7084,19 +7139,20 @@ export const payrollService = {
 
           const maxSalary = Number(tssConfig.max_salary_tss) || 0;
           if (maxSalary > 0) {
-            baseSalary = Math.min(grossSalary, maxSalary);
+            tssBaseSalary = Math.min(grossSalary, maxSalary);
           }
         } else {
           employeeRate = 16.67;
         }
 
-        const tssDeductions = baseSalary * (employeeRate / 100);
+        const tssDeductions = tssBaseSalary * (employeeRate / 100);
 
-        // Calcular ISR de nómina sobre base imponible (salario bruto menos TSS)
+        // ========== ISR ==========
+        // ISR se calcula sobre ingreso bruto menos TSS
         const taxableIncome = Math.max(0, grossSalary - tssDeductions);
         const isrDeductions = calculateIsrForIncome(taxableIncome);
 
-        // Total de deducciones (incluyendo ISR cuando aplique)
+        // ========== TOTAL DEDUCCIONES ==========
         const totalDeductions =
           periodicDeductionsTotal +
           otherDeductionsTotal +
@@ -7104,7 +7160,8 @@ export const payrollService = {
           tssDeductions +
           isrDeductions;
 
-        // Salario neto (no permitir valores negativos)
+        // ========== SALARIO NETO ==========
+        // Ingreso bruto total - Deducciones totales (no permitir negativos)
         const netSalary = Math.max(0, grossSalary - totalDeductions);
 
         payrollEntries.push({
@@ -7112,9 +7169,9 @@ export const payrollService = {
           payroll_period_id: periodId,
           employee_id: employee.id,
           gross_salary: grossSalary,
-          overtime_hours: 0,
-          overtime_amount: 0,
-          bonuses: 0,
+          overtime_hours: overtimeHours,
+          overtime_amount: overtimeAmount,
+          bonuses: bonusesTotal,
           tss_deductions: tssDeductions,
           isr_deductions: isrDeductions,
           periodic_deductions: periodicDeductionsTotal,
@@ -12844,35 +12901,70 @@ export const taxService = {
       }
 
       // ==========================================================
-      // 2) Retenciones a PROVEEDORES / TERCEROS (desde 606)
+      // 2) Retenciones a PROVEEDORES / TERCEROS (desde ap_invoices directamente)
       // ==========================================================
-      try {
-        await this.buildReport606(period);
-      } catch (e) {
-        console.error('Error building Report 606 before IR-17:', e);
-      }
+      // Mapeo de categorías a casillas IR-17
+      const categoryToCasilla: Record<string, number> = {
+        'alquileres': 1,
+        'honorarios': 2,
+        'premios': 3,
+        'transferencia_titulo': 4,
+        'dividendos': 5,
+        'intereses_juridicas_no_residentes': 6,
+        'intereses_juridicas_no_residentes_57': 7,
+        'intereses_fisicas_no_residentes': 8,
+        'intereses_fisicas_no_residentes_57': 9,
+        'remesas_exterior': 10,
+        'intereses_no_financieras': 11,
+        'pagos_estado': 12,
+        'juegos_telefonicos': 13,
+        'ganancia_capital': 14,
+        'juegos_internet': 15,
+        'otras_rentas_309': 16,
+        'otras_rentas_139': 17,
+        'otras_retenciones_07': 18,
+        'intereses_financieras_juridicas': 19,
+        'intereses_financieras_fisicas': 20,
+        'ganaderia_bovina': 21,
+      };
 
-      const { data: report606, error: r606Err } = await supabase
-        .from('report_606_data')
-        .select('*')
-        .eq('period', period)
-        .eq('user_id', tenantId);
+      // Obtener facturas de proveedor con retención del período
+      const { data: apInvoices, error: apErr } = await supabase
+        .from('ap_invoices')
+        .select(`*, suppliers (name, tax_id)`)
+        .eq('user_id', tenantId)
+        .gte('invoice_date', startDate)
+        .lte('invoice_date', endDate)
+        .neq('status', 'cancelled');
 
-      if (r606Err) throw r606Err;
+      if (apErr) throw apErr;
 
-      (report606 || []).forEach((row: any) => {
-        const base = Number(row?.monto_facturado ?? 0) || 0;
-        const supplierRnc = String(row?.rnc_cedula || row?.rnc_cedula_proveedor || '').trim() || null;
-        const supplierName = row?.nombre_proveedor || row?.supplier_name || null;
-        const paymentDate = row?.fecha_pago || row?.fecha_comprobante || startDate;
-        const docRef = row?.ncf || row?.invoice_number || null;
-        const serviceType = row?.tipo_gasto || row?.tipo_bienes_servicios || null;
+      (apInvoices || []).forEach((inv: any) => {
+        const base = Number(inv?.total_gross ?? 0) - Number(inv?.total_discount ?? 0);
+        const supplierRnc = inv?.tax_id || inv?.suppliers?.tax_id || null;
+        const supplierName = inv?.legal_name || inv?.suppliers?.name || null;
+        const paymentDate = inv?.invoice_date || startDate;
+        const docRef = inv?.invoice_number || null;
+        const retentionCategory = inv?.retention_category || 'otras_retenciones_07';
 
-        const isrWithheld = Number(row?.monto_retencion_renta ?? row?.retencion_renta ?? 0) || 0;
-        const itbisWithheld = Number(row?.itbis_retenido ?? 0) || 0;
+        const isrWithheld = Number(inv?.total_isr_withheld ?? 0) || 0;
+        const itbisWithheld = Number(inv?.total_itbis_withheld ?? 0) || 0;
+
+        // Determinar casilla basada en categoría o tasa
+        let casilla = categoryToCasilla[retentionCategory] || 18;
+        const rate = base > 0 ? (isrWithheld / base) * 100 : retentionRate;
+
+        // Si no hay categoría, inferir por tasa
+        if (!inv?.retention_category && isrWithheld > 0) {
+          if (Math.abs(rate - 10) < 0.5) casilla = 2; // Honorarios 10%
+          else if (Math.abs(rate - 25) < 0.5) casilla = 3; // Premios 25%
+          else if (Math.abs(rate - 27) < 0.5) casilla = 10; // Remesas 27%
+          else if (Math.abs(rate - 5) < 0.5) casilla = 12; // Pagos estado 5%
+          else if (Math.abs(rate - 2) < 0.5) casilla = 4; // Transferencia título 2%
+          else if (Math.abs(rate - 1) < 0.5) casilla = 14; // Ganancia capital 1%
+        }
 
         if (isrWithheld > 0) {
-          const rate = base > 0 ? (isrWithheld / base) * 100 : retentionRate;
           const net = base - isrWithheld;
 
           pushRow({
@@ -12880,13 +12972,15 @@ export const taxService = {
             period,
             beneficiary_type: 'PROVEEDOR',
             retention_type: 'ISR',
+            retention_category: retentionCategory,
+            ir17_casilla: casilla,
             rnc_cedula: supplierRnc,
             beneficiary_name: supplierName,
             base_amount: base,
             payment_date: paymentDate,
-            service_type: serviceType,
+            service_type: retentionCategory,
             document_ref: docRef,
-            source: '606',
+            source: 'ap_invoices',
             supplier_rnc: supplierRnc,
             supplier_name: supplierName,
             invoice_number: docRef,
@@ -12898,8 +12992,7 @@ export const taxService = {
         }
 
         if (itbisWithheld > 0) {
-          // En DGII es común 30% para ITBIS retenido, pero aquí usamos lo real registrado.
-          const rate = base > 0 ? (itbisWithheld / base) * 100 : 0;
+          const itbisRate = base > 0 ? (itbisWithheld / base) * 100 : 0;
           const net = base - itbisWithheld;
 
           pushRow({
@@ -12907,23 +13000,67 @@ export const taxService = {
             period,
             beneficiary_type: 'PROVEEDOR',
             retention_type: 'ITBIS',
+            retention_category: null,
+            ir17_casilla: null,
             rnc_cedula: supplierRnc,
             beneficiary_name: supplierName,
             base_amount: base,
             payment_date: paymentDate,
-            service_type: serviceType,
+            service_type: 'ITBIS Retenido',
             document_ref: docRef,
-            source: '606',
+            source: 'ap_invoices',
             supplier_rnc: supplierRnc,
             supplier_name: supplierName,
             invoice_number: docRef,
             gross_amount: base,
-            withholding_rate: rate,
+            withholding_rate: itbisRate,
             withheld_amount: itbisWithheld,
             net_amount: net,
           });
         }
       });
+
+      // ==========================================================
+      // 3) Retribuciones Complementarias (27%)
+      // ==========================================================
+      try {
+        const { data: retributions, error: retErr } = await supabase
+          .from('complementary_retributions')
+          .select('*')
+          .eq('user_id', tenantId)
+          .eq('period', period);
+
+        if (!retErr && retributions && retributions.length > 0) {
+          const totalRetributions = retributions.reduce((sum, r) => sum + (Number(r.tax_amount) || 0), 0);
+          if (totalRetributions > 0) {
+            const totalGross = retributions.reduce((sum, r) => sum + (Number(r.gross_amount) || 0), 0);
+            pushRow({
+              user_id: tenantId,
+              period,
+              beneficiary_type: 'RETRIBUCIONES',
+              retention_type: 'ISR',
+              retention_category: 'retribuciones_complementarias',
+              ir17_casilla: 25,
+              rnc_cedula: null,
+              beneficiary_name: 'Retribuciones Complementarias',
+              base_amount: totalGross,
+              payment_date: startDate,
+              service_type: 'Retribuciones Complementarias',
+              document_ref: null,
+              source: 'complementary_retributions',
+              supplier_rnc: null,
+              supplier_name: null,
+              invoice_number: null,
+              gross_amount: totalGross,
+              withholding_rate: 27,
+              withheld_amount: totalRetributions,
+              net_amount: totalGross - totalRetributions,
+            });
+          }
+        }
+      } catch (retError) {
+        console.error('Error loading complementary retributions:', retError);
+      }
 
       // Limpiar datos anteriores del período para este usuario
       const { error: delErr } = await supabase
@@ -13053,7 +13190,7 @@ export const taxService = {
       }
 
       // Obtener datos de ventas y compras para el período del usuario actual
-      const [salesResponse, purchasesResponse] = await Promise.all([
+      const [salesResponse, purchasesResponse, invoicesResponse] = await Promise.all([
         supabase
           .from('report_607_data')
           .select('*')
@@ -13064,14 +13201,62 @@ export const taxService = {
           .select('*')
           .eq('period', period)
           .eq('user_id', tenantId),
+        // Obtener facturas directamente para clasificación IT-1
+        supabase
+          .from('invoices')
+          .select('id, total_amount, subtotal, tax_amount, document_type, sale_classification')
+          .eq('user_id', tenantId)
+          .gte('invoice_date', `${period}-01`)
+          .lte('invoice_date', `${period}-31`)
+          .neq('status', 'draft'),
       ]);
+
+      // Clasificar ventas según documento y sale_classification
+      let exportacionesBienes = 0;      // Casilla 2
+      let exportacionesServicios = 0;   // Casilla 3
+      let ventasExentas = 0;            // Casilla 4
+      let ventasExentasDestino = 0;     // Casilla 5
+      let ventasGravadas18 = 0;         // Casilla 11
+      let ventasGravadas16 = 0;         // Casilla 12
+
+      (invoicesResponse.data || []).forEach((inv: any) => {
+        const amount = Number(inv?.total_amount ?? inv?.subtotal ?? 0) || 0;
+        const itbis = Number(inv?.tax_amount ?? 0) || 0;
+        const baseAmount = amount - itbis;
+        const docType = String(inv?.document_type || '').toUpperCase();
+        const saleClass = String(inv?.sale_classification || 'gravada').toLowerCase();
+
+        // Clasificar por tipo de documento
+        if (docType === 'B16') {
+          // Exportaciones
+          if (saleClass === 'exportacion_servicios') {
+            exportacionesServicios += baseAmount;
+          } else {
+            exportacionesBienes += baseAmount;
+          }
+        } else if (docType === 'B14' || docType === 'B15' || saleClass === 'exenta') {
+          // Ventas exentas (gubernamental, régimen especial)
+          ventasExentas += baseAmount;
+        } else if (saleClass === 'exenta_destino') {
+          ventasExentasDestino += baseAmount;
+        } else if (itbis > 0) {
+          // Ventas gravadas
+          const tasaItbis = baseAmount > 0 ? (itbis / baseAmount) * 100 : 18;
+          if (tasaItbis < 17) {
+            ventasGravadas16 += baseAmount;
+          } else {
+            ventasGravadas18 += baseAmount;
+          }
+        } else {
+          // Sin ITBIS pero no clasificada como exenta
+          ventasExentas += baseAmount;
+        }
+      });
 
       const totalSales =
         salesResponse.data?.reduce((sum, item) => {
           const gross = Number(item?.monto_facturado ?? 0) || 0;
           const itbis = Number(item?.itbis_facturado ?? 0) || 0;
-          // En 607, monto_facturado viene del total con ITBIS (total_amount).
-          // Para IT-1 necesitamos la base imponible => total - itbis.
           return sum + Math.max(gross - itbis, 0);
         }, 0) || 0;
 
@@ -13087,6 +13272,11 @@ export const taxService = {
       const itbisPaid =
         purchasesResponse.data?.reduce((sum, item) => sum + (Number(item?.itbis_facturado ?? 0) || 0), 0) || 0;
 
+      // Calcular total no gravadas (casilla 9)
+      const totalNoGravadas = exportacionesBienes + exportacionesServicios + ventasExentas + ventasExentasDestino;
+      // Total gravadas (casilla 10)
+      const totalGravadas = Math.max(0, totalSales - totalNoGravadas);
+
       // ITBIS neto a pagar (considerando ITBIS retenido por clientes)
       const netItbisDue = (itbisCollected - itbisWithheld) - itbisPaid;
 
@@ -13096,12 +13286,24 @@ export const taxService = {
         user_id: tenantId,
         period,
         tipo_declaracion: 'normal',
+        // Casilla 1 - Total operaciones
         total_sales: totalSales,
-        itbis_collected: itbisCollected,
+        // Sección II.A No Gravadas
+        exportaciones_bienes: exportacionesBienes,      // Casilla 2
+        exportaciones_servicios: exportacionesServicios, // Casilla 3
+        ventas_exentas: ventasExentas,                  // Casilla 4
+        ventas_exentas_destino: ventasExentasDestino,   // Casilla 5
+        total_no_gravadas: totalNoGravadas,             // Casilla 9
+        // Sección II.B Gravadas
+        total_gravadas: totalGravadas,                  // Casilla 10
+        ventas_gravadas_18: ventasGravadas18,           // Casilla 11
+        ventas_gravadas_16: ventasGravadas16,           // Casilla 12
+        // Sección III Liquidación
+        itbis_collected: itbisCollected,                // Casilla 21
         itbis_withheld: itbisWithheld,
         total_purchases: totalPurchases,
-        itbis_paid: itbisPaid,
-        net_itbis_due: netItbisDue,
+        itbis_paid: itbisPaid,                          // Casilla 25
+        net_itbis_due: netItbisDue,                     // Casilla 26 o 27
         generated_date: new Date().toISOString(),
         locked: false,
         locked_at: null,
