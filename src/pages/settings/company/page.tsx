@@ -174,56 +174,6 @@ export default function CompanySettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración Fiscal</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inicio del Año Fiscal
-                </label>
-                <select
-                  value={companyInfo.fiscal_year_start}
-                  onChange={(e) => handleInputChange('fiscal_year_start', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
-                >
-                  <option value="01-01">1 de Enero</option>
-                  <option value="04-01">1 de Abril</option>
-                  <option value="07-01">1 de Julio</option>
-                  <option value="10-01">1 de Octubre</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Moneda Principal
-                </label>
-                <select
-                  value={companyInfo.currency}
-                  onChange={(e) => handleInputChange('currency', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
-                >
-                  <option value="DOP">Peso Dominicano (DOP)</option>
-                  <option value="USD">Dólar Americano (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zona Horaria
-                </label>
-                <select
-                  value={companyInfo.timezone}
-                  onChange={(e) => handleInputChange('timezone', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
-                >
-                  <option value="America/Santo_Domingo">República Dominicana</option>
-                  <option value="America/New_York">Nueva York</option>
-                  <option value="America/Los_Angeles">Los Ángeles</option>
-                  <option value="Europe/Madrid">Madrid</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
           <div className="flex justify-end space-x-4">
             <button
               type="button"
