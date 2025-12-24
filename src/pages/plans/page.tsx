@@ -24,6 +24,8 @@ export default function PlansPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successPlanName, setSuccessPlanName] = useState('');
   const [stripePromise] = useState(() => getStripe());
   const { user } = useAuth();
   
@@ -175,9 +177,12 @@ export default function PlansPage() {
       
       if (result.success) {
         setShowPaymentModal(false);
-        alert('¡Suscripción exitosa! Bienvenido a Contabi RD.');
+        const plan = plans.find(p => p.id === selectedPlan);
+        setSuccessPlanName(plan?.name || 'tu nuevo plan');
+        setShowSuccessModal(true);
+        
+        // Procesar comisión de referido
         try {
-          const plan = plans.find(p => p.id === selectedPlan);
           const price = plan ? getPrice(plan) : 0;
           const ref = localStorage.getItem('ref_code') || '';
           const buyerId = user?.id || '';
@@ -195,6 +200,11 @@ export default function PlansPage() {
             }
           }
         } catch {}
+        
+        // Auto-refresh después de 5 segundos para aplicar nuevos permisos
+        setTimeout(() => {
+          window.location.reload();
+        }, 5000);
       } else {
         alert(result.error || 'Error al procesar el pago. Intente nuevamente.');
       }
@@ -564,6 +574,79 @@ export default function PlansPage() {
                   userEmail={user?.email || ''}
                 />
               </Elements>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de éxito */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            
+            {/* Modal */}
+            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+              {/* Header con gradiente verde */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-8 text-center">
+                <div className="w-24 h-24 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm animate-bounce">
+                  <i className="ri-check-line text-5xl text-white"></i>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">¡Pago Exitoso!</h3>
+                <p className="text-green-100">Tu suscripción ha sido activada</p>
+              </div>
+
+              {/* Contenido */}
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-4 shadow-lg">
+                    <i className="ri-vip-crown-2-fill text-3xl text-white"></i>
+                  </div>
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                    Bienvenido a {successPlanName}
+                  </h4>
+                  <p className="text-gray-600">
+                    Ahora tienes acceso a todas las funcionalidades de tu nuevo plan.
+                  </p>
+                </div>
+
+                {/* Beneficios */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Tu plan incluye:</p>
+                  <ul className="space-y-2">
+                    <li className="flex items-center text-sm text-gray-700">
+                      <i className="ri-check-double-line text-green-500 mr-2"></i>
+                      Acceso a todos los módulos del plan
+                    </li>
+                    <li className="flex items-center text-sm text-gray-700">
+                      <i className="ri-check-double-line text-green-500 mr-2"></i>
+                      Soporte técnico incluido
+                    </li>
+                    <li className="flex items-center text-sm text-gray-700">
+                      <i className="ri-check-double-line text-green-500 mr-2"></i>
+                      Actualizaciones automáticas
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Mensaje de refresh */}
+                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 mb-4">
+                  <div className="flex items-center">
+                    <i className="ri-refresh-line text-amber-600 mr-2 animate-spin"></i>
+                    <p className="text-sm text-amber-800">
+                      El sistema se actualizará automáticamente en unos segundos...
+                    </p>
+                  </div>
+                </div>
+
+                {/* Botón */}
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+                >
+                  <i className="ri-refresh-line mr-2"></i>
+                  Actualizar Ahora
+                </button>
+              </div>
             </div>
           </div>
         )}
