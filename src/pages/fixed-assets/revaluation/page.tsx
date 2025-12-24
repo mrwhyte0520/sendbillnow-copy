@@ -582,6 +582,7 @@ export default function RevaluationPage() {
 
     const fileBase = `revalorizaciones_${new Date().toISOString().split('T')[0]}`;
     const title = 'Revalorización de Activos Fijos';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
@@ -592,6 +593,8 @@ export default function RevaluationPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };

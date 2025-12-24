@@ -85,13 +85,18 @@ export default function DepreciationTypesPage() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
+    const usefulLifeYearsRaw = formData.get('usefulLifeYears');
+    const usefulLifeYears = usefulLifeYearsRaw != null && String(usefulLifeYearsRaw).trim() !== ''
+      ? Number(usefulLifeYearsRaw)
+      : null;
     const payload: any = {
       code: String(formData.get('code') || '').trim(),
       name: String(formData.get('name') || '').trim(),
       method: String(formData.get('method') || '').trim() || null,
-      useful_life_months: formData.get('usefulLifeMonths')
-        ? Number(formData.get('usefulLifeMonths')) || 0
-        : null,
+      useful_life_months:
+        usefulLifeYears != null
+          ? Math.max(1, Math.round(usefulLifeYears * 12))
+          : null,
       annual_rate: formData.get('annualRate')
         ? Number(formData.get('annualRate')) || 0
         : null,
@@ -193,7 +198,7 @@ export default function DepreciationTypesPage() {
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Vida Útil (meses)</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Vida Útil (años)</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa Anual (%)</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -206,7 +211,7 @@ export default function DepreciationTypesPage() {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{type.name}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{type.method || '-'}</td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
-                      {type.usefulLifeMonths != null ? type.usefulLifeMonths : '-'}
+                      {type.usefulLifeMonths != null ? (type.usefulLifeMonths / 12).toFixed(2) : '-'}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
                       {type.annualRate != null ? type.annualRate.toFixed(2) : '-'}
@@ -312,15 +317,20 @@ export default function DepreciationTypesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Vida Útil (meses)
+                      Vida Útil (años)
                     </label>
                     <input
                       type="number"
-                      name="usefulLifeMonths"
+                      name="usefulLifeYears"
                       min="1"
-                      defaultValue={editingType?.usefulLifeMonths ?? ''}
+                      step="0.01"
+                      defaultValue={
+                        editingType?.usefulLifeMonths != null
+                          ? String(editingType.usefulLifeMonths / 12)
+                          : ''
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: 120"
+                      placeholder="Ej: 10"
                     />
                   </div>
                   <div>

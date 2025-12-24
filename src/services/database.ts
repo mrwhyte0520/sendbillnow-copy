@@ -5316,21 +5316,64 @@ export const inventoryService = {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
-      const rawQty = Number(movement.quantity) || 0;
-      const quantity = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
+      const rawQty = Number(movement.quantity);
+      const quantity = Number.isFinite(rawQty) ? rawQty : 0;
 
-      const payload = {
+      const basePayload = {
         ...movement,
         quantity,
         user_id: tenantId,
       };
-      const { data, error } = await supabase
-        .from('inventory_movements')
-        .insert(payload)
-        .select('*')
-        .single();
-      if (error) throw error;
-      return data;
+
+      const tryInsert = async (payload: any) => {
+        const { data, error } = await supabase
+          .from('inventory_movements')
+          .insert(payload)
+          .select('*')
+          .single();
+
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('inventory_movements insert failed', {
+            code: (error as any)?.code,
+            message: (error as any)?.message,
+            details: (error as any)?.details,
+            hint: (error as any)?.hint,
+            payloadKeys: Object.keys(payload || {}),
+          });
+          const wrapped: any = new Error(describeSupabaseError(error));
+          wrapped.code = (error as any)?.code;
+          wrapped.details = (error as any)?.details;
+          wrapped.hint = (error as any)?.hint;
+          wrapped.original = error;
+          throw wrapped;
+        }
+        return data;
+      };
+
+      // Reintento: si el schema de inventory_movements no tiene alguna columna (PGRST204),
+      // eliminamos la columna faltante del payload y reintentamos.
+      let payloadToInsert: any = { ...basePayload };
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          return await tryInsert(payloadToInsert);
+        } catch (err: any) {
+          if (err?.code === 'PGRST204') {
+            const msg = String(err?.message || '');
+            const m = msg.match(/Could not find the '([^']+)' column/i);
+            const missingCol = m?.[1] ? String(m[1]) : null;
+            if (missingCol && Object.prototype.hasOwnProperty.call(payloadToInsert, missingCol)) {
+              const nextPayload = { ...payloadToInsert };
+              delete (nextPayload as any)[missingCol];
+              payloadToInsert = nextPayload;
+              continue;
+            }
+          }
+          throw err;
+        }
+      }
+
+      throw new Error('No se pudo insertar el movimiento de inventario (inventory_movements)');
     } catch (error) {
       console.error('inventoryService.createMovement error', error);
       throw error;
@@ -5485,13 +5528,18 @@ export const warehouseEntriesService = {
             current_stock,
             cost_price,
             average_cost,
-            last_purchase_price
+            last_purchase_price,
+            inventory_account_id
           )
         `)
         .eq('entry_id', entry.id);
 
       if (linesError) throw linesError;
       if (!lines || lines.length === 0) throw new Error('Warehouse entry has no lines');
+
+      // Acumular totales para asiento contable consolidado
+      let totalEntryCost = 0;
+      let inventoryAccountId: string | null = null;
 
       for (const rawLine of lines as any[]) {
         const invItem = rawLine.inventory_items as any | null;
@@ -5515,6 +5563,12 @@ export const warehouseEntriesService = {
         const lineCost = qty * unitCost;
 
         if (lineCost <= 0) continue;
+
+        // Acumular para asiento contable
+        totalEntryCost += lineCost;
+        if (!inventoryAccountId && invItem.inventory_account_id) {
+          inventoryAccountId = String(invItem.inventory_account_id);
+        }
 
         const newStock = oldStock + qty;
         const newAvg = newStock > 0 ? (oldAvg * oldStock + unitCost * qty) / newStock : oldAvg;
@@ -5550,6 +5604,48 @@ export const warehouseEntriesService = {
           });
         } catch (movError) {
           console.error('warehouseEntriesService.post createMovement error', movError);
+        }
+      }
+
+      // Best-effort: generar asiento contable para la entrada de almacén
+      if (totalEntryCost > 0) {
+        try {
+          const settings = await accountingSettingsService.get(tenantId);
+          // Usar cuenta de inventario del producto o la cuenta por defecto
+          const invAccountId = inventoryAccountId || settings?.default_inventory_asset_account_id;
+          // Contrapartida: CxP (para compras) o cuenta de inventario en tránsito
+          const apAccountId = settings?.ap_account_id;
+
+          if (invAccountId && apAccountId) {
+            const jeLines = [
+              {
+                account_id: invAccountId,
+                description: `Entrada de almacén: ${entry.document_number || entry.id}`,
+                debit_amount: totalEntryCost,
+                credit_amount: 0,
+              },
+              {
+                account_id: apAccountId,
+                description: `Contrapartida entrada almacén`,
+                debit_amount: 0,
+                credit_amount: totalEntryCost,
+              },
+            ];
+
+            await journalEntriesService.createWithLines(
+              tenantId,
+              {
+                entry_number: `WE-${entry.document_number || entry.id}`,
+                entry_date: movementDate,
+                description: `Entrada de almacén ${entry.document_number || ''}`.trim(),
+                reference: entry.id ? String(entry.id) : null,
+                status: 'posted',
+              },
+              jeLines,
+            );
+          }
+        } catch (jeError) {
+          console.error('warehouseEntriesService.post journal entry error', jeError);
         }
       }
 

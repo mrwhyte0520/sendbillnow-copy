@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
-import { assetTypesService, chartAccountsService, settingsService } from '../../../services/database';
+import { assetDepreciationTypesService, assetTypesService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface AssetType {
   id: string;
   name: string;
   description: string;
+  depreciationTypeId?: string;
   depreciationRate: number;
   usefulLife: number;
   depreciationMethod: string;
@@ -20,6 +21,15 @@ interface AssetType {
   revaluationLossAccount: string;
   isActive: boolean;
   createdAt: string;
+}
+
+interface DepreciationTypeOption {
+  id: string;
+  code: string;
+  name: string;
+  method: string;
+  usefulLifeMonths: number | null;
+  annualRate: number | null;
 }
 
 interface AccountOption {
@@ -38,6 +48,13 @@ export default function AssetTypesPage() {
 
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
+  const [depreciationTypes, setDepreciationTypes] = useState<DepreciationTypeOption[]>([]);
+
+  const [formDepreciationTypeId, setFormDepreciationTypeId] = useState('');
+  const [formDepreciationRate, setFormDepreciationRate] = useState('');
+  const [formUsefulLifeYears, setFormUsefulLifeYears] = useState('');
+  const [formDepreciationMethod, setFormDepreciationMethod] = useState('');
+
   const parseCodeNumber = (code: string): number | null => {
     const digits = String(code || '').replace(/[^0-9]/g, '');
     if (!digits) return null;
@@ -71,6 +88,7 @@ export default function AssetTypesPage() {
           id: t.id,
           name: t.name,
           description: t.description || '',
+          depreciationTypeId: t.depreciation_type_id || undefined,
           depreciationRate: Number(t.depreciation_rate) || 0,
           usefulLife: t.useful_life || 0,
           depreciationMethod: t.depreciation_method || '',
@@ -92,6 +110,28 @@ export default function AssetTypesPage() {
   }, [user]);
 
   useEffect(() => {
+    const loadDepreciationTypes = async () => {
+      if (!user) return;
+      try {
+        const data = await assetDepreciationTypesService.getAll(user.id);
+        const mapped: DepreciationTypeOption[] = (data || []).map((t: any) => ({
+          id: t.id,
+          code: t.code,
+          name: t.name,
+          method: t.method || '',
+          usefulLifeMonths: t.useful_life_months ?? null,
+          annualRate: t.annual_rate != null ? Number(t.annual_rate) || 0 : null,
+        }));
+        setDepreciationTypes(mapped);
+      } catch (error) {
+        console.error('Error loading depreciation types for asset types:', error);
+      }
+    };
+
+    loadDepreciationTypes();
+  }, [user]);
+
+  useEffect(() => {
     const loadAccounts = async () => {
       if (!user) return;
       try {
@@ -106,7 +146,6 @@ export default function AssetTypesPage() {
           }));
         setAccounts(options);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('Error loading chart of accounts for asset types:', error);
       }
     };
@@ -116,12 +155,38 @@ export default function AssetTypesPage() {
 
   const handleAddType = () => {
     setEditingType(null);
+    setFormDepreciationTypeId('');
+    setFormDepreciationRate('');
+    setFormUsefulLifeYears('');
+    setFormDepreciationMethod('');
     setShowModal(true);
   };
 
   const handleEditType = (type: AssetType) => {
     setEditingType(type);
+    setFormDepreciationTypeId(type.depreciationTypeId || '');
+    setFormDepreciationRate(type.depreciationRate != null ? String(type.depreciationRate) : '');
+    setFormUsefulLifeYears(type.usefulLife != null ? String(type.usefulLife) : '');
+    setFormDepreciationMethod(type.depreciationMethod || '');
     setShowModal(true);
+  };
+
+  const applyDepreciationTypeToForm = (depreciationTypeId: string) => {
+    setFormDepreciationTypeId(depreciationTypeId);
+    if (!depreciationTypeId) return;
+    const selected = depreciationTypes.find((t) => t.id === depreciationTypeId);
+    if (!selected) return;
+
+    if (selected.annualRate != null) {
+      setFormDepreciationRate(String(selected.annualRate));
+    }
+    if (selected.method) {
+      setFormDepreciationMethod(String(selected.method));
+    }
+    if (selected.usefulLifeMonths != null) {
+      const years = Math.max(1, Math.ceil(selected.usefulLifeMonths / 12));
+      setFormUsefulLifeYears(String(years));
+    }
   };
 
   const handleDeleteType = async (typeId: string) => {
@@ -144,6 +209,7 @@ export default function AssetTypesPage() {
       const payload: any = {
         name: type.name,
         description: type.description,
+        depreciation_type_id: type.depreciationTypeId || null,
         depreciation_rate: type.depreciationRate,
         useful_life: type.usefulLife,
         depreciation_method: type.depreciationMethod,
@@ -154,10 +220,11 @@ export default function AssetTypesPage() {
         revaluation_loss_account: type.revaluationLossAccount,
         is_active: !type.isActive,
       };
+
       const updated = await assetTypesService.update(typeId, payload);
       setAssetTypes(prev => prev.map(t => t.id === typeId ? {
         ...t,
-        isActive: !!updated.is_active,
+        is_active: !!updated.is_active,
       } : t));
     } catch (error) {
       console.error('Error toggling asset type status:', error);
@@ -171,12 +238,19 @@ export default function AssetTypesPage() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
+
+    const depreciationTypeId = String(formData.get('depreciationTypeId') || formDepreciationTypeId || '').trim();
+    const selectedDepType = depreciationTypeId
+      ? depreciationTypes.find((t) => t.id === depreciationTypeId)
+      : undefined;
+
     const payload: any = {
       name: String(formData.get('name') || '').trim(),
       description: String(formData.get('description') || '').trim() || null,
-      depreciation_rate: Number(formData.get('depreciationRate') || 0) || 0,
-      useful_life: Number(formData.get('usefulLife') || 0) || 0,
-      depreciation_method: String(formData.get('depreciationMethod') || '').trim(),
+      depreciation_type_id: depreciationTypeId || null,
+      depreciation_rate: Number(formDepreciationRate || formData.get('depreciationRate') || 0) || 0,
+      useful_life: Number(formUsefulLifeYears || formData.get('usefulLife') || 0) || 0,
+      depreciation_method: String(formDepreciationMethod || formData.get('depreciationMethod') || '').trim(),
       account: String(formData.get('account') || '').trim(),
       depreciation_account: String(formData.get('depreciationAccount') || '').trim(),
       accumulated_depreciation_account: String(formData.get('accumulatedDepreciationAccount') || '').trim(),
@@ -185,6 +259,19 @@ export default function AssetTypesPage() {
       is_active: editingType ? editingType.isActive : true,
     };
 
+    if (selectedDepType) {
+      if (selectedDepType.method) {
+        payload.depreciation_method = selectedDepType.method;
+      }
+      if (selectedDepType.annualRate != null) {
+        payload.depreciation_rate = selectedDepType.annualRate;
+      }
+      if (selectedDepType.usefulLifeMonths != null) {
+        const years = Math.max(1, Math.round(selectedDepType.usefulLifeMonths / 12));
+        payload.useful_life = years;
+      }
+    }
+
     try {
       if (editingType) {
         const updated = await assetTypesService.update(editingType.id, payload);
@@ -192,6 +279,7 @@ export default function AssetTypesPage() {
           id: updated.id,
           name: updated.name,
           description: updated.description || '',
+          depreciationTypeId: updated.depreciation_type_id || undefined,
           depreciationRate: Number(updated.depreciation_rate) || 0,
           usefulLife: updated.useful_life || 0,
           depreciationMethod: updated.depreciation_method || '',
@@ -210,6 +298,7 @@ export default function AssetTypesPage() {
           id: created.id,
           name: created.name,
           description: created.description || '',
+          depreciationTypeId: created.depreciation_type_id || undefined,
           depreciationRate: Number(created.depreciation_rate) || 0,
           usefulLife: created.useful_life || 0,
           depreciationMethod: created.depreciation_method || '',
@@ -416,6 +505,7 @@ export default function AssetTypesPage() {
     const today = new Date().toISOString().split('T')[0];
     const fileBase = `tipos_activos_${today}`;
     const title = 'Tipos de Activos Fijos';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
@@ -426,6 +516,8 @@ export default function AssetTypesPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };
@@ -616,6 +708,24 @@ export default function AssetTypesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Depreciación
+                    </label>
+                    <select
+                      name="depreciationTypeId"
+                      value={formDepreciationTypeId}
+                      onChange={(e) => applyDepreciationTypeToForm(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Seleccionar tipo...</option>
+                      {depreciationTypes.map((dt) => (
+                        <option key={dt.id} value={dt.id}>
+                          {dt.code} - {dt.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Tasa de Depreciación (%) *
                     </label>
                     <input
@@ -623,9 +733,9 @@ export default function AssetTypesPage() {
                       required
                       step="0.01"
                       min="0"
-                      max="100"
                       name="depreciationRate"
-                      defaultValue={editingType?.depreciationRate || ''}
+                      value={formDepreciationRate}
+                      onChange={(e) => setFormDepreciationRate(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="10.00"
                     />
@@ -639,7 +749,8 @@ export default function AssetTypesPage() {
                       required
                       min="1"
                       name="usefulLife"
-                      defaultValue={editingType?.usefulLife || ''}
+                      value={formUsefulLifeYears}
+                      onChange={(e) => setFormUsefulLifeYears(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="10"
                     />
@@ -651,7 +762,8 @@ export default function AssetTypesPage() {
                     <select
                       required
                       name="depreciationMethod"
-                      defaultValue={editingType?.depreciationMethod || ''}
+                      value={formDepreciationMethod}
+                      onChange={(e) => setFormDepreciationMethod(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Seleccionar método</option>

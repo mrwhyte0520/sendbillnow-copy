@@ -188,6 +188,7 @@ export default function InventoryExistenceReportPage() {
       undefined;
 
     const title = 'Reporte de Existencia en Almacén';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rowsData,
@@ -198,6 +199,8 @@ export default function InventoryExistenceReportPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };

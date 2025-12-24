@@ -174,7 +174,21 @@ export default function InventoryPhysicalCountPage() {
       notes: '',
     }));
 
-    exportToExcelWithHeaders(rowsData, headers, 'toma_inventario_fisico');
+    const companyName =
+      (companyInfo?.name as string) ||
+      (companyInfo?.company_name as string) ||
+      (companyInfo?.legal_name as string) ||
+      undefined;
+
+    const title = 'Toma de Inventario Físico';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
+    exportToExcelWithHeaders(rowsData, headers, 'toma_inventario_fisico', 'Toma Física', undefined, {
+      title,
+      companyName,
+      headerStyle: 'dgii_606',
+      periodText,
+    });
   };
 
   const handleExportPdf = async () => {

@@ -342,7 +342,21 @@ export default function InventoryPhysicalResultPage() {
       costDifference: r.costDifference,
     }));
 
-    exportToExcelWithHeaders(rowsData, headers, 'reporte_inventario_fisico');
+    const companyName =
+      (companyInfo?.name as string) ||
+      (companyInfo?.company_name as string) ||
+      (companyInfo?.legal_name as string) ||
+      undefined;
+
+    const title = 'Reporte de Inventario Físico';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
+    exportToExcelWithHeaders(rowsData, headers, 'reporte_inventario_fisico', 'Inventario Físico', undefined, {
+      title,
+      companyName,
+      headerStyle: 'dgii_606',
+      periodText,
+    });
   };
 
   const handleExportPdf = async () => {

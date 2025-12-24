@@ -351,6 +351,8 @@ export default function DepreciationPage() {
     const fileBase = `depreciaciones_${new Date().toISOString().split('T')[0]}`;
     const title = 'Depreciación de Activos Fijos';
 
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
     exportToExcelWithHeaders(
       rows,
       headers,
@@ -360,6 +362,8 @@ export default function DepreciationPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };

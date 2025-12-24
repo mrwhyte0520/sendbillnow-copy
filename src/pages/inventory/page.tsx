@@ -457,10 +457,15 @@ export default function InventoryPage() {
               const currentStock = Number(item.current_stock ?? 0) || 0;
               let newStock = currentStock;
 
-              if (formData.movement_type === 'entry' || formData.movement_type === 'adjustment') {
+              if (formData.movement_type === 'entry') {
                 newStock = currentStock + quantity;
               } else if (formData.movement_type === 'exit') {
                 newStock = currentStock - quantity;
+              } else if (formData.movement_type === 'adjustment') {
+                // Los ajustes pueden ser positivos (aumento) o negativos (disminución)
+                // El usuario indica si es positivo o negativo con adjustment_direction
+                const isPositive = formData.adjustment_direction !== 'negative';
+                newStock = isPositive ? currentStock + quantity : currentStock - quantity;
               }
 
               if (newStock < 0) newStock = 0;
@@ -513,21 +518,41 @@ export default function InventoryPage() {
                   },
                 );
               } else if (formData.movement_type === 'adjustment') {
-                // Para ajustes, tratamos como entrada (aumento) por ahora
-                lines.push(
-                  {
-                    account_id: inventoryAccountId,
-                    description: 'Ajuste de inventario',
-                    debit_amount: totalCost,
-                    credit_amount: 0,
-                  },
-                  {
-                    account_id: counterAccountId,
-                    description: 'Contrapartida ajuste inventario',
-                    debit_amount: 0,
-                    credit_amount: totalCost,
-                  },
-                );
+                // Los ajustes pueden ser positivos (aumento) o negativos (disminución)
+                const isPositive = formData.adjustment_direction !== 'negative';
+                if (isPositive) {
+                  // Ajuste positivo: débito inventario, crédito contrapartida
+                  lines.push(
+                    {
+                      account_id: inventoryAccountId,
+                      description: 'Ajuste de inventario (aumento)',
+                      debit_amount: totalCost,
+                      credit_amount: 0,
+                    },
+                    {
+                      account_id: counterAccountId,
+                      description: 'Contrapartida ajuste inventario',
+                      debit_amount: 0,
+                      credit_amount: totalCost,
+                    },
+                  );
+                } else {
+                  // Ajuste negativo: crédito inventario, débito contrapartida (gasto/pérdida)
+                  lines.push(
+                    {
+                      account_id: counterAccountId,
+                      description: 'Pérdida/Merma de inventario',
+                      debit_amount: totalCost,
+                      credit_amount: 0,
+                    },
+                    {
+                      account_id: inventoryAccountId,
+                      description: 'Ajuste de inventario (disminución)',
+                      debit_amount: 0,
+                      credit_amount: totalCost,
+                    },
+                  );
+                }
               }
 
               if (lines.length > 0) {
@@ -724,9 +749,16 @@ export default function InventoryPage() {
       if (user) {
         loadData();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving data:', error);
-      alert('Error al guardar los datos. Por favor, inténtelo de nuevo.');
+      const parts = [
+        error?.message ? String(error.message) : null,
+        error?.code ? `code: ${String(error.code)}` : null,
+        error?.details ? `details: ${String(error.details)}` : null,
+        error?.hint ? `hint: ${String(error.hint)}` : null,
+      ].filter(Boolean);
+      const msg = parts.length > 0 ? parts.join('\n') : 'Revisa la consola para más detalles.';
+      alert(`Error al guardar los datos:\n${msg}`);
     }
   };
 
@@ -774,6 +806,8 @@ export default function InventoryPage() {
       console.error('Error obteniendo información de la empresa para Excel de inventario:', error);
     }
 
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
     if (isItemsTab) {
       const rows = dataToExport.map((item: any) => ({
         sku: item.sku,
@@ -803,6 +837,8 @@ export default function InventoryPage() {
       exportToExcelWithHeaders(rows, headers, fileBase, 'Productos', [16, 30, 22, 16, 16, 16, 16, 14], {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       });
     } else {
       const rows = dataToExport.map((movement: any) => ({
@@ -844,6 +880,8 @@ export default function InventoryPage() {
         {
           title,
           companyName,
+          headerStyle: 'dgii_606',
+          periodText,
         },
       );
     }
@@ -871,6 +909,8 @@ export default function InventoryPage() {
       // eslint-disable-next-line no-console
       console.error('Error obteniendo información de la empresa para Excel de valorización:', error);
     }
+
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     const rows = items.map((item: any) => {
       const stock = Number(item.current_stock || 0) || 0;
@@ -908,6 +948,8 @@ export default function InventoryPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };
@@ -2397,7 +2439,7 @@ export default function InventoryPage() {
                     </label>
                     <select
                       value={formData.movement_type || ''}
-                      onChange={(e) => setFormData({ ...formData, movement_type: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, movement_type: e.target.value, adjustment_direction: 'positive' })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       required
                     >
@@ -2408,6 +2450,22 @@ export default function InventoryPage() {
                       <option value="adjustment">Ajuste</option>
                     </select>
                   </div>
+                  {formData.movement_type === 'adjustment' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipo de ajuste *
+                      </label>
+                      <select
+                        value={formData.adjustment_direction || 'positive'}
+                        onChange={(e) => setFormData({ ...formData, adjustment_direction: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                        required
+                      >
+                        <option value="positive">Ajuste positivo (aumento de stock)</option>
+                        <option value="negative">Ajuste negativo (disminución/merma)</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Cuenta contable (contrapartida)
@@ -2454,10 +2512,8 @@ export default function InventoryPage() {
                       type="number" min="0"
                       step="0.01"
                       value={formData.unit_cost ?? ''}
-                      onChange={(e) =>
-                        setFormData({ ...formData, unit_cost: parseFloat(e.target.value || '0') })
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      readOnly
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
@@ -2543,17 +2599,24 @@ export default function InventoryPage() {
                         onChange={(e) => {
                           const value = e.target.value || null;
                           let issuerName = formData.issuer_name || '';
+                          let documentNumber = formData.document_number || '';
                           if (value) {
                             const inv = entryInvoices.find((x) => String(x.id) === String(value));
                             const customerName = (inv as any)?.customers?.name as string | undefined;
                             if (customerName) {
                               issuerName = customerName;
                             }
+                            const invNumber = String((inv as any)?.invoice_number || '');
+                            // Si la factura tiene un número (NCF o interno), usarlo como número de documento
+                            if (invNumber) {
+                              documentNumber = invNumber;
+                            }
                           }
                           setFormData({
                             ...formData,
                             related_invoice_id: value,
                             issuer_name: issuerName,
+                            document_number: documentNumber || null,
                           });
                         }}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
@@ -2707,13 +2770,8 @@ export default function InventoryPage() {
                               step="0.01"
                               min="0"
                               value={line.unit_cost}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setWarehouseEntryLines((prev) =>
-                                  prev.map((ln, i) => (i === idx ? { ...ln, unit_cost: value } : ln)),
-                                );
-                              }}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              readOnly
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
                           <div>

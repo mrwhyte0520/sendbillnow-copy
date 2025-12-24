@@ -164,6 +164,7 @@ export default function FixedAssetsReportPage() {
     const today = new Date().toISOString().split('T')[0];
     const fileBase = `reporte_activos_fijos_${today}`;
     const title = 'Reporte de Activos Fijos';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
@@ -174,6 +175,8 @@ export default function FixedAssetsReportPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };

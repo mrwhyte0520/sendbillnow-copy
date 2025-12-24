@@ -337,7 +337,21 @@ export default function InventoryCostRevaluationPage() {
       totalDifference: r.totalDifference,
     }));
 
-    exportToExcelWithHeaders(rowsData, headers, 'revalorizacion_costos_inventario');
+    const companyName =
+      (companyInfo?.name as string) ||
+      (companyInfo?.company_name as string) ||
+      (companyInfo?.legal_name as string) ||
+      undefined;
+
+    const title = 'Revalorización de Costos';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
+    exportToExcelWithHeaders(rowsData, headers, 'revalorizacion_costos_inventario', 'Revalorización', undefined, {
+      title,
+      companyName,
+      headerStyle: 'dgii_606',
+      periodText,
+    });
   };
 
   const handleExportPdf = async () => {

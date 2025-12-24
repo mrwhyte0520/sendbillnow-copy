@@ -34,11 +34,11 @@ export default function FixedAssetsPage() {
           return;
         }
 
-        // Calculate total value
-        const totalValue = assetsArr.reduce((sum, asset: any) => sum + (Number(asset.acquisition_cost) || 0), 0);
+        // Calculate total value (usando purchase_cost que es el campo real en la tabla)
+        const totalValue = assetsArr.reduce((sum, asset: any) => sum + (Number(asset.purchase_cost) || 0), 0);
 
-        // Calculate total accumulated depreciation
-        const totalDepreciation = depreciationsArr.reduce((sum, dep: any) => sum + (Number(dep.depreciation_amount) || 0), 0);
+        // Calculate total accumulated depreciation (monthly_depreciation o accumulated_depreciation)
+        const totalDepreciation = assetsArr.reduce((sum, asset: any) => sum + (Number(asset.accumulated_depreciation) || 0), 0);
 
         // Calculate net value
         const netValue = totalValue - totalDepreciation;
@@ -77,22 +77,23 @@ export default function FixedAssetsPage() {
           },
         ]);
 
-        // Group assets by category
-        const categoryMap: Record<string, { count: number; value: number }> = {};
+        // Group assets by category (usando 'category' que es el campo real)
+        const categoryMap: Record<string, { count: number; value: number; depreciation: number }> = {};
         assetsArr.forEach((asset: any) => {
-          const category = asset.asset_category || 'Sin Categoría';
+          const category = asset.category || 'Sin Categoría';
           if (!categoryMap[category]) {
-            categoryMap[category] = { count: 0, value: 0 };
+            categoryMap[category] = { count: 0, value: 0, depreciation: 0 };
           }
           categoryMap[category].count += 1;
-          categoryMap[category].value += Number(asset.acquisition_cost) || 0;
+          categoryMap[category].value += Number(asset.purchase_cost) || 0;
+          categoryMap[category].depreciation += Number(asset.accumulated_depreciation) || 0;
         });
 
         const categoriesData = Object.entries(categoryMap).map(([category, data]) => ({
           category,
           count: data.count,
           value: formatMoney(data.value, 'RD$'),
-          depreciation: '',
+          depreciation: formatMoney(data.depreciation, 'RD$'),
         }));
 
         if (categoriesData.length > 0) {
@@ -104,18 +105,19 @@ export default function FixedAssetsPage() {
           .sort((a: any, b: any) => new Date(b.depreciation_date || b.created_at || 0).getTime() - new Date(a.depreciation_date || a.created_at || 0).getTime())
           .slice(0, 3)
           .map((dep: any) => {
-            // Find the related asset
+            // Find the related asset (usando 'name' que es el campo real)
             const asset = assetsArr.find((a: any) => a.id === dep.asset_id);
-            const assetName = asset?.asset_name || 'Activo';
-            const assetCode = asset?.code || dep.asset_id;
-            const depAmount = Number(dep.depreciation_amount) || 0;
+            const assetName = dep.asset_name || asset?.name || 'Activo';
+            const assetCode = dep.asset_code || asset?.code || '';
+            const depAmount = Number(dep.monthly_depreciation) || Number(dep.depreciation_amount) || 0;
+            const accDepAmount = Number(dep.accumulated_depreciation) || 0;
             const dateStr = (dep.depreciation_date || '').slice(0, 10) || (dep.created_at || '').slice(0, 10);
 
             return {
               asset: assetName,
               code: assetCode,
               monthlyDepreciation: formatMoney(depAmount, 'RD$'),
-              accumulatedDepreciation: '',
+              accumulatedDepreciation: formatMoney(accDepAmount, 'RD$'),
               date: dateStr ? new Date(dateStr).toLocaleDateString('es-DO') : '',
             };
           });
@@ -281,12 +283,14 @@ export default function FixedAssetsPage() {
                   <i className={`${stat.icon || 'ri-apps-line'} text-xl ${getColorClasses(stat.color).text}`}></i>
                 </div>
               </div>
-              <div className="mt-4">
-                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
-                </span>
-                <span className="text-sm text-gray-500 ml-1">vs mes anterior</span>
-              </div>
+              {stat.change && (
+                <div className="mt-4">
+                  <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                    {stat.change}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-1">vs mes anterior</span>
+                </div>
+              )}
             </div>
           ))}
         </div>

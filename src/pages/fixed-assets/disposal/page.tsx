@@ -345,6 +345,7 @@ export default function AssetDisposalPage() {
 
     const fileBase = `retiro_activos_${new Date().toISOString().split('T')[0]}`;
     const title = 'Retiro de Activos Fijos';
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
@@ -355,6 +356,8 @@ export default function AssetDisposalPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };
@@ -686,6 +689,7 @@ export default function AssetDisposalPage() {
                     <input
                       type="number" min="0"
                       step="0.01"
+                      name="salePrice"
                       defaultValue={editingDisposal?.salePrice || ''}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="0.00"

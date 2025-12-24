@@ -32,6 +32,32 @@ export default function AssetRegisterPage() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
+  const normalizeAssetStatus = (value: unknown) => {
+    const raw = String(value || '').trim();
+    const s = raw.toLowerCase();
+
+    if (s === 'active' || s === 'activo') return 'Activo';
+    if (s === 'inactive' || s === 'inactivo') return 'Inactivo';
+    if (s === 'maintenance' || s === 'en mantenimiento') return 'En Mantenimiento';
+    if (s === 'disposed' || s === 'dado de baja' || s === 'retirado') return 'Retirado';
+    if (s === 'sold' || s === 'vendido') return 'Vendido';
+
+    return raw || 'Activo';
+  };
+
+  const denormalizeAssetStatus = (value: unknown) => {
+    const raw = String(value || '').trim();
+    const s = raw.toLowerCase();
+
+    if (s === 'activo' || s === 'active') return 'active';
+    if (s === 'inactivo' || s === 'inactive') return 'inactive';
+    if (s === 'en mantenimiento' || s === 'maintenance') return 'maintenance';
+    if (s === 'retirado' || s === 'dado de baja' || s === 'disposed') return 'disposed';
+    if (s === 'vendido' || s === 'sold') return 'sold';
+
+    return raw || 'active';
+  };
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -70,7 +96,7 @@ export default function AssetRegisterPage() {
           depreciationMethod: a.depreciation_method,
           currentValue: Number(a.current_value) || 0,
           accumulatedDepreciation: Number(a.accumulated_depreciation) || 0,
-          status: a.status,
+          status: normalizeAssetStatus(a.status),
           supplier: a.supplier || '',
           description: a.description || '',
         }));
@@ -175,7 +201,7 @@ export default function AssetRegisterPage() {
       depreciation_method: String(depreciationMethodValue || formData.get('depreciationMethod') || '').trim(),
       current_value: Number(formData.get('currentValue') || 0) || 0,
       accumulated_depreciation: Number(formData.get('accumulatedDepreciation') || 0) || 0,
-      status: String(formData.get('status') || 'Activo'),
+      status: denormalizeAssetStatus(formData.get('status') || 'Activo'),
       supplier: String(formData.get('supplier') || '').trim() || null,
       description: String(formData.get('description') || '').trim() || null,
     };
@@ -195,7 +221,7 @@ export default function AssetRegisterPage() {
           depreciationMethod: updated.depreciation_method,
           currentValue: Number(updated.current_value) || 0,
           accumulatedDepreciation: Number(updated.accumulated_depreciation) || 0,
-          status: updated.status,
+          status: normalizeAssetStatus(updated.status),
           supplier: updated.supplier || '',
           description: updated.description || '',
         };
@@ -214,7 +240,7 @@ export default function AssetRegisterPage() {
           depreciationMethod: created.depreciation_method,
           currentValue: Number(created.current_value) || 0,
           accumulatedDepreciation: Number(created.accumulated_depreciation) || 0,
-          status: created.status,
+          status: normalizeAssetStatus(created.status),
           supplier: created.supplier || '',
           description: created.description || '',
         };
@@ -371,6 +397,8 @@ export default function AssetRegisterPage() {
     const fileBase = `registro_activos_${today}`;
     const title = 'Registro de Activos Fijos';
 
+    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+
     exportToExcelWithHeaders(
       rows,
       headers,
@@ -380,6 +408,8 @@ export default function AssetRegisterPage() {
       {
         title,
         companyName,
+        headerStyle: 'dgii_606',
+        periodText,
       },
     );
   };
@@ -468,7 +498,8 @@ export default function AssetRegisterPage() {
                 <option value="Activo">Activo</option>
                 <option value="Inactivo">Inactivo</option>
                 <option value="En Mantenimiento">En Mantenimiento</option>
-                <option value="Dado de Baja">Dado de Baja</option>
+                <option value="Retirado">Retirado</option>
+                <option value="Vendido">Vendido</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -544,22 +575,20 @@ export default function AssetRegisterPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          asset.status === 'active' || asset.status === 'Activo'
+                          asset.status === 'Activo'
                             ? 'bg-green-100 text-green-800'
-                            : asset.status === 'disposed' || asset.status === 'Dado de Baja'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : asset.status === 'sold' || asset.status === 'Vendido'
+                            : asset.status === 'Inactivo'
+                            ? 'bg-gray-100 text-gray-800'
+                            : asset.status === 'En Mantenimiento'
                             ? 'bg-blue-100 text-blue-800'
+                            : asset.status === 'Retirado'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : asset.status === 'Vendido'
+                            ? 'bg-indigo-100 text-indigo-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {asset.status === 'active' || asset.status === 'Activo'
-                          ? 'Activo'
-                          : asset.status === 'disposed' || asset.status === 'Dado de Baja'
-                          ? 'Retirado'
-                          : asset.status === 'sold' || asset.status === 'Vendido'
-                          ? 'Vendido'
-                          : asset.status}
+                        {asset.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -748,12 +777,14 @@ export default function AssetRegisterPage() {
                     </label>
                     <select
                       name="status"
-                      defaultValue={editingAsset?.status || 'active'}
+                      defaultValue={editingAsset?.status || 'Activo'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="active">Activo</option>
-                      <option value="disposed">Retirado</option>
-                      <option value="sold">Vendido</option>
+                      <option value="Activo">Activo</option>
+                      <option value="Inactivo">Inactivo</option>
+                      <option value="En Mantenimiento">En Mantenimiento</option>
+                      <option value="Retirado">Retirado</option>
+                      <option value="Vendido">Vendido</option>
                     </select>
                   </div>
                 </div>
