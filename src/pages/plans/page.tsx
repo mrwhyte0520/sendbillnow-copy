@@ -2,7 +2,6 @@ import { useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { usePlans } from '../../hooks/usePlans';
 import { useAuth } from '../../hooks/useAuth';
-import { notifyPlanPurchase } from '../../utils/notify';
 import { referralsService } from '../../services/database';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '../../services/stripe';
@@ -104,8 +103,7 @@ export default function PlansPage() {
         'Multimoneda',
         'Servicio de reparaciones',
         'Cotizaciones',
-        'Devoluciones',
-        'Notificaciones WhatsApp (adicional)'
+        'Devoluciones'
       ],
       popular: true,
       color: 'from-purple-500 to-purple-600',
@@ -138,8 +136,7 @@ export default function PlansPage() {
         'Multimoneda',
         'Servicio de reparaciones',
         'Cotizaciones',
-        'Devoluciones',
-        'Notificaciones WhatsApp (adicional)'
+        'Devoluciones'
       ],
       popular: false,
       color: 'from-amber-500 to-orange-600',
@@ -182,32 +179,21 @@ export default function PlansPage() {
         try {
           const plan = plans.find(p => p.id === selectedPlan);
           const price = plan ? getPrice(plan) : 0;
-          await notifyPlanPurchase({
-            to: '+18299411224',
-            userEmail: user?.email || 'desconocido',
-            planId: selectedPlan,
-            planName: plan?.name || selectedPlan,
-            amount: price,
-            method: 'stripe',
-            purchasedAt: new Date().toISOString(),
-          });
-          try {
-            const ref = localStorage.getItem('ref_code') || '';
-            const buyerId = user?.id || '';
-            if (ref && buyerId && price > 0) {
-              const refRow = await referralsService.getReferrerByCode(ref);
-              if (refRow && refRow.user_id !== buyerId) {
-                const commission = Number((price * 0.15).toFixed(2));
-                await referralsService.createCommission({
-                  ref_code: ref,
-                  referee_user_id: buyerId,
-                  plan_id: selectedPlan,
-                  amount: commission,
-                  currency: 'DOP'
-                });
-              }
+          const ref = localStorage.getItem('ref_code') || '';
+          const buyerId = user?.id || '';
+          if (ref && buyerId && price > 0) {
+            const refRow = await referralsService.getReferrerByCode(ref);
+            if (refRow && refRow.user_id !== buyerId) {
+              const commission = Number((price * 0.15).toFixed(2));
+              await referralsService.createCommission({
+                ref_code: ref,
+                referee_user_id: buyerId,
+                plan_id: selectedPlan,
+                amount: commission,
+                currency: 'DOP'
+              });
             }
-          } catch {}
+          }
         } catch {}
       } else {
         alert(result.error || 'Error al procesar el pago. Intente nuevamente.');
@@ -505,33 +491,11 @@ export default function PlansPage() {
                   <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
                   <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
                 </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Notificaciones WhatsApp</td>
-                  <td className="py-3 px-4 text-center text-sm text-gray-500">Módulo adicional</td>
-                  <td className="py-3 px-4 text-center text-sm text-gray-500">Módulo adicional</td>
-                </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Contact Section */}
-        <div className="bg-gradient-to-r from-navy-600 to-navy-700 rounded-lg p-6 text-white text-center">
-          <i className="ri-customer-service-2-line text-4xl mb-3"></i>
-          <h3 className="text-xl font-bold mb-2">¿Necesitas ayuda para elegir?</h3>
-          <p className="text-navy-200 mb-4">
-            Contáctanos y te ayudaremos a encontrar el plan perfecto para tu negocio
-          </p>
-          <a 
-            href="https://wa.me/18299411224" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-semibold transition-colors"
-          >
-            <i className="ri-whatsapp-line mr-2 text-xl"></i>
-            Contactar por WhatsApp
-          </a>
-        </div>
 
         {/* Payment Modal */}
         {showPaymentModal && selectedPlanData && (

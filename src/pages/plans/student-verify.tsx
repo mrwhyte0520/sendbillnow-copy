@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { usePlans } from '../../hooks/usePlans';
 import { useAuth } from '../../hooks/useAuth';
-import { notifyPlanPurchase } from '../../utils/notify';
 
 function isInstitutionalEmail(email: string): boolean {
   const at = email.indexOf('@');
@@ -22,7 +21,7 @@ const STORAGE_KEY = 'contabi_student_verify_code';
 export default function StudentVerifyPage() {
   const navigate = useNavigate();
   const { subscribeToPlan, canSelectPlan } = usePlans();
-  const { user } = useAuth();
+  useAuth();
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -97,17 +96,6 @@ export default function StudentVerifyPage() {
         expiresAtDate.setMonth(expiresAtDate.getMonth() + 4);
         localStorage.setItem('contabi_student_expires_at', String(expiresAtDate.getTime()));
         localStorage.setItem('contabi_student_email', payload.email);
-        try {
-          await notifyPlanPurchase({
-            to: '+18299411224',
-            userEmail: user?.email || payload.email,
-            planId: 'student',
-            planName: 'ESTUDIANTIL',
-            amount: 0,
-            method: 'student-verify',
-            purchasedAt: new Date().toISOString(),
-          });
-        } catch {}
         alert('Verificación exitosa. Plan Estudiantil activado.');
         navigate('/plans');
       } else {
