@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
-import { apSupplierAdvancesService, suppliersService, bankAccountsService, chartAccountsService } from '../../../services/database';
+import { apSupplierAdvancesService, suppliersService, bankAccountsService, chartAccountsService, settingsService } from '../../../services/database';
 
 interface SupplierAdvance {
   id: string;
@@ -330,8 +332,109 @@ export default function AdvancesPage() {
     }
   };
 
-  const exportToExcel = () => {
-    alert('Exportando anticipos a Excel... (pendiente de implementar integración real)');
+  const exportToExcel = async () => {
+    if (!filteredAdvances.length) {
+      alert('No hay anticipos para exportar.');
+      return;
+    }
+
+    let companyName = 'ContaBi';
+    try {
+      const info = await settingsService.getCompanyInfo();
+      if (info) {
+        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+      }
+    } catch {
+      // usar default
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Anticipos');
+
+    const headers = [
+      { title: 'Número', width: 18 },
+      { title: 'Fecha', width: 14 },
+      { title: 'Proveedor', width: 30 },
+      { title: 'Monto', width: 16 },
+      { title: 'Aplicado', width: 16 },
+      { title: 'Saldo', width: 16 },
+      { title: 'Motivo', width: 30 },
+      { title: 'Estado', width: 14 },
+    ];
+
+    let currentRow = 1;
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = companyName;
+    ws.getCell(currentRow, 1).font = { bold: true, size: 14 };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = 'Anticipos a Proveedores';
+    ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      headerRow.getCell(idx + 1).value = h.title;
+    });
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
+    });
+    currentRow++;
+
+    for (const adv of filteredAdvances) {
+      const r = ws.getRow(currentRow);
+      r.getCell(1).value = adv.number;
+      r.getCell(2).value = adv.date;
+      r.getCell(3).value = adv.supplierName;
+      r.getCell(4).value = Number(adv.amount || 0);
+      r.getCell(5).value = Number(adv.appliedAmount || 0);
+      r.getCell(6).value = Number(adv.remainingBalance || 0);
+      r.getCell(7).value = adv.reason;
+      r.getCell(8).value = adv.status;
+      currentRow++;
+    }
+
+    [4, 5, 6].forEach((col) => {
+      ws.getColumn(col).numFmt = '#,##0.00';
+    });
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    // Estadísticas
+    currentRow++;
+    const totalAmount = filteredAdvances.reduce((s, a) => s + a.amount, 0);
+    const totalApplied = filteredAdvances.reduce((s, a) => s + a.appliedAmount, 0);
+    const totalBalance = filteredAdvances.reduce((s, a) => s + a.remainingBalance, 0);
+
+    ws.getCell(currentRow, 1).value = 'Resumen';
+    ws.getCell(currentRow, 1).font = { bold: true };
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Total Anticipos';
+    ws.getCell(currentRow, 2).value = totalAmount;
+    ws.getCell(currentRow, 2).numFmt = '#,##0.00';
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Total Aplicado';
+    ws.getCell(currentRow, 2).value = totalApplied;
+    ws.getCell(currentRow, 2).numFmt = '#,##0.00';
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Saldo Pendiente';
+    ws.getCell(currentRow, 2).value = totalBalance;
+    ws.getCell(currentRow, 2).numFmt = '#,##0.00';
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, `anticipos-proveedores-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const printAdvance = (advance: SupplierAdvance) => {

@@ -1055,7 +1055,10 @@ export default function APInvoicesPage() {
       worksheet.addRow([]);
 
       const itemsHeader = worksheet.addRow(['Descripción', 'Cantidad', 'Precio', 'Total']);
-      itemsHeader.font = { bold: true };
+      itemsHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      itemsHeader.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      });
 
       items.forEach((item: any) => {
         worksheet.addRow([

@@ -396,11 +396,11 @@ export default function SalesReportsPage() {
       ]);
 
       // Estilo para los encabezados
-      headerRow.font = { bold: true };
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFD9EAD3' }
+        fgColor: { argb: 'FF0B1F3A' }
       };
 
       // Ajustar anchos de columna
@@ -431,11 +431,11 @@ export default function SalesReportsPage() {
       });
 
       // Estilo para los encabezados
-      headerRow.font = { bold: true };
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFD9EAD3' }
+        fgColor: { argb: 'FF0B1F3A' }
       };
 
       // Ajustar anchos de columna

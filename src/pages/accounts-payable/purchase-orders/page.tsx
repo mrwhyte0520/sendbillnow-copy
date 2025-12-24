@@ -501,43 +501,174 @@ export default function PurchaseOrdersPage() {
     doc.save(`ordenes-compra-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const exportToExcel = () => {
-    let csvContent = 'Órdenes de Compra\n\n';
-    csvContent += 'Número,Fecha,Proveedor,Subtotal,ITBIS,Total,Fecha Entrega,Estado,Notas\n';
+  const exportToExcel = async () => {
+    if (!filteredOrders.length) {
+      alert('No hay órdenes para exportar con los filtros actuales.');
+      return;
+    }
 
-    filteredOrders.forEach((order) => {
-      csvContent += `${order.number},${order.date},"${order.supplier}",${formatMoney(order.subtotal, 'RD$')},${formatMoney(order.itbis, 'RD$')},${formatMoney(order.total, 'RD$')},${order.deliveryDate},"${order.status}","${order.notes}"\n`;
-    });
+    const headerCompanyName =
+      (companyInfo as any)?.name ||
+      (companyInfo as any)?.company_name ||
+      'ContaBi';
 
-    csvContent += '\n\nDetalle de Productos\n';
-    csvContent += 'Orden,Producto,Cantidad,Precio Unitario,Total\n';
+    const headerCompanyRnc =
+      (companyInfo as any)?.rnc ||
+      (companyInfo as any)?.tax_id ||
+      (companyInfo as any)?.ruc ||
+      '';
 
-    filteredOrders.forEach((order) => {
-      (order.products || []).forEach((product: any) => {
-        const lineTotal = Number(product.quantity || 0) * Number(product.price || 0);
-        csvContent += `${order.number},"${product.name}",${product.quantity},${formatMoney(product.price, 'RD$')},${formatMoney(lineTotal, 'RD$')}\n`;
+    const workbook = new ExcelJS.Workbook();
+
+    const applyHeaderStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+        cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
       });
+    };
+
+    // Hoja 1: Órdenes
+    const wsOrders = workbook.addWorksheet('Órdenes');
+    const ordersHeaders = [
+      { title: 'Número', width: 16 },
+      { title: 'Fecha', width: 14 },
+      { title: 'Proveedor', width: 32 },
+      { title: 'Subtotal', width: 16 },
+      { title: 'ITBIS', width: 16 },
+      { title: 'Total', width: 16 },
+      { title: 'Fecha Entrega', width: 16 },
+      { title: 'Estado', width: 14 },
+      { title: 'Notas', width: 40 },
+    ];
+
+    let currentRow = 1;
+    const totalColumnsOrders = ordersHeaders.length;
+
+    wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
+    wsOrders.getCell(currentRow, 1).value = headerCompanyName;
+    wsOrders.getCell(currentRow, 1).font = { bold: true, size: 14 };
+    wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
+    currentRow++;
+
+    if (headerCompanyRnc) {
+      wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
+      wsOrders.getCell(currentRow, 1).value = `RNC: ${headerCompanyRnc}`;
+      wsOrders.getCell(currentRow, 1).font = { bold: true };
+      wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
+      currentRow++;
+    }
+
+    wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
+    wsOrders.getCell(currentRow, 1).value = 'Órdenes de Compra';
+    wsOrders.getCell(currentRow, 1).font = { bold: true, size: 16 };
+    wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
+    currentRow++;
+
+    wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
+    wsOrders.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+    wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
+    currentRow++;
+    currentRow++;
+
+    const headerRowOrders = wsOrders.getRow(currentRow);
+    ordersHeaders.forEach((h, idx) => {
+      headerRowOrders.getCell(idx + 1).value = h.title;
+    });
+    applyHeaderStyle(headerRowOrders);
+    currentRow++;
+
+    for (const order of filteredOrders) {
+      const r = wsOrders.getRow(currentRow);
+      r.getCell(1).value = order.number;
+      r.getCell(2).value = order.date;
+      r.getCell(3).value = order.supplier;
+      r.getCell(4).value = Number(order.subtotal || 0);
+      r.getCell(5).value = Number(order.itbis || 0);
+      r.getCell(6).value = Number(order.total || 0);
+      r.getCell(7).value = order.deliveryDate;
+      r.getCell(8).value = order.status;
+      r.getCell(9).value = order.notes;
+      currentRow++;
+    }
+
+    // Formatos
+    [4, 5, 6].forEach((col) => {
+      const c = wsOrders.getColumn(col);
+      c.numFmt = '#,##0.00';
+      c.alignment = { horizontal: 'right' } as any;
     });
 
-    const totalAmount = filteredOrders.reduce((sum, order) => sum + order.total, 0);
+    ordersHeaders.forEach((h, idx) => {
+      wsOrders.getColumn(idx + 1).width = h.width;
+    });
+
+    // Estadísticas
+    currentRow++;
+    const totalAmount = filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
     const pendingOrders = filteredOrders.filter((o) => o.status === 'Pendiente').length;
     const approvedOrders = filteredOrders.filter((o) => o.status === 'Aprobada').length;
 
-    csvContent += '\nEstadísticas\n';
-    csvContent += `Total en Órdenes,${formatMoney(totalAmount, 'RD$')}\n`;
-    csvContent += `Órdenes Pendientes,${pendingOrders}\n`;
-    csvContent += `Órdenes Aprobadas,${approvedOrders}\n`;
-    csvContent += `Total Órdenes,${filteredOrders.length}\n`;
+    wsOrders.getCell(currentRow, 1).value = 'Estadísticas';
+    wsOrders.getCell(currentRow, 1).font = { bold: true };
+    currentRow++;
+    wsOrders.getCell(currentRow, 1).value = 'Total en Órdenes';
+    wsOrders.getCell(currentRow, 2).value = totalAmount;
+    wsOrders.getCell(currentRow, 2).numFmt = '#,##0.00';
+    currentRow++;
+    wsOrders.getCell(currentRow, 1).value = 'Órdenes Pendientes';
+    wsOrders.getCell(currentRow, 2).value = pendingOrders;
+    currentRow++;
+    wsOrders.getCell(currentRow, 1).value = 'Órdenes Aprobadas';
+    wsOrders.getCell(currentRow, 2).value = approvedOrders;
+    currentRow++;
+    wsOrders.getCell(currentRow, 1).value = 'Total Órdenes';
+    wsOrders.getCell(currentRow, 2).value = filteredOrders.length;
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `ordenes-compra-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Hoja 2: Detalle de Productos
+    const wsProducts = workbook.addWorksheet('Detalle Productos');
+    const prodHeaders = [
+      { title: 'Orden', width: 16 },
+      { title: 'Producto', width: 40 },
+      { title: 'Cantidad', width: 12 },
+      { title: 'Precio Unitario', width: 16 },
+      { title: 'Total', width: 16 },
+    ];
+
+    const headerRowProducts = wsProducts.getRow(1);
+    prodHeaders.forEach((h, idx) => {
+      headerRowProducts.getCell(idx + 1).value = h.title;
+    });
+    applyHeaderStyle(headerRowProducts);
+
+    let prodRow = 2;
+    for (const order of filteredOrders) {
+      for (const product of order.products || []) {
+        const quantity = Number(product.quantity || 0);
+        const price = Number(product.price || 0);
+        const lineTotal = quantity * price;
+
+        const r = wsProducts.getRow(prodRow);
+        r.getCell(1).value = order.number;
+        r.getCell(2).value = product.name;
+        r.getCell(3).value = quantity;
+        r.getCell(4).value = price;
+        r.getCell(5).value = lineTotal;
+        prodRow++;
+      }
+    }
+
+    wsProducts.getColumn(4).numFmt = '#,##0.00';
+    wsProducts.getColumn(5).numFmt = '#,##0.00';
+    prodHeaders.forEach((h, idx) => {
+      wsProducts.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, `ordenes-compra-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const printOrder = async (order: any) => {
@@ -779,7 +910,10 @@ export default function PurchaseOrdersPage() {
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow(['Producto', 'Cantidad', 'Precio', 'Total']);
-    headerRow.font = { bold: true };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+    });
 
     (order.products || []).forEach((product: any) => {
       const qty = Number(product.quantity) || 0;

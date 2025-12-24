@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
 import { suppliersService, apQuotesService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
@@ -375,80 +377,145 @@ export default function QuotesPage() {
   };
 
   const exportToExcel = async () => {
+    if (!filteredQuotes.length) {
+      alert('No hay solicitudes para exportar.');
+      return;
+    }
+
     let companyName = 'ContaBi';
     try {
       const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName =
-          (info as any).name ||
-          (info as any).company_name ||
-          (info as any).legal_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
+      if (info) {
+        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de solicitudes de cotización:', error);
+    } catch {
+      // usar default
     }
 
-    let csvContent = '';
-    csvContent += `${companyName}\n`;
-    csvContent += 'Solicitudes de Cotización\n';
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-DO')}\n`;
-    csvContent += `Total de solicitudes: ${filteredQuotes.length}\n\n`;
-    csvContent += 'Número,Fecha,Título,Descripción,Categoría,Fecha Vencimiento,Monto Estimado,Estado,Proveedor Seleccionado\n';
+    const wb = new ExcelJS.Workbook();
 
-    filteredQuotes.forEach((quote: any) => {
-      const date = formatDate(quote.date);
-      const due = formatDate(quote.dueDate);
-      const amount = formatCurrency(quote.estimatedAmount);
-      const title = String(quote.title || '').replace(/"/g, '""');
-      const description = String(quote.description || '').replace(/"/g, '""');
-      const category = String(quote.category || '').replace(/"/g, '""');
-      const status = String(quote.status || '').replace(/"/g, '""');
-      const selectedSupplier = String(quote.selectedSupplier || 'N/A').replace(/"/g, '""');
+    const applyHeaderStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+        cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
+      });
+    };
 
-      csvContent += `${quote.number},${date},"${title}","${description}","${category}",${due},${amount},"${status}","${selectedSupplier}"\n`;
+    // Hoja 1: Solicitudes
+    const ws = wb.addWorksheet('Solicitudes');
+    const headers = [
+      { title: 'Número', width: 18 },
+      { title: 'Fecha', width: 14 },
+      { title: 'Título', width: 30 },
+      { title: 'Descripción', width: 40 },
+      { title: 'Categoría', width: 16 },
+      { title: 'Vencimiento', width: 14 },
+      { title: 'Monto Estimado', width: 18 },
+      { title: 'Estado', width: 14 },
+      { title: 'Proveedor Sel.', width: 24 },
+    ];
+
+    let currentRow = 1;
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = companyName;
+    ws.getCell(currentRow, 1).font = { bold: true, size: 14 };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = 'Solicitudes de Cotización';
+    ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, headers.length);
+    ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      headerRow.getCell(idx + 1).value = h.title;
     });
+    applyHeaderStyle(headerRow);
+    currentRow++;
 
-    // Detalle de proveedores
-    csvContent += '\n\nDetalle de Proveedores\n';
-    csvContent += 'Cotización,Proveedor,Monto,Tiempo Entrega,Notas,Estado\n';
-    filteredQuotes.forEach((quote: any) => {
-      quote.suppliers.forEach(
-        (supplier: { name: string; amount: number; deliveryTime?: string; notes?: string; status: string }) => {
-          const supplierName = String(supplier.name || '').replace(/"/g, '""');
-          const supplierAmount = formatCurrency(supplier.amount);
-          const delivery = String(supplier.deliveryTime || '').replace(/"/g, '""');
-          const notes = String(supplier.notes || '').replace(/"/g, '""');
-          const status = String(supplier.status || '').replace(/"/g, '""');
+    for (const q of filteredQuotes) {
+      const r = ws.getRow(currentRow);
+      r.getCell(1).value = q.number;
+      r.getCell(2).value = formatDate(q.date);
+      r.getCell(3).value = q.title;
+      r.getCell(4).value = q.description;
+      r.getCell(5).value = q.category;
+      r.getCell(6).value = formatDate(q.dueDate);
+      r.getCell(7).value = Number(q.estimatedAmount || 0);
+      r.getCell(8).value = q.status;
+      r.getCell(9).value = q.selectedSupplier || 'N/A';
+      currentRow++;
+    }
 
-          csvContent += `${quote.number},"${supplierName}",${supplierAmount},"${delivery}","${notes}","${status}"\n`;
-        },
-      );
+    ws.getColumn(7).numFmt = '#,##0.00';
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
     });
 
     // Estadísticas
-    const pendingQuotes = filteredQuotes.filter((q) => q.status === 'Pendiente').length;
-    const approvedQuotes = filteredQuotes.filter((q) => q.status === 'Aprobada').length;
-    const rejectedQuotes = filteredQuotes.filter((q) => q.status === 'Rechazada').length;
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Estadísticas';
+    ws.getCell(currentRow, 1).font = { bold: true };
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Pendientes';
+    ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Pendiente').length;
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Aprobadas';
+    ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Aprobada').length;
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Rechazadas';
+    ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Rechazada').length;
+    currentRow++;
+    ws.getCell(currentRow, 1).value = 'Total';
+    ws.getCell(currentRow, 2).value = filteredQuotes.length;
 
-    csvContent += `\nEstadísticas\n`;
-    csvContent += `Solicitudes Pendientes,${pendingQuotes}\n`;
-    csvContent += `Solicitudes Aprobadas,${approvedQuotes}\n`;
-    csvContent += `Solicitudes Rechazadas,${rejectedQuotes}\n`;
-    csvContent += `Total Solicitudes,${filteredQuotes.length}\n`;
+    // Hoja 2: Detalle de Proveedores
+    const wsSupp = wb.addWorksheet('Proveedores');
+    const suppHeaders = [
+      { title: 'Cotización', width: 18 },
+      { title: 'Proveedor', width: 30 },
+      { title: 'Monto', width: 16 },
+      { title: 'Tiempo Entrega', width: 18 },
+      { title: 'Notas', width: 30 },
+      { title: 'Estado', width: 14 },
+    ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `solicitudes-cotizacion-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const suppHeaderRow = wsSupp.getRow(1);
+    suppHeaders.forEach((h, idx) => {
+      suppHeaderRow.getCell(idx + 1).value = h.title;
+    });
+    applyHeaderStyle(suppHeaderRow);
+
+    let suppRow = 2;
+    for (const q of filteredQuotes) {
+      for (const s of q.suppliers || []) {
+        const r = wsSupp.getRow(suppRow);
+        r.getCell(1).value = q.number;
+        r.getCell(2).value = s.name;
+        r.getCell(3).value = Number(s.amount || 0);
+        r.getCell(4).value = s.deliveryTime || '';
+        r.getCell(5).value = s.notes || '';
+        r.getCell(6).value = s.status;
+        suppRow++;
+      }
+    }
+
+    wsSupp.getColumn(3).numFmt = '#,##0.00';
+    suppHeaders.forEach((h, idx) => {
+      wsSupp.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    saveAs(blob, `solicitudes-cotizacion-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleViewDetails = (quote: any) => {

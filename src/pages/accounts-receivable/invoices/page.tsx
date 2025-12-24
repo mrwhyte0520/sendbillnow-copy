@@ -514,7 +514,10 @@ export default function InvoicesPage() {
       'Saldo',
       'Estado',
     ]);
-    headerRow.font = { bold: true };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+    });
 
     filteredInvoices.forEach((invoice) => {
       worksheet.addRow([

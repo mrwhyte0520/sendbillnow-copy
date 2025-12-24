@@ -26,16 +26,59 @@ export const exportToExcelStyled = async (
   sheetName: string = 'Datos'
 ) => {
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(sheetName, {
-    views: [{ state: 'frozen', ySplit: 1 }]
-  });
+  const ws = wb.addWorksheet(sheetName);
 
-  // Header row
-  ws.columns = columns.map(col => ({ key: col.key, header: col.title, width: col.width || 14 }));
-  const header = ws.getRow(1);
-  header.font = { bold: true };
-  header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-  header.alignment = { vertical: 'middle' };
+  let companyName = 'ContaBi';
+  try {
+    const info = await settingsService.getCompanyInfo();
+    if (info) {
+      companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+    }
+  } catch {
+    // usar default
+  }
+
+  const totalColumns = Math.max(1, columns.length);
+  let currentRow = 1;
+
+  // Encabezado superior (empresa / título / fecha)
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  ws.getCell(currentRow, 1).value = companyName;
+  ws.getCell(currentRow, 1).font = { bold: true, size: 14 };
+  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
+  currentRow++;
+
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  ws.getCell(currentRow, 1).value = sheetName;
+  ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
+  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
+  currentRow++;
+
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
+  currentRow++;
+
+  // línea en blanco
+  currentRow++;
+
+  // Columnas (sin header automático; el header lo pintamos manual)
+  ws.columns = columns.map(col => ({ key: col.key, width: col.width || 14 }));
+
+  // Header row (cabecera de columnas)
+  const headerRowIndex = currentRow;
+  const header = ws.getRow(headerRowIndex);
+  columns.forEach((col, idx) => {
+    const cell = header.getCell(idx + 1);
+    cell.value = col.title;
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+    cell.alignment = { vertical: 'middle' };
+  });
+  currentRow++;
+
+  // Freeze panes at header row
+  ws.views = [{ state: 'frozen', ySplit: headerRowIndex }];
 
   // Data rows
   rows.forEach(row => {
@@ -61,8 +104,8 @@ export const exportToExcelStyled = async (
 
   // Autofilter across header range
   ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: columns.length }
+    from: { row: headerRowIndex, column: 1 },
+    to: { row: headerRowIndex, column: columns.length }
   } as any;
 
   const buffer = await wb.xlsx.writeBuffer();

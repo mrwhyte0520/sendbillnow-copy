@@ -417,11 +417,11 @@ export default function ReportsPage() {
         '61-90 días',
         '+90 días',
       ]);
-      headerRow.font = { bold: true };
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF3B82F6' },
+        fgColor: { argb: 'FF0B1F3A' },
       } as any;
       headerRow.alignment = { horizontal: 'center' } as any;
 
@@ -488,11 +488,11 @@ export default function ReportsPage() {
         'Método',
         'Monto',
       ]);
-      headerRow.font = { bold: true };
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF22C55E' },
+        fgColor: { argb: 'FF0B1F3A' },
       } as any;
       headerRow.alignment = { horizontal: 'center' } as any;
 

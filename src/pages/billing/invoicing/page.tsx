@@ -931,11 +931,13 @@ export default function InvoicingPage() {
       'ContaBi';
 
     worksheet.addRow([headerCompanyName]);
+    worksheet.getRow(1).font = { bold: true, size: 14 };
     worksheet.addRow(['REPORTE DE FACTURAS']);
+    worksheet.getRow(2).font = { bold: true, size: 12 };
     worksheet.addRow([`Generado el: ${new Date().toLocaleDateString('es-DO')}`]);
     worksheet.addRow([]);
 
-    worksheet.addRow([
+    const headerRow = worksheet.addRow([
       'N° Factura',
       'Cliente',
       'Fecha',
@@ -945,6 +947,10 @@ export default function InvoicingPage() {
       'Total',
       'Estado'
     ]);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+    });
 
     const data = filteredInvoices.map(invoice => [
       invoice.id,

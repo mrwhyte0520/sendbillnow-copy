@@ -431,7 +431,10 @@ export default function PaymentsPage() {
     ];
 
     const headerRow = ws.getRow(1);
-    headerRow.font = { bold: true };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+    });
 
     rows.forEach((r) => {
       ws.addRow(r);
