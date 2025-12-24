@@ -2,7 +2,8 @@
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { resolveTenantId, settingsService } from '../../../services/database';
 import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
@@ -504,19 +505,17 @@ const GeneralJournalPage = () => {
     setShowCreateModal(true);
   };
 
-  const exportToExcel = (data: JournalEntry[]) => {
+  const exportToExcel = async (data: JournalEntry[]) => {
     try {
-      // Preparar los datos para la exportación
       const dataToExport = data.flatMap((entry) => {
         return entry.journal_entry_lines.map((line) => ({
-          Fecha: formatDate(entry.entry_date),
-
-          'Número Asiento': entry.entry_number,
-          'Descripción': entry.description,
-          Cuenta: `${line.chart_accounts.code} - ${line.chart_accounts.name}`,
-          'Débito': line.debit_amount || '',
-          'Crédito': line.credit_amount || '',
-          Estado: entry.status === 'posted' ? 'Publicado' : entry.status === 'draft' ? 'Borrador' : 'Anulado',
+          fecha: formatDate(entry.entry_date),
+          numero: entry.entry_number,
+          descripcion: entry.description,
+          cuenta: `${line.chart_accounts.code} - ${line.chart_accounts.name}`,
+          debito: line.debit_amount || 0,
+          credito: line.credit_amount || 0,
+          estado: entry.status === 'posted' ? 'Publicado' : entry.status === 'draft' ? 'Borrador' : 'Anulado',
         }));
       });
 
@@ -530,45 +529,72 @@ const GeneralJournalPage = () => {
         (companyInfo as any)?.company_name ||
         'ContaBi';
 
-      const columns = Object.keys(dataToExport[0] || {});
-      const totalColumns = columns.length || 1;
-      const centerIndex = Math.floor((totalColumns - 1) / 2);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Diario General');
 
-      const headerRows: (string | number)[][] = [];
-
-      const row1 = new Array(totalColumns).fill('');
-      row1[centerIndex] = companyName;
-      headerRows.push(row1);
-
-      const row2 = new Array(totalColumns).fill('');
-      row2[centerIndex] = 'Diario General';
-      headerRows.push(row2);
-
-      const row3 = new Array(totalColumns).fill('');
-      row3[centerIndex] = `Generado: ${formatDate(new Date())}`;
-      headerRows.push(row3);
-
-      headerRows.push(new Array(totalColumns).fill(''));
-
-      // Crear un nuevo libro de trabajo
-      const wb = XLSX.utils.book_new();
-      const tableStartRow = headerRows.length + 1;
-      const ws = XLSX.utils.json_to_sheet(dataToExport as any, { origin: `A${tableStartRow}` } as any);
-
-      XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
-
-      (ws as any)['!cols'] = [
-        { wch: 12 },
-        { wch: 16 },
-        { wch: 40 },
-        { wch: 45 },
-        { wch: 14 },
-        { wch: 14 },
-        { wch: 14 },
+      const headers = [
+        { title: 'Fecha', width: 12 },
+        { title: 'Número Asiento', width: 16 },
+        { title: 'Descripción', width: 40 },
+        { title: 'Cuenta', width: 45 },
+        { title: 'Débito', width: 14 },
+        { title: 'Crédito', width: 14 },
+        { title: 'Estado', width: 14 },
       ];
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Diario General');
-      XLSX.writeFile(wb, `diario_general_${new Date().toISOString().split('T')[0]}.xlsx`);
+      let currentRow = 1;
+      const totalColumns = headers.length;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const companyCell = ws.getCell(currentRow, 1);
+      companyCell.value = companyName;
+      companyCell.font = { bold: true, size: 14 };
+      companyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = 'Diario General';
+      titleCell.font = { bold: true, size: 16 };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const dateCell = ws.getCell(currentRow, 1);
+      dateCell.value = `Generado: ${formatDate(new Date())}`;
+      dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+      currentRow++;
+
+      const headerRow = ws.getRow(currentRow);
+      headers.forEach((h, idx) => {
+        const cell = headerRow.getCell(idx + 1);
+        cell.value = h.title;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.alignment = { vertical: 'middle' };
+      });
+      currentRow++;
+
+      for (const item of dataToExport) {
+        const dataRow = ws.getRow(currentRow);
+        dataRow.getCell(1).value = item.fecha;
+        dataRow.getCell(2).value = item.numero;
+        dataRow.getCell(3).value = item.descripcion;
+        dataRow.getCell(4).value = item.cuenta;
+        dataRow.getCell(5).value = item.debito;
+        dataRow.getCell(6).value = item.credito;
+        dataRow.getCell(7).value = item.estado;
+        currentRow++;
+      }
+
+      headers.forEach((h, idx) => {
+        ws.getColumn(idx + 1).width = h.width;
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `diario_general_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error al exportar a Excel:', error);
       alert('Error al generar el archivo Excel. Por favor, intente nuevamente.');

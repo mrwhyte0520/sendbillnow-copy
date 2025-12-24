@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { exportToPdf } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -153,26 +154,8 @@ export default function Report607Page() {
     document.body.removeChild(link);
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (reportData.length === 0) return;
-
-    const excelData = reportData.map(row => ({
-      'RNC/Cédula': row.rnc_cedula,
-      'Tipo Identificación': row.tipo_identificacion,
-      'NCF': row.numero_comprobante_fiscal,
-      'Fecha Comprobante': row.fecha_comprobante,
-      'Monto Facturado': formatMoney(row.monto_facturado, 'RD$'),
-      'ITBIS Facturado': formatMoney(row.itbis_facturado, 'RD$'),
-      'ITBIS Retenido': formatMoney(row.itbis_retenido, 'RD$'),
-      'Propina Legal': formatMoney(row.monto_propina_legal, 'RD$'),
-      'ITBIS Ret. Propina': formatMoney(row.itbis_retenido_propina, 'RD$'),
-      'ITBIS Percibido Ventas': formatMoney(row.itbis_percibido_ventas, 'RD$'),
-      'Retención Renta Terceros': formatMoney(row.retencion_renta_terceros, 'RD$'),
-      'ISR Percibido Ventas': formatMoney(row.isr_percibido_ventas, 'RD$'),
-      'Impuesto Selectivo Consumo': formatMoney(row.impuesto_selectivo_consumo, 'RD$'),
-      'Otros Impuestos/Tasas': formatMoney(row.otros_impuestos_tasas, 'RD$'),
-      'Propina Legal 2': formatMoney(row.monto_propina_legal_2, 'RD$'),
-    }));
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -184,43 +167,100 @@ export default function Report607Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte 607');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Reporte 607 - Ventas y Servicios']);
-    headerRows.push([`Período: ${selectedPeriod}`]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-
-    const colWidths = [
-      { wch: 15 }, // RNC/Cédula
-      { wch: 16 }, // Tipo Identificación
-      { wch: 18 }, // NCF
-      { wch: 16 }, // Fecha
-      { wch: 18 }, // Monto Facturado
-      { wch: 18 }, // ITBIS Facturado
-      { wch: 18 }, // ITBIS Retenido
-      { wch: 16 }, // Propina Legal
-      { wch: 18 }, // ITBIS Ret. Propina
-      { wch: 20 }, // ITBIS Percibido Ventas
-      { wch: 24 }, // Retención Renta Terceros
-      { wch: 20 }, // ISR Percibido Ventas
-      { wch: 24 }, // Impuesto Selectivo Consumo
-      { wch: 22 }, // Otros Impuestos/Tasas
-      { wch: 18 }, // Propina Legal 2
+    const headers = [
+      { title: 'RNC/Cédula', width: 15 },
+      { title: 'Tipo ID', width: 12 },
+      { title: 'NCF', width: 22 },
+      { title: 'Fecha', width: 12 },
+      { title: 'Monto Fact.', width: 14 },
+      { title: 'ITBIS Fact.', width: 14 },
+      { title: 'ITBIS Ret.', width: 14 },
+      { title: 'Propina', width: 14 },
+      { title: 'ITBIS Ret. Prop.', width: 16 },
+      { title: 'ITBIS Perc.', width: 14 },
+      { title: 'Ret. Terceros', width: 14 },
+      { title: 'ISR Perc.', width: 14 },
+      { title: 'Imp. Selectivo', width: 14 },
+      { title: 'Otros Imp.', width: 14 },
+      { title: 'Propina 2', width: 14 },
     ];
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-    (ws as any)['!cols'] = colWidths;
 
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte 607');
-    XLSX.writeFile(wb, `reporte_607_${selectedPeriod}.xlsx`);
+    // Encabezado: empresa
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Reporte 607 - Ventas y Servicios';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${selectedPeriod}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    // Header row (azul marino + texto blanco)
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    // Datos
+    for (const row of reportData) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = row.rnc_cedula;
+      dataRow.getCell(2).value = row.tipo_identificacion;
+      dataRow.getCell(3).value = row.numero_comprobante_fiscal;
+      dataRow.getCell(4).value = row.fecha_comprobante;
+      dataRow.getCell(5).value = row.monto_facturado;
+      dataRow.getCell(6).value = row.itbis_facturado;
+      dataRow.getCell(7).value = row.itbis_retenido;
+      dataRow.getCell(8).value = row.monto_propina_legal;
+      dataRow.getCell(9).value = row.itbis_retenido_propina;
+      dataRow.getCell(10).value = row.itbis_percibido_ventas;
+      dataRow.getCell(11).value = row.retencion_renta_terceros;
+      dataRow.getCell(12).value = row.isr_percibido_ventas;
+      dataRow.getCell(13).value = row.impuesto_selectivo_consumo;
+      dataRow.getCell(14).value = row.otros_impuestos_tasas;
+      dataRow.getCell(15).value = row.monto_propina_legal_2;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `reporte_607_${selectedPeriod}.xlsx`);
   };
 
   const exportToTXT = () => {

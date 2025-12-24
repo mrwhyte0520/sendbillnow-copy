@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatMoney } from '../../../utils/numberFormat';
@@ -102,28 +103,8 @@ export default function ItbisProportionalityPage() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!data) return;
-
-    const excelData = [
-      { 'Concepto': 'Período', 'Valor': getMonthLabel(data.period) },
-      { 'Concepto': '', 'Valor': '' },
-      { 'Concepto': 'VENTAS DEL PERÍODO', 'Valor': '' },
-      { 'Concepto': 'Total de las Ventas', 'Valor': data.totalSales },
-      { 'Concepto': 'Ventas Gravadas', 'Valor': data.taxableSales },
-      { 'Concepto': 'Ventas Exentas', 'Valor': data.exemptSales },
-      { 'Concepto': 'Ventas Exentas por Destino', 'Valor': data.exemptDestinationSales },
-      { 'Concepto': 'Ventas al Exterior', 'Valor': data.exportSales },
-      { 'Concepto': 'Notas de Crédito < 30 Días', 'Valor': data.creditNotesLess30Days },
-      { 'Concepto': '', 'Valor': '' },
-      { 'Concepto': 'CÁLCULO DE PROPORCIONALIDAD', 'Valor': '' },
-      { 'Concepto': 'Coeficiente de Proporcionalidad', 'Valor': (data.coefficient * 100).toFixed(2) + '%' },
-      { 'Concepto': 'ITBIS Sujeto a Proporcionalidad', 'Valor': data.itbisSubject },
-      { 'Concepto': '', 'Valor': '' },
-      { 'Concepto': 'RESULTADOS', 'Valor': '' },
-      { 'Concepto': 'ITBIS Deducible', 'Valor': data.itbisDeductible },
-      { 'Concepto': 'Proporcionalidad No Admitida', 'Valor': data.nonAdmittedProportionality },
-    ];
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -135,29 +116,91 @@ export default function ItbisProportionalityPage() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Proporcionalidad ITBIS');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Proporcionalidad del ITBIS']);
-    headerRows.push([`Período: ${getMonthLabel(data.period)}`]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    ws['!cols'] = [
-      { wch: 40 },
-      { wch: 20 }
+    const headers = [
+      { title: 'Concepto', width: 45 },
+      { title: 'Valor', width: 22 },
     ];
 
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Proporcionalidad ITBIS');
-    XLSX.writeFile(wb, `proporcionalidad_itbis_${data.period}.xlsx`);
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Proporcionalidad del ITBIS';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${getMonthLabel(data.period)}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    const dataRows = [
+      ['Período', getMonthLabel(data.period)],
+      ['', ''],
+      ['VENTAS DEL PERÍODO', ''],
+      ['Total de las Ventas', data.totalSales],
+      ['Ventas Gravadas', data.taxableSales],
+      ['Ventas Exentas', data.exemptSales],
+      ['Ventas Exentas por Destino', data.exemptDestinationSales],
+      ['Ventas al Exterior', data.exportSales],
+      ['Notas de Crédito < 30 Días', data.creditNotesLess30Days],
+      ['', ''],
+      ['CÁLCULO DE PROPORCIONALIDAD', ''],
+      ['Coeficiente de Proporcionalidad', (data.coefficient * 100).toFixed(2) + '%'],
+      ['ITBIS Sujeto a Proporcionalidad', data.itbisSubject],
+      ['', ''],
+      ['RESULTADOS', ''],
+      ['ITBIS Deducible', data.itbisDeductible],
+      ['Proporcionalidad No Admitida', data.nonAdmittedProportionality],
+    ];
+
+    for (const [concepto, valor] of dataRows) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = concepto;
+      dataRow.getCell(2).value = valor;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `proporcionalidad_itbis_${data.period}.xlsx`);
   };
 
   const exportToPDF = () => {

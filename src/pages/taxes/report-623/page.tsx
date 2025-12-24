@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { exportToPdf } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -60,20 +61,8 @@ export default function Report623Page() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (foreignPayments.length === 0) return;
-
-    const excelData = foreignPayments.map(payment => ({
-      'Beneficiario': payment.beneficiary_name,
-      'País': payment.beneficiary_country,
-      'Concepto': payment.payment_concept,
-      'Fecha Pago': payment.payment_date,
-      'Método de Pago': payment.payment_method,
-      'Monto USD': payment.amount_usd,
-      'Monto RD$': payment.amount_dop,
-      'Tasa de Cambio': payment.exchange_rate,
-      'Impuesto Retenido': payment.tax_withheld
-    }));
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -85,36 +74,85 @@ export default function Report623Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte 623');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Reporte 623 - Pagos al Exterior']);
-    headerRows.push([`Período: ${selectedPeriod}`]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    ws['!cols'] = [
-      { wch: 30 },
-      { wch: 15 },
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 18 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 18 }
+    const headers = [
+      { title: 'Beneficiario', width: 30 },
+      { title: 'País', width: 15 },
+      { title: 'Concepto', width: 25 },
+      { title: 'Fecha Pago', width: 14 },
+      { title: 'Método Pago', width: 16 },
+      { title: 'Monto USD', width: 14 },
+      { title: 'Monto RD$', width: 14 },
+      { title: 'Tasa Cambio', width: 14 },
+      { title: 'Impuesto', width: 14 },
     ];
 
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte 623');
-    XLSX.writeFile(wb, `reporte_623_${selectedPeriod}.xlsx`);
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Reporte 623 - Pagos al Exterior';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${selectedPeriod}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    for (const payment of foreignPayments) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = payment.beneficiary_name;
+      dataRow.getCell(2).value = payment.beneficiary_country;
+      dataRow.getCell(3).value = payment.payment_concept;
+      dataRow.getCell(4).value = payment.payment_date;
+      dataRow.getCell(5).value = payment.payment_method;
+      dataRow.getCell(6).value = payment.amount_usd;
+      dataRow.getCell(7).value = payment.amount_dop;
+      dataRow.getCell(8).value = payment.exchange_rate;
+      dataRow.getCell(9).value = payment.tax_withheld;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `reporte_623_${selectedPeriod}.xlsx`);
   };
 
   const exportToCSV = () => {

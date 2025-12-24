@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { exportToPdf } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -84,19 +85,8 @@ export default function Report608Page() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (cancelledDocuments.length === 0) return;
-
-    const excelData = cancelledDocuments.map(doc => ({
-      'NCF': doc.ncf,
-      'Tipo Documento': doc.document_type,
-      'Fecha Emisión': doc.issue_date,
-      'Fecha Cancelación': doc.cancellation_date,
-      'RNC Cliente': doc.customer_rnc,
-      'Monto': doc.amount,
-      'ITBIS': doc.tax_amount,
-      'Motivo': doc.reason
-    }));
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -108,35 +98,83 @@ export default function Report608Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte 608');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Reporte 608 - Documentos Cancelados']);
-    headerRows.push([`Período: ${reportPeriod || selectedPeriod}`]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    ws['!cols'] = [
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 18 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 30 }
+    const headers = [
+      { title: 'NCF', width: 22 },
+      { title: 'Tipo Documento', width: 16 },
+      { title: 'Fecha Emisión', width: 14 },
+      { title: 'Fecha Cancelación', width: 16 },
+      { title: 'RNC Cliente', width: 15 },
+      { title: 'Monto', width: 14 },
+      { title: 'ITBIS', width: 14 },
+      { title: 'Motivo', width: 30 },
     ];
 
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte 608');
-    XLSX.writeFile(wb, `reporte_608_${selectedPeriod}.xlsx`);
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Reporte 608 - Documentos Cancelados';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${reportPeriod || selectedPeriod}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    for (const doc of cancelledDocuments) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = doc.ncf;
+      dataRow.getCell(2).value = doc.document_type;
+      dataRow.getCell(3).value = doc.issue_date;
+      dataRow.getCell(4).value = doc.cancellation_date;
+      dataRow.getCell(5).value = doc.customer_rnc;
+      dataRow.getCell(6).value = doc.amount;
+      dataRow.getCell(7).value = doc.tax_amount;
+      dataRow.getCell(8).value = doc.reason;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `reporte_608_${selectedPeriod}.xlsx`);
   };
 
   const exportToCSV = () => {

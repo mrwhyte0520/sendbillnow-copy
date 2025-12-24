@@ -70,7 +70,7 @@ export const exportToExcelStyled = async (
   saveAs(blob, `${fileBaseName}.xlsx`);
 };
 
-export const exportToExcelWithHeaders = (
+export const exportToExcelWithHeaders = async (
   rows: any[],
   headers: { key: string; title: string }[],
   fileName: string,
@@ -79,122 +79,94 @@ export const exportToExcelWithHeaders = (
   options?: { title?: string; companyName?: string; headerStyle?: 'simple' | 'dgii_606'; periodText?: string }
 ) => {
   try {
-    const aoa: any[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(sheetName);
 
     const use606Header = options?.headerStyle === 'dgii_606';
-    const headerRowsCount = use606Header ? 3 : (options?.title || options?.companyName ? 1 : 0);
-    const hasAnyHeader = headerRowsCount > 0;
+    const totalColumns = headers.length || 1;
 
+    let currentRow = 1;
+
+    // Encabezado tipo 606 (empresa / título / período)
     if (use606Header) {
-      aoa.push([options?.companyName || '']);
-      aoa.push([options?.title || '']);
-      aoa.push([options?.periodText || `Periodo: ${new Date().toISOString().slice(0, 7)}`]);
-      aoa.push([]);
+      // Fila 1: Nombre de empresa
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const companyCell = ws.getCell(currentRow, 1);
+      companyCell.value = options?.companyName || '';
+      companyCell.font = { bold: true };
+      companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+
+      // Fila 2: Título del reporte
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = options?.title || '';
+      titleCell.font = { bold: true };
+      titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+
+      // Fila 3: Período
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const periodCell = ws.getCell(currentRow, 1);
+      periodCell.value = options?.periodText || `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+      periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+
+      // Fila 4: vacía
+      currentRow++;
     } else if (options?.title || options?.companyName) {
       const titleParts: string[] = [];
-      if (options.companyName) titleParts.push(options.companyName);
-      if (options.title) titleParts.push(options.title);
+      if (options?.companyName) titleParts.push(options.companyName);
+      if (options?.title) titleParts.push(options.title);
       const titleText = titleParts.join(' - ');
-      aoa.push([titleText]);
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = titleText;
+      titleCell.font = { bold: true };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
     }
 
-    aoa.push(headers.map((h) => h.title));
-
-    for (const row of rows) {
-      aoa.push(headers.map(h => row[h.key]));
-    }
-
-    const ws = utils.aoa_to_sheet(aoa);
-
-    const totalColumns = headers.length || 1;
-    const merges: any[] = (ws as any)['!merges'] || [];
-
-    // Encabezado tipo 606 (empresa / título / período) o título simple: unir y centrar
-    if (use606Header) {
-      // merge rows 0..2 across columns
-      for (let r = 0; r <= 2; r += 1) {
-        merges.push({
-          s: { r, c: 0 },
-          e: { r, c: totalColumns - 1 },
-        });
-
-        const addr = utils.encode_cell({ r, c: 0 });
-        const cell = (ws as any)[addr];
-        if (cell) {
-          const existingStyle = (cell as any).s || {};
-          (cell as any).s = {
-            ...existingStyle,
-            alignment: {
-              ...(existingStyle.alignment || {}),
-              horizontal: 'left',
-              vertical: 'center',
-            },
-            font: {
-              ...(existingStyle.font || {}),
-              bold: r <= 1,
-            },
-          };
-        }
-      }
-    } else if (options?.title || options?.companyName) {
-      merges.push({
-        s: { r: 0, c: 0 },
-        e: { r: 0, c: totalColumns - 1 },
-      });
-      const cell = (ws as any)['A1'];
-      if (cell) {
-        const existingStyle = (cell as any).s || {};
-        (cell as any).s = {
-          ...existingStyle,
-          alignment: {
-            ...(existingStyle.alignment || {}),
-            horizontal: 'center',
-            vertical: 'center',
-          },
-          font: {
-            ...(existingStyle.font || {}),
-            bold: true,
-          },
-        };
-      }
-    }
-
-    (ws as any)['!merges'] = merges;
-
-    // Estilo para fila de encabezados de columnas
-    const headerRowIndex = (use606Header ? 4 : hasAnyHeader ? 1 : 0);
-    for (let c = 0; c < totalColumns; c += 1) {
-      const addr = utils.encode_cell({ r: headerRowIndex, c });
-      const cell = (ws as any)[addr];
-      if (!cell) continue;
-      const existingStyle = (cell as any).s || {};
-      (cell as any).s = {
-        ...existingStyle,
-        font: {
-          ...(existingStyle.font || {}),
-          bold: true,
-        },
-        fill: {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { rgb: 'F3F4F6' },
-        },
-        alignment: {
-          ...(existingStyle.alignment || {}),
-          vertical: 'center',
-        },
+    // Fila de encabezados de columnas (azul marino + texto blanco)
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0B1F3A' },
       };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    // Filas de datos
+    for (const row of rows) {
+      const dataRow = ws.getRow(currentRow);
+      headers.forEach((h, idx) => {
+        dataRow.getCell(idx + 1).value = row[h.key];
+      });
+      currentRow++;
     }
 
+    // Anchos de columna
     if (columnWidths && columnWidths.length) {
-      (ws as any)['!cols'] = columnWidths.map(w => ({ wch: w }));
+      headers.forEach((_, idx) => {
+        ws.getColumn(idx + 1).width = columnWidths[idx] || 14;
+      });
     } else {
-      (ws as any)['!cols'] = headers.map(h => ({ wch: Math.max(12, h.title.length + 2) }));
+      headers.forEach((h, idx) => {
+        ws.getColumn(idx + 1).width = Math.max(12, h.title.length + 2);
+      });
     }
 
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, sheetName);
-    writeFile(wb, `${fileName}.xlsx`, { cellStyles: true as any });
+    // Generar y descargar
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `${fileName}.xlsx`);
   } catch (error) {
     console.error('Error al exportar a Excel con cabeceras:', error);
     throw error;

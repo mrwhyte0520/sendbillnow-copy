@@ -3,7 +3,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { resolveTenantId, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 
@@ -254,7 +255,7 @@ const GeneralLedgerPage: FC = () => {
     }
   };
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     try {
       if (!selectedAccount) {
         alert('Por favor seleccione una cuenta primero');
@@ -265,85 +266,97 @@ const GeneralLedgerPage: FC = () => {
         return;
       }
 
-      // Crear datos con balance inicial
-      const dataToExport = [
-        {
-          Asiento: '',
-          'Tipo Doc.': 'Balance inicial',
-          Fecha: dateFrom ? formatDate(dateFrom) : 'Inicio',
-          Descripción: `Balance inicial - ${selectedAccount.code} ${selectedAccount.name}`,
-          Débito: '',
-          Crédito: '',
-          Balance: openingBalance,
-        },
-        ...filteredLedgerEntries.map(e => ({
-          Asiento: e.entryNumber,
-          'Tipo Doc.': getEntryDocumentType(e),
-          Fecha: formatDate(e.date),
-          Descripción: e.description || '',
-          Débito: e.debit > 0 ? e.debit : '',
-          Crédito: e.credit > 0 ? e.credit : '',
-          Balance: e.balance,
-        })),
-      ];
-
       const companyName =
         (companyInfo as any)?.name ||
         (companyInfo as any)?.company_name ||
         'ContaBi';
 
-      const columns = Object.keys(dataToExport[0] || {});
-      const totalColumns = columns.length || 1;
-      const centerIndex = Math.floor((totalColumns - 1) / 2);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Mayor General');
 
-      const headerRows: (string | number)[][] = [];
+      const headers = [
+        { title: 'Asiento', width: 15 },
+        { title: 'Tipo Doc.', width: 20 },
+        { title: 'Fecha', width: 12 },
+        { title: 'Descripción', width: 40 },
+        { title: 'Débito', width: 15 },
+        { title: 'Crédito', width: 15 },
+        { title: 'Balance', width: 15 },
+      ];
 
-      const row1 = new Array(totalColumns).fill('');
-      row1[centerIndex] = companyName;
-      headerRows.push(row1);
+      let currentRow = 1;
+      const totalColumns = headers.length;
 
-      const row2 = new Array(totalColumns).fill('');
-      row2[centerIndex] = 'Mayor General';
-      headerRows.push(row2);
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const companyCell = ws.getCell(currentRow, 1);
+      companyCell.value = companyName;
+      companyCell.font = { bold: true, size: 14 };
+      companyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
 
-      const row3 = new Array(totalColumns).fill('');
-      row3[centerIndex] = `Cuenta: ${selectedAccount.code} - ${selectedAccount.name}`;
-      headerRows.push(row3);
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = 'Mayor General';
+      titleCell.font = { bold: true, size: 16 };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const accountCell = ws.getCell(currentRow, 1);
+      accountCell.value = `Cuenta: ${selectedAccount.code} - ${selectedAccount.name}`;
+      accountCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
 
       if (dateFrom || dateTo) {
-        const row4 = new Array(totalColumns).fill('');
-        row4[centerIndex] = `Período: ${dateFrom ? formatDate(dateFrom) : 'Inicio'} - ${dateTo ? formatDate(dateTo) : 'Fin'}`;
-        headerRows.push(row4);
+        ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+        const periodCell = ws.getCell(currentRow, 1);
+        periodCell.value = `Período: ${dateFrom ? formatDate(dateFrom) : 'Inicio'} - ${dateTo ? formatDate(dateTo) : 'Fin'}`;
+        periodCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        currentRow++;
+      }
+      currentRow++;
+
+      const headerRow = ws.getRow(currentRow);
+      headers.forEach((h, idx) => {
+        const cell = headerRow.getCell(idx + 1);
+        cell.value = h.title;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.alignment = { vertical: 'middle' };
+      });
+      currentRow++;
+
+      // Balance inicial
+      const initRow = ws.getRow(currentRow);
+      initRow.getCell(1).value = '';
+      initRow.getCell(2).value = 'Balance inicial';
+      initRow.getCell(3).value = dateFrom ? formatDate(dateFrom) : 'Inicio';
+      initRow.getCell(4).value = `Balance inicial - ${selectedAccount.code} ${selectedAccount.name}`;
+      initRow.getCell(5).value = '';
+      initRow.getCell(6).value = '';
+      initRow.getCell(7).value = openingBalance;
+      currentRow++;
+
+      for (const e of filteredLedgerEntries) {
+        const dataRow = ws.getRow(currentRow);
+        dataRow.getCell(1).value = e.entryNumber;
+        dataRow.getCell(2).value = getEntryDocumentType(e);
+        dataRow.getCell(3).value = formatDate(e.date);
+        dataRow.getCell(4).value = e.description || '';
+        dataRow.getCell(5).value = e.debit > 0 ? e.debit : '';
+        dataRow.getCell(6).value = e.credit > 0 ? e.credit : '';
+        dataRow.getCell(7).value = e.balance;
+        currentRow++;
       }
 
-      headerRows.push(new Array(totalColumns).fill(''));
+      headers.forEach((h, idx) => {
+        ws.getColumn(idx + 1).width = h.width;
+      });
 
-      // Crear libro de trabajo
-      const wb = XLSX.utils.book_new();
-      const tableStartRow = headerRows.length + 1;
-      const ws = XLSX.utils.json_to_sheet(dataToExport as any, { origin: `A${tableStartRow}` } as any);
-
-      // Agregar encabezado centrado visualmente
-      XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
-
-      // Ajustar anchos de columnas
-      const colWidths = [
-        { wch: 15 }, // Asiento
-        { wch: 20 }, // Tipo Doc
-        { wch: 12 }, // Fecha  
-        { wch: 40 }, // Descripción
-        { wch: 15 }, // Débito
-        { wch: 15 }, // Crédito
-        { wch: 15 }, // Balance
-      ];
-      (ws as any)['!cols'] = colWidths;
-
-      // Agregar hoja al libro
-      XLSX.utils.book_append_sheet(wb, ws, 'Mayor General');
-
-      // Generar archivo
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const fileName = `mayor_general_${selectedAccount.code}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      saveAs(blob, fileName);
       
     } catch (error) {
       console.error('Error al exportar a Excel:', error);

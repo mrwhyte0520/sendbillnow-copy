@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { financialReportsService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { formatMoney } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 
@@ -358,7 +359,7 @@ const TrialBalancePage: FC = () => {
   const totalFinalDebit = rows.reduce((sum, r) => sum + r.finalDebit, 0);
   const totalFinalCredit = rows.reduce((sum, r) => sum + r.finalCredit, 0);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       if (!user) {
         alert('Debes iniciar sesión para exportar la balanza.');
@@ -370,82 +371,94 @@ const TrialBalancePage: FC = () => {
         return;
       }
 
-      const excelRows = rows.map((row) => ({
-        Número: row.code,
-        'Cuenta Contable': row.name,
-        'Saldo Ant. Débito': row.prevDebit || 0,
-        'Saldo Ant. Crédito': row.prevCredit || 0,
-        'Mov. Débito': row.movDebit || 0,
-        'Mov. Crédito': row.movCredit || 0,
-        'Saldo Final Débito': row.finalDebit || 0,
-        'Saldo Final Crédito': row.finalCredit || 0,
-      }));
-
-      excelRows.push({
-        Número: '',
-        'Cuenta Contable': 'TOTALES',
-        'Saldo Ant. Débito': totalPrevDebit,
-        'Saldo Ant. Crédito': totalPrevCredit,
-        'Mov. Débito': totalMovDebit,
-        'Mov. Crédito': totalMovCredit,
-        'Saldo Final Débito': totalFinalDebit,
-        'Saldo Final Crédito': totalFinalCredit,
-      });
-
       const companyName =
         (companyInfo as any)?.name ||
         (companyInfo as any)?.company_name ||
         'ContaBi';
 
-      const columns = Object.keys(excelRows[0] || {});
-      const totalColumns = columns.length || 1;
-      const centerIndex = Math.floor((totalColumns - 1) / 2);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Balanza de Comprobación');
 
-      const headerRows: (string | number)[][] = [];
-
-      const row1 = new Array(totalColumns).fill('');
-      row1[centerIndex] = companyName;
-      headerRows.push(row1);
-
-      const row2 = new Array(totalColumns).fill('');
-      row2[centerIndex] = 'Balanza de Comprobación';
-      headerRows.push(row2);
-
-      if (fromDateLabel && toDateLabel) {
-        const row3 = new Array(totalColumns).fill('');
-        row3[centerIndex] = `Período: ${formatDate(fromDateLabel)} al ${formatDate(toDateLabel)}`;
-        headerRows.push(row3);
-      }
-
-      headerRows.push(new Array(totalColumns).fill(''));
-
-      // Crear libro de trabajo
-      const wb = XLSX.utils.book_new();
-      const tableStartRow = headerRows.length + 1;
-      const ws = XLSX.utils.json_to_sheet(excelRows as any, { origin: `A${tableStartRow}` } as any);
-
-      // Agregar encabezado centrado visualmente
-      XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
-
-      // Ajustar anchos de columnas
-      (ws as any)['!cols'] = [
-        { wch: 15 }, // Número
-        { wch: 40 }, // Cuenta
-        { wch: 18 }, // Saldo Ant. Débito
-        { wch: 18 }, // Saldo Ant. Crédito
-        { wch: 18 }, // Mov. Débito
-        { wch: 18 }, // Mov. Crédito
-        { wch: 18 }, // Saldo Final Débito
-        { wch: 18 }, // Saldo Final Crédito
+      const headers = [
+        { title: 'Número', width: 15 },
+        { title: 'Cuenta Contable', width: 40 },
+        { title: 'Saldo Ant. Débito', width: 18 },
+        { title: 'Saldo Ant. Crédito', width: 18 },
+        { title: 'Mov. Débito', width: 18 },
+        { title: 'Mov. Crédito', width: 18 },
+        { title: 'Saldo Final Débito', width: 18 },
+        { title: 'Saldo Final Crédito', width: 18 },
       ];
 
-      // Agregar hoja al libro
-      XLSX.utils.book_append_sheet(wb, ws, 'Balanza de Comprobación');
+      let currentRow = 1;
+      const totalColumns = headers.length;
 
-      // Generar archivo
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const companyCell = ws.getCell(currentRow, 1);
+      companyCell.value = companyName;
+      companyCell.font = { bold: true, size: 14 };
+      companyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = 'Balanza de Comprobación';
+      titleCell.font = { bold: true, size: 16 };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+
+      if (fromDateLabel && toDateLabel) {
+        ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+        const periodCell = ws.getCell(currentRow, 1);
+        periodCell.value = `Período: ${formatDate(fromDateLabel)} al ${formatDate(toDateLabel)}`;
+        periodCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        currentRow++;
+      }
+      currentRow++;
+
+      const headerRow = ws.getRow(currentRow);
+      headers.forEach((h, idx) => {
+        const cell = headerRow.getCell(idx + 1);
+        cell.value = h.title;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.alignment = { vertical: 'middle' };
+      });
+      currentRow++;
+
+      for (const row of rows) {
+        const dataRow = ws.getRow(currentRow);
+        dataRow.getCell(1).value = row.code;
+        dataRow.getCell(2).value = row.name;
+        dataRow.getCell(3).value = row.prevDebit || 0;
+        dataRow.getCell(4).value = row.prevCredit || 0;
+        dataRow.getCell(5).value = row.movDebit || 0;
+        dataRow.getCell(6).value = row.movCredit || 0;
+        dataRow.getCell(7).value = row.finalDebit || 0;
+        dataRow.getCell(8).value = row.finalCredit || 0;
+        currentRow++;
+      }
+
+      // Totales
+      const totalsRow = ws.getRow(currentRow);
+      totalsRow.getCell(1).value = '';
+      totalsRow.getCell(2).value = 'TOTALES';
+      totalsRow.getCell(2).font = { bold: true };
+      totalsRow.getCell(3).value = totalPrevDebit;
+      totalsRow.getCell(4).value = totalPrevCredit;
+      totalsRow.getCell(5).value = totalMovDebit;
+      totalsRow.getCell(6).value = totalMovCredit;
+      totalsRow.getCell(7).value = totalFinalDebit;
+      totalsRow.getCell(8).value = totalFinalCredit;
+
+      headers.forEach((h, idx) => {
+        ws.getColumn(idx + 1).width = h.width;
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const baseDate = cutoffDate || new Date().toISOString().slice(0, 10);
-      const fileName = `balanza_comprobacion_${baseDate}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      saveAs(blob, `balanza_comprobacion_${baseDate}.xlsx`);
     } catch (error) {
       console.error('Error al exportar la Balanza de Comprobación:', error);
       alert('Error al generar el archivo Excel de la Balanza de Comprobación.');

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { exportToPdf } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -73,20 +74,8 @@ export default function ReportIR17Page() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (withholdingData.length === 0) return;
-
-    const excelData = [
-      { Sección: 'A', Concepto: 'Total ISR retenido a empleados', Valor: totalIsrEmpleados },
-      { Sección: 'B', Concepto: 'Total ISR retenido a proveedores/terceros', Valor: totalIsrProveedores },
-      { Sección: 'B', Concepto: 'Total ITBIS retenido a proveedores/terceros', Valor: totalItbisProveedores },
-      { Sección: 'TOTAL', Concepto: 'Total ISR', Valor: totalIsrRetenido },
-      { Sección: 'TOTAL', Concepto: 'Total ITBIS', Valor: totalItbisRetenido },
-      { Sección: 'TOTAL', Concepto: 'Total general a pagar DGII', Valor: totalPagarDgii },
-    ].map(r => ({
-      ...r,
-      Valor: formatMoney(Number(r.Valor ?? 0) || 0, 'RD$'),
-    }));
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -98,76 +87,82 @@ export default function ReportIR17Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte IR-17');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Reporte IR-17 - Retenciones ISR']);
-    headerRows.push([`Período: ${reportPeriod || selectedPeriod}`]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    // Insertar filas de encabezado al inicio
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
-
-    // Centrar y resaltar encabezado (empresa, nombre del reporte y período)
-    const totalColumns = Object.keys(excelData[0] || {}).length || 1;
-    const merges: any[] = (ws as any)['!merges'] || [];
-
-    // Fusionar las primeras filas de encabezado sobre todas las columnas de datos
-    for (let r = 0; r < headerRows.length - 1; r++) {
-      merges.push({
-        s: { r, c: 0 },
-        e: { r, c: totalColumns - 1 },
-      });
-    }
-    (ws as any)['!merges'] = merges;
-
-    // Aplicar estilos: centrado y fuente más grande para el título del reporte
-    for (let r = 0; r < headerRows.length - 1; r++) {
-      const cellRef = `A${r + 1}`;
-      const cell = (ws as any)[cellRef];
-      if (!cell) continue;
-
-      const existingStyle = (cell as any).s || {};
-      const font: any = {
-        ...(existingStyle.font || {}),
-        bold: true,
-      };
-
-      if (typeof cell.v === 'string' && cell.v.includes('Reporte IR-17')) {
-        font.sz = 16; // Título principal del reporte
-      } else if (r === 0) {
-        font.sz = 14; // Nombre de la empresa
-      } else {
-        font.sz = 12; // Otras líneas de encabezado (RNC, período)
-      }
-
-      (cell as any).s = {
-        ...existingStyle,
-        alignment: {
-          ...(existingStyle.alignment || {}),
-          horizontal: 'center',
-          vertical: 'center',
-        },
-        font,
-      };
-    }
-
-    // Ancho de columnas de la tabla de datos
-    ws['!cols'] = [
-      { wch: 15 }, // Sección
-      { wch: 30 }, // Concepto
-      { wch: 15 }, // Valor
+    const headers = [
+      { title: 'Sección', width: 15 },
+      { title: 'Concepto', width: 40 },
+      { title: 'Valor', width: 18 },
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte IR-17');
-    XLSX.writeFile(wb, `reporte_ir17_${selectedPeriod}.xlsx`, { cellStyles: true } as any);
+    let currentRow = 1;
+    const totalColumns = headers.length;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Reporte IR-17 - Retenciones ISR';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${reportPeriod || selectedPeriod}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    const dataRows = [
+      { seccion: 'A', concepto: 'Total ISR retenido a empleados', valor: totalIsrEmpleados },
+      { seccion: 'B', concepto: 'Total ISR retenido a proveedores/terceros', valor: totalIsrProveedores },
+      { seccion: 'B', concepto: 'Total ITBIS retenido a proveedores/terceros', valor: totalItbisProveedores },
+      { seccion: 'TOTAL', concepto: 'Total ISR', valor: totalIsrRetenido },
+      { seccion: 'TOTAL', concepto: 'Total ITBIS', valor: totalItbisRetenido },
+      { seccion: 'TOTAL', concepto: 'Total general a pagar DGII', valor: totalPagarDgii },
+    ];
+
+    for (const item of dataRows) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = item.seccion;
+      dataRow.getCell(2).value = item.concepto;
+      dataRow.getCell(3).value = item.valor;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `reporte_ir17_${selectedPeriod}.xlsx`);
   };
 
   const exportToCSV = () => {

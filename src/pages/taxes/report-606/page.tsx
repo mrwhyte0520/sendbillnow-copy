@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { exportToPdf } from '../../../utils/exportImportUtils';
 import { formatAmount } from '../../../utils/numberFormat';
 
@@ -205,26 +206,8 @@ export default function Report606Page() {
     link.click();
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (reportData.length === 0) return;
-
-    // Preparar datos para Excel
-    const excelData = reportData.map(row => ({
-      'RNC/Cédula': row.rnc_cedula,
-      'Tipo ID': row.tipo_identificacion,
-      'Tipo Bien/Serv.': row.tipo_bienes_servicios,
-      'NCF': row.ncf,
-      'NCF Mod.': row.ncf_modificado || '',
-      'F. Comp.': row.fecha_comprobante,
-      'F. Pago': row.fecha_pago,
-      'Serv. Fact.': row.servicios_facturados,
-      'Bienes Fact.': row.bienes_facturados,
-      'Monto Fact.': row.monto_facturado,
-      'ITBIS Fact.': row.itbis_facturado,
-      'ITBIS Ret.': row.itbis_retenido,
-      'Ret. Renta': row.retencion_renta,
-      'Forma Pago': row.forma_pago
-    }));
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -236,117 +219,167 @@ export default function Report606Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Reporte 606');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Reporte 606 - Compras y Servicios']);
-    headerRows.push([`Período: ${selectedPeriod}`]);
-    headerRows.push([]);
-
-    // Crear libro de trabajo
-    const wb = XLSX.utils.book_new();
-
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
-
-    // Centrar y resaltar encabezado (empresa, nombre del reporte y período)
-    const totalColumns = Object.keys(excelData[0] || {}).length || 1;
-    const merges: any[] = (ws as any)['!merges'] || [];
-
-    // Fusionar las primeras filas de encabezado sobre todas las columnas de datos
-    for (let r = 0; r < headerRows.length - 1; r++) {
-      merges.push({
-        s: { r, c: 0 },
-        e: { r, c: totalColumns - 1 },
-      });
-    }
-    (ws as any)['!merges'] = merges;
-
-    // Aplicar estilos: centrado y fuente más grande para el título del reporte
-    for (let r = 0; r < headerRows.length - 1; r++) {
-      const cellRef = `A${r + 1}`;
-      const cell = (ws as any)[cellRef];
-      if (!cell) continue;
-
-      const existingStyle = (cell as any).s || {};
-      const font: any = {
-        ...(existingStyle.font || {}),
-        bold: true,
-      };
-
-      if (typeof cell.v === 'string' && cell.v.includes('Reporte 606')) {
-        font.sz = 16; // Título principal del reporte
-      } else if (r === 0) {
-        font.sz = 14; // Nombre de la empresa
-      } else {
-        font.sz = 12; // Otras líneas de encabezado (RNC, período)
-      }
-
-      (cell as any).s = {
-        ...existingStyle,
-        alignment: {
-          ...(existingStyle.alignment || {}),
-          horizontal: 'center',
-          vertical: 'center',
-        },
-        font,
-      };
-    }
-
-    // Configurar ancho de columnas (alineado con las columnas simplificadas)
-    const colWidths = [
-      { wch: 15 }, // RNC/Cédula
-      { wch: 10 }, // Tipo ID
-      { wch: 20 }, // Tipo Bien/Serv.
-      { wch: 15 }, // NCF
-      { wch: 12 }, // NCF Mod.
-      { wch: 12 }, // F. Comp.
-      { wch: 12 }, // F. Pago
-      { wch: 14 }, // Serv. Fact.
-      { wch: 14 }, // Bienes Fact.
-      { wch: 14 }, // Monto Fact.
-      { wch: 14 }, // ITBIS Fact.
-      { wch: 14 }, // ITBIS Ret.
-      { wch: 14 }, // Ret. Renta
-      { wch: 12 }  // Forma Pago
+    const headers = [
+      { key: 'rnc', title: 'RNC/Cédula', width: 15 },
+      { key: 'tipoId', title: 'Tipo ID', width: 10 },
+      { key: 'tipoBien', title: 'Tipo Bien/Serv.', width: 22 },
+      { key: 'ncf', title: 'NCF', width: 22 },
+      { key: 'ncfMod', title: 'NCF Mod.', width: 22 },
+      { key: 'fComp', title: 'F. Comp.', width: 12 },
+      { key: 'fPago', title: 'F. Pago', width: 12 },
+      { key: 'servFact', title: 'Serv. Fact.', width: 14 },
+      { key: 'bienesFact', title: 'Bienes Fact.', width: 14 },
+      { key: 'montoFact', title: 'Monto Fact.', width: 14 },
+      { key: 'itbisFact', title: 'ITBIS Fact.', width: 14 },
+      { key: 'itbisRet', title: 'ITBIS Ret.', width: 14 },
+      { key: 'retRenta', title: 'Ret. Renta', width: 14 },
+      { key: 'formaPago', title: 'Forma Pago', width: 12 },
     ];
-    ws['!cols'] = colWidths;
 
-    // Agregar hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Reporte 606');
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    // Si hay resumen, agregar hoja de resumen
-    if (summary) {
-      const summaryData = [
-        { 'Concepto': 'Total de Registros', 'Valor': summary.totalRecords },
-        { 'Concepto': 'Monto Total Facturado', 'Valor': summary.totalAmount },
-        { 'Concepto': 'Total ITBIS', 'Valor': summary.totalItbis },
-        { 'Concepto': 'Total Retenciones', 'Valor': summary.totalRetention }
-      ];
-      
-      const summaryHeaderRows: (string | number)[][] = [];
+    // Encabezado: empresa
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
 
-      summaryHeaderRows.push([companyName]);
-      if (companyRnc) {
-        summaryHeaderRows.push([`RNC: ${companyRnc}`]);
-      }
-      summaryHeaderRows.push(['Reporte 606 - Resumen']);
-      summaryHeaderRows.push([`Período: ${selectedPeriod}`]);
-      summaryHeaderRows.push([]);
-
-      const summaryWs = XLSX.utils.json_to_sheet(summaryData as any, { origin: `A${summaryHeaderRows.length + 1}` } as any);
-      XLSX.utils.sheet_add_aoa(summaryWs, summaryHeaderRows, { origin: 'A1' });
-      summaryWs['!cols'] = [{ wch: 25 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, summaryWs, 'Resumen');
+    // RNC (si existe)
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
     }
 
-    // Descargar archivo
-    XLSX.writeFile(wb, `reporte_606_${selectedPeriod}.xlsx`, { cellStyles: true } as any);
+    // Título del reporte
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Reporte 606 - Compras y Servicios';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    // Período
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${selectedPeriod}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    // Fila vacía
+    currentRow++;
+
+    // Fila de encabezados de columnas (azul marino + texto blanco)
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0B1F3A' },
+      };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    // Datos
+    for (const row of reportData) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = row.rnc_cedula;
+      dataRow.getCell(2).value = row.tipo_identificacion;
+      dataRow.getCell(3).value = row.tipo_bienes_servicios;
+      dataRow.getCell(4).value = row.ncf;
+      dataRow.getCell(5).value = row.ncf_modificado || '';
+      dataRow.getCell(6).value = row.fecha_comprobante;
+      dataRow.getCell(7).value = row.fecha_pago;
+      dataRow.getCell(8).value = row.servicios_facturados;
+      dataRow.getCell(9).value = row.bienes_facturados;
+      dataRow.getCell(10).value = row.monto_facturado;
+      dataRow.getCell(11).value = row.itbis_facturado;
+      dataRow.getCell(12).value = row.itbis_retenido;
+      dataRow.getCell(13).value = row.retencion_renta;
+      dataRow.getCell(14).value = row.forma_pago;
+      currentRow++;
+    }
+
+    // Anchos de columna
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    // Hoja de resumen
+    if (summary) {
+      const wsSummary = wb.addWorksheet('Resumen');
+      let sRow = 1;
+
+      wsSummary.mergeCells(sRow, 1, sRow, 2);
+      const sCompanyCell = wsSummary.getCell(sRow, 1);
+      sCompanyCell.value = companyName;
+      sCompanyCell.font = { bold: true };
+      sRow++;
+
+      if (companyRnc) {
+        wsSummary.mergeCells(sRow, 1, sRow, 2);
+        const sRncCell = wsSummary.getCell(sRow, 1);
+        sRncCell.value = `RNC: ${companyRnc}`;
+        sRow++;
+      }
+
+      wsSummary.mergeCells(sRow, 1, sRow, 2);
+      const sTitleCell = wsSummary.getCell(sRow, 1);
+      sTitleCell.value = 'Reporte 606 - Resumen';
+      sTitleCell.font = { bold: true };
+      sRow++;
+
+      wsSummary.mergeCells(sRow, 1, sRow, 2);
+      const sPeriodCell = wsSummary.getCell(sRow, 1);
+      sPeriodCell.value = `Período: ${selectedPeriod}`;
+      sRow++;
+      sRow++;
+
+      // Header resumen
+      const summaryHeaderRow = wsSummary.getRow(sRow);
+      summaryHeaderRow.getCell(1).value = 'Concepto';
+      summaryHeaderRow.getCell(2).value = 'Valor';
+      [1, 2].forEach(c => {
+        const cell = summaryHeaderRow.getCell(c);
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      });
+      sRow++;
+
+      const summaryItems = [
+        ['Total de Registros', summary.totalRecords],
+        ['Monto Total Facturado', summary.totalAmount],
+        ['Total ITBIS', summary.totalItbis],
+        ['Total Retenciones', summary.totalRetention],
+      ];
+      summaryItems.forEach(([label, value]) => {
+        const r = wsSummary.getRow(sRow);
+        r.getCell(1).value = label;
+        r.getCell(2).value = value;
+        sRow++;
+      });
+
+      wsSummary.getColumn(1).width = 25;
+      wsSummary.getColumn(2).width = 20;
+    }
+
+    // Descargar
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `reporte_606_${selectedPeriod}.xlsx`);
   };
 
   const exportToTXT = () => {

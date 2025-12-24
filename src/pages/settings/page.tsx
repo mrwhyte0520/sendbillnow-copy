@@ -2,7 +2,8 @@ import { useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { settingsService } from '../../services/database';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { useAuth } from '../../hooks/useAuth';
 
 interface SettingsSection {
@@ -100,13 +101,31 @@ export default function SettingsPage() {
         settingsService.getPayrollConcepts()
       ]);
 
-      // Crear un nuevo libro de Excel
-      const workbook = XLSX.utils.book_new();
+      const wb = new ExcelJS.Workbook();
+
+      const addStyledSheet = (sheetName: string, headers: string[], data: (string | number | boolean)[][]) => {
+        const ws = wb.addWorksheet(sheetName);
+        const headerRow = ws.getRow(1);
+        headers.forEach((h, idx) => {
+          const cell = headerRow.getCell(idx + 1);
+          cell.value = h;
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        });
+        data.forEach((row, rowIdx) => {
+          const dataRow = ws.getRow(rowIdx + 2);
+          row.forEach((val, colIdx) => {
+            dataRow.getCell(colIdx + 1).value = val;
+          });
+        });
+        headers.forEach((_, idx) => {
+          ws.getColumn(idx + 1).width = 25;
+        });
+      };
 
       // Hoja 1: Información de la Empresa
       if (companyInfo) {
-        const companyData = [
-          ['Campo', 'Valor'],
+        addStyledSheet('Información Empresa', ['Campo', 'Valor'], [
           ['Nombre de la Empresa', companyInfo.name || ''],
           ['RNC', companyInfo.rnc || ''],
           ['Dirección', companyInfo.address || ''],
@@ -115,15 +134,12 @@ export default function SettingsPage() {
           ['Sitio Web', companyInfo.website || ''],
           ['Sector', companyInfo.sector || ''],
           ['Tipo de Empresa', companyInfo.company_type || '']
-        ];
-        const companySheet = XLSX.utils.aoa_to_sheet(companyData);
-        XLSX.utils.book_append_sheet(workbook, companySheet, 'Información Empresa');
+        ]);
       }
 
       // Hoja 2: Configuración Contable
       if (accountingSettings) {
-        const accountingData = [
-          ['Campo', 'Valor'],
+        addStyledSheet('Config Contable', ['Campo', 'Valor'], [
           ['Inicio Año Fiscal', accountingSettings.fiscal_year_start || ''],
           ['Fin Año Fiscal', accountingSettings.fiscal_year_end || ''],
           ['Moneda por Defecto', accountingSettings.default_currency || ''],
@@ -133,44 +149,35 @@ export default function SettingsPage() {
           ['Respaldo Automático', accountingSettings.auto_backup ? 'Sí' : 'No'],
           ['Frecuencia de Respaldo', accountingSettings.backup_frequency || ''],
           ['Período de Retención', accountingSettings.retention_period || '']
-        ];
-        const accountingSheet = XLSX.utils.aoa_to_sheet(accountingData);
-        XLSX.utils.book_append_sheet(workbook, accountingSheet, 'Config Contable');
+        ]);
       }
 
       // Hoja 3: Configuración de Impuestos
       if (taxSettings) {
-        const taxData = [
-          ['Campo', 'Valor'],
+        addStyledSheet('Config Impuestos', ['Campo', 'Valor'], [
           ['Tasa ITBIS (%)', taxSettings.itbis_rate || ''],
           ['Tasa ISR (%)', taxSettings.isr_rate || ''],
           ['Tasa Retención (%)', taxSettings.retention_rate || ''],
           ['Frecuencia Declaración', taxSettings.declaration_frequency || ''],
           ['Inicio Año Fiscal', taxSettings.fiscal_year_start || ''],
           ['Fin Año Fiscal', taxSettings.fiscal_year_end || '']
-        ];
-        const taxSheet = XLSX.utils.aoa_to_sheet(taxData);
-        XLSX.utils.book_append_sheet(workbook, taxSheet, 'Config Impuestos');
+        ]);
       }
 
       // Hoja 4: Configuración de Inventario
       if (inventorySettings) {
-        const inventoryData = [
-          ['Campo', 'Valor'],
+        addStyledSheet('Config Inventario', ['Campo', 'Valor'], [
           ['Método de Valuación', inventorySettings.valuation_method || ''],
           ['Reorden Automático', inventorySettings.auto_reorder ? 'Sí' : 'No'],
           ['Rastrear Números de Serie', inventorySettings.track_serial_numbers ? 'Sí' : 'No'],
           ['Rastrear Fechas de Vencimiento', inventorySettings.track_expiration_dates ? 'Sí' : 'No'],
           ['Almacén por Defecto', inventorySettings.default_warehouse || '']
-        ];
-        const inventorySheet = XLSX.utils.aoa_to_sheet(inventoryData);
-        XLSX.utils.book_append_sheet(workbook, inventorySheet, 'Config Inventario');
+        ]);
       }
 
       // Hoja 5: Configuración de Nómina
       if (payrollSettings) {
-        const payrollData = [
-          ['Campo', 'Valor'],
+        addStyledSheet('Config Nómina', ['Campo', 'Valor'], [
           ['Frecuencia de Pago', payrollSettings.pay_frequency || ''],
           ['Tasa Horas Extra', payrollSettings.overtime_rate || ''],
           ['Tasa Seguro Social (%)', payrollSettings.social_security_rate || ''],
@@ -178,81 +185,60 @@ export default function SettingsPage() {
           ['Tasa SFS (%)', payrollSettings.sfs_rate || ''],
           ['Bono Navideño', payrollSettings.christmas_bonus ? 'Sí' : 'No'],
           ['Días de Vacaciones', payrollSettings.vacation_days || '']
-        ];
-        const payrollSheet = XLSX.utils.aoa_to_sheet(payrollData);
-        XLSX.utils.book_append_sheet(workbook, payrollSheet, 'Config Nómina');
+        ]);
       }
 
       // Hoja 6: Tasas de Impuestos
       if (taxRates && taxRates.length > 0) {
-        const taxRatesData = [
-          ['Nombre', 'Tipo', 'Tasa (%)', 'Descripción', 'Activo']
-        ];
-        taxRates.forEach(rate => {
-          taxRatesData.push([
-            rate.name || '',
-            rate.type || '',
-            rate.rate || '',
-            rate.description || '',
-            rate.is_active ? 'Sí' : 'No'
-          ]);
-        });
-        const taxRatesSheet = XLSX.utils.aoa_to_sheet(taxRatesData);
-        XLSX.utils.book_append_sheet(workbook, taxRatesSheet, 'Tasas Impuestos');
+        const taxRatesRows = taxRates.map(rate => [
+          rate.name || '',
+          rate.type || '',
+          rate.rate || '',
+          rate.description || '',
+          rate.is_active ? 'Sí' : 'No'
+        ]);
+        addStyledSheet('Tasas Impuestos', ['Nombre', 'Tipo', 'Tasa (%)', 'Descripción', 'Activo'], taxRatesRows);
       }
 
       // Hoja 7: Almacenes
       if (warehouses && warehouses.length > 0) {
-        const warehousesData = [
-          ['Nombre', 'Código', 'Dirección', 'Teléfono', 'Responsable', 'Activo']
-        ];
-        warehouses.forEach(warehouse => {
-          warehousesData.push([
-            warehouse.name || '',
-            warehouse.code || '',
-            warehouse.address || '',
-            warehouse.phone || '',
-            warehouse.manager || '',
-            warehouse.is_active ? 'Sí' : 'No'
-          ]);
-        });
-        const warehousesSheet = XLSX.utils.aoa_to_sheet(warehousesData);
-        XLSX.utils.book_append_sheet(workbook, warehousesSheet, 'Almacenes');
+        const warehousesRows = warehouses.map(wh => [
+          wh.name || '',
+          wh.code || '',
+          wh.address || '',
+          wh.phone || '',
+          wh.manager || '',
+          wh.is_active ? 'Sí' : 'No'
+        ]);
+        addStyledSheet('Almacenes', ['Nombre', 'Código', 'Dirección', 'Teléfono', 'Responsable', 'Activo'], warehousesRows);
       }
 
       // Hoja 8: Conceptos de Nómina
       if (payrollConcepts && payrollConcepts.length > 0) {
-        const conceptsData = [
-          ['Nombre', 'Código', 'Tipo', 'Fórmula', 'Activo']
-        ];
-        payrollConcepts.forEach(concept => {
-          conceptsData.push([
-            concept.name || '',
-            concept.code || '',
-            concept.type || '',
-            concept.formula || '',
-            concept.is_active ? 'Sí' : 'No'
-          ]);
-        });
-        const conceptsSheet = XLSX.utils.aoa_to_sheet(conceptsData);
-        XLSX.utils.book_append_sheet(workbook, conceptsSheet, 'Conceptos Nómina');
+        const conceptsRows = payrollConcepts.map(c => [
+          c.name || '',
+          c.code || '',
+          c.type || '',
+          c.formula || '',
+          c.is_active ? 'Sí' : 'No'
+        ]);
+        addStyledSheet('Conceptos Nómina', ['Nombre', 'Código', 'Tipo', 'Fórmula', 'Activo'], conceptsRows);
       }
 
       // Hoja 9: Información de Exportación
-      const exportInfoData = [
-        ['Campo', 'Valor'],
+      addStyledSheet('Info Exportación', ['Campo', 'Valor'], [
         ['Fecha de Exportación', new Date().toLocaleString('es-DO')],
         ['Sistema', 'Contabi RD'],
         ['Versión', '1.0'],
         ['Usuario', 'Administrador'],
         ['Descripción', 'Configuración completa del sistema contable']
-      ];
-      const exportInfoSheet = XLSX.utils.aoa_to_sheet(exportInfoData);
-      XLSX.utils.book_append_sheet(workbook, exportInfoSheet, 'Info Exportación');
+      ]);
 
       // Generar y descargar el archivo Excel
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const fileName = `contabi-configuracion-${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
+      saveAs(blob, fileName);
 
       setMessage({ 
         type: 'success', 

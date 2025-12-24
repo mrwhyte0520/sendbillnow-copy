@@ -3,6 +3,8 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { chartAccountsService, accountingSettingsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface ChartAccount {
   id: string;
@@ -854,82 +856,70 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
     }
   };
 
-  const downloadExcel = () => {
+  const downloadExcel = async () => {
     try {
-      // Construir datos en formato similar al ejemplo:
-      // Codigo | Nombre | Grupo | Tipo | Nivel | Cuenta Madre | Descripcion
-
-      // Mapa para obtener código padre rápidamente
       const idToCode: Record<string, string> = {};
       accounts.forEach((acc) => {
         idToCode[acc.id] = acc.code;
       });
 
-      const header = ['Codigo', 'Nombre', 'Grupo', 'Tipo', 'Nivel', 'Cuenta Madre', 'Descripcion'];
-      const rows = filteredAccounts.map(acc => {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Catalogo');
+
+      const headers = [
+        { title: 'Codigo', width: 12 },
+        { title: 'Nombre', width: 40 },
+        { title: 'Grupo', width: 12 },
+        { title: 'Tipo', width: 12 },
+        { title: 'Nivel', width: 8 },
+        { title: 'Cuenta Madre', width: 14 },
+        { title: 'Descripcion', width: 40 },
+      ];
+
+      let currentRow = 1;
+      const totalColumns = headers.length;
+
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const titleCell = ws.getCell(currentRow, 1);
+      titleCell.value = 'Catálogo de Cuentas';
+      titleCell.font = { bold: true, size: 14, underline: true };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      currentRow++;
+      currentRow++;
+
+      const headerRow = ws.getRow(currentRow);
+      headers.forEach((h, idx) => {
+        const cell = headerRow.getCell(idx + 1);
+        cell.value = h.title;
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.alignment = { vertical: 'middle' };
+      });
+      currentRow++;
+
+      for (const acc of filteredAccounts) {
         const parentCode = acc.parentId ? idToCode[acc.parentId] || '' : '';
-        const group = getAccountTypeName(acc.type); // Activo, Pasivo, etc.
+        const group = getAccountTypeName(acc.type);
         const tipo = acc.allowPosting ? 'Detalle' : 'General';
 
-        return [
-          acc.code,
-          acc.name,
-          group,
-          tipo,
-          acc.level,
-          parentCode,
-          acc.description || '',
-        ];
+        const dataRow = ws.getRow(currentRow);
+        dataRow.getCell(1).value = acc.code;
+        dataRow.getCell(2).value = acc.name;
+        dataRow.getCell(3).value = group;
+        dataRow.getCell(4).value = tipo;
+        dataRow.getCell(5).value = acc.level;
+        dataRow.getCell(6).value = parentCode;
+        dataRow.getCell(7).value = acc.description || '';
+        currentRow++;
+      }
+
+      headers.forEach((h, idx) => {
+        ws.getColumn(idx + 1).width = h.width;
       });
 
-      // Fila de título + fila en blanco + encabezados + datos
-      const aoa = [
-        ['Catálogo de Cuentas'],
-        [],
-        header,
-        ...rows,
-      ];
-
-      const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-      // Anchos de columnas para legibilidad en Excel
-      ws['!cols'] = [
-        { wch: 12 }, // Codigo
-        { wch: 40 }, // Nombre
-        { wch: 12 }, // Grupo
-        { wch: 12 }, // Tipo (General/Detalle)
-        { wch: 8 },  // Nivel
-        { wch: 14 }, // Cuenta Madre
-        { wch: 40 }, // Descripcion
-      ];
-
-      // Dar formato al título en A1 (negrita y subrayado) y combinar columnas A1:G1
-      const titleCellRef = 'A1';
-      if (!ws[titleCellRef]) {
-        ws[titleCellRef] = { t: 's', v: 'Catálogo de Cuentas' } as any;
-      }
-      (ws[titleCellRef] as any).s = {
-        font: { bold: true, underline: true, sz: 14 },
-        alignment: { horizontal: 'center' },
-      };
-      (ws as any)['!merges'] = (ws as any)['!merges'] || [];
-      (ws as any)['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } });
-
-      // Congelar fila de encabezados de columnas (tercera fila)
-      (ws as any)['!freeze'] = { rows: 3, columns: 0 };
-
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Catalogo');
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = `catalogo_cuentas_${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `catalogo_cuentas_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error downloading Excel:', error);
       alert('Error al descargar el archivo');

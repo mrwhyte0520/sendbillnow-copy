@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatMoney } from '../../../utils/numberFormat';
@@ -171,27 +172,8 @@ export default function ReportIT1Page() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (!reportData) return;
-
-    const excelData = [
-      { 'Campo': 'Período', 'Valor': periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' }) },
-      { 'Campo': '', 'Valor': '' },
-      { 'Campo': 'I. VENTAS Y SERVICIOS GRAVADOS', 'Valor': '' },
-      { 'Campo': 'Total de Ventas y Servicios Gravados', 'Valor': formatMoney(reportData.total_sales) },
-      { 'Campo': 'ITBIS Cobrado en Ventas', 'Valor': formatMoney(reportData.itbis_collected) },
-      { 'Campo': '', 'Valor': '' },
-      { 'Campo': 'II. COMPRAS Y GASTOS GRAVADOS', 'Valor': '' },
-      { 'Campo': 'Total de Compras y Gastos Gravados', 'Valor': formatMoney(reportData.total_purchases) },
-      { 'Campo': 'ITBIS Pagado en Compras', 'Valor': formatMoney(reportData.itbis_paid) },
-      { 'Campo': '', 'Valor': '' },
-      { 'Campo': 'III. LIQUIDACIÓN DEL IMPUESTO', 'Valor': '' },
-      { 'Campo': 'ITBIS Cobrado en Ventas', 'Valor': formatMoney(reportData.itbis_collected) },
-      { 'Campo': '(-) ITBIS Pagado en Compras', 'Valor': formatMoney(reportData.itbis_paid) },
-      { 'Campo': 'ITBIS NETO A PAGAR', 'Valor': formatMoney(reportData.net_itbis_due) },
-      { 'Campo': '', 'Valor': '' },
-      { 'Campo': 'Fecha de Generación', 'Valor': new Date(reportData.generated_date).toLocaleDateString('es-DO') }
-    ];
 
     const companyName =
       (companyInfo as any)?.name ||
@@ -203,36 +185,90 @@ export default function ReportIT1Page() {
       (companyInfo as any)?.tax_id ||
       '';
 
-    const headerRows: (string | number)[][] = [];
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Declaración IT-1');
 
-    headerRows.push([companyName]);
-    if (companyRnc) {
-      headerRows.push([`RNC: ${companyRnc}`]);
-    }
-    headerRows.push(['Declaración Jurada del ITBIS (IT-1)']);
-    headerRows.push([
-      `Período: ${periodToLocalDate(reportData.period).toLocaleDateString('es-DO', {
-        year: 'numeric',
-        month: 'long',
-      })}`,
-    ]);
-    headerRows.push([]);
-
-    const wb = XLSX.utils.book_new();
-    const tableStartRow = headerRows.length + 1;
-    const ws = XLSX.utils.json_to_sheet(excelData as any, { origin: `A${tableStartRow}` } as any);
-
-    ws['!cols'] = [
-      { wch: 40 },
-      { wch: 20 }
+    const headers = [
+      { title: 'Campo', width: 45 },
+      { title: 'Valor', width: 22 },
     ];
 
-    (ws as any);
-    (ws as any);
-    XLSX.utils.sheet_add_aoa(ws, headerRows, { origin: 'A1' });
+    let currentRow = 1;
+    const totalColumns = headers.length;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Declaración IT-1');
-    XLSX.writeFile(wb, `declaracion_it1_${reportData.period}.xlsx`);
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const companyCell = ws.getCell(currentRow, 1);
+    companyCell.value = companyName;
+    companyCell.font = { bold: true, size: 14 };
+    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    if (companyRnc) {
+      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+      const rncCell = ws.getCell(currentRow, 1);
+      rncCell.value = `RNC: ${companyRnc}`;
+      rncCell.font = { bold: true };
+      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      currentRow++;
+    }
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const titleCell = ws.getCell(currentRow, 1);
+    titleCell.value = 'Declaración Jurada del ITBIS (IT-1)';
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const periodCell = ws.getCell(currentRow, 1);
+    periodCell.value = `Período: ${periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })}`;
+    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    currentRow++;
+    currentRow++;
+
+    const headerRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = h.title;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.alignment = { vertical: 'middle' };
+    });
+    currentRow++;
+
+    const dataRows = [
+      ['Período', periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })],
+      ['', ''],
+      ['I. VENTAS Y SERVICIOS GRAVADOS', ''],
+      ['Total de Ventas y Servicios Gravados', formatMoney(reportData.total_sales)],
+      ['ITBIS Cobrado en Ventas', formatMoney(reportData.itbis_collected)],
+      ['', ''],
+      ['II. COMPRAS Y GASTOS GRAVADOS', ''],
+      ['Total de Compras y Gastos Gravados', formatMoney(reportData.total_purchases)],
+      ['ITBIS Pagado en Compras', formatMoney(reportData.itbis_paid)],
+      ['', ''],
+      ['III. LIQUIDACIÓN DEL IMPUESTO', ''],
+      ['ITBIS Cobrado en Ventas', formatMoney(reportData.itbis_collected)],
+      ['(-) ITBIS Pagado en Compras', formatMoney(reportData.itbis_paid)],
+      ['ITBIS NETO A PAGAR', formatMoney(reportData.net_itbis_due)],
+      ['', ''],
+      ['Fecha de Generación', new Date(reportData.generated_date).toLocaleDateString('es-DO')],
+    ];
+
+    for (const [campo, valor] of dataRows) {
+      const dataRow = ws.getRow(currentRow);
+      dataRow.getCell(1).value = campo;
+      dataRow.getCell(2).value = valor;
+      currentRow++;
+    }
+
+    headers.forEach((h, idx) => {
+      ws.getColumn(idx + 1).width = h.width;
+    });
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `declaracion_it1_${reportData.period}.xlsx`);
   };
 
   const exportToCSV = () => {
