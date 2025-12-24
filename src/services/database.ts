@@ -7,6 +7,24 @@ const handleDatabaseError = (error: any, fallbackData: any = []) => {
   return fallbackData;
 };
 
+// Helper para determinar si el plan actual es un plan básico que no requiere períodos contables
+export const shouldSkipPeriodValidation = (): boolean => {
+  try {
+    const savedPlan = localStorage.getItem('contard_current_plan');
+    if (!savedPlan) return false; // Sin plan = trial, requiere validación
+    
+    const plan = JSON.parse(savedPlan);
+    if (!plan?.active) return false;
+    
+    const planId = plan.id?.toLowerCase() || '';
+    // Planes básicos que no requieren períodos contables
+    const basicPlans = ['facturacion-simple', 'facturacion-premium'];
+    return basicPlans.some(bp => planId.includes(bp) || planId === bp);
+  } catch {
+    return false;
+  }
+};
+
 const describeSupabaseError = (error: any) => {
   if (!error) return 'Unknown error';
   const parts: string[] = [];
@@ -8249,8 +8267,11 @@ export const invoicesService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      // Determinar si omitir validación de período (planes básicos no la requieren)
+      const skipValidation = options?.skipPeriodValidation ?? shouldSkipPeriodValidation();
+
       // Validar que exista un período contable abierto para la fecha de la factura
-      if (!options?.skipPeriodValidation) {
+      if (!skipValidation) {
         const invoiceDate = invoice.invoice_date || new Date().toISOString().split('T')[0];
         await accountingPeriodsService.requireOpenPeriod(tenantId, invoiceDate);
       }
@@ -9897,8 +9918,11 @@ export const apInvoicesService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      // Determinar si omitir validación de período (planes básicos no la requieren)
+      const skipValidation = options?.skipPeriodValidation ?? shouldSkipPeriodValidation();
+
       // Validar que exista un período contable abierto para la fecha de la factura
-      if (!options?.skipPeriodValidation) {
+      if (!skipValidation) {
         const invoiceDate = invoice.invoice_date || new Date().toISOString().split('T')[0];
         await accountingPeriodsService.requireOpenPeriod(tenantId, invoiceDate);
       }
@@ -10817,8 +10841,11 @@ export const supplierPaymentsService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      // Determinar si omitir validación de período (planes básicos no la requieren)
+      const skipValidation = options?.skipPeriodValidation ?? shouldSkipPeriodValidation();
+
       // Validar período contable abierto
-      if (!options?.skipPeriodValidation) {
+      if (!skipValidation) {
         await accountingPeriodsService.requireOpenPeriod(tenantId, payload.payment_date);
       }
 
@@ -11092,8 +11119,11 @@ export const customerPaymentsService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      // Determinar si omitir validación de período (planes básicos no la requieren)
+      const skipValidation = options?.skipPeriodValidation ?? shouldSkipPeriodValidation();
+
       // Validar período contable abierto
-      if (!options?.skipPeriodValidation) {
+      if (!skipValidation) {
         const paymentDate = payload.payment_date || new Date().toISOString().split('T')[0];
         await accountingPeriodsService.requireOpenPeriod(tenantId, paymentDate);
       }

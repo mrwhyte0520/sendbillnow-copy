@@ -46,11 +46,11 @@ export const MODULES = {
   ACCOUNTING: 'accounting',
   TAXES: 'taxes',
   SETTINGS: 'settings',
-  ACCOUNTING_SETTINGS: 'accounting-settings',
   USERS: 'users',
   FIXED_ASSETS: 'fixed-assets',
   STATISTICS: 'statistics',
   REFERRALS: 'referrals',
+  ACCOUNTING_SETTINGS: 'accounting-settings',
 } as const;
 
 // Configuración de cada plan
@@ -156,11 +156,11 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.ACCOUNTING,
       MODULES.TAXES,
       MODULES.SETTINGS,
-      MODULES.ACCOUNTING_SETTINGS,
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
       MODULES.STATISTICS,
       MODULES.REFERRALS,
+      MODULES.ACCOUNTING_SETTINGS,
     ],
     routes: [
       '/dashboard',
@@ -237,11 +237,11 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.ACCOUNTING,
       MODULES.TAXES,
       MODULES.SETTINGS,
-      MODULES.ACCOUNTING_SETTINGS,
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
       MODULES.STATISTICS,
       MODULES.REFERRALS,
+      MODULES.ACCOUNTING_SETTINGS,
     ],
     routes: [
       '/dashboard',
@@ -318,9 +318,9 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.ACCOUNTING,
       MODULES.TAXES,
       MODULES.SETTINGS,
-      MODULES.ACCOUNTING_SETTINGS,
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
+      MODULES.ACCOUNTING_SETTINGS,
     ],
     routes: ['*'], // Todas las rutas durante prueba
     limits: {
@@ -375,11 +375,11 @@ export const ROUTE_TO_MODULE: Record<string, string> = {
   '/accounting': MODULES.ACCOUNTING,
   '/taxes': MODULES.TAXES,
   '/settings': MODULES.SETTINGS,
-  '/settings/accounting': MODULES.ACCOUNTING_SETTINGS,
   '/users': MODULES.USERS,
   '/fixed-assets': MODULES.FIXED_ASSETS,
   '/statistics': MODULES.STATISTICS,
   '/referrals': MODULES.REFERRALS,
+  '/settings/accounting': MODULES.ACCOUNTING_SETTINGS,
 };
 
 // Nombres amigables para los módulos
@@ -410,11 +410,11 @@ export const MODULE_NAMES: Record<string, string> = {
   [MODULES.ACCOUNTING]: 'Contabilidad',
   [MODULES.TAXES]: 'Impuestos',
   [MODULES.SETTINGS]: 'Configuración',
-  [MODULES.ACCOUNTING_SETTINGS]: 'Configuración Contable',
   [MODULES.USERS]: 'Usuarios',
   [MODULES.FIXED_ASSETS]: 'Activos Fijos',
   [MODULES.STATISTICS]: 'Estadísticas',
   [MODULES.REFERRALS]: 'Referidos',
+  [MODULES.ACCOUNTING_SETTINGS]: 'Configuración Contable',
 };
 
 // Función para obtener el plan mínimo requerido para un módulo

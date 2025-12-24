@@ -60,11 +60,9 @@ export default function SettingsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; sectionName: string; requiredPlan: string }>({
-    show: false,
-    sectionName: '',
-    requiredPlan: ''
-  });
+  const [showRestrictedModal, setShowRestrictedModal] = useState(false);
+  const [restrictedSectionName, setRestrictedSectionName] = useState('');
+  const [restrictedPlanName, setRestrictedPlanName] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -503,7 +501,11 @@ export default function SettingsPage() {
               return (
                 <div
                   key={section.id}
-                  onClick={() => setRestrictedModal({ show: true, sectionName: section.name, requiredPlan })}
+                  onClick={() => {
+                    setRestrictedSectionName(section.name);
+                    setRestrictedPlanName(requiredPlan);
+                    setShowRestrictedModal(true);
+                  }}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group opacity-75"
                 >
                   <div className="flex items-start space-x-4">
@@ -523,6 +525,7 @@ export default function SettingsPage() {
                         {section.description}
                       </p>
                       <div className="mt-3 flex items-center text-sm text-amber-600">
+                        <i className="ri-vip-crown-2-line mr-1"></i>
                         <span>Requiere {requiredPlan}</span>
                       </div>
                     </div>
@@ -709,44 +712,50 @@ export default function SettingsPage() {
         )}
 
         {/* Modal de módulo restringido */}
-        {restrictedModal.show && (
+        {showRestrictedModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
+            <div 
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' })}
+              onClick={() => setShowRestrictedModal(false)}
             />
             <div className="relative bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
               <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center">
                 <div className="w-14 h-14 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-2 backdrop-blur-sm">
                   <i className="ri-lock-2-line text-3xl text-white"></i>
                 </div>
-                <h3 className="text-lg font-bold text-white">Función Premium</h3>
+                <h3 className="text-lg font-bold text-white">Módulo Premium</h3>
                 <p className="text-amber-100 text-sm">Acceso restringido</p>
               </div>
               <div className="p-4">
                 <div className="text-center mb-4">
-                  <p className="text-gray-600 text-sm">
-                    <span className="font-semibold text-gray-900">"{restrictedModal.sectionName}"</span> no está disponible en tu plan actual.
+                  <p className="text-gray-600 text-sm mb-3">
+                    <span className="font-semibold text-gray-900">"{restrictedSectionName}"</span> no está disponible en tu plan actual.
                   </p>
-                  <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
-                    <p className="text-xs text-gray-500">Plan requerido:</p>
-                    <p className="font-bold text-blue-600">{restrictedModal.requiredPlan}</p>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                    <div className="flex items-center justify-center mb-1">
+                      <i className="ri-vip-crown-2-fill text-amber-500 text-xl mr-2"></i>
+                      <span className="text-xs text-gray-600">Plan requerido:</span>
+                    </div>
+                    <p className="text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      {restrictedPlanName}
+                    </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
-                    onClick={() => setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' })}
-                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+                    onClick={() => setShowRestrictedModal(false)}
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={() => {
-                      setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' });
+                      setShowRestrictedModal(false);
                       window.REACT_APP_NAVIGATE('/plans');
                     }}
-                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center"
                   >
+                    <i className="ri-arrow-up-circle-line mr-1"></i>
                     Ver Planes
                   </button>
                 </div>

@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlans } from '../../hooks/usePlans';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
-import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService } from '../../services/database';
-import InitialSetupModal from '../common/InitialSetupModal';
+import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService, accountingPeriodsService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
 
 interface DashboardLayoutProps {
@@ -38,7 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { currentPlan, getTrialStatus, trialInfo } = usePlans();
-  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
+  const { canAccessRoute, getRequiredPlanForRoute, requiresAccountingSetup } = usePlanPermissions();
   const [kpiCounts, setKpiCounts] = useState({ invoices: 0, customers: 0, products: 0 });
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -48,6 +47,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     moduleName: '',
     requiredPlan: ''
   });
+  const [showAccountingSetupModal, setShowAccountingSetupModal] = useState(false);
+  const [accountingSetupChecked, setAccountingSetupChecked] = useState(false);
 
   useEffect(() => {
     setUserProfile(prev => ({
@@ -118,6 +119,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
     checkIfOwner();
   }, [user?.id]);
+
+  // Verificar si necesita configuración contable (para planes avanzados)
+  useEffect(() => {
+    const checkAccountingSetup = async () => {
+      if (!user?.id || accountingSetupChecked || !requiresAccountingSetup) return;
+      
+      try {
+        const periods = await accountingPeriodsService.getAll(user.id);
+        const hasOpenPeriod = periods && periods.length > 0 && periods.some((p: any) => p.status === 'open');
+        
+        if (!hasOpenPeriod) {
+          // El usuario tiene un plan avanzado pero no tiene períodos contables configurados
+          setShowAccountingSetupModal(true);
+        }
+        setAccountingSetupChecked(true);
+      } catch (error) {
+        console.error('Error verificando configuración contable:', error);
+        setAccountingSetupChecked(true);
+      }
+    };
+    
+    checkAccountingSetup();
+  }, [user?.id, requiresAccountingSetup, accountingSetupChecked]);
 
   useEffect(() => {
     const STORAGE_PREFIX = 'contabi_rbac_';
@@ -1105,8 +1129,62 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       )}
 
-      {/* Modal de configuración inicial para planes premium */}
-      <InitialSetupModal />
+      {/* Modal de configuración contable requerida */}
+      {showAccountingSetupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-center">
+              <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm">
+                <i className="ri-settings-3-line text-3xl text-white"></i>
+              </div>
+              <h3 className="text-xl font-bold text-white">Configuración Requerida</h3>
+              <p className="text-blue-100 text-sm mt-1">Tu plan incluye funciones contables avanzadas</p>
+            </div>
+            <div className="p-5">
+              <div className="text-center mb-5">
+                <p className="text-gray-600 text-sm mb-4">
+                  Para aprovechar todas las funcionalidades de tu plan, necesitas configurar:
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center bg-amber-50 rounded-lg p-3 border border-amber-200">
+                    <i className="ri-calendar-check-line text-amber-600 text-xl mr-3"></i>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 text-sm">Períodos Contables</p>
+                      <p className="text-xs text-gray-500">Define tu año fiscal y períodos mensuales</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <i className="ri-file-list-3-line text-blue-600 text-xl mr-3"></i>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 text-sm">Secuencias NCF</p>
+                      <p className="text-xs text-gray-500">Configura tus comprobantes fiscales</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAccountingSetupModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Más tarde
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAccountingSetupModal(false);
+                    navigate('/settings/accounting');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center"
+                >
+                  <i className="ri-settings-3-line mr-2"></i>
+                  Configurar Ahora
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

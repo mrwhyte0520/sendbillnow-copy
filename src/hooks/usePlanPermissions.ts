@@ -19,6 +19,8 @@ export interface PlanPermissions {
   getRequiredPlanForModule: (module: string) => string;
   getRequiredPlanForRoute: (route: string) => string;
   getModuleName: (module: string) => string;
+  requiresAccountingSetup: boolean;
+  skipPeriodValidation: boolean;
   limits: {
     users: number;
     invoicesPerMonth: number;
@@ -140,6 +142,14 @@ export function usePlanPermissions(): PlanPermissions {
     return MODULE_NAMES[module] || module;
   };
 
+  // Determinar si el plan requiere configuración contable completa
+  // Los planes básicos (facturacion-simple, facturacion-premium) no requieren períodos contables
+  const basicPlans: PlanId[] = ['facturacion-simple', 'facturacion-premium'];
+  const requiresAccountingSetup = !basicPlans.includes(currentPlanId) && currentPlanId !== 'none';
+  
+  // skipPeriodValidation es true para planes básicos (no necesitan validar períodos)
+  const skipPeriodValidation = basicPlans.includes(currentPlanId);
+
   return {
     currentPlanId,
     currentPlanName,
@@ -151,6 +161,8 @@ export function usePlanPermissions(): PlanPermissions {
     getRequiredPlanForModule,
     getRequiredPlanForRoute,
     getModuleName,
+    requiresAccountingSetup,
+    skipPeriodValidation,
     limits: planConfig?.limits || {
       users: 0,
       invoicesPerMonth: 0,
