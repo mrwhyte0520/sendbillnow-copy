@@ -674,7 +674,6 @@ export default function InvoicingPage() {
               <div class="card">
                 <div class="card-head">
                   <div class="card-head-title">Cliente</div>
-                  <div class="badge">ID: ${invoice.customerId || ''}</div>
                 </div>
                 <div class="card-body">
                   <div class="kv">
@@ -772,13 +771,54 @@ export default function InvoicingPage() {
       worksheet.mergeCells('A2:D2');
       worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
       worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-      worksheet.getCell('A2').font = { size: 10 };
+      worksheet.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FF0b2a6f' } };
+      worksheet.getCell('A2').fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFe0e7ff' }
+      };
     }
 
     const headerStartRow = companyRnc ? 3 : 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
     worksheet.getCell(`A${headerStartRow}`).value = `Factura #${invoice.id}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
+
+    const ncfRow = headerStartRow + 1;
+    worksheet.mergeCells(`A${ncfRow}:D${ncfRow}`);
+    worksheet.getCell(`A${ncfRow}`).value = `NCF: ${invoice.id}`;
+    worksheet.getCell(`A${ncfRow}`).font = { bold: true, size: 14, color: { argb: 'FF166534' } };
+    worksheet.getCell(`A${ncfRow}`).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFdcfce7' }
+    };
+    worksheet.getCell(`A${ncfRow}`).alignment = { horizontal: 'center' } as any;
+    worksheet.getCell(`A${ncfRow}`).border = {
+      top: { style: 'medium', color: { argb: 'FF16a34a' } },
+      bottom: { style: 'medium', color: { argb: 'FF16a34a' } },
+      left: { style: 'medium', color: { argb: 'FF16a34a' } },
+      right: { style: 'medium', color: { argb: 'FF16a34a' } }
+    };
+
+    if (String(invoice.id || '').toUpperCase().startsWith('B')) {
+      const fiscalRow = ncfRow + 1;
+      worksheet.mergeCells(`A${fiscalRow}:D${fiscalRow}`);
+      worksheet.getCell(`A${fiscalRow}`).value = '✓ FACTURA VÁLIDA PARA CRÉDITO FISCAL';
+      worksheet.getCell(`A${fiscalRow}`).font = { bold: true, size: 11, color: { argb: 'FF92400e' } };
+      worksheet.getCell(`A${fiscalRow}`).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFfef3c7' }
+      };
+      worksheet.getCell(`A${fiscalRow}`).alignment = { horizontal: 'center' } as any;
+      worksheet.getCell(`A${fiscalRow}`).border = {
+        top: { style: 'medium', color: { argb: 'FFf59e0b' } },
+        bottom: { style: 'medium', color: { argb: 'FFf59e0b' } },
+        left: { style: 'medium', color: { argb: 'FFf59e0b' } },
+        right: { style: 'medium', color: { argb: 'FFf59e0b' } }
+      };
+    }
 
     worksheet.addRow([]);
 

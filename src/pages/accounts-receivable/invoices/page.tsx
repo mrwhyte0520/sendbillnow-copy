@@ -1249,8 +1249,6 @@ export default function InvoicesPage() {
                     ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
                     ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
                     ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
-                    <div class="k">Factura</div>
-                    <div class="v">${invoice.invoiceNumber}</div>
                   </div>
                 </div>
               </div>

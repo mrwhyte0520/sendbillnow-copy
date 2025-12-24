@@ -207,6 +207,21 @@ export const referralsService = {
       console.error('referralsService.createCommission error', e);
       throw e;
     }
+  },
+
+  async listPayouts(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('referral_payouts')
+        .select('id, paypal_email, amount, currency, status, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.error('referralsService.listPayouts error', e);
+      return [];
+    }
   }
 };
 
@@ -12133,50 +12148,70 @@ export const taxService = {
 
       if (error) throw error;
 
+      // Importar utilidades de tipo de gasto 606
+      const {
+        distributeAmount,
+        distributeItbis,
+        extractExpenseCode,
+        isValidExpenseType606,
+      } = await import('../utils/expenseType606');
+
       const mapped = (data || []).map((item: any) => {
         // RNC / Cédula
         const rawRnc: string = (item.rnc_cedula ?? item.rnc_cedula_proveedor ?? '') as string;
         const normalizedRnc = rawRnc || '';
 
-        // Tipo de identificación (simplificado: RNC vs Cédula por longitud)
+        // Tipo de identificación (1=RNC, 2=Cédula, 3=Pasaporte)
         let tipoIdentificacion: string = item.tipo_identificacion ?? '';
         if (!tipoIdentificacion && normalizedRnc) {
           const digits = normalizedRnc.replace(/[^0-9]/g, '');
           if (digits.length === 11) {
-            tipoIdentificacion = 'Cédula';
+            tipoIdentificacion = '2'; // Cédula
+          } else if (digits.length === 9) {
+            tipoIdentificacion = '1'; // RNC
           } else {
-            tipoIdentificacion = 'RNC';
+            tipoIdentificacion = '1'; // Por defecto RNC
           }
         }
 
-        // Tipo de bienes/servicios
-        const tipoBienesServicios: string =
+        // Tipo de bienes/servicios - extraer solo el código (01-11)
+        const tipoGastoRaw: string =
           (item.tipo_bienes_servicios as string) ||
           (item.tipo_gasto as string) ||
           '';
+        const tipoGastoCode = extractExpenseCode(tipoGastoRaw);
+        const tipoBienesServicios = isValidExpenseType606(tipoGastoRaw) ? tipoGastoCode : '';
 
-        // Monto base y distribución entre bienes/servicios
+        // Monto base y distribución automática entre bienes/servicios según tipo de gasto
         const baseAmount = Number(item.monto_facturado ?? 0) || 0;
-        let serviciosFacturados = Number(item.servicios_facturados ?? 0) || 0;
-        let bienesFacturados = Number(item.bienes_facturados ?? 0) || 0;
+        const itbisFacturado = Number(item.itbis_facturado ?? 0) || 0;
+        const itbisRetenido = Number(item.itbis_retenido ?? 0) || 0;
+        const itbisToCost = Boolean(item.itbis_to_cost);
 
-        if (!serviciosFacturados && !bienesFacturados && baseAmount) {
-          const tipoLower = tipoBienesServicios.toLowerCase();
-          if (tipoLower.includes('servicio')) {
-            serviciosFacturados = baseAmount;
-          } else {
-            bienesFacturados = baseAmount;
-          }
-        }
+        // Distribución automática de montos según tipo de gasto (servicios vs bienes)
+        const { servicios, bienes } = distributeAmount(tipoGastoRaw, baseAmount);
+
+        // Distribución automática del ITBIS según tipo de gasto
+        const {
+          itbisProporcionalidad,
+          itbisAlCosto,
+          itbisPorAdelantar,
+        } = distributeItbis(tipoGastoRaw, itbisFacturado, itbisToCost);
 
         return {
           ...item,
-          // Normalizar nombres esperados por el frontend
+          // Normalizar nombres esperados por el frontend y formato DGII
           rnc_cedula: normalizedRnc,
           tipo_identificacion: tipoIdentificacion,
-          tipo_bienes_servicios: tipoBienesServicios,
-          servicios_facturados: serviciosFacturados,
-          bienes_facturados: bienesFacturados,
+          tipo_bienes_servicios: tipoBienesServicios, // Solo código 01-11
+          servicios_facturados: servicios,
+          bienes_facturados: bienes,
+          monto_facturado: baseAmount, // Total = servicios + bienes
+          itbis_facturado: itbisFacturado,
+          itbis_retenido: itbisRetenido,
+          itbis_proporcionalidad: itbisProporcionalidad, // Columna 13
+          itbis_al_costo: itbisAlCosto,                   // Columna 14
+          itbis_por_adelantar: itbisPorAdelantar,         // Columna 15
           forma_pago: (item.forma_pago as string) ?? (item.tipo_pago as string) ?? '',
           retencion_renta: Number(item.retencion_renta ?? item.monto_retencion_renta ?? 0) || 0,
           isr_percibido: Number(item.isr_percibido ?? 0) || 0,

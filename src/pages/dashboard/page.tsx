@@ -1,12 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
+
+const STORAGE_PREFIX = 'contabi_rbac_';
 
 export default function DashboardPage() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [currentDate] = useState(new Date());
+  const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
+
+  // Obtener módulos permitidos para el usuario
+  useEffect(() => {
+    const fetchAllowed = async () => {
+      try {
+        if (!user?.id) {
+          // local fallback
+          const perms = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'permissions') || '[]');
+          const rolePerms = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'role_permissions') || '[]');
+          const userRoles = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'user_roles') || '[]');
+          const myRoleIds = userRoles.filter((ur: any) => ur.user_id === 'local').map((ur: any) => ur.role_id);
+          const permIds = rolePerms.filter((rp: any) => myRoleIds.includes(rp.role_id)).map((rp: any) => rp.permission_id);
+          const modules = new Set<string>();
+          perms.forEach((p: any) => { if (p.action === 'access' && permIds.includes(p.id)) modules.add(p.module); });
+          setAllowedModules(modules);
+          return;
+        }
+        const { data: ur } = await supabase.from('user_roles').select('*').eq('user_id', user.id);
+        const roleIds = (ur || []).map((r: any) => r.role_id);
+        if (roleIds.length === 0) { setAllowedModules(new Set()); return; }
+        const { data: rp } = await supabase.from('role_permissions').select('permission_id').in('role_id', roleIds);
+        const permIds = (rp || []).map((r: any) => r.permission_id);
+        if (permIds.length === 0) { setAllowedModules(new Set()); return; }
+        const { data: perms } = await supabase.from('permissions').select('*').in('id', permIds).eq('action', 'access');
+        setAllowedModules(new Set((perms || []).map((p: any) => p.module)));
+      } catch {
+        setAllowedModules(new Set());
+      }
+    };
+    fetchAllowed();
+  }, [user?.id]);
 
   const handleSignOut = async () => {
     try {
@@ -17,23 +52,32 @@ export default function DashboardPage() {
     }
   };
 
-  // Botones de acceso rápido
-  const quickAccessButtons = [
-    { name: 'Usuario', icon: 'ri-user-add-line', href: '/users', color: 'from-teal-500 to-teal-600' },
-    { name: 'Nuevo Cliente', icon: 'ri-user-smile-line', href: '/customers', color: 'from-blue-500 to-blue-600' },
-    { name: 'Nuevo Proveedor', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-cyan-500 to-cyan-600' },
-    { name: 'Nueva Factura', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-purple-500 to-purple-600' },
-    { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-orange-500 to-orange-600' },
-    { name: 'Cierre de Caja', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-yellow-500 to-yellow-600' },
-    { name: 'Ventas', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-pink-500 to-pink-600' },
-    { name: 'Productos', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-red-500 to-red-600' },
-    { name: 'Inventario', icon: 'ri-archive-line', href: '/inventory', color: 'from-indigo-500 to-indigo-600' },
-    { name: 'Reportes Inventario', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-green-500 to-green-600' },
-    { name: 'Entradas', icon: 'ri-download-line', href: '/inventory', color: 'from-lime-500 to-lime-600' },
-    { name: 'Transferencias', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-emerald-500 to-emerald-600' },
-    { name: 'Almacén', icon: 'ri-building-line', href: '/inventory', color: 'from-sky-500 to-sky-600' },
-    { name: 'Nóminas', icon: 'ri-wallet-line', href: '/payroll', color: 'from-fuchsia-500 to-fuchsia-600' },
+  // Botones de acceso rápido con sus módulos correspondientes
+  const allQuickAccessButtons = [
+    { name: 'Usuario', icon: 'ri-user-add-line', href: '/users', color: 'from-teal-500 to-teal-600', module: 'users' },
+    { name: 'Nuevo Cliente', icon: 'ri-user-smile-line', href: '/customers', color: 'from-blue-500 to-blue-600', module: 'customers' },
+    { name: 'Nuevo Proveedor', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-cyan-500 to-cyan-600', module: 'accounts-payable' },
+    { name: 'Nueva Factura', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-purple-500 to-purple-600', module: 'billing' },
+    { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-orange-500 to-orange-600', module: 'pos' },
+    { name: 'Cierre de Caja', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-yellow-500 to-yellow-600', module: 'billing' },
+    { name: 'Ventas', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-pink-500 to-pink-600', module: 'billing' },
+    { name: 'Productos', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-red-500 to-red-600', module: 'products' },
+    { name: 'Inventario', icon: 'ri-archive-line', href: '/inventory', color: 'from-indigo-500 to-indigo-600', module: 'inventory' },
+    { name: 'Reportes Inventario', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-green-500 to-green-600', module: 'inventory' },
+    { name: 'Entradas', icon: 'ri-download-line', href: '/inventory', color: 'from-lime-500 to-lime-600', module: 'inventory' },
+    { name: 'Transferencias', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-emerald-500 to-emerald-600', module: 'inventory' },
+    { name: 'Almacén', icon: 'ri-building-line', href: '/inventory', color: 'from-sky-500 to-sky-600', module: 'inventory' },
+    { name: 'Nóminas', icon: 'ri-wallet-line', href: '/payroll', color: 'from-fuchsia-500 to-fuchsia-600', module: 'payroll' },
   ];
+
+  // Filtrar botones según permisos del usuario
+  // Si no hay permisos configurados (allowedModules vacío o null), mostrar todos
+  const quickAccessButtons = useMemo(() => {
+    if (allowedModules === null || allowedModules.size === 0) {
+      return allQuickAccessButtons;
+    }
+    return allQuickAccessButtons.filter(button => allowedModules.has(button.module));
+  }, [allowedModules]);
 
   // Generar días del calendario
   const getDaysInMonth = (date: Date) => {

@@ -902,11 +902,15 @@ export default function APInvoicesPage() {
               <div class="top">
                 <div class="company">
                   <div class="company-name">${companyName}</div>
-                  ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                  ${companyRnc ? `<div style="font-size: 14px; font-weight: 700; color: #0b2a6f; background: #e0e7ff; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 4px;">RNC: ${companyRnc}</div>` : ''}
                 </div>
                 <div class="doc">
                   <div class="doc-title">FACTURA</div>
                   <div class="doc-number">#${safeNumber}</div>
+                  <div style="margin-top: 8px; padding: 8px 12px; background: #dcfce7; border: 2px solid #16a34a; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 11px; color: #166534; font-weight: 600;">NCF</div>
+                    <div style="font-size: 16px; font-weight: 800; color: #166534; letter-spacing: 1px;">${safeNumber}</div>
+                  </div>
                   <div class="doc-kv">
                     <div><strong>Fecha:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('es-DO')}</div>
                     ${invoice.dueDate ? `<div><strong>Vence:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>` : ''}
@@ -916,11 +920,16 @@ export default function APInvoicesPage() {
                 </div>
               </div>
 
+              ${String(safeNumber || '').toUpperCase().startsWith('B') ? `
+              <div style="margin-top: 12px; padding: 10px 16px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; text-align: center;">
+                <span style="font-size: 13px; font-weight: 700; color: #92400e;">✓ FACTURA VÁLIDA PARA CRÉDITO FISCAL</span>
+              </div>
+              ` : ''}
+
               <div class="section-grid">
                 <div class="card">
                   <div class="card-head">
                     <div class="card-head-title">Suplidor</div>
-                    <div class="badge">ID: ${invoice.supplierId || ''}</div>
                   </div>
                   <div class="card-body">
                     <div class="kv">
@@ -1038,13 +1047,54 @@ export default function APInvoicesPage() {
         worksheet.mergeCells('A2:D2');
         worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
         worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-        worksheet.getCell('A2').font = { size: 10 };
+        worksheet.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FF0b2a6f' } };
+        worksheet.getCell('A2').fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFe0e7ff' }
+        };
       }
 
       const headerStartRow = companyRnc ? 3 : 2;
       worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
       worksheet.getCell(`A${headerStartRow}`).value = `Factura de Suplidor #${invoice.invoiceNumber}`;
       worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
+
+      const ncfRow = headerStartRow + 1;
+      worksheet.mergeCells(`A${ncfRow}:D${ncfRow}`);
+      worksheet.getCell(`A${ncfRow}`).value = `NCF: ${invoice.invoiceNumber}`;
+      worksheet.getCell(`A${ncfRow}`).font = { bold: true, size: 14, color: { argb: 'FF166534' } };
+      worksheet.getCell(`A${ncfRow}`).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFdcfce7' }
+      };
+      worksheet.getCell(`A${ncfRow}`).alignment = { horizontal: 'center' } as any;
+      worksheet.getCell(`A${ncfRow}`).border = {
+        top: { style: 'medium', color: { argb: 'FF16a34a' } },
+        bottom: { style: 'medium', color: { argb: 'FF16a34a' } },
+        left: { style: 'medium', color: { argb: 'FF16a34a' } },
+        right: { style: 'medium', color: { argb: 'FF16a34a' } }
+      };
+
+      if (String(invoice.invoiceNumber || '').toUpperCase().startsWith('B')) {
+        const fiscalRow = ncfRow + 1;
+        worksheet.mergeCells(`A${fiscalRow}:D${fiscalRow}`);
+        worksheet.getCell(`A${fiscalRow}`).value = '✓ FACTURA VÁLIDA PARA CRÉDITO FISCAL';
+        worksheet.getCell(`A${fiscalRow}`).font = { bold: true, size: 11, color: { argb: 'FF92400e' } };
+        worksheet.getCell(`A${fiscalRow}`).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFfef3c7' }
+        };
+        worksheet.getCell(`A${fiscalRow}`).alignment = { horizontal: 'center' } as any;
+        worksheet.getCell(`A${fiscalRow}`).border = {
+          top: { style: 'medium', color: { argb: 'FFf59e0b' } },
+          bottom: { style: 'medium', color: { argb: 'FFf59e0b' } },
+          left: { style: 'medium', color: { argb: 'FFf59e0b' } },
+          right: { style: 'medium', color: { argb: 'FFf59e0b' } }
+        };
+      }
 
       worksheet.addRow([]);
 
@@ -1218,6 +1268,18 @@ export default function APInvoicesPage() {
         alert('Para Prestador de Servicios el RNC debe tener 9 dígitos o la Cédula 11 dígitos');
         return;
       }
+    }
+
+    // Validación obligatoria del Tipo de Gasto 606 para facturas con NCF
+    const hasNcf = headerForm.documentType && String(headerForm.documentType).trim() !== '';
+    const expenseType606Value = headerForm.expenseType606?.trim() || '';
+    if (hasNcf && !expenseType606Value) {
+      alert(
+        '⚠️ CAMPO OBLIGATORIO: Tipo de Gasto 606\n\n' +
+        'Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3 del 606) es OBLIGATORIO para todas las facturas con NCF.\n\n' +
+        'Por favor, seleccione el Tipo de Gasto 606 correcto (01-11) antes de guardar.'
+      );
+      return;
     }
 
     const invoiceNumber = headerForm.invoiceNumber.trim() || `AP-${Date.now()}`;

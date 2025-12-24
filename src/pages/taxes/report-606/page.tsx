@@ -45,6 +45,7 @@ export default function Report606Page() {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
+  const [missingExpenseTypeCount, setMissingExpenseTypeCount] = useState(0);
 
   const months = [
     { value: '01', label: 'Enero' },
@@ -94,19 +95,21 @@ export default function Report606Page() {
       const data = await taxService.generateReport606(period);
       const summaryData = await taxService.getReport606Summary(period) as any;
 
+      // Contar registros sin tipo de gasto (obligatorio para el 606)
       const missingExpenseTypeCount = Array.isArray(data)
         ? data.filter((row: any) => !row?.tipo_bienes_servicios || String(row.tipo_bienes_servicios).trim() === '').length
         : 0;
 
+      // Guardar el conteo para bloquear exportación
+      setMissingExpenseTypeCount(missingExpenseTypeCount);
+
       if (missingExpenseTypeCount > 0) {
-        const proceed = confirm(
-          `Hay ${missingExpenseTypeCount} registro(s) sin "Tipo de gasto (606)". ` +
-          'Esto puede afectar el archivo oficial para la DGII. ¿Deseas continuar de todos modos?'
+        alert(
+          `⚠️ HAY ${missingExpenseTypeCount} REGISTRO(S) SIN "TIPO DE GASTO 606"\n\n` +
+          'Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3) es OBLIGATORIO.\n\n' +
+          'La exportación del archivo oficial estará BLOQUEADA hasta que corrija estos registros.\n\n' +
+          'Por favor, edite las facturas de suplidor correspondientes y asigne el Tipo de Gasto 606 correcto (01-11).'
         );
-        if (!proceed) {
-          setLoading(false);
-          return;
-        }
       }
 
       const totalRecords = Array.isArray(data) ? data.length : 0;
@@ -251,7 +254,6 @@ export default function Report606Page() {
 
     const totalColumns = headers.length;
     const blueColor = 'FF1E3A5F'; // Azul oscuro (en lugar de verde DGII)
-    const lightBlueColor = 'FF4472C4'; // Azul más claro para detalles
 
     let currentRow = 1;
 
@@ -349,9 +351,9 @@ export default function Report606Page() {
       dataRow.getCell(10).value = row.monto_facturado || 0;
       dataRow.getCell(11).value = row.itbis_facturado || 0;
       dataRow.getCell(12).value = row.itbis_retenido || 0;
-      dataRow.getCell(13).value = 0; // ITBIS proporcionalidad
-      dataRow.getCell(14).value = 0; // ITBIS al costo
-      dataRow.getCell(15).value = 0; // ITBIS por adelantar
+      dataRow.getCell(13).value = (row as any).itbis_proporcionalidad || 0; // ITBIS proporcionalidad
+      dataRow.getCell(14).value = (row as any).itbis_al_costo || 0; // ITBIS al costo
+      dataRow.getCell(15).value = (row as any).itbis_por_adelantar || 0; // ITBIS por adelantar
       dataRow.getCell(16).value = 0; // ITBIS percibido
       dataRow.getCell(17).value = ''; // Tipo retención ISR
       dataRow.getCell(18).value = row.retencion_renta || 0;
@@ -479,10 +481,10 @@ export default function Report606Page() {
         const itbisFact = toMoney(row.itbis_facturado);
         const itbisRet = toMoney(row.itbis_retenido);
 
-        // Campos no manejados actualmente: exportar en 0.00 / 0
-        const itbisSujProp = toMoney(0);
-        const itbisLlevCosto = toMoney(0);
-        const itbisPorAdel = toMoney(row.itbis_facturado);
+        // Distribución automática del ITBIS según tipo de gasto
+        const itbisSujProp = toMoney((row as any).itbis_proporcionalidad || 0);
+        const itbisLlevCosto = toMoney((row as any).itbis_al_costo || 0);
+        const itbisPorAdel = toMoney((row as any).itbis_por_adelantar || 0);
         const itbisPerc = toMoney(0);
 
         const tipoRetIsr = '0';
@@ -638,27 +640,23 @@ export default function Report606Page() {
             {summary && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Período</h2>
-                
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">{summary.totalRecords}</div>
                     <div className="text-sm text-gray-600">Total Registros</div>
                   </div>
-                  
                   <div className="bg-green-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
                       RD$ {formatAmount(summary.totalAmount)}
                     </div>
                     <div className="text-sm text-gray-600">Monto Total</div>
                   </div>
-                  
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-yellow-600">
                       RD$ {formatAmount(summary.totalItbis)}
                     </div>
                     <div className="text-sm text-gray-600">Total ITBIS</div>
                   </div>
-                  
                   <div className="bg-red-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-red-600">
                       RD$ {formatAmount(summary.totalRetention)}
@@ -669,10 +667,28 @@ export default function Report606Page() {
               </div>
             )}
 
+            {/* Alerta de registros incompletos */}
+            {missingExpenseTypeCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <i className="ri-error-warning-line text-red-600 text-xl mt-0.5"></i>
+                  <div>
+                    <h3 className="text-red-800 font-semibold">⚠️ {missingExpenseTypeCount} registro(s) sin Tipo de Gasto 606</h3>
+                    <p className="text-red-700 text-sm mt-1">
+                      Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3) es <strong>OBLIGATORIO</strong>.
+                      La exportación del archivo oficial TXT está <strong>BLOQUEADA</strong> hasta que corrija estos registros.
+                    </p>
+                    <p className="text-red-600 text-sm mt-2">
+                      Por favor, edite las facturas de suplidor correspondientes y asigne el Tipo de Gasto 606 correcto (01-11).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Botones de exportación */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Exportar Datos</h2>
-              
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={exportToCSV}
@@ -681,7 +697,6 @@ export default function Report606Page() {
                   <i className="ri-file-excel-2-line"></i>
                   Exportar CSV
                 </button>
-                
                 <button
                   onClick={exportToExcel}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap"
@@ -689,15 +704,20 @@ export default function Report606Page() {
                   <i className="ri-file-excel-line"></i>
                   Exportar Excel
                 </button>
-                
                 <button
                   onClick={exportToTXT}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center gap-2 whitespace-nowrap"
+                  disabled={missingExpenseTypeCount > 0}
+                  className={`px-4 py-2 rounded-md flex items-center gap-2 whitespace-nowrap ${
+                    missingExpenseTypeCount > 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                  }`}
+                  title={missingExpenseTypeCount > 0 ? 'Bloqueado: hay registros sin Tipo de Gasto 606' : 'Exportar formato oficial DGII'}
                 >
                   <i className="ri-file-text-line"></i>
-                  Exportar TXT
+                  Exportar TXT (DGII)
+                  {missingExpenseTypeCount > 0 && <i className="ri-lock-line ml-1"></i>}
                 </button>
-                
                 <button
                   onClick={handleExportPdf}
                   className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center gap-2 whitespace-nowrap"
@@ -715,67 +735,42 @@ export default function Report606Page() {
                   Datos del Reporte ({reportData.length} registros)
                 </h2>
               </div>
-              
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        RNC/Cédula
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        NCF
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Monto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        ITBIS
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Retención
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Forma Pago
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RNC/Cédula</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Gasto</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NCF</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bienes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ITBIS</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forma Pago</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {reportData.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.rnc_cedula}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.ncf}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.fecha_comprobante}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.monto_facturado)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.itbis_facturado)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.itbis_retenido)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.forma_pago}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {reportData.map((row) => (
+                    <tr key={row.id} className={`hover:bg-gray-50 ${!row.tipo_bienes_servicios ? 'bg-red-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.rnc_cedula}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${row.tipo_bienes_servicios ? 'text-gray-900' : 'text-red-600 font-semibold'}`}>
+                        {row.tipo_bienes_servicios || '⚠️ Sin especificar'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ncf}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.fecha_comprobante}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.servicios_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.bienes_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.itbis_facturado)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.forma_pago}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
-        )}
-      </div>
-    </DashboardLayout>
-  );
+          </div>
+        </>
+      )}
+    </div>
+  </DashboardLayout>
+);
 }
