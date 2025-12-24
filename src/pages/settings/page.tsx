@@ -4,6 +4,7 @@ import { settingsService } from '../../services/database';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useAuth } from '../../hooks/useAuth';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 interface SettingsSection {
   id: string;
@@ -55,9 +56,15 @@ const settingsSections: SettingsSection[] = [
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; sectionName: string; requiredPlan: string }>({
+    show: false,
+    sectionName: '',
+    requiredPlan: ''
+  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -488,33 +495,70 @@ export default function SettingsPage() {
 
         {/* Settings Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSections.map((section) => (
-            <div
-              key={section.id}
-              onClick={() => handleSectionClick(section.href)}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                    <i className={`${section.icon} text-blue-600 text-xl`}></i>
+          {filteredSections.map((section) => {
+            const isRestricted = !canAccessRoute(section.href);
+            const requiredPlan = isRestricted ? getRequiredPlanForRoute(section.href) : '';
+
+            if (isRestricted) {
+              return (
+                <div
+                  key={section.id}
+                  onClick={() => setRestrictedModal({ show: true, sectionName: section.name, requiredPlan })}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group opacity-75"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <i className={`${section.icon} text-gray-400 text-xl`}></i>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-500">
+                          {section.name}
+                        </h3>
+                        <i className="ri-lock-2-fill text-amber-500"></i>
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {section.description}
+                      </p>
+                      <div className="mt-3 flex items-center text-sm text-amber-600">
+                        <span>Requiere {requiredPlan}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                    {section.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {section.description}
-                  </p>
-                  <div className="mt-3 flex items-center text-sm text-blue-600 group-hover:text-blue-700">
-                    <span>Configurar</span>
-                    <i className="ri-arrow-right-line ml-1"></i>
+              );
+            }
+
+            return (
+              <div
+                key={section.id}
+                onClick={() => handleSectionClick(section.href)}
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
+              >
+                <div className="flex items-start space-x-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                      <i className={`${section.icon} text-blue-600 text-xl`}></i>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                      {section.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {section.description}
+                    </p>
+                    <div className="mt-3 flex items-center text-sm text-blue-600 group-hover:text-blue-700">
+                      <span>Configurar</span>
+                      <i className="ri-arrow-right-line ml-1"></i>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Quick Actions */}
@@ -657,6 +701,53 @@ export default function SettingsPage() {
                     className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Restableciendo...' : 'Restablecer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de módulo restringido */}
+        {restrictedModal.show && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' })}
+            />
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center">
+                <div className="w-14 h-14 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-2 backdrop-blur-sm">
+                  <i className="ri-lock-2-line text-3xl text-white"></i>
+                </div>
+                <h3 className="text-lg font-bold text-white">Función Premium</h3>
+                <p className="text-amber-100 text-sm">Acceso restringido</p>
+              </div>
+              <div className="p-4">
+                <div className="text-center mb-4">
+                  <p className="text-gray-600 text-sm">
+                    <span className="font-semibold text-gray-900">"{restrictedModal.sectionName}"</span> no está disponible en tu plan actual.
+                  </p>
+                  <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-100">
+                    <p className="text-xs text-gray-500">Plan requerido:</p>
+                    <p className="font-bold text-blue-600">{restrictedModal.requiredPlan}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' })}
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRestrictedModal({ show: false, sectionName: '', requiredPlan: '' });
+                      window.REACT_APP_NAVIGATE('/plans');
+                    }}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  >
+                    Ver Planes
                   </button>
                 </div>
               </div>

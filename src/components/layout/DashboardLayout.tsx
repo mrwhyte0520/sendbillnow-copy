@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { usePlans } from '../../hooks/usePlans';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService } from '../../services/database';
+import InitialSetupModal from '../common/InitialSetupModal';
 import { supabase } from '../../lib/supabase';
 
 interface DashboardLayoutProps {
@@ -1103,6 +1104,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </div>
       )}
+
+      {/* Modal de configuración inicial para planes premium */}
+      <InitialSetupModal />
     </div>
   );
 }
