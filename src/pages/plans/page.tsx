@@ -4,6 +4,9 @@ import { usePlans } from '../../hooks/usePlans';
 import { useAuth } from '../../hooks/useAuth';
 import { notifyPlanPurchase } from '../../utils/notify';
 import { referralsService } from '../../services/database';
+import { Elements } from '@stripe/react-stripe-js';
+import { getStripe } from '../../services/stripe';
+import StripePaymentForm from '../../components/StripePaymentForm';
 
 interface Plan {
   id: string;
@@ -22,6 +25,7 @@ export default function PlansPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [stripePromise] = useState(() => getStripe());
   const { user } = useAuth();
   
   const { 
@@ -108,17 +112,14 @@ export default function PlansPage() {
     setShowPaymentModal(true);
   };
 
-  const handlePayment = async () => {
+  const handlePaymentSuccess = async () => {
     if (!selectedPlan) return;
-    
-    setIsProcessingPayment(true);
     
     try {
       const result = await subscribeToPlan(selectedPlan);
       
       if (result.success) {
         setShowPaymentModal(false);
-        // Mostrar mensaje de éxito
         alert('¡Suscripción exitosa! Bienvenido a Contabi RD.');
         try {
           const plan = plans.find(p => p.id === selectedPlan);
@@ -128,7 +129,7 @@ export default function PlansPage() {
             planId: selectedPlan,
             planName: plan?.name || selectedPlan,
             amount: plan?.price ?? 0,
-            method: (result as any)?.method || 'desconocido',
+            method: 'stripe',
             purchasedAt: new Date().toISOString(),
           });
           // Atribuir comisión por referido (15%) si aplica
@@ -138,7 +139,6 @@ export default function PlansPage() {
             const planAmount = plan?.price ?? 0;
             if (ref && buyerId && planAmount > 0) {
               const refRow = await referralsService.getReferrerByCode(ref);
-              // Evitar auto-referido
               if (refRow && refRow.user_id !== buyerId) {
                 const commission = Number((planAmount * 0.15).toFixed(2));
                 await referralsService.createCommission({
@@ -158,8 +158,6 @@ export default function PlansPage() {
     } catch (error) {
       console.error('Payment error:', error);
       alert('Error al procesar el pago. Intente nuevamente.');
-    } finally {
-      setIsProcessingPayment(false);
     }
   };
 
@@ -421,65 +419,29 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h5 className="font-semibold text-gray-900 mb-2">Incluye:</h5>
-                  <ul className="space-y-1">
-                    {selectedPlanData.features.slice(0, 4).map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-700">
-                        <i className="ri-check-line text-green-500 mr-2"></i>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {trialStatus === 'expired' && (
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <div className="flex items-center text-red-800">
-                      <i className="ri-alarm-warning-line mr-2"></i>
-                      <span className="font-semibold">Período de prueba expirado</span>
-                    </div>
-                    <p className="text-sm text-red-600 mt-1">
-                      Debes completar el pago para reactivar tu acceso a Contabi RD.
-                    </p>
+              {trialStatus === 'expired' && (
+                <div className="bg-red-50 rounded-lg p-4 mb-4">
+                  <div className="flex items-center text-red-800">
+                    <i className="ri-alarm-warning-line mr-2"></i>
+                    <span className="font-semibold">Período de prueba expirado</span>
                   </div>
-                )}
-
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center text-green-600 mb-2">
-                    <i className="ri-shield-check-line mr-2"></i>
-                    <span className="font-semibold">Pago seguro y protegido</span>
-                  </div>
-                  <p className="text-sm text-blue-600 mt-1">
-                    Procesamiento seguro y confiable
+                  <p className="text-sm text-red-600 mt-1">
+                    Debes completar el pago para reactivar tu acceso a Contabi RD.
                   </p>
                 </div>
+              )}
 
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => setShowPaymentModal(false)}
-                    disabled={isProcessingPayment}
-                    className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handlePayment}
-                    disabled={isProcessingPayment}
-                    className="flex-1 py-2 px-4 bg-gradient-to-r from-navy-600 to-navy-700 text-white rounded-lg hover:from-navy-700 hover:to-navy-800 disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {isProcessingPayment ? (
-                      <div className="flex items-center justify-center">
-                        <i className="ri-loader-4-line animate-spin mr-2"></i>
-                        Procesando...
-                      </div>
-                    ) : (
-                      'Proceder al Pago'
-                    )}
-                  </button>
-                </div>
-              </div>
+              <Elements stripe={stripePromise}>
+                <StripePaymentForm
+                  planId={selectedPlan}
+                  planName={selectedPlanData.name}
+                  amount={selectedPlanData.price}
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={() => setShowPaymentModal(false)}
+                  userId={user?.id || ''}
+                  userEmail={user?.email || ''}
+                />
+              </Elements>
             </div>
           </div>
         )}
