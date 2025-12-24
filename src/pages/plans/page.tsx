@@ -584,56 +584,37 @@ export default function PlansPage() {
             {/* Overlay */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             
-            {/* Modal */}
-            <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-              {/* Header con gradiente verde */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-8 text-center">
-                <div className="w-24 h-24 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm animate-bounce">
-                  <i className="ri-check-line text-5xl text-white"></i>
+            {/* Modal - más compacto */}
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200">
+              {/* Header con gradiente verde - más pequeño */}
+              <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-4 text-center">
+                <div className="w-14 h-14 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-2 backdrop-blur-sm">
+                  <i className="ri-check-line text-3xl text-white"></i>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">¡Pago Exitoso!</h3>
-                <p className="text-green-100">Tu suscripción ha sido activada</p>
+                <h3 className="text-lg font-bold text-white">¡Pago Exitoso!</h3>
+                <p className="text-green-100 text-sm">Tu suscripción ha sido activada</p>
               </div>
 
-              {/* Contenido */}
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-4 shadow-lg">
-                    <i className="ri-vip-crown-2-fill text-3xl text-white"></i>
+              {/* Contenido - más compacto */}
+              <div className="p-4">
+                <div className="text-center mb-4">
+                  <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-2 shadow-md">
+                    <i className="ri-vip-crown-2-fill text-xl text-white"></i>
                   </div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                  <h4 className="text-base font-bold text-gray-900">
                     Bienvenido a {successPlanName}
                   </h4>
-                  <p className="text-gray-600">
-                    Ahora tienes acceso a todas las funcionalidades de tu nuevo plan.
+                  <p className="text-gray-600 text-sm">
+                    Acceso completo a tu nuevo plan.
                   </p>
                 </div>
 
-                {/* Beneficios */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Tu plan incluye:</p>
-                  <ul className="space-y-2">
-                    <li className="flex items-center text-sm text-gray-700">
-                      <i className="ri-check-double-line text-green-500 mr-2"></i>
-                      Acceso a todos los módulos del plan
-                    </li>
-                    <li className="flex items-center text-sm text-gray-700">
-                      <i className="ri-check-double-line text-green-500 mr-2"></i>
-                      Soporte técnico incluido
-                    </li>
-                    <li className="flex items-center text-sm text-gray-700">
-                      <i className="ri-check-double-line text-green-500 mr-2"></i>
-                      Actualizaciones automáticas
-                    </li>
-                  </ul>
-                </div>
-
                 {/* Mensaje de refresh */}
-                <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 mb-4">
+                <div className="bg-amber-50 rounded-lg p-3 border border-amber-200 mb-3">
                   <div className="flex items-center">
-                    <i className="ri-refresh-line text-amber-600 mr-2 animate-spin"></i>
-                    <p className="text-sm text-amber-800">
-                      El sistema se actualizará automáticamente en unos segundos...
+                    <i className="ri-refresh-line text-amber-600 mr-2 animate-spin text-sm"></i>
+                    <p className="text-xs text-amber-800">
+                      El sistema se actualizará en unos segundos...
                     </p>
                   </div>
                 </div>
@@ -641,7 +622,7 @@ export default function PlansPage() {
                 {/* Botón */}
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+                  className="w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center"
                 >
                   <i className="ri-refresh-line mr-2"></i>
                   Actualizar Ahora
