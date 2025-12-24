@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlans } from '../../hooks/usePlans';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
 
@@ -36,6 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { currentPlan, getTrialStatus, trialInfo } = usePlans();
+  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
   const [kpiCounts, setKpiCounts] = useState({ invoices: 0, customers: 0, products: 0 });
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -397,22 +399,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       : null;
     const hasFilteredSubmenu = submenu && submenu.length > 0;
 
+    // Verificar si el módulo está restringido por plan
+    const isPlanRestricted = !canAccessRoute(item.href);
+    const requiredPlan = isPlanRestricted ? getRequiredPlanForRoute(item.href) : '';
+
+    // Handler para items restringidos
+    const handleRestrictedClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (confirm(`Este módulo requiere el plan "${requiredPlan}". ¿Deseas ver los planes disponibles?`)) {
+        navigate('/plans');
+      }
+    };
+
     return (
       <div key={item.name} className="mb-1">
         <div className="flex items-center">
-          <Link
-            to={item.href}
-            className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 ${
-              item.current
-                ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-[1.02]'
-                : 'text-slate-300 hover:bg-slate-700/50 hover:text-white hover:transform hover:scale-[1.01]'
-            }`}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <i className={`${item.icon} mr-3 text-lg flex-shrink-0`}></i>
-            <span className="truncate">{item.name}</span>
-          </Link>
-          {hasFilteredSubmenu && (
+          {isPlanRestricted ? (
+            // Item restringido por plan - mostrar con candado
+            <div
+              onClick={handleRestrictedClick}
+              className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-slate-500 hover:bg-slate-700/30 cursor-pointer"
+              title={`Requiere ${requiredPlan}`}
+            >
+              <i className={`${item.icon} mr-3 text-lg flex-shrink-0 opacity-50`}></i>
+              <span className="truncate opacity-70">{item.name}</span>
+              <i className="ri-lock-2-fill ml-auto text-amber-500/70 text-sm"></i>
+            </div>
+          ) : (
+            // Item permitido
+            <Link
+              to={item.href}
+              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 ${
+                item.current
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-[1.02]'
+                  : 'text-slate-300 hover:bg-slate-700/50 hover:text-white hover:transform hover:scale-[1.01]'
+              }`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <i className={`${item.icon} mr-3 text-lg flex-shrink-0`}></i>
+              <span className="truncate">{item.name}</span>
+            </Link>
+          )}
+          {hasFilteredSubmenu && !isPlanRestricted && (
             <button
               onClick={() => toggleSubmenu(item.href)}
               className="p-2 ml-1 text-slate-400 hover:text-white transition-colors duration-200 rounded-md hover:bg-slate-700/50"
@@ -421,22 +450,46 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           )}
         </div>
-        {hasFilteredSubmenu && isExpanded && (
+        {hasFilteredSubmenu && isExpanded && !isPlanRestricted && (
           <div className="ml-6 mt-2 space-y-1 border-l border-slate-700 pl-4">
-            {submenu!.map((subItem: any) => (
-              <Link
-                key={subItem.name}
-                to={subItem.href}
-                className={`block px-3 py-2 text-sm rounded-md transition-all duration-200 ${
-                  location.pathname === subItem.href
-                    ? 'text-blue-400 bg-slate-700/50 font-medium'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/30'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                {subItem.name}
-              </Link>
-            ))}
+            {submenu!.map((subItem: any) => {
+              const isSubItemRestricted = !canAccessRoute(subItem.href);
+              const subRequiredPlan = isSubItemRestricted ? getRequiredPlanForRoute(subItem.href) : '';
+
+              if (isSubItemRestricted) {
+                return (
+                  <div
+                    key={subItem.name}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (confirm(`Este módulo requiere el plan "${subRequiredPlan}". ¿Deseas ver los planes disponibles?`)) {
+                        navigate('/plans');
+                      }
+                    }}
+                    className="flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 text-slate-500 hover:bg-slate-700/30 cursor-pointer"
+                    title={`Requiere ${subRequiredPlan}`}
+                  >
+                    <span className="truncate opacity-70">{subItem.name}</span>
+                    <i className="ri-lock-2-fill ml-auto text-amber-500/70 text-xs"></i>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={subItem.name}
+                  to={subItem.href}
+                  className={`block px-3 py-2 text-sm rounded-md transition-all duration-200 ${
+                    location.pathname === subItem.href
+                      ? 'text-blue-400 bg-slate-700/50 font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/30'
+                  }`}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  {subItem.name}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
