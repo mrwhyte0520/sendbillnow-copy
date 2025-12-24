@@ -611,17 +611,29 @@ const GeneralJournalPage = () => {
 
     const rowsHtml = sortedEntries
       .map(
-        (entry) => `
+        (entry) => {
+          const statusLabel = entry.status === 'posted' ? 'Contabilizado' : 
+                              entry.status === 'draft' ? 'Borrador' : 
+                              entry.status === 'reversed' ? 'Anulado' : entry.status;
+          const statusColor = entry.status === 'posted' ? '#166534' : 
+                              entry.status === 'draft' ? '#854d0e' : 
+                              entry.status === 'reversed' ? '#dc2626' : '#374151';
+          const statusBg = entry.status === 'posted' ? '#dcfce7' : 
+                           entry.status === 'draft' ? '#fef9c3' : 
+                           entry.status === 'reversed' ? '#fee2e2' : '#f3f4f6';
+          return `
         <tr>
           <td>${entry.entry_number}</td>
           <td>${formatDate(entry.entry_date)}</td>
           <td>${getEntryDocumentType(entry)}</td>
           <td>${entry.supplier_name || entry.vendor_name || entry.payee_name || entry.counterparty || ''}</td>
           <td>${entry.description || ''}</td>
-                    <td style="text-align:right;">${formatAmount(entry.total_debit)}</td>
+          <td style="text-align:right;">${formatAmount(entry.total_debit)}</td>
           <td style="text-align:right;">${formatAmount(entry.total_credit)}</td>
+          <td style="text-align:center;"><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:10px;font-size:11px;">${statusLabel}</span></td>
         </tr>
-      `,
+      `;
+        },
       )
       .join('');
 
@@ -652,6 +664,7 @@ const GeneralJournalPage = () => {
                 <th>Descripción</th>
                 <th>Débito</th>
                 <th>Crédito</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -659,9 +672,10 @@ const GeneralJournalPage = () => {
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="6" style="text-align:right;">Totales:</td>
+                <td colspan="5" style="text-align:right;">Totales:</td>
                 <td style="text-align:right;">${formatAmount(totalDebitsFiltered)}</td>
                 <td style="text-align:right;">${formatAmount(totalCreditsFiltered)}</td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
@@ -746,8 +760,12 @@ const GeneralJournalPage = () => {
     return (b.entry_number || '').localeCompare(a.entry_number || '');
   });
 
-  const totalDebitsFiltered = filteredEntries.reduce((sum, entry) => sum + (entry.total_debit || 0), 0);
-  const totalCreditsFiltered = filteredEntries.reduce((sum, entry) => sum + (entry.total_credit || 0), 0);
+  const totalDebitsFiltered = filteredEntries
+    .filter(entry => entry.status !== 'reversed')
+    .reduce((sum, entry) => sum + (entry.total_debit || 0), 0);
+  const totalCreditsFiltered = filteredEntries
+    .filter(entry => entry.status !== 'reversed')
+    .reduce((sum, entry) => sum + (entry.total_credit || 0), 0);
 
   const handlePeriodChange = (periodId: string) => {
     setSelectedPeriodId(periodId);
@@ -1144,13 +1162,15 @@ const GeneralJournalPage = () => {
                     >
                       <i className="ri-eye-line"></i>
                     </button>
-                    <button 
-                      className="text-gray-600 hover:text-gray-900 mr-3" 
-                      title="Editar"
-                      onClick={() => handleEditClick(entry)}
-                    >
-                      <i className="ri-edit-line"></i>
-                    </button>
+                    {entry.status !== 'reversed' && (
+                      <button 
+                        className="text-gray-600 hover:text-gray-900 mr-3" 
+                        title="Editar"
+                        onClick={() => handleEditClick(entry)}
+                      >
+                        <i className="ri-edit-line"></i>
+                      </button>
+                    )}
                     <button
                       className="text-green-600 hover:text-green-900 mr-3"
                       title="Imprimir"
@@ -1158,13 +1178,15 @@ const GeneralJournalPage = () => {
                     >
                       <i className="ri-printer-line"></i>
                     </button>
-                    <button 
-                      className="text-red-600 hover:text-red-900" 
-                      title="Anular"
-                      onClick={() => handleDeleteEntry(entry.id)}
-                    >
-                      <i className="ri-delete-bin-line"></i>
-                    </button>
+                    {entry.status !== 'reversed' && (
+                      <button 
+                        className="text-red-600 hover:text-red-900" 
+                        title="Anular"
+                        onClick={() => handleDeleteEntry(entry.id)}
+                      >
+                        <i className="ri-delete-bin-line"></i>
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1437,6 +1459,7 @@ const GeneralJournalPage = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Débito</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crédito</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1451,6 +1474,19 @@ const GeneralJournalPage = () => {
                         <td className="px-4 py-3 text-sm text-gray-700">{entry.description}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right">RD${formatAmount(entry.total_debit)}</td>
                         <td className="px-4 py-3 text-sm text-gray-900 text-right">RD${formatAmount(entry.total_credit)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            entry.status === 'posted' ? 'bg-green-100 text-green-800' :
+                            entry.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                            entry.status === 'reversed' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {entry.status === 'posted' ? 'Contabilizado' : 
+                             entry.status === 'draft' ? 'Borrador' : 
+                             entry.status === 'reversed' ? 'Anulado' : 
+                             entry.status}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1459,6 +1495,7 @@ const GeneralJournalPage = () => {
                       <td colSpan={5} className="px-4 py-3 text-right font-semibold text-gray-900">Totales:</td>
                       <td className="px-4 py-3 font-bold text-gray-900 text-right">RD${formatAmount(totalDebitsFiltered)}</td>
                       <td className="px-4 py-3 font-bold text-gray-900 text-right">RD${formatAmount(totalCreditsFiltered)}</td>
+                      <td></td>
                     </tr>
                   </tfoot>
                 </table>

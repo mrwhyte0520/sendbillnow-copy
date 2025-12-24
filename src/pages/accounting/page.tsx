@@ -880,6 +880,14 @@ export default function AccountingPage() {
                                 </tr>
                               ))}
                           </tbody>
+                          <tfoot className="bg-gray-100">
+                            <tr>
+                              <td colSpan={2} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Total:</td>
+                              <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                RD${formatAmount(getAccountsByType(breakdownType).reduce((sum, acc) => sum + (acc.balance || 0), 0))}
+                              </td>
+                            </tr>
+                          </tfoot>
                         </table>
                         {getAccountsByType(breakdownType).length === 0 && (
                           <div className="p-4 text-sm text-gray-500">No hay cuentas para este tipo.</div>
@@ -914,6 +922,19 @@ export default function AccountingPage() {
                                 </tr>
                               ))}
                             </tbody>
+                            {breakdownLines.length > 0 && (
+                              <tfoot className="bg-gray-100">
+                                <tr>
+                                  <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Totales:</td>
+                                  <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                    RD${formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.debit_amount || 0), 0))}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
+                                    RD${formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.credit_amount || 0), 0))}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            )}
                           </table>
                           {breakdownLines.length === 0 && (
                             <div className="p-4 text-sm text-gray-500">No hay movimientos recientes para estas cuentas.</div>

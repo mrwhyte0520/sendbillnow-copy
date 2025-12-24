@@ -114,7 +114,7 @@ export default function PayrollPage() {
         phone: e.phone || '',
         department_id: e.department_id || '',
         position_id: e.position_id || '',
-        salary: Number(e.salary) || 0,
+        salary: Number(e.base_salary || e.salary) || 0,
         hire_date: e.hire_date || new Date().toISOString().slice(0, 10),
         status: (e.status as 'active' | 'inactive') || 'active',
         bank_account: e.bank_account || undefined,

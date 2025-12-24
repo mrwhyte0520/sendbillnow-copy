@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { bankAccountsService, bankTransfersService, chartAccountsService, financialReportsService, suppliersService, apInvoicesService } from '../../services/database';
+import { formatAmount } from '../../utils/numberFormat';
 
 interface BankTransfer {
   id: string;
@@ -283,7 +284,7 @@ export default function BankTransfersPage() {
           );
         } else if (originBalance >= 0 && montoNumber > originBalance + 0.01) {
           alert(
-            `Advertencia: el monto a transferir (${montoNumber.toLocaleString()}) excede el saldo contable estimado de la cuenta (${originBalance.toLocaleString()}). ` +
+            `Advertencia: el monto a transferir (${formatAmount(montoNumber)}) excede el saldo contable estimado de la cuenta (${formatAmount(originBalance)}). ` +
               'Verifique sus saldos bancarios reales antes de confirmar la operación en el banco.'
           );
         }
@@ -639,7 +640,7 @@ export default function BankTransfersPage() {
                       Seleccionar todas
                     </label>
                     <div className="text-xs text-gray-600">
-                      Total asignado: {form.moneda} {Object.values(selectedInvoices).reduce((sum, val) => sum + val, 0).toLocaleString()}
+                      Total asignado: {form.moneda} {formatAmount(Object.values(selectedInvoices).reduce((sum, val) => sum + val, 0))}
                     </div>
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -666,7 +667,7 @@ export default function BankTransfersPage() {
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900">{inv.invoice_number}</div>
                           <div className="text-xs text-gray-500">
-                            Fecha: {inv.invoice_date} | Saldo: {form.moneda} {inv.balance.toLocaleString()}
+                            Fecha: {inv.invoice_date} | Saldo: {form.moneda} {formatAmount(inv.balance)}
                           </div>
                         </div>
                         <input
@@ -776,7 +777,7 @@ export default function BankTransfersPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{tr.bancoOrigen}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{destino}</td>
                         <td className="px-4 py-2 text-right text-gray-900">
-                          {tr.moneda} {tr.monto.toLocaleString()}
+                          {tr.moneda} {formatAmount(tr.monto)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{statusLabel}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{tr.referencia || '-'}</td>

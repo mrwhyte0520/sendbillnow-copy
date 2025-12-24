@@ -7045,7 +7045,7 @@ export const payrollService = {
       };
 
       for (const employee of employees) {
-        const grossSalary = Number(employee.salary) || 0;
+        const grossSalary = Number(employee.base_salary || employee.salary) || 0;
 
         // Obtener deducciones del empleado
         const deductions = await this.getEmployeeDeductions(userId, employee.id, periodStart, periodEnd);

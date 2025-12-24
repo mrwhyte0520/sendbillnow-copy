@@ -242,9 +242,10 @@ export default function PayrollPeriodsPage() {
       }
 
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating payroll period:', error);
-      alert('Error al crear el período de nómina.');
+      const errorMessage = error?.message || 'Error desconocido al crear el período de nómina.';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

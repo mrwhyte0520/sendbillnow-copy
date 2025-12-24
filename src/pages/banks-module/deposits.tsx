@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { bankAccountsService, bankDepositsService, chartAccountsService, journalEntriesService, financialReportsService } from '../../services/database';
+import { formatAmount } from '../../utils/numberFormat';
 
 interface BankDeposit {
   id: string;
@@ -151,8 +152,8 @@ export default function BankDepositsPage() {
           alert(
             `❌ Saldo insuficiente en cuenta de origen\n\n` +
             `Cuenta: ${originAcct.code} - ${originAcct.name}\n` +
-            `Saldo disponible: RD$${saldoDisponible.toFixed(2)}\n` +
-            `Monto a depositar: RD$${montoNumber.toFixed(2)}\n\n` +
+            `Saldo disponible: RD$${formatAmount(saldoDisponible)}\n` +
+            `Monto a depositar: RD$${formatAmount(montoNumber)}\n\n` +
             `No puede depositar más dinero del que tiene disponible.`
           );
           return;
@@ -398,7 +399,7 @@ export default function BankDepositsPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{dep.banco}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{dep.cuentaBanco}</td>
                         <td className="px-4 py-2 text-right text-gray-900">
-                          {dep.moneda} {dep.monto.toLocaleString()}
+                          {dep.moneda} {formatAmount(dep.monto)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{currencyLabel}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{dep.referencia || '-'}</td>

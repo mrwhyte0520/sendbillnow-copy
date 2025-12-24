@@ -116,7 +116,7 @@ export default function PayrollProcessPage() {
         if (deptEmployees.length === 0) return;
 
         const deptPayroll = deptEmployees.reduce(
-          (sum: number, e: any) => sum + (Number(e.salary) || 0),
+          (sum: number, e: any) => sum + (Number(e.base_salary || e.salary) || 0),
           0
         );
         const budget = Number(dept.budget) || 0;

@@ -193,6 +193,9 @@ const GeneralLedgerPage: FC = () => {
       setLoading(true);
       const isAll = accountId === 'ALL';
 
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+
       let query = supabase
         .from('journal_entry_lines')
         .select(`
@@ -201,9 +204,11 @@ const GeneralLedgerPage: FC = () => {
           description,
           debit_amount,
           credit_amount,
-          journal_entries:journal_entries!inner(entry_date, entry_number, reference),
+          journal_entries:journal_entries!inner(entry_date, entry_number, reference, status, user_id),
           chart_accounts:chart_accounts!inner(id, code, name, normal_balance)
-        `);
+        `)
+        .eq('journal_entries.user_id', tenantId)
+        .eq('journal_entries.status', 'posted');
 
       if (!isAll) {
         query = query.eq('account_id', accountId);

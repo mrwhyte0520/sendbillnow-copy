@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { bankAccountsService, bankCreditsService, chartAccountsService } from '../../services/database';
+import { formatAmount } from '../../utils/numberFormat';
 
 interface BankCredit {
   id: string;
@@ -423,10 +424,10 @@ export default function BankCreditsPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{cr.cuentaBanco}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{cr.numeroCredito}</td>
                         <td className="px-4 py-2 text-right text-gray-900">
-                          {cr.moneda} {cr.monto.toLocaleString()}
+                          {cr.moneda} {formatAmount(cr.monto)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{currencyLabel}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-gray-900">{cr.tasaInteres != null ? cr.tasaInteres.toFixed(2) : '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-900">{cr.tasaInteres != null ? formatAmount(cr.tasaInteres) : '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{statusLabel}</td>
                         <td className="px-4 py-2 text-gray-900">{cr.descripcion}</td>
                       </tr>

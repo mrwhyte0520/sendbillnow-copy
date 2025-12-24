@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { bankAccountsService, bankChargesService, chartAccountsService } from '../../services/database';
+import { formatAmount } from '../../utils/numberFormat';
 
 interface BankCharge {
   id: string;
@@ -298,7 +299,7 @@ export default function BankChargesPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{charge.banco}</td>
                         <td className="px-4 py-2 text-gray-900">{charge.descripcion}</td>
                         <td className="px-4 py-2 text-right text-gray-900">
-                          {charge.moneda} {charge.monto.toLocaleString()}
+                          {charge.moneda} {formatAmount(charge.monto)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{currencyLabel}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-900">{charge.ncf || '-'}</td>

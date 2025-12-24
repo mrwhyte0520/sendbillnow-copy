@@ -21,6 +21,7 @@ import {
   receiptsService,
   receiptApplicationsService,
 } from '../../../services/database';
+import { supabase } from '../../../lib/supabase';
 import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
@@ -68,7 +69,14 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showViewInvoiceModal, setShowViewInvoiceModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceMovements, setInvoiceMovements] = useState<any[]>([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
+  const [movementLines, setMovementLines] = useState<any[]>([]);
+  const [showMovementModal, setShowMovementModal] = useState(false);
+  const [loadingMovementLines, setLoadingMovementLines] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
@@ -1037,12 +1045,59 @@ export default function InvoicesPage() {
     setShowPaymentModal(true);
   };
 
-  const handleViewInvoice = (invoiceId: string) => {
+  const handleViewInvoice = async (invoiceId: string) => {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) return;
-    alert(
-      `Factura: ${invoice.invoiceNumber}\nCliente: ${invoice.customerName}\nMonto: RD$ ${formatAmount(invoice.amount)}\nPagado: RD$ ${formatAmount(invoice.paidAmount)}\nSaldo: RD$ ${formatAmount(invoice.balance)}`,
-    );
+    setSelectedInvoice(invoice);
+    setShowViewInvoiceModal(true);
+    setLoadingMovements(true);
+    setInvoiceMovements([]);
+    
+    try {
+      // Buscar asientos relacionados con esta factura
+      const { data: entries, error } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .or(`description.ilike.%${invoice.invoiceNumber}%,reference.ilike.%${invoice.invoiceNumber}%,entry_number.ilike.%${invoice.invoiceNumber}%`)
+        .order('entry_date', { ascending: false });
+      
+      if (error) throw error;
+      setInvoiceMovements(entries || []);
+    } catch (error) {
+      console.error('Error loading invoice movements:', error);
+      setInvoiceMovements([]);
+    } finally {
+      setLoadingMovements(false);
+    }
+  };
+
+  const handleViewMovement = async (movement: any) => {
+    setSelectedMovement(movement);
+    setShowMovementModal(true);
+    setLoadingMovementLines(true);
+    try {
+      const { data, error } = await supabase
+        .from('journal_entry_lines')
+        .select(`
+          id,
+          account_id,
+          description,
+          debit_amount,
+          credit_amount,
+          line_number,
+          chart_accounts(id, code, name)
+        `)
+        .eq('journal_entry_id', movement.id)
+        .order('line_number', { ascending: true });
+      
+      if (error) throw error;
+      setMovementLines(data || []);
+    } catch (error) {
+      console.error('Error loading movement lines:', error);
+      setMovementLines([]);
+    } finally {
+      setLoadingMovementLines(false);
+    }
   };
 
   const handlePrintInvoice = (invoiceId: string) => {
@@ -1402,14 +1457,15 @@ export default function InvoicesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleRegisterPayment(invoice)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Registrar Pago"
-                          disabled={invoice.status === 'cancelled' || invoice.balance <= 0}
-                        >
-                          <i className="ri-money-dollar-circle-line"></i>
-                        </button>
+                        {invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.balance > 0 && (
+                          <button
+                            onClick={() => handleRegisterPayment(invoice)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Registrar Pago"
+                          >
+                            <i className="ri-money-dollar-circle-line"></i>
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleViewInvoice(invoice.id)}
                           className="text-blue-600 hover:text-blue-900" 
@@ -2014,6 +2070,375 @@ export default function InvoicesPage() {
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Descargar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View Invoice Modal */}
+        {showViewInvoiceModal && selectedInvoice && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Factura #{selectedInvoice.invoiceNumber}</h3>
+                  <p className="text-blue-100 text-sm">Detalles de la factura</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowViewInvoiceModal(false);
+                    setSelectedInvoice(null);
+                  }}
+                  className="text-white hover:text-blue-200 transition-colors"
+                >
+                  <i className="ri-close-line text-2xl"></i>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Status Badge */}
+                <div className="flex justify-between items-center">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(selectedInvoice.status)}`}>
+                    {getStatusName(selectedInvoice.status)}
+                  </span>
+                  {selectedInvoice.daysOverdue > 0 && (
+                    <span className="text-red-600 text-sm font-medium">
+                      <i className="ri-alarm-warning-line mr-1"></i>
+                      {selectedInvoice.daysOverdue} días vencida
+                    </span>
+                  )}
+                </div>
+
+                {/* Customer & Invoice Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                      <i className="ri-user-line mr-2"></i>Cliente
+                    </h4>
+                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.customerName}</p>
+                    {(() => {
+                      const customer = customers.find(c => c.id === selectedInvoice.customerId);
+                      return customer ? (
+                        <div className="mt-2 space-y-1 text-sm text-gray-600">
+                          {customer.document && <p><i className="ri-id-card-line mr-2"></i>{customer.document}</p>}
+                          {customer.phone && <p><i className="ri-phone-line mr-2"></i>{customer.phone}</p>}
+                          {customer.email && <p><i className="ri-mail-line mr-2"></i>{customer.email}</p>}
+                          {customer.address && <p><i className="ri-map-pin-line mr-2"></i>{customer.address}</p>}
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                      <i className="ri-calendar-line mr-2"></i>Información
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Fecha de emisión:</span>
+                        <span className="font-medium text-gray-900">{formatDate(selectedInvoice.date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Fecha de vencimiento:</span>
+                        <span className="font-medium text-gray-900">{formatDate(selectedInvoice.dueDate)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                    <i className="ri-list-check mr-2"></i>Productos/Servicios
+                  </h4>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Descripción</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Cantidad</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Precio</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {selectedInvoice.items.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-gray-900">{item.description}</td>
+                            <td className="px-4 py-3 text-right text-gray-700">{item.quantity}</td>
+                            <td className="px-4 py-3 text-right text-gray-700">RD$ {formatAmount(item.price)}</td>
+                            <td className="px-4 py-3 text-right font-medium text-gray-900">RD$ {formatAmount(item.total)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium text-gray-900">RD$ {formatAmount(selectedInvoice.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">ITBIS:</span>
+                      <span className="font-medium text-gray-900">RD$ {formatAmount(selectedInvoice.tax)}</span>
+                    </div>
+                    <div className="border-t border-gray-300 my-2"></div>
+                    <div className="flex justify-between text-lg">
+                      <span className="font-semibold text-gray-700">Total:</span>
+                      <span className="font-bold text-blue-600">RD$ {formatAmount(selectedInvoice.amount)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Pagado:</span>
+                      <span className="font-medium text-green-600">RD$ {formatAmount(selectedInvoice.paidAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-lg">
+                      <span className="font-semibold text-gray-700">Saldo pendiente:</span>
+                      <span className={`font-bold ${selectedInvoice.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        RD$ {formatAmount(selectedInvoice.balance)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Movimientos Contables */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                    <i className="ri-book-2-line mr-2"></i>Movimientos Contables
+                  </h4>
+                  {loadingMovements ? (
+                    <div className="text-center py-6 text-gray-500">
+                      <i className="ri-loader-4-line animate-spin text-2xl"></i>
+                      <p className="mt-2">Cargando movimientos...</p>
+                    </div>
+                  ) : invoiceMovements.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-500">
+                      <i className="ri-file-list-3-line text-3xl mb-2"></i>
+                      <p>No hay movimientos contables registrados para esta factura</p>
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-indigo-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-indigo-700">Fecha</th>
+                            <th className="px-4 py-3 text-left font-semibold text-indigo-700">No. Asiento</th>
+                            <th className="px-4 py-3 text-left font-semibold text-indigo-700">Descripción</th>
+                            <th className="px-4 py-3 text-right font-semibold text-indigo-700">Débito</th>
+                            <th className="px-4 py-3 text-right font-semibold text-indigo-700">Crédito</th>
+                            <th className="px-4 py-3 text-center font-semibold text-indigo-700">Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {invoiceMovements.map((mov: any) => (
+                            <tr key={mov.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-gray-900">{formatDate(mov.entry_date)}</td>
+                              <td className="px-4 py-3 font-medium text-indigo-600">{mov.entry_number}</td>
+                              <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={mov.description}>
+                                {mov.description}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                RD$ {formatAmount(mov.total_debit || 0)}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                RD$ {formatAmount(mov.total_credit || 0)}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() => handleViewMovement(mov)}
+                                  className="text-indigo-600 hover:text-indigo-900"
+                                  title="Ver detalle del asiento"
+                                >
+                                  <i className="ri-eye-line text-lg"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                {selectedInvoice.status !== 'paid' && selectedInvoice.status !== 'cancelled' && selectedInvoice.balance > 0 && (
+                  <button
+                    onClick={() => {
+                      setShowViewInvoiceModal(false);
+                      handleRegisterPayment(selectedInvoice);
+                    }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <i className="ri-money-dollar-circle-line"></i>
+                    Registrar Pago
+                  </button>
+                )}
+                <button
+                  onClick={() => handlePrintInvoice(selectedInvoice.id)}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                >
+                  <i className="ri-printer-line"></i>
+                  Imprimir
+                </button>
+                <button
+                  onClick={() => handleExportInvoiceExcel(selectedInvoice.id)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <i className="ri-file-excel-2-line"></i>
+                  Excel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowViewInvoiceModal(false);
+                    setSelectedInvoice(null);
+                  }}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Movement Detail Modal */}
+        {showMovementModal && selectedMovement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Asiento #{selectedMovement.entry_number}</h3>
+                  <p className="text-indigo-100 text-sm">{selectedMovement.description}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMovementModal(false);
+                    setSelectedMovement(null);
+                    setMovementLines([]);
+                  }}
+                  className="text-white hover:text-indigo-200 transition-colors"
+                >
+                  <i className="ri-close-line text-2xl"></i>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Entry Info */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 uppercase">Fecha</p>
+                    <p className="font-semibold text-gray-900">{formatDate(selectedMovement.entry_date)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 uppercase">Estado</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                      selectedMovement.status === 'posted' ? 'bg-green-100 text-green-800' :
+                      selectedMovement.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedMovement.status === 'posted' ? 'Contabilizado' : selectedMovement.status === 'draft' ? 'Borrador' : selectedMovement.status}
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 uppercase">Total Débito</p>
+                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedMovement.total_debit || 0)}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 uppercase">Total Crédito</p>
+                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedMovement.total_credit || 0)}</p>
+                  </div>
+                </div>
+
+                {selectedMovement.reference && (
+                  <div className="bg-blue-50 rounded-lg p-3">
+                    <p className="text-xs text-blue-600 uppercase">Referencia</p>
+                    <p className="font-medium text-blue-900">{selectedMovement.reference}</p>
+                  </div>
+                )}
+
+                {/* Entry Lines */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase mb-3">
+                    <i className="ri-list-check mr-2"></i>Líneas del Asiento
+                  </h4>
+                  {loadingMovementLines ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <i className="ri-loader-4-line animate-spin text-2xl"></i>
+                      <p className="mt-2">Cargando líneas...</p>
+                    </div>
+                  ) : movementLines.length === 0 ? (
+                    <p className="text-gray-500 text-center py-4">No se encontraron líneas para este asiento</p>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-600">Código</th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-600">Cuenta</th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-600">Descripción</th>
+                            <th className="px-4 py-3 text-right font-semibold text-gray-600">Débito</th>
+                            <th className="px-4 py-3 text-right font-semibold text-gray-600">Crédito</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {movementLines.map((line: any, idx: number) => (
+                            <tr key={line.id || idx} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 font-mono text-indigo-600">
+                                {(line.chart_accounts as any)?.code || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-900 font-medium">
+                                {(line.chart_accounts as any)?.name || 'Cuenta no encontrada'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">
+                                {line.description || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                {Number(line.debit_amount || 0) > 0 ? `RD$ ${formatAmount(line.debit_amount)}` : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900">
+                                {Number(line.credit_amount || 0) > 0 ? `RD$ ${formatAmount(line.credit_amount)}` : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 font-semibold">
+                          <tr>
+                            <td colSpan={3} className="px-4 py-3 text-right text-gray-700">Totales:</td>
+                            <td className="px-4 py-3 text-right text-green-700">
+                              RD$ {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.debit_amount || 0), 0))}
+                            </td>
+                            <td className="px-4 py-3 text-right text-green-700">
+                              RD$ {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.credit_amount || 0), 0))}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowMovementModal(false);
+                    setSelectedMovement(null);
+                    setMovementLines([]);
+                  }}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>

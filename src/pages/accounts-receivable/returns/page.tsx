@@ -9,6 +9,7 @@ import {
   chartAccountsService,
   accountingSettingsService,
 } from '../../../services/database';
+import { formatAmount } from '../../../utils/numberFormat';
 
 interface ArReturn {
   id: string;
@@ -242,7 +243,7 @@ export default function ReturnsPage() {
         }
         if (amount > pending) {
           alert(
-            `El monto de la devolución no puede ser mayor que el saldo pendiente de la factura (pendiente: RD$${pending.toLocaleString()}).`,
+            `El monto de la devolución no puede ser mayor que el saldo pendiente de la factura (pendiente: RD$${formatAmount(pending)}).`,
           );
           return;
         }
@@ -359,7 +360,7 @@ export default function ReturnsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Devoluciones</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  RD${totalAmount.toLocaleString()}
+                  RD${formatAmount(totalAmount)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -444,7 +445,7 @@ export default function ReturnsPage() {
                       {ret.invoiceNumber || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                      RD${ret.amount.toLocaleString()}
+                      RD${formatAmount(ret.amount)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {ret.concept}

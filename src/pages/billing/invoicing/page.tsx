@@ -1571,13 +1571,15 @@ export default function InvoicingPage() {
                           >
                             <i className="ri-eye-line"></i>
                           </button>
-                          <button
-                            onClick={() => handleEditInvoice(invoice.id)}
-                            className="text-green-600 hover:text-green-900 p-1"
-                            title="Editar factura"
-                          >
-                            <i className="ri-edit-line"></i>
-                          </button>
+                          {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
+                            <button
+                              onClick={() => handleEditInvoice(invoice.id)}
+                              className="text-green-600 hover:text-green-900 p-1"
+                              title="Editar factura"
+                            >
+                              <i className="ri-edit-line"></i>
+                            </button>
+                          )}
                           {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
                             <button
                               onClick={() => handleCancelInvoice(invoice.id)}

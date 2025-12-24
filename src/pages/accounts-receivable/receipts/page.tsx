@@ -10,6 +10,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { customersService, receiptsService, invoicesService, receiptApplicationsService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { formatDate } from '../../../utils/dateFormat';
+import { formatAmount } from '../../../utils/numberFormat';
 import DateInput from '../../../components/common/DateInput';
 
 interface Receipt {
@@ -215,7 +216,7 @@ export default function ReceiptsPage() {
     
     const summaryData = [
       ['Concepto', 'Valor'],
-      ['Total Recibido', `RD$ ${totalAmount.toLocaleString()}`],
+      ['Total Recibido', `RD$ ${formatAmount(totalAmount)}`],
       ['Recibos Activos', activeReceipts.toString()],
       ['Recibos Anulados', cancelledReceipts.toString()],
       ['Total de Recibos', filteredReceipts.length.toString()]
@@ -247,7 +248,7 @@ export default function ReceiptsPage() {
         customerEmail,
         customerAddress,
         formatDate(receipt.date),
-        `RD$ ${receipt.amount.toLocaleString()}`,
+        `RD$ ${formatAmount(receipt.amount)}`,
         getPaymentMethodName(receipt.paymentMethod),
         receipt.reference,
         getStatusName(receipt.status),
@@ -639,7 +640,7 @@ export default function ReceiptsPage() {
             ${enriched.concept ? `<p><strong>Concepto:</strong> ${enriched.concept}</p>` : ''}
             <p><strong>Método de pago:</strong> ${getPaymentMethodName(enriched.paymentMethod)}</p>
             ${enriched.reference ? `<p><strong>Referencia:</strong> ${enriched.reference}</p>` : ''}
-            <p class="amount">Monto: RD$ ${enriched.amount.toLocaleString()}</p>
+            <p class="amount">Monto: RD$ ${formatAmount(enriched.amount)}</p>
             ${appliedInvoicesHtml}
           </div>
 
@@ -836,7 +837,7 @@ export default function ReceiptsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Recibido</p>
                 <p className="text-2xl font-bold text-green-600">
-                  RD${filteredReceipts.filter(r => r.status === 'active').reduce((sum, r) => sum + r.amount, 0).toLocaleString()}
+                  RD${formatAmount(filteredReceipts.filter(r => r.status === 'active').reduce((sum, r) => sum + r.amount, 0))}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -878,7 +879,7 @@ export default function ReceiptsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Promedio por Recibo</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  RD${filteredReceipts.length > 0 ? Math.round(filteredReceipts.reduce((sum, r) => sum + r.amount, 0) / filteredReceipts.length).toLocaleString() : '0'}
+                  RD${filteredReceipts.length > 0 ? formatAmount(Math.round(filteredReceipts.reduce((sum, r) => sum + r.amount, 0) / filteredReceipts.length)) : '0'}
                 </p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -996,7 +997,7 @@ export default function ReceiptsPage() {
                       {formatDate(receipt.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD${receipt.amount.toLocaleString()}
+                      RD${formatAmount(receipt.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {getPaymentMethodName(receipt.paymentMethod)}
@@ -1093,7 +1094,7 @@ export default function ReceiptsPage() {
                   Cliente: <span className="font-medium">{selectedReceipt.customerName}</span>
                 </p>
                 <p className="text-lg font-semibold text-green-600">
-                  Monto disponible: RD${selectedReceiptAvailableAmount.toLocaleString()}
+                  Monto disponible: RD${formatAmount(selectedReceiptAvailableAmount)}
                 </p>
               </div>
 
@@ -1121,7 +1122,7 @@ export default function ReceiptsPage() {
                       <option value="">Seleccionar factura</option>
                       {applyInvoices.map((inv) => (
                         <option key={inv.id} value={inv.id}>
-                          {inv.invoiceNumber} - RD$ {inv.totalAmount.toLocaleString()}
+                          {inv.invoiceNumber} - RD$ {formatAmount(inv.totalAmount)}
                         </option>
                       ))}
                     </select>
@@ -1388,7 +1389,7 @@ export default function ReceiptsPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Monto</label>
-                    <p className="text-2xl font-bold text-green-600">RD${selectedReceipt.amount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">RD${formatAmount(selectedReceipt.amount)}</p>
                   </div>
                 </div>
                 
