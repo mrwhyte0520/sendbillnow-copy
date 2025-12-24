@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { settingsService } from '../../services/database';
-import { useNavigate } from 'react-router-dom';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useAuth } from '../../hooks/useAuth';

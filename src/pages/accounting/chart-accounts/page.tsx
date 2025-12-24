@@ -487,9 +487,9 @@ export default function ChartAccountsPage() {
 
     const codeToIdMap: { [key: string]: string } = {};
     const existing = await chartAccountsService.getAll(user.id);
-    const existingCodes = new Set(existing.map(acc => acc.code));
+    const existingCodes = new Set(existing.map((acc: any) => acc.code));
     const existingByCode: Record<string, typeof existing[number]> = {};
-    existing.forEach(acc => { existingByCode[acc.code] = acc; });
+    existing.forEach((acc: any) => { existingByCode[acc.code] = acc; });
 
     const fileHasExplicitTipo = importedData.some(d => d.allowPosting !== undefined);
 
@@ -594,7 +594,7 @@ export default function ChartAccountsPage() {
     try {
       const refreshed = await chartAccountsService.getAll(user.id);
       const refreshedByCode: Record<string, typeof refreshed[number]> = {};
-      refreshed.forEach(acc => { refreshedByCode[acc.code] = acc; });
+      refreshed.forEach((acc: any) => { refreshedByCode[acc.code] = acc; });
 
       for (const data of importedData) {
         if (!data.code || !data.parentCode) continue;
