@@ -48,6 +48,8 @@ export const MODULES = {
   SETTINGS: 'settings',
   USERS: 'users',
   FIXED_ASSETS: 'fixed-assets',
+  STATISTICS: 'statistics',
+  REFERRALS: 'referrals',
 } as const;
 
 // Configuración de cada plan
@@ -155,6 +157,8 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.SETTINGS,
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
+      MODULES.STATISTICS,
+      MODULES.REFERRALS,
     ],
     routes: [
       '/dashboard',
@@ -188,6 +192,8 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/settings',
       '/users',
       '/fixed-assets',
+      '/statistics',
+      '/referrals',
       '/profile',
       '/plans',
     ],
@@ -230,6 +236,8 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.SETTINGS,
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
+      MODULES.STATISTICS,
+      MODULES.REFERRALS,
     ],
     routes: [
       '/dashboard',
@@ -263,6 +271,8 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/settings',
       '/users',
       '/fixed-assets',
+      '/statistics',
+      '/referrals',
       '/profile',
       '/plans',
     ],
@@ -361,6 +371,8 @@ export const ROUTE_TO_MODULE: Record<string, string> = {
   '/settings': MODULES.SETTINGS,
   '/users': MODULES.USERS,
   '/fixed-assets': MODULES.FIXED_ASSETS,
+  '/statistics': MODULES.STATISTICS,
+  '/referrals': MODULES.REFERRALS,
 };
 
 // Nombres amigables para los módulos
@@ -393,16 +405,18 @@ export const MODULE_NAMES: Record<string, string> = {
   [MODULES.SETTINGS]: 'Configuración',
   [MODULES.USERS]: 'Usuarios',
   [MODULES.FIXED_ASSETS]: 'Activos Fijos',
+  [MODULES.STATISTICS]: 'Estadísticas',
+  [MODULES.REFERRALS]: 'Referidos',
 };
 
 // Función para obtener el plan mínimo requerido para un módulo
 export function getMinimumPlanForModule(module: string): PlanId {
   // Módulos básicos disponibles desde Facturación Simple
-  const basicModules = [MODULES.DASHBOARD, MODULES.BILLING, MODULES.INVOICING, MODULES.QUOTES, MODULES.CREDIT_NOTES, MODULES.REPORTS, MODULES.CUSTOMERS, MODULES.SETTINGS];
+  const basicModules: string[] = [MODULES.DASHBOARD, MODULES.BILLING, MODULES.INVOICING, MODULES.QUOTES, MODULES.CREDIT_NOTES, MODULES.REPORTS, MODULES.CUSTOMERS, MODULES.SETTINGS];
   if (basicModules.includes(module)) return 'facturacion-simple';
 
   // Módulos de inventario disponibles desde Facturación Premium
-  const inventoryModules = [MODULES.INVENTORY, MODULES.PRODUCTS];
+  const inventoryModules: string[] = [MODULES.INVENTORY, MODULES.PRODUCTS];
   if (inventoryModules.includes(module)) return 'facturacion-premium';
 
   // Todos los demás módulos requieren POS Premium
