@@ -5,6 +5,7 @@ import { usePlans } from '../../hooks/usePlans';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService, accountingPeriodsService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
+import InitialPlanSelectionModal from '../common/InitialPlanSelectionModal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -36,7 +37,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useAuth();
-  const { currentPlan, getTrialStatus, trialInfo } = usePlans();
+  const { currentPlan, getTrialStatus, trialInfo, hasUsedTrial, startTrialWithPlan, hasAccess } = usePlans();
   const { canAccessRoute, getRequiredPlanForRoute, requiresAccountingSetup } = usePlanPermissions();
   const [kpiCounts, setKpiCounts] = useState({ invoices: 0, customers: 0, products: 0 });
   const trialStatus = getTrialStatus();
@@ -49,6 +50,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   });
   const [showAccountingSetupModal, setShowAccountingSetupModal] = useState(false);
   const [accountingSetupChecked, setAccountingSetupChecked] = useState(false);
+  const [showInitialPlanModal, setShowInitialPlanModal] = useState(false);
+  const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
 
   useEffect(() => {
     setUserProfile(prev => ({
@@ -142,6 +145,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     
     checkAccountingSetup();
   }, [user?.id, requiresAccountingSetup, accountingSetupChecked]);
+
+  // Verificar si es usuario nuevo y mostrar modal de selección de plan
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    // Verificar si ya usó el trial
+    const trialUsed = hasUsedTrial();
+    const savedTrialInfo = localStorage.getItem('contard_trial_info');
+    
+    // Si no ha usado el trial y no hay info guardada, es un usuario nuevo
+    if (!trialUsed && !savedTrialInfo) {
+      setShowInitialPlanModal(true);
+    }
+    
+    // Si el trial expiró y no tiene plan activo, mostrar modal de bloqueo
+    if (trialInfo.hasExpired && !currentPlan?.active) {
+      setShowTrialExpiredModal(true);
+    }
+  }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active]);
 
   useEffect(() => {
     const STORAGE_PREFIX = 'contabi_rbac_';
@@ -547,6 +569,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleEditProfile = () => {
     setEditProfileOpen(true);
+  };
+
+  const handlePlanSelection = async (planId: string) => {
+    const result = startTrialWithPlan(planId);
+    if (result.success) {
+      setShowInitialPlanModal(false);
+      // Recargar la página para aplicar el nuevo plan
+      window.location.reload();
+    } else {
+      console.error('Error al iniciar trial:', result.error);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -1181,6 +1214,63 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   Configurar Ahora
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de selección de plan inicial para usuarios nuevos */}
+      {showInitialPlanModal && (
+        <InitialPlanSelectionModal onPlanSelected={handlePlanSelection} />
+      )}
+
+      {/* Modal de trial expirado - bloqueo total */}
+      {showTrialExpiredModal && !hasAccess() && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 text-center">
+              <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
+                <i className="ri-time-line text-4xl text-white"></i>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Período de Prueba Finalizado</h2>
+              <p className="text-red-100 text-lg">Tu acceso al sistema ha expirado</p>
+            </div>
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <p className="text-gray-700 mb-4">
+                  Tu período de prueba gratuito de <span className="font-bold">7 días</span> ha finalizado.
+                </p>
+                <p className="text-gray-600 mb-6">
+                  Para continuar usando Contabi RD, necesitas seleccionar un plan de pago.
+                </p>
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
+                  <div className="flex items-start">
+                    <i className="ri-information-line text-blue-600 text-xl mr-3 mt-0.5"></i>
+                    <div>
+                      <h4 className="font-semibold text-blue-900 mb-1">Beneficios al actualizar</h4>
+                      <ul className="text-sm text-blue-800 space-y-1">
+                        <li>• Acceso ilimitado a todas las funciones</li>
+                        <li>• Sin interrupciones en tu negocio</li>
+                        <li>• Soporte técnico prioritario</li>
+                        <li>• Backups automáticos de tu información</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTrialExpiredModal(false);
+                  navigate('/plans');
+                }}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+              >
+                <i className="ri-vip-crown-line mr-2 text-2xl"></i>
+                Ver Planes y Precios
+              </button>
+              <p className="text-center text-sm text-gray-500 mt-4">
+                Solo puedes usar el período de prueba una vez por cuenta
+              </p>
             </div>
           </div>
         </div>

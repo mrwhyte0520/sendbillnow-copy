@@ -46,11 +46,11 @@ export function usePlans() {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [trialInfo, setTrialInfo] = useState<TrialInfo>({
     isActive: true,
-    daysLeft: 15,
+    daysLeft: 7,
     hoursLeft: 0,
     minutesLeft: 0,
     startDate: new Date(),
-    endDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     hasExpired: false
   });
 
@@ -130,11 +130,11 @@ export function usePlans() {
 
     const startNewTrial = () => {
       const startDate = new Date();
-      const endDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+      const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       
       const newTrialInfo = {
         isActive: true,
-        daysLeft: 15,
+        daysLeft: 7,
         hoursLeft: 0,
         minutesLeft: 0,
         startDate,
@@ -146,6 +146,9 @@ export function usePlans() {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString()
       }));
+      
+      // Marcar que el trial fue usado
+      localStorage.setItem('contard_trial_used', 'true');
       
       setTrialInfo(newTrialInfo);
     };
@@ -340,6 +343,65 @@ export function usePlans() {
     return features[planId] || [];
   };
 
+  const hasUsedTrial = () => {
+    return localStorage.getItem('contard_trial_used') === 'true';
+  };
+
+  const startTrialWithPlan = (planId: string) => {
+    // Iniciar trial solo si no se ha usado antes
+    if (hasUsedTrial()) {
+      return { success: false, error: 'Ya has utilizado tu período de prueba gratuito' };
+    }
+
+    const startDate = new Date();
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    
+    const newTrialInfo = {
+      isActive: true,
+      daysLeft: 7,
+      hoursLeft: 0,
+      minutesLeft: 0,
+      startDate,
+      endDate,
+      hasExpired: false
+    };
+    
+    localStorage.setItem('contard_trial_info', JSON.stringify({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    }));
+    
+    // Marcar que el trial fue usado
+    localStorage.setItem('contard_trial_used', 'true');
+    
+    // Guardar el plan seleccionado para el trial
+    const plan: Plan = {
+      id: planId,
+      name: getPlanNameFromId(planId),
+      price: 0, // Gratis durante trial
+      features: [],
+      active: false, // No activo hasta que pague
+      color: 'from-blue-500 to-blue-600',
+      icon: 'ri-gift-line'
+    };
+    
+    localStorage.setItem('contard_trial_plan', planId);
+    
+    setTrialInfo(newTrialInfo);
+    
+    return { success: true };
+  };
+
+  const getPlanNameFromId = (planId: string): string => {
+    const names: Record<string, string> = {
+      'facturacion-simple': 'Facturación Simple',
+      'facturacion-premium': 'Facturación Premium',
+      'pos-premium': 'POS Premium',
+      'pos-super-plus': 'POS Super Plus'
+    };
+    return names[planId] || planId;
+  };
+
   return {
     currentPlan,
     trialInfo,
@@ -347,6 +409,8 @@ export function usePlans() {
     cancelSubscription,
     hasAccess,
     canSelectPlan,
-    getTrialStatus
+    getTrialStatus,
+    hasUsedTrial,
+    startTrialWithPlan
   };
 }
