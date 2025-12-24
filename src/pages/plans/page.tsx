@@ -6,7 +6,7 @@ import { notifyPlanPurchase } from '../../utils/notify';
 import { referralsService } from '../../services/database';
 import { Elements } from '@stripe/react-stripe-js';
 import { getStripe } from '../../services/stripe';
-import StripePaymentForm from '../../components/StripePaymentForm';
+import StripePaymentFormDirect from '../../components/StripePaymentFormDirect';
 
 interface Plan {
   id: string;
@@ -432,7 +432,7 @@ export default function PlansPage() {
               )}
 
               <Elements stripe={stripePromise}>
-                <StripePaymentForm
+                <StripePaymentFormDirect
                   planId={selectedPlan}
                   planName={selectedPlanData.name}
                   amount={selectedPlanData.price}
