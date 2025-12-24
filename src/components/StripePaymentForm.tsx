@@ -40,6 +40,7 @@ export default function StripePaymentForm({
     e.preventDefault();
 
     if (!stripe || !elements) {
+      console.error('Stripe not loaded');
       return;
     }
 
@@ -52,11 +53,15 @@ export default function StripePaymentForm({
     setError(null);
 
     try {
+      console.log('Starting payment process...', { planId, userId, userEmail });
+      
       // Obtener el CardElement
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
         throw new Error('No se pudo obtener el elemento de tarjeta');
       }
+
+      console.log('Calling Edge Function...');
 
       // Crear Payment Intent desde el backend
       const response = await fetch(`${import.meta.env.VITE_PUBLIC_SUPABASE_URL}/functions/v1/create-payment-intent`, {
@@ -73,10 +78,14 @@ export default function StripePaymentForm({
       });
 
       if (!response.ok) {
-        throw new Error('Error al crear el pago');
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        console.error('Edge Function error:', errorData);
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
 
-      const { clientSecret } = await response.json();
+      const data = await response.json();
+      console.log('Payment Intent created:', data);
+      const { clientSecret } = data;
 
       // Confirmar el pago
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
@@ -89,16 +98,25 @@ export default function StripePaymentForm({
       });
 
       if (stripeError) {
+        console.error('Stripe confirmation error:', stripeError);
         throw new Error(stripeError.message);
       }
 
+      console.log('Payment Intent status:', paymentIntent?.status);
+
       if (paymentIntent?.status === 'succeeded') {
+        console.log('Payment succeeded!');
         onSuccess();
       } else {
-        throw new Error('El pago no se completó correctamente');
+        throw new Error(`El pago no se completó correctamente. Estado: ${paymentIntent?.status || 'desconocido'}`);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
       setError(err.message || 'Error al procesar el pago');
     } finally {
       setIsProcessing(false);
