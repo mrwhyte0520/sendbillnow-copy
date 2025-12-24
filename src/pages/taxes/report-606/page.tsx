@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '../../../components/layout/DashboardLayout';
+import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { taxService, settingsService } from '../../../services/database';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';

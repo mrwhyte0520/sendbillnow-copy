@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
-import { employeesService, employeeExitsService } from '../../../services/database';
+import { employeesService, employeeExitsService, journalEntriesService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface EmployeeExit {
@@ -313,6 +313,59 @@ export default function EmployeeExitsPage() {
       // Marcar empleado como inactivo pero mantener ficha
       await employeesService.update(exit.employeeId, { status: 'inactive' });
 
+      // Generar asiento contable para la liquidación
+      try {
+        const accounts = await chartAccountsService.getAll(user.id);
+        const settings = await settingsService.getPayrollSettings();
+
+        const accountsByCode = new Map<string, string>();
+        (accounts || []).forEach((acc: any) => {
+          if (acc.code && acc.id) {
+            accountsByCode.set(String(acc.code), String(acc.id));
+          }
+        });
+
+        // Cuentas por defecto (pueden configurarse en settings)
+        const settlementExpenseCode = (settings as any)?.settlement_expense_account || '6105';
+        const settlementPayableCode = (settings as any)?.settlement_payable_account || '2105';
+
+        const expenseAccountId = accountsByCode.get(settlementExpenseCode);
+        const payableAccountId = accountsByCode.get(settlementPayableCode);
+
+        if (expenseAccountId && payableAccountId && exit.netSettlement > 0) {
+          const today = new Date().toISOString().split('T')[0];
+          const entryNumber = `LIQ-${today}-${exit.employeeCode || id.slice(0, 6)}`;
+
+          const lines = [
+            {
+              account_id: expenseAccountId,
+              description: `Liquidación empleado: ${exit.employeeName}`,
+              debit_amount: exit.netSettlement,
+              credit_amount: 0,
+              line_number: 1,
+            },
+            {
+              account_id: payableAccountId,
+              description: `Liquidación por pagar: ${exit.employeeName}`,
+              debit_amount: 0,
+              credit_amount: exit.netSettlement,
+              line_number: 2,
+            },
+          ];
+
+          await journalEntriesService.createWithLines(user.id, {
+            entry_number: entryNumber,
+            entry_date: exit.exitDate || today,
+            description: `Liquidación de ${exit.employeeName} - ${exit.exitType === 'resignation' ? 'Renuncia' : exit.exitType === 'termination' ? 'Despido' : 'Salida'}`,
+            reference: `Liquidación ${exit.employeeCode}`,
+            status: 'posted',
+          }, lines);
+        }
+      } catch (journalError) {
+        console.error('Error creating settlement journal entry:', journalError);
+        // No bloquear la aprobación si falla el asiento
+      }
+
       setExits(prev => prev.map(e =>
         e.id === id
           ? { ...e, status: 'approved', approvedBy: user.email || 'Sistema', approvedDate: new Date().toISOString().split('T')[0] }
@@ -321,7 +374,7 @@ export default function EmployeeExitsPage() {
 
       setEmployees(prev => prev.filter(e => e.id !== exit.employeeId));
 
-      alert('Salida de empleado aprobada. El empleado ha sido marcado como inactivo.');
+      alert('Salida de empleado aprobada y asiento contable generado. El empleado ha sido marcado como inactivo.');
     } catch (error) {
       console.error('Error approving employee exit:', error);
       alert('Error al aprobar la salida del empleado');

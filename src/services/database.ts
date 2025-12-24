@@ -11748,7 +11748,9 @@ export const taxService = {
         .select('*');
       
       if (userId) {
-        query = query.eq('user_id', userId);
+        const tenantId = await resolveTenantId(userId);
+        if (!tenantId) return [];
+        query = query.eq('user_id', tenantId);
       }
       
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -13487,8 +13489,18 @@ export const taxService = {
       let purchases606Query = supabase.from('report_606_data').select('*').eq('period', currentMonth);
       
       if (userId) {
-        sales607Query = sales607Query.eq('user_id', userId);
-        purchases606Query = purchases606Query.eq('user_id', userId);
+        const tenantId = await resolveTenantId(userId);
+        if (!tenantId) {
+          return {
+            itbis_cobrado: 0,
+            itbis_pagado: 0,
+            itbis_neto: 0,
+            retenciones: 0
+          };
+        }
+
+        sales607Query = sales607Query.eq('user_id', tenantId);
+        purchases606Query = purchases606Query.eq('user_id', tenantId);
       }
 
       const [salesResponse, purchasesResponse] = await Promise.all([
@@ -13527,11 +13539,13 @@ export const taxService = {
   async getFiscalDeadlines(userId: string) {
     try {
       if (!userId) return [];
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
       
       const { data, error } = await supabase
         .from('fiscal_deadlines')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', tenantId)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
@@ -13544,9 +13558,11 @@ export const taxService = {
 
   async createFiscalDeadline(userId: string, deadline: any) {
     try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
       const { data, error } = await supabase
         .from('fiscal_deadlines')
-        .insert({ ...deadline, user_id: userId })
+        .insert({ ...deadline, user_id: tenantId })
         .select()
         .single();
 

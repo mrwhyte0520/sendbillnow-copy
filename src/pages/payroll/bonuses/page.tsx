@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
 import { bonusesService } from '../../../services/database';
@@ -321,7 +322,8 @@ export default function PayrollBonusesPage() {
   };
 
   return (
-    <div className="p-6">
+    <DashboardLayout>
+    <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bonificaciones</h1>
@@ -798,5 +800,6 @@ export default function PayrollBonusesPage() {
         )}
       </div>
     </div>
+    </DashboardLayout>
   );
 }
