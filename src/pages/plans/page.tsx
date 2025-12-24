@@ -102,7 +102,6 @@ export default function PlansPage() {
         'Cuentas por pagar',
         'Nómina completa',
         'Multisucursal',
-        'Multimoneda',
         'Servicio de reparaciones',
         'Cotizaciones',
         'Devoluciones'
@@ -135,7 +134,6 @@ export default function PlansPage() {
         'Cuentas por pagar',
         'Nómina completa',
         'Multisucursal',
-        'Multimoneda',
         'Servicio de reparaciones',
         'Cotizaciones',
         'Devoluciones'
