@@ -49,7 +49,6 @@ export default function PlansPage() {
         '100 Facturas al mes',
         'Cotizaciones',
         '2 Plantillas de factura',
-        'Código de barra',
         'Notas de crédito/débito',
         'Reportes básicos'
       ],
@@ -69,7 +68,6 @@ export default function PlansPage() {
         '500 Facturas al mes',
         'Cotizaciones',
         '2 Plantillas de factura',
-        'Código de barra',
         '1 Almacén de inventario',
         'Notas de crédito/débito',
         'Reportes completos'
