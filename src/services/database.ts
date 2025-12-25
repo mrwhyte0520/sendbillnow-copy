@@ -14062,6 +14062,75 @@ export const settingsService = {
       throw error;
     }
   },
+
+  // Warehouses
+  async getWarehouses() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.id) return [];
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('warehouses')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('name');
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error getting warehouses:', error);
+      return [];
+    }
+  },
+
+  async createWarehouse(warehouseData: any) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.id) {
+        throw new Error('No authenticated user for warehouse creation');
+      }
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('userId required');
+
+      const generatedCode = (warehouseData.code || warehouseData.name || 'ALM')
+        .toString()
+        .trim()
+        .substring(0, 8)
+        .toUpperCase();
+      const payload = {
+        user_id: tenantId,
+        name: warehouseData.name,
+        code: generatedCode,
+        location: warehouseData.location ?? null,
+        address: warehouseData.address ?? null,
+        manager: warehouseData.manager ?? null,
+        phone: warehouseData.phone ?? null,
+        inventory_account_id: warehouseData.inventory_account_id ?? null,
+        active: warehouseData.active !== false,
+      };
+      const { data, error } = await supabase
+        .from('warehouses')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating warehouse:', error);
+      throw error;
+    }
+  },
 };
 
 /* ==========================================================
@@ -14261,17 +14330,15 @@ export const dataBackupsService = {
       throw error;
     }
   },
+};
 
-  // Warehouses
-  async getWarehouses() {
+/* ==========================================================
+   Warehouses Service
+========================================================== */
+export const warehousesService = {
+  async getAll(userId?: string) {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user?.id) return [];
-
-      const tenantId = await resolveTenantId(user.id);
+      const tenantId = userId ? await resolveTenantId(userId) : null;
       if (!tenantId) return [];
 
       const { data, error } = await supabase
@@ -14287,7 +14354,8 @@ export const dataBackupsService = {
       return [];
     }
   },
-  async createWarehouse(warehouseData: any) {
+
+  async create(warehouseData: any) {
     try {
       const {
         data: { user },
@@ -14330,7 +14398,7 @@ export const dataBackupsService = {
     }
   },
 
-  async updateWarehouse(id: string, warehouseData: any) {
+  async update(id: string, warehouseData: any) {
     try {
       const safeCode = (warehouseData.code || warehouseData.name || 'ALM')
         .toString()
@@ -14362,7 +14430,7 @@ export const dataBackupsService = {
     }
   },
 
-  async deleteWarehouse(id: string) {
+  async delete(id: string) {
     try {
       const { error } = await supabase
         .from('warehouses')
@@ -14375,8 +14443,12 @@ export const dataBackupsService = {
       throw error;
     }
   },
+};
 
-  // Payroll Settings
+/* ==========================================================
+   Payroll Settings Service
+========================================================== */
+export const payrollSettingsService = {
   async getPayrollSettings() {
     try {
       const {
