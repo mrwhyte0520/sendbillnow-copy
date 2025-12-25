@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { customersService, paymentTermsService } from '../../services/database';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 interface Customer {
   id: string;
@@ -204,24 +206,76 @@ export default function CustomersPage() {
     saveLocal(customers.filter(c => c.id !== id));
   };
 
-  const exportCSV = () => {
-    const rows = filtered;
-    const header = ['Nombre','Documento','Teléfono','Email','Dirección','Tipo'];
-    const body = rows.map(r => [
-      `"${(r.name||'').replace(/"/g,'""')}"`,
-      r.document || '',
-      r.phone || '',
-      r.email || '',
-      `"${(r.address||'').replace(/"/g,'""')}"`,
-      r.type === 'vip' ? 'VIP' : 'Regular'
-    ].join(','));
-    const csvContent = [header.join(','), ...body].join('\n');
-    const csvForExcel = '\uFEFF' + csvContent.replace(/\n/g, '\r\n');
-    const blob = new Blob([csvForExcel], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `clientes_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const exportCSV = async () => {
+    try {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Clientes');
+
+      // Definir columnas con anchos adecuados
+      ws.columns = [
+        { header: 'Nombre', key: 'name', width: 30 },
+        { header: 'RNC/Cédula', key: 'document', width: 18 },
+        { header: 'Teléfono', key: 'phone', width: 15 },
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Dirección', key: 'address', width: 40 },
+        { header: 'Tipo', key: 'type', width: 12 },
+        { header: 'Términos de Pago', key: 'paymentTerms', width: 20 },
+      ];
+
+      // Estilo del header
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      ws.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF0B1F3A' },
+      };
+      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+      ws.getRow(1).height = 25;
+
+      // Agregar datos
+      filtered.forEach((customer) => {
+        const paymentTermName = customer.paymentTermId 
+          ? paymentTerms.find(t => t.id === customer.paymentTermId)?.name || 'N/A'
+          : 'Contado';
+
+        ws.addRow({
+          name: customer.name || '',
+          document: customer.document || '',
+          phone: customer.phone || '',
+          email: customer.email || '',
+          address: customer.address || '',
+          type: customer.type === 'vip' ? 'VIP' : 'Regular',
+          paymentTerms: paymentTermName,
+        });
+      });
+
+      // Aplicar bordes a todas las celdas
+      ws.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            left: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+            right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+          };
+          // Alineación para filas de datos
+          if (rowNumber > 1) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+          }
+        });
+      });
+
+      // Generar archivo
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const fileName = `clientes_${new Date().toISOString().split('T')[0]}.xlsx`;
+      saveAs(blob, fileName);
+    } catch (error) {
+      console.error('Error exportando clientes:', error);
+      alert('Error al exportar clientes a Excel');
+    }
   };
 
   return (
@@ -248,7 +302,7 @@ export default function CustomersPage() {
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-download-line mr-2" />
-              Exportar CSV
+              Exportar Excel
             </button>
             <button
               onClick={() => { setForm({ name: '', document: '', phone: '', email: '', address: '', type: 'regular' }); setShowNew(true); }}
