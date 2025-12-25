@@ -37,20 +37,6 @@ const settingsSections: SettingsSection[] = [
     description: 'Configurar períodos fiscales, monedas y políticas contables',
     icon: 'ri-calculator-line',
     href: '/settings/accounting'
-  },
-  {
-    id: 'inventory',
-    name: 'Configuración de Inventario',
-    description: 'Configurar métodos de valuación, categorías y almacenes',
-    icon: 'ri-archive-line',
-    href: '/settings/inventory'
-  },
-  {
-    id: 'backup',
-    name: 'Respaldos y Seguridad',
-    description: 'Configurar respaldos automáticos y políticas de seguridad',
-    icon: 'ri-shield-check-line',
-    href: '/settings/backup'
   }
 ];
 
