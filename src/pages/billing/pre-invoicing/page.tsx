@@ -809,7 +809,7 @@ export default function PreInvoicingPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Número
+                    #
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cliente
@@ -832,7 +832,7 @@ export default function PreInvoicingPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredQuotes.map((quote) => {
+                {filteredQuotes.map((quote, index) => {
                   const customerName = quote.customerId
                     ? customers.find(c => c.id === quote.customerId)?.name || quote.customer
                     : quote.customer;
@@ -843,7 +843,7 @@ export default function PreInvoicingPage() {
                   return (
                     <tr key={quote.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{quote.id}</div>
+                        <div className="text-sm font-medium text-gray-500">{index + 1}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{customerName}</div>

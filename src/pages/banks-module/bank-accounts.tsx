@@ -50,6 +50,53 @@ export default function BankAccountsPage() {
   const [showBankModal, setShowBankModal] = useState(false);
   const [editingBank, setEditingBank] = useState<Bank | null>(null);
 
+  // Estados para campos con máscara
+  const [phoneValue, setPhoneValue] = useState('');
+  const [faxValue, setFaxValue] = useState('');
+  const [rncValue, setRncValue] = useState('');
+  const [balanceValue, setBalanceValue] = useState('');
+
+  // Formatear teléfono: 809-000-0000
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  // Formatear RNC: 1-01-12345-6
+  const formatRNC = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 1) return digits;
+    if (digits.length <= 3) return `${digits.slice(0, 1)}-${digits.slice(1)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 1)}-${digits.slice(1, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 1)}-${digits.slice(1, 3)}-${digits.slice(3, 8)}-${digits.slice(8)}`;
+  };
+
+  // Formatear monto con separadores de miles: 1,000.00
+  const formatAmount = (value: string) => {
+    // Remover todo excepto dígitos y punto
+    let cleaned = value.replace(/[^\d.]/g, '');
+    // Solo permitir un punto decimal
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    // Separar enteros y decimales
+    const [intPart, decPart] = cleaned.split('.');
+    // Formatear con comas
+    const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (decPart !== undefined) {
+      return `${formatted}.${decPart.slice(0, 2)}`;
+    }
+    return formatted;
+  };
+
+  // Obtener valor numérico del monto formateado
+  const parseFormattedAmount = (value: string) => {
+    return parseFloat(value.replace(/,/g, '')) || 0;
+  };
+
   const formatCurrency = (value: number, currency: string = 'DOP') => {
     const label = currency === 'DOP' ? 'RD$' : currency === 'USD' ? '$' : currency;
     return formatMoney(value, label);
@@ -273,7 +320,14 @@ export default function BankAccountsPage() {
             <p className="text-gray-600 mt-1">Bancos registrados</p>
           </div>
           <button
-            onClick={() => setShowBankModal(true)}
+            onClick={() => {
+              setEditingBank(null);
+              setPhoneValue('');
+              setFaxValue('');
+              setRncValue('');
+              setBalanceValue('');
+              setShowBankModal(true);
+            }}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
             <svg
@@ -381,6 +435,10 @@ export default function BankAccountsPage() {
                           type="button"
                           onClick={() => {
                             setEditingBank(bank);
+                            setPhoneValue(bank.contact_phone ? formatPhone(bank.contact_phone) : '');
+                            setFaxValue(bank.contact_fax ? formatPhone(bank.contact_fax) : '');
+                            setRncValue(bank.rnc ? formatRNC(bank.rnc) : '');
+                            setBalanceValue(formatAmount(String(bank.balance)));
                             setShowBankModal(true);
                           }}
                           className="text-blue-600 hover:text-blue-800 text-xs font-medium"
@@ -496,10 +554,8 @@ export default function BankAccountsPage() {
                         {editingBank ? 'Saldo actual' : 'Saldo Inicial *'}
                       </label>
                       <input
-                        type="number"
-                        name="balance"
-                        step="0.01"
-                        min="0"
+                        type="text"
+                        name="balance_display"
                         required={!editingBank}
                         readOnly={!!editingBank}
                         className={
@@ -507,8 +563,10 @@ export default function BankAccountsPage() {
                           (editingBank ? ' bg-gray-100 text-gray-500' : '')
                         }
                         placeholder="0.00"
-                        defaultValue={editingBank ? String(editingBank.balance) : ''}
+                        value={balanceValue}
+                        onChange={(e) => setBalanceValue(formatAmount(e.target.value))}
                       />
+                      <input type="hidden" name="balance" value={parseFormattedAmount(balanceValue)} />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -554,14 +612,15 @@ export default function BankAccountsPage() {
                       <input
                         type="text"
                         name="rnc"
-                        defaultValue={editingBank?.rnc || ''}
+                        value={rncValue}
+                        onChange={(e) => setRncValue(formatRNC(e.target.value))}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ej: 1-01-12345-6"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Direccin del Banco
+                        Dirección del Banco
                       </label>
                       <input
                         type="text"
@@ -585,12 +644,13 @@ export default function BankAccountsPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Telfono del Manejador
+                        Teléfono del Manejador
                       </label>
                       <input
                         type="tel"
                         name="contact_phone"
-                        defaultValue={editingBank?.contact_phone || ''}
+                        value={phoneValue}
+                        onChange={(e) => setPhoneValue(formatPhone(e.target.value))}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ej: 809-000-0000"
                       />
@@ -600,9 +660,10 @@ export default function BankAccountsPage() {
                         Fax del Manejador
                       </label>
                       <input
-                        type="text"
+                        type="tel"
                         name="contact_fax"
-                        defaultValue={editingBank?.contact_fax || ''}
+                        value={faxValue}
+                        onChange={(e) => setFaxValue(formatPhone(e.target.value))}
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Ej: 809-000-0001"
                       />

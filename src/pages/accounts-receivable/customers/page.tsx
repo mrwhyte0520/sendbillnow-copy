@@ -44,6 +44,44 @@ export default function CustomersPage() {
   const [paymentTerms, setPaymentTerms] = useState<Array<{ id: string; name: string; days?: number }>>([]);
   const formRef = useRef<HTMLFormElement | null>(null);
 
+  // Estados para máscaras de formato
+  const [documentValue, setDocumentValue] = useState('');
+  const [phoneValue, setPhoneValue] = useState('');
+  const [contactPhoneValue, setContactPhoneValue] = useState('');
+  const [selectedDocType, setSelectedDocType] = useState('');
+
+  // Formatear teléfono: 809-000-0000
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  // Formatear RNC: 1-01-12345-6 (9 dígitos)
+  const formatRNC = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 9);
+    if (digits.length <= 1) return digits;
+    if (digits.length <= 3) return `${digits.slice(0, 1)}-${digits.slice(1)}`;
+    if (digits.length <= 8) return `${digits.slice(0, 1)}-${digits.slice(1, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 1)}-${digits.slice(1, 3)}-${digits.slice(3, 8)}-${digits.slice(8)}`;
+  };
+
+  // Formatear Cédula: 000-0000000-0 (11 dígitos)
+  const formatCedula = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 10)}-${digits.slice(10)}`;
+  };
+
+  // Formatear documento según tipo
+  const formatDocument = (value: string, docType: string) => {
+    if (docType === 'rnc') return formatRNC(value);
+    if (docType === 'cedula') return formatCedula(value);
+    return value; // Para pasaporte y otros, sin formato
+  };
+
   const loadCustomers = async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -255,11 +293,19 @@ export default function CustomersPage() {
 
   const handleNewCustomer = () => {
     setSelectedCustomer(null);
+    setDocumentValue('');
+    setPhoneValue('');
+    setContactPhoneValue('');
+    setSelectedDocType('');
     setShowCustomerModal(true);
   };
 
   const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
+    setSelectedDocType((customer as any)?.documentType || '');
+    setDocumentValue(formatDocument(customer.document || '', (customer as any)?.documentType || ''));
+    setPhoneValue(formatPhone(customer.phone || ''));
+    setContactPhoneValue(formatPhone((customer as any)?.contactPhone || ''));
     setShowCustomerModal(true);
   };
 
@@ -544,7 +590,11 @@ export default function CustomersPage() {
                     <div className="grid grid-cols-3 gap-2">
                       <select
                         name="documentType"
-                        defaultValue={(selectedCustomer as any)?.documentType || ''}
+                        value={selectedDocType}
+                        onChange={(e) => {
+                          setSelectedDocType(e.target.value);
+                          setDocumentValue(formatDocument(documentValue.replace(/\D/g, ''), e.target.value));
+                        }}
                         className="col-span-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                       >
                         <option value="">Tipo</option>
@@ -558,9 +608,10 @@ export default function CustomersPage() {
                           type="text"
                           required
                           name="document"
-                          defaultValue={selectedCustomer?.document || ''}
+                          value={documentValue}
+                          onChange={(e) => setDocumentValue(formatDocument(e.target.value, selectedDocType))}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="000-0000000-0"
+                          placeholder={selectedDocType === 'rnc' ? '1-01-12345-6' : selectedDocType === 'cedula' ? '000-0000000-0' : 'Documento'}
                         />
                       </div>
                     </div>
@@ -576,7 +627,8 @@ export default function CustomersPage() {
                       type="tel"
                       required
                       name="phone"
-                      defaultValue={selectedCustomer?.phone || ''}
+                      value={phoneValue}
+                      onChange={(e) => setPhoneValue(formatPhone(e.target.value))}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="809-000-0000"
                     />
@@ -630,7 +682,8 @@ export default function CustomersPage() {
                     <input
                       type="tel"
                       name="contactPhone"
-                      defaultValue={(selectedCustomer as any)?.contactPhone || ''}
+                      value={contactPhoneValue}
+                      onChange={(e) => setContactPhoneValue(formatPhone(e.target.value))}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="809-000-0000"
                     />

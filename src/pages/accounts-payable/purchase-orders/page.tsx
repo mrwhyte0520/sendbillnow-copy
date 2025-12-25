@@ -798,7 +798,6 @@ export default function PurchaseOrdersPage() {
               <div class="card">
                 <div class="card-head">
                   <div class="card-head-title">Suplidor</div>
-                  <div class="badge">ID: ${order.supplierId || ''}</div>
                 </div>
                 <div class="card-body">
                   <div class="kv">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../../components/layout/DashboardLayout';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
 import { useAuth } from '../../../hooks/useAuth';
-import { departmentsService } from '../../../services/database';
+import { departmentsService, employeesService } from '../../../services/database';
 
 interface Department {
   id: string;
@@ -39,13 +39,27 @@ export default function DepartmentsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await departmentsService.getAll(user.id);
+      const [data, employees] = await Promise.all([
+        departmentsService.getAll(user.id),
+        employeesService.getAll(user.id)
+      ]);
+
+      // Contar empleados activos por departamento
+      const employeeCountByDept = new Map<string, number>();
+      (employees || []).forEach((emp: any) => {
+        const status = String(emp.status || '').toLowerCase();
+        if ((status === 'active' || status === 'activo') && emp.department_id) {
+          const count = employeeCountByDept.get(emp.department_id) || 0;
+          employeeCountByDept.set(emp.department_id, count + 1);
+        }
+      });
+
       const mapped: Department[] = (data || []).map((d: any) => ({
         id: d.id as string,
         name: d.name || '',
         description: d.description || '',
         manager: d.manager || '',
-        employeeCount: 0,
+        employeeCount: employeeCountByDept.get(d.id) || 0,
         budget: Number(d.budget) || 0,
         location: d.location || '',
         status: (d.status as 'active' | 'inactive') || 'active',

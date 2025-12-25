@@ -45,6 +45,7 @@ export default function Report606Page() {
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
+  const [missingExpenseTypeCount, setMissingExpenseTypeCount] = useState(0);
 
   const months = [
     { value: '01', label: 'Enero' },
@@ -94,19 +95,21 @@ export default function Report606Page() {
       const data = await taxService.generateReport606(period);
       const summaryData = await taxService.getReport606Summary(period) as any;
 
+      // Contar registros sin tipo de gasto (obligatorio para el 606)
       const missingExpenseTypeCount = Array.isArray(data)
         ? data.filter((row: any) => !row?.tipo_bienes_servicios || String(row.tipo_bienes_servicios).trim() === '').length
         : 0;
 
+      // Guardar el conteo para bloquear exportación
+      setMissingExpenseTypeCount(missingExpenseTypeCount);
+
       if (missingExpenseTypeCount > 0) {
-        const proceed = confirm(
-          `Hay ${missingExpenseTypeCount} registro(s) sin "Tipo de gasto (606)". ` +
-          'Esto puede afectar el archivo oficial para la DGII. ¿Deseas continuar de todos modos?'
+        alert(
+          `⚠️ HAY ${missingExpenseTypeCount} REGISTRO(S) SIN "TIPO DE GASTO 606"\n\n` +
+          'Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3) es OBLIGATORIO.\n\n' +
+          'La exportación del archivo oficial estará BLOQUEADA hasta que corrija estos registros.\n\n' +
+          'Por favor, edite las facturas de suplidor correspondientes y asigne el Tipo de Gasto 606 correcto (01-11).'
         );
-        if (!proceed) {
-          setLoading(false);
-          return;
-        }
       }
 
       const totalRecords = Array.isArray(data) ? data.length : 0;
@@ -220,76 +223,116 @@ export default function Report606Page() {
       '';
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Reporte 606');
+    const ws = wb.addWorksheet('Formato 606');
 
+    // Formato oficial DGII: 23 columnas
     const headers = [
-      { key: 'rnc', title: 'RNC/Cédula', width: 15 },
-      { key: 'tipoId', title: 'Tipo ID', width: 10 },
-      { key: 'tipoBien', title: 'Tipo Bien/Serv.', width: 22 },
-      { key: 'ncf', title: 'NCF', width: 22 },
-      { key: 'ncfMod', title: 'NCF Mod.', width: 22 },
-      { key: 'fComp', title: 'F. Comp.', width: 12 },
-      { key: 'fPago', title: 'F. Pago', width: 12 },
-      { key: 'servFact', title: 'Serv. Fact.', width: 14 },
-      { key: 'bienesFact', title: 'Bienes Fact.', width: 14 },
-      { key: 'montoFact', title: 'Monto Fact.', width: 14 },
-      { key: 'itbisFact', title: 'ITBIS Fact.', width: 14 },
-      { key: 'itbisRet', title: 'ITBIS Ret.', width: 14 },
-      { key: 'retRenta', title: 'Ret. Renta', width: 14 },
-      { key: 'formaPago', title: 'Forma Pago', width: 12 },
+      { num: 1, title: 'RNC o\nCédula', width: 14 },
+      { num: 2, title: 'Tipo Id', width: 8 },
+      { num: 3, title: 'Tipo Bienes y Servicios Comprados', width: 38 },
+      { num: 4, title: 'NCF', width: 20 },
+      { num: 5, title: 'NCF ó Documento\nModificado', width: 20 },
+      { num: 6, title: 'Fecha\nComprobante', width: 12 },
+      { num: 7, title: 'Fecha Pago', width: 12 },
+      { num: 8, title: 'Monto Facturado\nen Servicios', width: 16 },
+      { num: 9, title: 'Monto Facturado\nen Bienes', width: 16 },
+      { num: 10, title: 'Total Monto\nFacturado', width: 16 },
+      { num: 11, title: 'ITBIS Facturado', width: 14 },
+      { num: 12, title: 'ITBIS Retenido', width: 14 },
+      { num: 13, title: 'ITBIS sujeto a\nProporcionalidad\n(Art. 349)', width: 16 },
+      { num: 14, title: 'ITBIS llevado al\nCosto', width: 14 },
+      { num: 15, title: 'ITBIS por\nAdelantar', width: 14 },
+      { num: 16, title: 'ITBIS percibido\nen compras', width: 14 },
+      { num: 17, title: 'Tipo de\nRetención en\nISR', width: 12 },
+      { num: 18, title: 'Monto Retención\nRenta', width: 16 },
+      { num: 19, title: 'ISR Percibido en\ncompras', width: 14 },
+      { num: 20, title: 'Impuesto Selectivo\nal Consumo', width: 16 },
+      { num: 21, title: 'Otros\nImpuestos/Tasas', width: 14 },
+      { num: 22, title: 'Monto Propina\nLegal', width: 14 },
+      { num: 23, title: 'Forma de Pago', width: 16 },
     ];
 
-    let currentRow = 1;
     const totalColumns = headers.length;
+    const blueColor = 'FF1E3A5F'; // Azul oscuro (en lugar de verde DGII)
 
-    // Encabezado: empresa
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const companyCell = ws.getCell(currentRow, 1);
-    companyCell.value = companyName;
-    companyCell.font = { bold: true, size: 14 };
-    companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    let currentRow = 1;
+
+    // Encabezado institucional (estilo DGII pero azul)
+    ws.mergeCells(currentRow, 1, currentRow, 6);
+    const dgiiCell = ws.getCell(currentRow, 1);
+    dgiiCell.value = companyName || 'Dirección General de Impuestos Internos';
+    dgiiCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    dgiiCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    dgiiCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+    ws.mergeCells(currentRow, 7, currentRow, totalColumns);
+    const toolCell = ws.getCell(currentRow, 7);
+    toolCell.value = 'Herramienta de Distribución Gratuita';
+    toolCell.font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+    toolCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    toolCell.alignment = { horizontal: 'right', vertical: 'middle' };
     currentRow++;
 
-    // RNC (si existe)
-    if (companyRnc) {
-      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-      const rncCell = ws.getCell(currentRow, 1);
-      rncCell.value = `RNC: ${companyRnc}`;
-      rncCell.font = { bold: true };
-      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
-      currentRow++;
-    }
-
-    // Título del reporte
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const titleCell = ws.getCell(currentRow, 1);
-    titleCell.value = 'Reporte 606 - Compras y Servicios';
-    titleCell.font = { bold: true, size: 16 };
-    titleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // Subtítulo
+    ws.mergeCells(currentRow, 1, currentRow, 6);
+    const subtitleCell = ws.getCell(currentRow, 1);
+    subtitleCell.value = 'Formato de Envío de Compras de Bienes y Servicios';
+    subtitleCell.font = { bold: true, size: 11 };
+    subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+    subtitleCell.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
     currentRow++;
 
-    // Período
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const periodCell = ws.getCell(currentRow, 1);
-    periodCell.value = `Período: ${selectedPeriod}`;
-    periodCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    // Info empresa y período
+    ws.getCell(currentRow, 1).value = 'RNC o Cédula';
+    ws.getCell(currentRow, 2).value = companyRnc;
+    ws.getCell(currentRow, 2).font = { bold: true };
     currentRow++;
 
-    // Fila vacía
+    ws.getCell(currentRow, 1).value = 'Período';
+    ws.getCell(currentRow, 2).value = selectedPeriod.replace('-', '');
+    ws.getCell(currentRow, 2).font = { bold: true };
     currentRow++;
 
-    // Fila de encabezados de columnas (azul marino + texto blanco)
+    ws.getCell(currentRow, 1).value = 'Cantidad Registros';
+    ws.getCell(currentRow, 2).value = reportData.length;
+    ws.getCell(currentRow, 2).font = { bold: true };
+    currentRow++;
+
+    // Línea vacía
+    currentRow++;
+
+    // Fila de números de columna (1-23)
+    const numRow = ws.getRow(currentRow);
+    headers.forEach((h, idx) => {
+      const cell = numRow.getCell(idx + 1);
+      cell.value = h.num;
+      cell.font = { bold: true, size: 9 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9E2F3' } };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+    currentRow++;
+
+    // Fila de encabezados de columnas (azul + texto blanco)
     const headerRow = ws.getRow(currentRow);
+    headerRow.height = 45;
     headers.forEach((h, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = h.title;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
+      cell.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
       };
-      cell.alignment = { vertical: 'middle' };
     });
     currentRow++;
 
@@ -303,13 +346,37 @@ export default function Report606Page() {
       dataRow.getCell(5).value = row.ncf_modificado || '';
       dataRow.getCell(6).value = row.fecha_comprobante;
       dataRow.getCell(7).value = row.fecha_pago;
-      dataRow.getCell(8).value = row.servicios_facturados;
-      dataRow.getCell(9).value = row.bienes_facturados;
-      dataRow.getCell(10).value = row.monto_facturado;
-      dataRow.getCell(11).value = row.itbis_facturado;
-      dataRow.getCell(12).value = row.itbis_retenido;
-      dataRow.getCell(13).value = row.retencion_renta;
-      dataRow.getCell(14).value = row.forma_pago;
+      dataRow.getCell(8).value = row.servicios_facturados || 0;
+      dataRow.getCell(9).value = row.bienes_facturados || 0;
+      dataRow.getCell(10).value = row.monto_facturado || 0;
+      dataRow.getCell(11).value = row.itbis_facturado || 0;
+      dataRow.getCell(12).value = row.itbis_retenido || 0;
+      dataRow.getCell(13).value = (row as any).itbis_proporcionalidad || 0; // ITBIS proporcionalidad
+      dataRow.getCell(14).value = (row as any).itbis_al_costo || 0; // ITBIS al costo
+      dataRow.getCell(15).value = (row as any).itbis_por_adelantar || 0; // ITBIS por adelantar
+      dataRow.getCell(16).value = 0; // ITBIS percibido
+      dataRow.getCell(17).value = ''; // Tipo retención ISR
+      dataRow.getCell(18).value = row.retencion_renta || 0;
+      dataRow.getCell(19).value = row.isr_percibido || 0;
+      dataRow.getCell(20).value = row.impuesto_selectivo_consumo || 0;
+      dataRow.getCell(21).value = row.otros_impuestos || 0;
+      dataRow.getCell(22).value = row.monto_propina_legal || 0;
+      dataRow.getCell(23).value = row.forma_pago;
+
+      // Bordes y formato numérico
+      for (let c = 1; c <= totalColumns; c++) {
+        const cell = dataRow.getCell(c);
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          left: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          bottom: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+          right: { style: 'thin', color: { argb: 'FFD0D0D0' } },
+        };
+        // Formato numérico para columnas de montos (8-22 excepto 17 y 23)
+        if (c >= 8 && c <= 22 && c !== 17) {
+          cell.numFmt = '#,##0.00';
+        }
+      }
       currentRow++;
     }
 
@@ -414,10 +481,10 @@ export default function Report606Page() {
         const itbisFact = toMoney(row.itbis_facturado);
         const itbisRet = toMoney(row.itbis_retenido);
 
-        // Campos no manejados actualmente: exportar en 0.00 / 0
-        const itbisSujProp = toMoney(0);
-        const itbisLlevCosto = toMoney(0);
-        const itbisPorAdel = toMoney(row.itbis_facturado);
+        // Distribución automática del ITBIS según tipo de gasto
+        const itbisSujProp = toMoney((row as any).itbis_proporcionalidad || 0);
+        const itbisLlevCosto = toMoney((row as any).itbis_al_costo || 0);
+        const itbisPorAdel = toMoney((row as any).itbis_por_adelantar || 0);
         const itbisPerc = toMoney(0);
 
         const tipoRetIsr = '0';
@@ -573,27 +640,23 @@ export default function Report606Page() {
             {summary && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Período</h2>
-                
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">{summary.totalRecords}</div>
                     <div className="text-sm text-gray-600">Total Registros</div>
                   </div>
-                  
                   <div className="bg-green-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
                       RD$ {formatAmount(summary.totalAmount)}
                     </div>
                     <div className="text-sm text-gray-600">Monto Total</div>
                   </div>
-                  
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-yellow-600">
                       RD$ {formatAmount(summary.totalItbis)}
                     </div>
                     <div className="text-sm text-gray-600">Total ITBIS</div>
                   </div>
-                  
                   <div className="bg-red-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-red-600">
                       RD$ {formatAmount(summary.totalRetention)}
@@ -604,10 +667,28 @@ export default function Report606Page() {
               </div>
             )}
 
+            {/* Alerta de registros incompletos */}
+            {missingExpenseTypeCount > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <i className="ri-error-warning-line text-red-600 text-xl mt-0.5"></i>
+                  <div>
+                    <h3 className="text-red-800 font-semibold">⚠️ {missingExpenseTypeCount} registro(s) sin Tipo de Gasto 606</h3>
+                    <p className="text-red-700 text-sm mt-1">
+                      Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3) es <strong>OBLIGATORIO</strong>.
+                      La exportación del archivo oficial TXT está <strong>BLOQUEADA</strong> hasta que corrija estos registros.
+                    </p>
+                    <p className="text-red-600 text-sm mt-2">
+                      Por favor, edite las facturas de suplidor correspondientes y asigne el Tipo de Gasto 606 correcto (01-11).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Botones de exportación */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Exportar Datos</h2>
-              
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={exportToCSV}
@@ -616,7 +697,6 @@ export default function Report606Page() {
                   <i className="ri-file-excel-2-line"></i>
                   Exportar CSV
                 </button>
-                
                 <button
                   onClick={exportToExcel}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 whitespace-nowrap"
@@ -624,15 +704,20 @@ export default function Report606Page() {
                   <i className="ri-file-excel-line"></i>
                   Exportar Excel
                 </button>
-                
                 <button
                   onClick={exportToTXT}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 flex items-center gap-2 whitespace-nowrap"
+                  disabled={missingExpenseTypeCount > 0}
+                  className={`px-4 py-2 rounded-md flex items-center gap-2 whitespace-nowrap ${
+                    missingExpenseTypeCount > 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-gray-600 text-white hover:bg-gray-700'
+                  }`}
+                  title={missingExpenseTypeCount > 0 ? 'Bloqueado: hay registros sin Tipo de Gasto 606' : 'Exportar formato oficial DGII'}
                 >
                   <i className="ri-file-text-line"></i>
-                  Exportar TXT
+                  Exportar TXT (DGII)
+                  {missingExpenseTypeCount > 0 && <i className="ri-lock-line ml-1"></i>}
                 </button>
-                
                 <button
                   onClick={handleExportPdf}
                   className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center gap-2 whitespace-nowrap"
@@ -650,67 +735,42 @@ export default function Report606Page() {
                   Datos del Reporte ({reportData.length} registros)
                 </h2>
               </div>
-              
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        RNC/Cédula
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        NCF
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Monto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        ITBIS
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Retención
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Forma Pago
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RNC/Cédula</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo Gasto</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NCF</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicios</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bienes</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ITBIS</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forma Pago</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {reportData.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.rnc_cedula}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.ncf}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.fecha_comprobante}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.monto_facturado)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.itbis_facturado)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD$ {formatAmount(row.itbis_retenido)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {row.forma_pago}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {reportData.map((row) => (
+                    <tr key={row.id} className={`hover:bg-gray-50 ${!row.tipo_bienes_servicios ? 'bg-red-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.rnc_cedula}</td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm ${row.tipo_bienes_servicios ? 'text-gray-900' : 'text-red-600 font-semibold'}`}>
+                        {row.tipo_bienes_servicios || '⚠️ Sin especificar'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ncf}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.fecha_comprobante}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.servicios_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.bienes_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.itbis_facturado)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.forma_pago}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
-        )}
-      </div>
-    </DashboardLayout>
-  );
+          </div>
+        </>
+      )}
+    </div>
+  </DashboardLayout>
+);
 }

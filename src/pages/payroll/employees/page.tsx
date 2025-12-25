@@ -33,6 +33,7 @@ interface Employee {
 interface Department {
   id: string;
   name: string;
+  status?: string;
 }
 
 interface Position {
@@ -608,9 +609,11 @@ export default function EmployeesPage() {
                       required
                     >
                       <option value="">Seleccionar departamento</option>
-                      {departments.map(dept => (
-                        <option key={dept.id} value={dept.id}>{dept.name}</option>
-                      ))}
+                      {departments
+                        .filter(dept => !dept.status || dept.status === 'active' || dept.status === 'activo')
+                        .map(dept => (
+                          <option key={dept.id} value={dept.id}>{dept.name}</option>
+                        ))}
                     </select>
                   </div>
                   <div>
