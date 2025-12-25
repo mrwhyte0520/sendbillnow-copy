@@ -16,6 +16,7 @@ export default function ReferralsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<'commissions' | 'payouts'>('commissions');
   const [showTerms, setShowTerms] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [purchases, setPurchases] = useState<Array<{
     id: string;
     referee_user_id: string | null;
@@ -44,8 +45,12 @@ export default function ReferralsPage() {
     const load = async () => {
       if (!user) return;
       setLoading(true);
+      setError(null);
       try {
-        await referralsService.getOrCreateCode(user.id);
+        const codeData = await referralsService.getOrCreateCode(user.id);
+        if (codeData?.code) {
+          setStats(prev => ({ ...prev, code: codeData.code }));
+        }
         const st = await referralsService.getStats(user.id);
         setStats(st);
         const [list, payoutsList] = await Promise.all([
@@ -54,8 +59,9 @@ export default function ReferralsPage() {
         ]);
         setPurchases(list);
         setPayouts(payoutsList);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Load referrals error', e);
+        setError(e?.message || 'Error al cargar los datos de referidos');
       } finally {
         setLoading(false);
       }
@@ -142,6 +148,28 @@ export default function ReferralsPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">Cargando referidos...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <i className="ri-error-warning-line text-3xl text-red-600"></i>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
           </div>
         </div>
       </DashboardLayout>
