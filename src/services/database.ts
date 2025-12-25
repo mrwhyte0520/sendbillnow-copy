@@ -63,21 +63,34 @@ export const resolveTenantId = async (userId: string | null | undefined): Promis
 export const referralsService = {
   async getOrCreateCode(userId: string) {
     try {
-      // Try get existing code
-      const { data: existing, error: getErr } = await supabase
+      // Try get existing code first
+      const { data: existing } = await supabase
         .from('referral_codes')
         .select('*')
         .eq('user_id', userId)
         .limit(1)
         .maybeSingle();
-      if (!getErr && existing) return existing;
+      if (existing) return existing;
 
+      // Try to insert new code
       const code = Math.random().toString(36).slice(2, 8) + userId.slice(0, 4);
       const { data, error } = await supabase
         .from('referral_codes')
         .insert({ user_id: userId, code })
         .select()
         .single();
+      
+      // If duplicate key error, fetch the existing record
+      if (error && error.code === '23505') {
+        const { data: existingAfterError } = await supabase
+          .from('referral_codes')
+          .select('*')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+        if (existingAfterError) return existingAfterError;
+      }
+      
       if (error) throw error;
       return data;
     } catch (e) {
