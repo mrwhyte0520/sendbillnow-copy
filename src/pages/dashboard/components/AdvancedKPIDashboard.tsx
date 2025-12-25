@@ -51,6 +51,7 @@ export default function AdvancedKPIDashboard() {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccountInfo[]>([]);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   interface PeriodRange {
     label: string;
@@ -146,8 +147,13 @@ export default function AdvancedKPIDashboard() {
   };
 
   const fetchData = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      setError('No se encontró usuario autenticado');
+      return;
+    }
     setLoading(true);
+    setError(null);
 
     try {
       const uid = user.id;
@@ -282,8 +288,9 @@ export default function AdvancedKPIDashboard() {
         });
       }
       setChartData(chartPoints);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+    } catch (err: any) {
+      console.error('Error loading dashboard data:', err);
+      setError(err?.message || 'Error al cargar los datos del dashboard');
       setKpi({
         bankBalance: 0,
         receivables: 0,
@@ -317,6 +324,26 @@ export default function AdvancedKPIDashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <i className="ri-error-warning-line text-3xl text-red-600"></i>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar estadísticas</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => fetchData()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Reintentar
+          </button>
+        </div>
       </div>
     );
   }
