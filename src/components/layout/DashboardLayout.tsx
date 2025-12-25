@@ -160,8 +160,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
     
     // Si el trial expiró y no tiene plan activo, mostrar modal de bloqueo
-    // Pero no mostrar si el usuario está en la página de planes
-    if (trialInfo.hasExpired && !currentPlan?.active && !location.pathname.startsWith('/plans')) {
+    // Pero no mostrar si el usuario está en páginas permitidas
+    const allowedPaths = ['/plans', '/statistics', '/profile', '/dashboard'];
+    const isAllowedPath = allowedPaths.some(path => location.pathname.startsWith(path));
+    if (trialInfo.hasExpired && !currentPlan?.active && !isAllowedPath) {
       setShowTrialExpiredModal(true);
     }
   }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active, location.pathname]);
@@ -1226,7 +1228,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Modal de trial expirado - bloqueo total */}
-      {showTrialExpiredModal && !hasAccess() && !location.pathname.startsWith('/plans') && (
+      {showTrialExpiredModal && !hasAccess() && !['/plans', '/statistics', '/profile', '/dashboard'].some(p => location.pathname.startsWith(p)) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 text-center">
