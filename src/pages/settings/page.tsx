@@ -34,7 +34,7 @@ const settingsSections: SettingsSection[] = [
   {
     id: 'accounting',
     name: 'Configuración Contable',
-    description: 'Configurar períodos fiscales y cuentas contables por defecto',
+    description: 'Configurar períodos fiscales, monedas y políticas contables',
     icon: 'ri-calculator-line',
     href: '/settings/accounting'
   },
@@ -46,39 +46,11 @@ const settingsSections: SettingsSection[] = [
     href: '/settings/inventory'
   },
   {
-    id: 'users',
-    name: 'Usuarios y Permisos',
-    description: 'Gestionar usuarios del sistema, roles y niveles de acceso',
-    icon: 'ri-team-line',
-    href: '/settings/users'
-  },
-  {
-    id: 'taxes',
-    name: 'Configuración de Impuestos',
-    description: 'Configurar tasas ITBIS, ISR, retenciones y períodos fiscales',
-    icon: 'ri-percent-line',
-    href: '/settings/taxes'
-  },
-  {
-    id: 'payroll',
-    name: 'Configuración de Nómina',
-    description: 'Configurar conceptos salariales, deducciones y beneficios',
-    icon: 'ri-money-dollar-circle-line',
-    href: '/settings/payroll'
-  },
-  {
-    id: 'stores',
-    name: 'Tiendas y Sucursales',
-    description: 'Administrar múltiples ubicaciones y puntos de venta',
-    icon: 'ri-store-3-line',
-    href: '/settings/stores'
-  },
-  {
-    id: 'integrations',
-    name: 'Integraciones',
-    description: 'Conectar con servicios externos, APIs y plataformas de pago',
-    icon: 'ri-plug-line',
-    href: '/settings/integrations'
+    id: 'backup',
+    name: 'Respaldos y Seguridad',
+    description: 'Configurar respaldos automáticos y políticas de seguridad',
+    icon: 'ri-shield-check-line',
+    href: '/settings/backup'
   }
 ];
 
@@ -520,7 +492,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Settings Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {filteredSections.map((section) => {
             const isRestricted = !canAccessRoute(section.href);
             const requiredPlan = isRestricted ? getRequiredPlanForRoute(section.href) : '';
