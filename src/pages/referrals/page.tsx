@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { referralsService } from '../../services/database';
 import { formatAmount } from '../../utils/numberFormat';
 import { toast } from 'sonner';
-import { notifyReferralPayout } from '../../utils/notify';
 
 const MIN_PAYOUT_AMOUNT = 10; // Monto mínimo de retiro en USD
 
@@ -122,8 +121,6 @@ export default function ReferralsPage() {
       await referralsService.requestPayout(user.id, paypalEmail, amount, 'USD');
       toast.success('Solicitud de retiro enviada correctamente');
       setPayoutAmount('');
-      // Notificar a WordNotiCenter
-      await notifyReferralPayout(user.email || '', amount, paypalEmail);
       // Recargar datos
       const [st, payoutsList] = await Promise.all([
         referralsService.getStats(user.id),

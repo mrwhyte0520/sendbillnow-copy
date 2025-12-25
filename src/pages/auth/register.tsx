@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { notifyNewUser } from '../../utils/notify';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -76,8 +75,6 @@ export default function Register() {
 
       if (data?.user) {
         setSuccess(true);
-        // Notificar a WordNotiCenter
-        notifyNewUser(formData.email, data.user.id);
         // Esperar 3 segundos antes de redirigir
         setTimeout(() => {
           navigate('/auth/login');
