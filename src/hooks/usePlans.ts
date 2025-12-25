@@ -185,14 +185,8 @@ export function usePlans() {
 
   const subscribeToPlan = async (planId: string) => {
     try {
-      // Verificar que el trial no haya expirado antes de permitir suscripción
-      if (trialInfo.hasExpired && !currentPlan?.active) {
-        return { 
-          success: false, 
-          error: 'El período de prueba ha expirado. Debe completar el pago para continuar.' 
-        };
-      }
-
+      // Permitir suscripción siempre - especialmente cuando el trial ha expirado
+      // El usuario necesita poder pagar para reactivar su cuenta
       console.log('Subscribing to plan:', planId);
       
       // Mapear el ID del plan a su información correspondiente
