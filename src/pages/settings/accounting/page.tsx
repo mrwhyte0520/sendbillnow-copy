@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { auxiliariesReconciliationService, settingsService, chartAccountsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
@@ -52,9 +52,6 @@ export default function AccountingSettingsPage() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [reconcilingAuxiliaries, setReconcilingAuxiliaries] = useState(false);
   const [recalculatingBalances, setRecalculatingBalances] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
@@ -125,106 +122,6 @@ export default function AccountingSettingsPage() {
 
   const handleInputChange = (field: keyof AccountingSettings, value: any) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const COA_KEY = 'contabi_chart_of_accounts';
-
-  const baseChartOfAccounts = [
-    { code: '1', name: 'Activos', type: 'group' },
-    { code: '1-01', name: 'Activo Corriente', type: 'group' },
-    { code: '1-01-001', name: 'Caja', type: 'account' },
-    { code: '1-01-002', name: 'Bancos', type: 'account' },
-    { code: '2', name: 'Pasivos', type: 'group' },
-    { code: '3', name: 'Patrimonio', type: 'group' },
-    { code: '4', name: 'Ingresos', type: 'group' },
-    { code: '5', name: 'Gastos', type: 'group' },
-  ];
-
-  const triggerImport = () => fileInputRef.current?.click();
-
-  const parseCsv = (text: string) => {
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const [h, ...rows] = lines;
-    const headers = h.split(',').map((s) => s.trim().toLowerCase());
-    const idxCode = headers.indexOf('code');
-    const idxName = headers.indexOf('name');
-    const idxType = headers.indexOf('type');
-    if (idxCode === -1 || idxName === -1) return [] as any[];
-    return rows
-      .map((r) => {
-        const cols = r.split(',');
-        return {
-          code: (cols[idxCode] || '').trim(),
-          name: (cols[idxName] || '').trim(),
-          type: (cols[idxType] || 'account').trim(),
-        };
-      })
-      .filter((x) => x.code && x.name);
-  };
-
-  const onImportFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    setImporting(true);
-    try {
-      const text = await file.text();
-      let data: any[] = [];
-      if (file.name.endsWith('.json')) {
-        data = JSON.parse(text);
-      } else {
-        data = parseCsv(text);
-      }
-      if (!Array.isArray(data) || data.length === 0) throw new Error('Formato inválido o vacío');
-
-      const normalized = data
-        .map((x: any) => ({
-          code: String(x.code || '').trim(),
-          name: String(x.name || '').trim(),
-          type: String(x.type || 'account').trim(),
-        }))
-        .filter((x: any) => x.code && x.name);
-
-      localStorage.setItem(COA_KEY, JSON.stringify(normalized));
-      setMessage({ type: 'success', text: `Plan contable importado (${normalized.length} cuentas)` });
-    } catch {
-      setMessage({ type: 'error', text: 'No se pudo importar el plan. Verifica el archivo (CSV/JSON).' });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const raw = localStorage.getItem(COA_KEY);
-      const data = raw ? JSON.parse(raw) : baseChartOfAccounts;
-      const toCsv = (rows: any[]) => {
-        const header = 'code,name,type';
-        const body = rows.map((r) => `${r.code},${r.name},${r.type || 'account'}`).join('\r\n');
-        return `\uFEFF${header}\r\n${body}\r\n`;
-      };
-      const csv = toCsv(data);
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'chart_of_accounts.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setMessage({ type: 'success', text: 'Plan contable exportado (CSV)' });
-    } catch {
-      setMessage({ type: 'error', text: 'No se pudo exportar el plan.' });
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleReset = () => {
-    localStorage.setItem(COA_KEY, JSON.stringify(baseChartOfAccounts));
-    setMessage({ type: 'success', text: 'Plan contable restablecido al plan base.' });
   };
 
   const handleReconcileAuxiliaries = async () => {
@@ -650,46 +547,6 @@ export default function AccountingSettingsPage() {
             )}
           </div>
         </div>
-
-          {/* Chart of Accounts Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Catálogo de Cuentas</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                type="button"
-                onClick={triggerImport}
-                disabled={importing}
-                className="flex items-center justify-center space-x-2 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-              >
-                <i className="ri-download-line"></i>
-                <span>Importar Plan Contable</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleExport}
-                disabled={exporting}
-                className="flex items-center justify-center space-x-2 bg-green-50 text-green-700 px-4 py-3 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
-              >
-                <i className="ri-upload-line"></i>
-                <span>Exportar Plan Contable</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="flex items-center justify-center space-x-2 bg-orange-50 text-orange-700 px-4 py-3 rounded-lg hover:bg-orange-100 transition-colors"
-              >
-                <i className="ri-refresh-line"></i>
-                <span>Restablecer Plan Base</span>
-              </button>
-            </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={onImportFile}
-              accept=".csv,.json"
-              className="hidden"
-            />
-          </div>
 
           <div className="flex justify-end space-x-4">
             <button
