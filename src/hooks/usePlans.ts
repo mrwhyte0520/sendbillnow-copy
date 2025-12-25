@@ -282,8 +282,9 @@ export function usePlans() {
   };
 
   const canSelectPlan = () => {
-    // Puede seleccionar plan si tiene plan activo O si el trial no ha expirado
-    return (currentPlan?.active === true) || !trialInfo.hasExpired;
+    // Siempre puede seleccionar un plan para poder pagar
+    // Especialmente importante cuando el trial ha expirado
+    return true;
   };
 
   const getTrialStatus = () => {
