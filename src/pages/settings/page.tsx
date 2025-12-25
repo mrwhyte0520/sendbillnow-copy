@@ -466,11 +466,11 @@ export default function SettingsPage() {
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-lg p-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Configuración del Sistema</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className="text-3xl font-bold text-white mb-2">Configuración del Sistema</h1>
+              <p className="text-blue-100 text-lg">
                 Administra la configuración general de tu sistema contable
               </p>
             </div>
@@ -484,7 +484,7 @@ export default function SettingsPage() {
                   placeholder="Buscar configuración..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-3 border-2 border-white/30 bg-white/10 text-white placeholder-white/60 rounded-lg focus:ring-2 focus:ring-white focus:border-white focus:bg-white/20 backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -492,7 +492,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Settings Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {filteredSections.map((section) => {
             const isRestricted = !canAccessRoute(section.href);
             const requiredPlan = isRestricted ? getRequiredPlanForRoute(section.href) : '';
@@ -506,27 +506,36 @@ export default function SettingsPage() {
                     setRestrictedPlanName(requiredPlan);
                     setShowRestrictedModal(true);
                   }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group opacity-75"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 hover:shadow-md transition-all cursor-pointer group opacity-75 min-h-[200px]"
                 >
-                  <div className="flex items-start space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <i className={`${section.icon} text-gray-400 text-xl`}></i>
+                  <div className="flex flex-col h-full">
+                    <div className="flex items-start space-x-4 mb-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
+                          <i className={`${section.icon} text-gray-400 text-3xl`}></i>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-xl font-bold text-gray-500">
+                            {section.name}
+                          </h3>
+                          <i className="ri-lock-2-fill text-amber-500 text-xl"></i>
+                        </div>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                          {section.description}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="mt-auto pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-500">
-                          {section.name}
-                        </h3>
-                        <i className="ri-lock-2-fill text-amber-500"></i>
-                      </div>
-                      <p className="text-sm text-gray-400 mt-1">
-                        {section.description}
-                      </p>
-                      <div className="mt-3 flex items-center text-sm text-amber-600">
-                        <i className="ri-vip-crown-2-line mr-1"></i>
-                        <span>Requiere {requiredPlan}</span>
+                        <div className="flex items-center text-sm text-amber-600 font-medium">
+                          <i className="ri-vip-crown-2-line mr-2 text-lg"></i>
+                          <span>Requiere {requiredPlan}</span>
+                        </div>
+                        <button className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors">
+                          Ver Planes
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -538,24 +547,31 @@ export default function SettingsPage() {
               <div
                 key={section.id}
                 onClick={() => handleSectionClick(section.href)}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
+                className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group min-h-[200px]"
               >
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                      <i className={`${section.icon} text-blue-600 text-xl`}></i>
+                <div className="flex flex-col h-full">
+                  <div className="flex items-start space-x-4 mb-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl flex items-center justify-center group-hover:from-blue-100 group-hover:to-blue-200 transition-all shadow-sm">
+                        <i className={`${section.icon} text-blue-600 text-3xl`}></i>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
+                        {section.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {section.description}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {section.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {section.description}
-                    </p>
-                    <div className="mt-3 flex items-center text-sm text-blue-600 group-hover:text-blue-700">
-                      <span>Configurar</span>
-                      <i className="ri-arrow-right-line ml-1"></i>
+                  <div className="mt-auto pt-4 border-t border-gray-100 group-hover:border-blue-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">Módulo de configuración</span>
+                      <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700 font-medium">
+                        <span>Configurar</span>
+                        <i className="ri-arrow-right-line ml-2 group-hover:translate-x-1 transition-transform"></i>
+                      </div>
                     </div>
                   </div>
                 </div>
