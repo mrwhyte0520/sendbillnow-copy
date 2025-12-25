@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { auxiliariesReconciliationService, settingsService, chartAccountsService, dataBackupsService } from '../../../services/database';
+import { auxiliariesReconciliationService, settingsService, chartAccountsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAccountingFormat } from '../../../providers/AccountingFormatProvider';
 
@@ -56,7 +56,6 @@ export default function AccountingSettingsPage() {
   const [recalculatingBalances, setRecalculatingBalances] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
-  const [creatingBackup, setCreatingBackup] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -165,47 +164,6 @@ export default function AccountingSettingsPage() {
       console.error('Error recalculando saldos auxiliares:', error);
     } finally {
       setRecalculatingBalances(false);
-    }
-  };
-
-  const handleCreateBackup = async () => {
-    if (!user?.id) return;
-    if (!confirm('¿Crear un respaldo manual de la base de datos? Esto guardará una copia de todos los datos contables.')) return;
-    setCreatingBackup(true);
-    setMessage(null);
-    try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupName = `Respaldo_Manual_${timestamp}`;
-      
-      // Crear respaldo en la base de datos con configuración actual
-      const backup = await dataBackupsService.createBackup({
-        backup_type: 'manual',
-        backup_name: backupName,
-        retention_days: settings.retention_period
-      });
-      
-      // Descargar el respaldo como archivo JSON
-      const backupJson = JSON.stringify(backup.backup_data, null, 2);
-      const blob = new Blob([backupJson], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${backupName}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      const sizeKB = (backup.file_size / 1024).toFixed(2);
-      setMessage({
-        type: 'success',
-        text: `Respaldo creado exitosamente: ${backupName}.json (${sizeKB} KB). El archivo se ha descargado y también se guardó en la base de datos.`,
-      });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'No se pudo crear el respaldo. Verifica la consola para más detalles.' });
-      console.error('Error creando respaldo:', error);
-    } finally {
-      setCreatingBackup(false);
     }
   };
 
@@ -419,148 +377,6 @@ export default function AccountingSettingsPage() {
               </div>
             )}
           </div>
-
-          {/* Currency and Format Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Formatos</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Decimales *
-                </label>
-                <select
-                  value={settings.decimal_places ?? 2}
-                  onChange={(e) => handleInputChange('decimal_places', parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value={0}>0 decimales</option>
-                  <option value={2}>2 decimales</option>
-                  <option value={4}>4 decimales</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Formato de Fecha
-                </label>
-                <select
-                  value={settings.date_format || 'DD/MM/YYYY'}
-                  onChange={(e) => handleInputChange('date_format', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Formato de Números
-                </label>
-                <select
-                  value={settings.number_format || '1,234.56'}
-                  onChange={(e) => handleInputChange('number_format', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="1,234.56">1,234.56</option>
-                  <option value="1.234,56">1.234,56</option>
-                  <option value="1 234.56">1 234.56</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Backup Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Configuración de Respaldos</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Protege tus datos con respaldos automáticos o manuales
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleCreateBackup}
-                disabled={creatingBackup}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex items-center gap-2"
-              >
-                <i className="ri-save-line"></i>
-                {creatingBackup ? 'Creando...' : 'Crear Respaldo Manual'}
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="auto_backup"
-                  checked={!!settings.auto_backup}
-                  onChange={(e) => handleInputChange('auto_backup', e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="auto_backup" className="ml-2 block text-sm text-gray-900">
-                  Habilitar respaldos automáticos
-                </label>
-              </div>
-              
-              {settings.auto_backup && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-start gap-3 mb-4">
-                    <i className="ri-information-line text-blue-600 text-xl mt-0.5"></i>
-                    <div>
-                      <p className="text-sm font-medium text-blue-900">Respaldos Automáticos Habilitados</p>
-                      <p className="text-sm text-blue-700 mt-1">
-                        El sistema creará respaldos automáticamente según la frecuencia configurada.
-                        Los respaldos antiguos se eliminarán después del período de retención.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Frecuencia de Respaldo
-                    </label>
-                    <select
-                      value={settings.backup_frequency || 'daily'}
-                      onChange={(e) => handleInputChange('backup_frequency', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="monthly">Mensual</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Período de Retención (días)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={settings.retention_period ?? 30}
-                      onChange={(e) => handleInputChange('retention_period', parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {!settings.auto_backup && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <i className="ri-alert-line text-gray-600 text-xl mt-0.5"></i>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Respaldos Automáticos Deshabilitados</p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Los respaldos automáticos están desactivados. Puedes crear respaldos manuales usando el botón "Crear Respaldo Manual".
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
           <div className="flex justify-end space-x-4">
             <button
