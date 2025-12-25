@@ -143,7 +143,32 @@ export function usePlanLimitations() {
         };
 
       default:
-        return getPlanLimitations(); // Fallback a sin plan
+        // Fallback a valores por defecto sin plan
+        return {
+          maxCompanies: 1,
+          maxUsers: 1,
+          maxProducts: 50,
+          maxEmployees: 0,
+          hasAdvancedReports: false,
+          hasBankingManagement: false,
+          hasAdvancedAnalytics: false,
+          hasPayroll: false,
+          hasMultiBranch: false,
+          hasElectronicInvoicing: false,
+          hasFixedAssets: false,
+          hasInventoryManagement: true,
+          hasAccountingPeriods: true,
+          hasGeneralJournal: true,
+          hasGeneralLedger: true,
+          hasChartOfAccounts: true,
+          hasFinancialStatements: false,
+          hasBankReconciliation: false,
+          hasTaxReports: false,
+          hasAccountsPayable: false,
+          hasAccountsReceivable: false,
+          hasBilling: true,
+          hasPOS: false
+        }
     }
   };
 
