@@ -14062,8 +14062,12 @@ export const settingsService = {
       throw error;
     }
   },
+};
 
-  // Data Backups
+/* ==========================================================
+   Data Backups Service
+========================================================== */
+export const dataBackupsService = {
   async getBackups() {
     try {
       const {

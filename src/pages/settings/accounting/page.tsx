@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { auxiliariesReconciliationService, settingsService, chartAccountsService } from '../../../services/database';
+import { auxiliariesReconciliationService, settingsService, chartAccountsService, dataBackupsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAccountingFormat } from '../../../providers/AccountingFormatProvider';
 
@@ -174,21 +174,35 @@ export default function AccountingSettingsPage() {
     setCreatingBackup(true);
     setMessage(null);
     try {
-      // Simulación de creación de respaldo
-      // En producción, esto debería llamar a un servicio que exporte los datos
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupName = `backup_${timestamp}.json`;
+      const backupName = `Respaldo_Manual_${timestamp}`;
       
-      // Aquí iría la lógica real de respaldo
-      // Por ahora, mostramos un mensaje de éxito
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Crear respaldo en la base de datos con configuración actual
+      const backup = await dataBackupsService.createBackup({
+        backup_type: 'manual',
+        backup_name: backupName,
+        retention_days: settings.retention_period
+      });
       
+      // Descargar el respaldo como archivo JSON
+      const backupJson = JSON.stringify(backup.backup_data, null, 2);
+      const blob = new Blob([backupJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${backupName}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      const sizeKB = (backup.file_size / 1024).toFixed(2);
       setMessage({
         type: 'success',
-        text: `Respaldo creado exitosamente: ${backupName}. Los respaldos se almacenan de forma segura.`,
+        text: `Respaldo creado exitosamente: ${backupName}.json (${sizeKB} KB). El archivo se ha descargado y también se guardó en la base de datos.`,
       });
     } catch (error) {
-      setMessage({ type: 'error', text: 'No se pudo crear el respaldo. Intenta nuevamente.' });
+      setMessage({ type: 'error', text: 'No se pudo crear el respaldo. Verifica la consola para más detalles.' });
       console.error('Error creando respaldo:', error);
     } finally {
       setCreatingBackup(false);
