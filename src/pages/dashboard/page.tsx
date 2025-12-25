@@ -2,11 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 export default function DashboardPage() {
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
   const [currentDate] = useState(new Date());
+  const [showRestrictedModal, setShowRestrictedModal] = useState(false);
+  const [restrictedAction, setRestrictedAction] = useState('');
+  const [requiredPlan, setRequiredPlan] = useState('');
 
   const handleSignOut = async () => {
     try {
@@ -81,23 +86,57 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Acceso Rápido</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-4">
-            {quickAccessButtons.map((button) => (
-              <button
-                key={button.name}
-                onClick={() => navigate(button.href)}
-                className="group relative flex flex-col items-center justify-center p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-105"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${button.color} opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300`}></div>
-                <div className="relative z-10">
-                  <div className={`w-14 h-14 mb-3 rounded-full bg-gradient-to-br ${button.color} flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-                    <i className={`${button.icon} text-2xl`}></i>
+            {quickAccessButtons.map((button) => {
+              const isRestricted = !canAccessRoute(button.href);
+              const planRequired = isRestricted ? getRequiredPlanForRoute(button.href) : '';
+
+              return (
+                <button
+                  key={button.name}
+                  onClick={() => {
+                    if (isRestricted) {
+                      setRestrictedAction(button.name);
+                      setRequiredPlan(planRequired);
+                      setShowRestrictedModal(true);
+                    } else {
+                      navigate(button.href);
+                    }
+                  }}
+                  className={`group relative flex flex-col items-center justify-center p-4 bg-white rounded-xl border-2 transition-all duration-300 ${
+                    isRestricted
+                      ? 'border-gray-200 opacity-75 hover:opacity-90 cursor-pointer'
+                      : 'border-gray-200 hover:border-transparent hover:shadow-xl hover:scale-105'
+                  }`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${button.color} opacity-0 ${!isRestricted && 'group-hover:opacity-100'} rounded-xl transition-opacity duration-300`}></div>
+                  <div className="relative z-10">
+                    <div className={`w-14 h-14 mb-3 rounded-full bg-gradient-to-br ${button.color} flex items-center justify-center text-white shadow-lg ${!isRestricted && 'group-hover:shadow-xl'} transition-shadow duration-300 relative`}>
+                      <i className={`${button.icon} text-2xl`}></i>
+                      {isRestricted && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center shadow-lg">
+                          <i className="ri-lock-fill text-white text-xs"></i>
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-sm font-medium text-center block transition-colors duration-300 ${
+                      isRestricted
+                        ? 'text-gray-500'
+                        : 'text-gray-700 group-hover:text-white'
+                    }`}>
+                      {button.name}
+                    </span>
+                    {isRestricted && (
+                      <div className="mt-1">
+                        <span className="text-xs text-amber-600 font-medium flex items-center justify-center">
+                          <i className="ri-vip-crown-2-line mr-1"></i>
+                          {planRequired}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-white text-center block transition-colors duration-300">
-                    {button.name}
-                  </span>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -135,6 +174,59 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Modal de acción restringida */}
+        {showRestrictedModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowRestrictedModal(false)}
+            />
+            <div className="relative bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4 text-center">
+                <div className="w-14 h-14 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-2 backdrop-blur-sm">
+                  <i className="ri-lock-2-line text-3xl text-white"></i>
+                </div>
+                <h3 className="text-lg font-bold text-white">Acción Premium</h3>
+                <p className="text-amber-100 text-sm">Acceso restringido</p>
+              </div>
+              <div className="p-4">
+                <div className="text-center mb-4">
+                  <p className="text-gray-600 text-sm mb-3">
+                    <span className="font-semibold text-gray-900">"{restrictedAction}"</span> no está disponible en tu plan actual.
+                  </p>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                    <div className="flex items-center justify-center mb-1">
+                      <i className="ri-vip-crown-2-fill text-amber-500 text-xl mr-2"></i>
+                      <span className="text-xs text-gray-600">Plan requerido:</span>
+                    </div>
+                    <p className="text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      {requiredPlan}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowRestrictedModal(false)}
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRestrictedModal(false);
+                      navigate('/plans');
+                    }}
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center"
+                  >
+                    <i className="ri-arrow-up-circle-line mr-1"></i>
+                    Ver Planes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
