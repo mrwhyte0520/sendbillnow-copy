@@ -572,8 +572,8 @@ export default function QuotesPage() {
           email: c.email || c.contact_email || '',
           phone: c.phone || c.contact_phone || '',
           address: c.address || c.company_address || c.billing_address || c.address_line || '',
-          documentType: (c as any).documentType || null,
-          ncfType: (c as any).ncfType || null,
+          documentType: c.document_type || c.documentType || null,
+          ncfType: c.ncf_type || c.ncfType || 'B02',
           document: c.document || null,
         })));
 
