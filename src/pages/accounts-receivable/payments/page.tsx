@@ -580,29 +580,46 @@ export default function PaymentsPage() {
         (customerArId ? String(customerArId) : '') ||
         (settings?.ar_account_id ? String(settings.ar_account_id) : '');
 
-      // Caja General (Débito): settings.cash_account_id o fallback a cuenta 100101 si existe
-      let cashGeneralAccountId: string | null = (settings as any)?.cash_account_id
-        ? String((settings as any).cash_account_id)
-        : null;
+      // Determinar cuenta de débito: Si hay banco seleccionado, usar su cuenta contable; sino usar Caja General
+      let debitAccountId: string | null = null;
+      let debitAccountLabel = 'Caja General';
 
-      if (!cashGeneralAccountId) {
-        const fromState = accounts.find((a: any) => normalizeCode(a.code) === '100101');
-        if (fromState?.id) cashGeneralAccountId = String(fromState.id);
-      }
-
-      if (!cashGeneralAccountId) {
-        try {
-          const allAccounts = await chartAccountsService.getAll(user.id);
-          const cash100101 = (allAccounts || []).find((a: any) => normalizeCode(a.code) === '100101');
-          if (cash100101?.id) cashGeneralAccountId = String(cash100101.id);
-        } catch {
-          cashGeneralAccountId = null;
+      // Si hay banco seleccionado, obtener su cuenta contable
+      if (bankAccountId) {
+        const selectedBank = bankAccounts.find((b) => b.id === bankAccountId);
+        if (selectedBank?.chartAccountId) {
+          debitAccountId = String(selectedBank.chartAccountId);
+          debitAccountLabel = selectedBank.name || 'Banco';
         }
       }
 
-      if (!cashGeneralAccountId) {
+      // Fallback a Caja General si no hay banco o no tiene cuenta contable
+      if (!debitAccountId) {
+        let cashGeneralAccountId: string | null = (settings as any)?.cash_account_id
+          ? String((settings as any).cash_account_id)
+          : null;
+
+        if (!cashGeneralAccountId) {
+          const fromState = accounts.find((a: any) => normalizeCode(a.code) === '100101');
+          if (fromState?.id) cashGeneralAccountId = String(fromState.id);
+        }
+
+        if (!cashGeneralAccountId) {
+          try {
+            const allAccounts = await chartAccountsService.getAll(user.id);
+            const cash100101 = (allAccounts || []).find((a: any) => normalizeCode(a.code) === '100101');
+            if (cash100101?.id) cashGeneralAccountId = String(cash100101.id);
+          } catch {
+            cashGeneralAccountId = null;
+          }
+        }
+
+        debitAccountId = cashGeneralAccountId;
+      }
+
+      if (!debitAccountId) {
         alert(
-          'No se pudo registrar el pago: configure la cuenta de Caja General (código 100101 o cash_account_id) para poder generar el asiento automáticamente.',
+          'No se pudo registrar el pago: configure la cuenta de Caja General (código 100101 o cash_account_id) o seleccione un banco con cuenta contable asociada.',
         );
         return;
       }
@@ -630,7 +647,7 @@ export default function PaymentsPage() {
       }
 
       if (!withholdingAccountId) {
-        withholdingAccountId = cashGeneralAccountId;
+        withholdingAccountId = debitAccountId;
       }
 
       if (!resolvedArAccountId) {
@@ -706,8 +723,8 @@ export default function PaymentsPage() {
 
         const lines: any[] = [
           {
-            account_id: cashGeneralAccountId,
-            description: 'Cobro de cliente - Caja General',
+            account_id: debitAccountId,
+            description: `Cobro de cliente - ${debitAccountLabel}`,
             debit_amount: cashReceived,
             credit_amount: 0,
             line_number: 1,
