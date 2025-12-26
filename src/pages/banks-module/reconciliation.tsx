@@ -711,22 +711,40 @@ export default function BankReconciliationPage() {
                 <input
                   type="text"
                   value={statement.opening}
-                  onChange={(e) => handleStatementChange('opening', e.target.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9.,]/g, '');
+                    handleStatementChange('opening', raw);
+                  }}
+                  onBlur={(e) => {
+                    const num = parseAmountValue(e.target.value);
+                    if (num > 0) {
+                      handleStatementChange('opening', formatAmount(num));
+                    }
+                  }}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Ej: 150000.00"
+                  placeholder="Ej: 150,000.00"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Saldo final en banco
+                  Saldo final del extracto
                 </label>
                 <input
                   type="text"
                   value={statement.closing}
-                  onChange={(e) => handleStatementChange('closing', e.target.value)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^0-9.,]/g, '');
+                    handleStatementChange('closing', raw);
+                  }}
+                  onBlur={(e) => {
+                    const num = parseAmountValue(e.target.value);
+                    if (num > 0) {
+                      handleStatementChange('closing', formatAmount(num));
+                    }
+                  }}
                   className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  placeholder="Ej: 175000.00"
+                  placeholder="Ej: 175,000.00"
                 />
               </div>
             </div>
