@@ -778,7 +778,7 @@ export default function QuotesPage() {
     try {
       await quotesService.update(quoteId, { status: 'approved' });
       setQuotes((prev) => prev.map((q) => q.id === quoteId ? { ...q, status: 'approved' } : q));
-      toast.success(`Cotización ${quoteId} aprobada`);
+      toast.success('✅ Cotización aprobada exitosamente');
     } catch (error) {
       console.error('Error al aprobar cotización', error);
       toast.error('Error al aprobar la cotización');
@@ -1141,7 +1141,7 @@ export default function QuotesPage() {
         await quotesService.update(quote.id, { status: 'invoiced' });
         setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'invoiced' } : q));
 
-        toast.success(`Factura ${invoiceNumber} creada exitosamente`);
+        toast.success('✅ Factura creada exitosamente');
       } catch (error) {
         console.error('Error converting quote to invoice:', error);
         toast.error('Error al convertir la cotización en factura');
@@ -1767,6 +1767,7 @@ export default function QuotesPage() {
                       const qts = await quotesService.getAll(user.id);
                       const mapped = (qts || []).map((q: any) => ({
                         id: q.id,
+                        customerId: q.customer_id || q.customers?.id || undefined,
                         customer: q.customer_name || q.customers?.name || 'Cliente',
                         customerEmail: q.customer_email || q.customers?.email || '',
                         project: q.project || '',

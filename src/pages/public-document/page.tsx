@@ -122,6 +122,12 @@ export default function PublicDocumentPage() {
     const tax = Number(header.tax_amount ?? header.total_itbis ?? header.tax ?? 0) || 0;
     const total = Number(header.total_amount ?? header.total_to_pay ?? header.total ?? 0) || 0;
 
+    const customerName = header.customers?.name || header.customer_name || '';
+    const customerDoc = header.customers?.document || header.customers?.tax_id || header.customer_document || header.tax_id || '';
+    const customerPhone = header.customers?.phone || header.customer_phone || '';
+    const customerEmail = header.customers?.email || header.customer_email || '';
+    const customerAddress = header.customers?.address || header.customer_address || '';
+
     return `
       <html>
         <head>
@@ -141,6 +147,10 @@ export default function PublicDocumentPage() {
             .totals { margin-top: 12px; width: 260px; margin-left: auto; }
             .totals-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
             .totals-row:last-child { border-bottom:none; font-weight:800; }
+            .client-section { margin-top: 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
+            .client-title { font-weight: 700; color: #0b2a6f; margin-bottom: 8px; font-size: 13px; }
+            .client-info { font-size: 12px; color: #374151; line-height: 1.5; }
+            .client-info .label { color: #6b7280; }
             @media print { body { padding: 0; } }
           </style>
         </head>
@@ -155,6 +165,18 @@ export default function PublicDocumentPage() {
               <div class="doc-number">#${safeNumber}</div>
             </div>
           </div>
+          ${customerName ? `
+          <div class="client-section">
+            <div class="client-title">Cliente</div>
+            <div class="client-info">
+              <div><strong>${customerName}</strong></div>
+              ${customerDoc ? `<div><span class="label">RNC/Cédula:</span> ${customerDoc}</div>` : ''}
+              ${customerPhone ? `<div><span class="label">Teléfono:</span> ${customerPhone}</div>` : ''}
+              ${customerEmail ? `<div><span class="label">Email:</span> ${customerEmail}</div>` : ''}
+              ${customerAddress ? `<div><span class="label">Dirección:</span> ${customerAddress}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
           <table>
             <thead>
               <tr>

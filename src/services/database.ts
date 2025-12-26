@@ -9986,7 +9986,15 @@ export const apInvoicesService = {
         .from('ap_invoices')
         .select(`
           *,
-          suppliers (name)
+          suppliers (
+            id,
+            name,
+            document,
+            tax_id,
+            phone,
+            email,
+            address
+          )
         `)
         .eq('user_id', tenantId)
         .order('invoice_date', { ascending: false })
@@ -10603,7 +10611,15 @@ export const purchaseOrdersService = {
         .from('purchase_orders')
         .select(`
           *,
-          suppliers (name)
+          suppliers (
+            id,
+            name,
+            document,
+            tax_id,
+            phone,
+            email,
+            address
+          )
         `)
         .eq('user_id', tenantId)
         .order('order_date', { ascending: false });

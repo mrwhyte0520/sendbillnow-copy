@@ -151,6 +151,24 @@ export default function DocumentPage() {
     const tax = Number(header.tax_amount ?? header.total_itbis ?? header.tax ?? 0) || 0;
     const total = Number(header.total_amount ?? header.total_to_pay ?? header.total ?? 0) || 0;
 
+    const isSupplierDoc = doc.type === 'ap-invoice' || doc.type === 'purchase-order';
+    const customerOrSupplierName = isSupplierDoc
+      ? (header.suppliers?.name || header.supplier_name || header.vendor_name || '')
+      : (header.customers?.name || header.customer_name || '');
+    const customerOrSupplierDoc = isSupplierDoc
+      ? (header.suppliers?.document || header.suppliers?.tax_id || header.supplier_rnc || header.supplier_document || '')
+      : (header.customers?.document || header.customers?.tax_id || header.customer_document || header.tax_id || '');
+    const customerOrSupplierPhone = isSupplierDoc
+      ? (header.suppliers?.phone || header.supplier_phone || '')
+      : (header.customers?.phone || header.customer_phone || '');
+    const customerOrSupplierEmail = isSupplierDoc
+      ? (header.suppliers?.email || header.supplier_email || '')
+      : (header.customers?.email || header.customer_email || '');
+    const customerOrSupplierAddress = isSupplierDoc
+      ? (header.suppliers?.address || header.supplier_address || '')
+      : (header.customers?.address || header.customer_address || '');
+    const entityLabel = isSupplierDoc ? 'Suplidor' : 'Cliente';
+
     return `
       <html>
         <head>
@@ -170,6 +188,10 @@ export default function DocumentPage() {
             .totals { margin-top: 12px; width: 260px; margin-left: auto; }
             .totals-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
             .totals-row:last-child { border-bottom:none; font-weight:800; }
+            .client-section { margin-top: 16px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; }
+            .client-title { font-weight: 700; color: #0b2a6f; margin-bottom: 8px; font-size: 13px; }
+            .client-info { font-size: 12px; color: #374151; line-height: 1.5; }
+            .client-info .label { color: #6b7280; }
           </style>
         </head>
         <body>
@@ -183,6 +205,18 @@ export default function DocumentPage() {
               <div class="doc-number">#${safeNumber}</div>
             </div>
           </div>
+          ${customerOrSupplierName ? `
+          <div class="client-section">
+            <div class="client-title">${entityLabel}</div>
+            <div class="client-info">
+              <div><strong>${customerOrSupplierName}</strong></div>
+              ${customerOrSupplierDoc ? `<div><span class="label">RNC/Cédula:</span> ${customerOrSupplierDoc}</div>` : ''}
+              ${customerOrSupplierPhone ? `<div><span class="label">Teléfono:</span> ${customerOrSupplierPhone}</div>` : ''}
+              ${customerOrSupplierEmail ? `<div><span class="label">Email:</span> ${customerOrSupplierEmail}</div>` : ''}
+              ${customerOrSupplierAddress ? `<div><span class="label">Dirección:</span> ${customerOrSupplierAddress}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
           <table>
             <thead>
               <tr>
