@@ -706,7 +706,7 @@ export default function BankReconciliationPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Saldo inicial del extracto
+                  Saldo inicial en banco
                 </label>
                 <input
                   type="text"
@@ -719,7 +719,7 @@ export default function BankReconciliationPage() {
 
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Saldo final del extracto
+                  Saldo final en banco
                 </label>
                 <input
                   type="text"
