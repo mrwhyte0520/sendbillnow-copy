@@ -82,8 +82,6 @@ export default function APInvoicesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<APInvoice | null>(null);
 
-  const [showSelectExistingInvoicesModal, setShowSelectExistingInvoicesModal] = useState(false);
-  const [selectedInvoicesToConvert, setSelectedInvoicesToConvert] = useState<any[]>([]);
 
   const [showDocumentPreviewModal, setShowDocumentPreviewModal] = useState(false);
   const [documentPreviewType, setDocumentPreviewType] = useState<'pdf' | 'table' | 'html'>('html');
@@ -905,16 +903,14 @@ export default function APInvoicesPage() {
                   ${companyRnc ? `<div style="font-size: 14px; font-weight: 700; color: #0b2a6f; background: #e0e7ff; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 4px;">RNC: ${companyRnc}</div>` : ''}
                 </div>
                 <div class="doc">
-                  <div class="doc-title">FACTURA</div>
-                  <div class="doc-number">#${safeNumber}</div>
-                  <div style="margin-top: 8px; padding: 8px 12px; background: #dcfce7; border: 2px solid #16a34a; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 11px; color: #166534; font-weight: 600;">NCF</div>
-                    <div style="font-size: 16px; font-weight: 800; color: #166534; letter-spacing: 1px;">${safeNumber}</div>
-                  </div>
+                  <div class="doc-title">FACTURA ${(invoice as any).saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
+                  <div class="doc-number">NCF: ${safeNumber}</div>
                   <div class="doc-kv">
-                    <div><strong>Fecha:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('es-DO')}</div>
-                    ${invoice.dueDate ? `<div><strong>Vence:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>` : ''}
-                    ${invoice.currency ? `<div><strong>Moneda:</strong> ${invoice.currency}</div>` : ''}
+                    ${(invoice as any).ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${new Date((invoice as any).ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
+                    ${(invoice as any).sequentialNumber ? `<div><strong>Número Factura:</strong> ${(invoice as any).sequentialNumber}</div>` : ''}
+                    <div><strong>Moneda:</strong> ${invoice.currency === 'DOP' ? 'Peso Dominicano' : (invoice.currency || 'DOP')}</div>
+                    ${invoice.storeName ? `<div><strong>Tienda:</strong> ${invoice.storeName}</div>` : ''}
+                    <div><strong>Fecha Límite de Pago:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('es-DO') : ''}</div>
                   </div>
                   ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
                 </div>

@@ -7049,7 +7049,7 @@ export const payrollService = {
       // Cargar tramos de ISR (si existen). Si falla o no hay tramos, ISR se mantiene en 0.
       let taxBrackets: any[] = [];
       try {
-        taxBrackets = await settingsService.getPayrollTaxBrackets();
+        taxBrackets = await payrollSettingsService.getPayrollTaxBrackets();
       } catch (e) {
         // eslint-disable-next-line no-console
         console.error('Error loading payroll tax brackets for payroll calculation:', e);
@@ -9989,7 +9989,6 @@ export const apInvoicesService = {
           suppliers (
             id,
             name,
-            document,
             tax_id,
             phone,
             email,
@@ -10614,7 +10613,6 @@ export const purchaseOrdersService = {
           suppliers (
             id,
             name,
-            document,
             tax_id,
             phone,
             email,

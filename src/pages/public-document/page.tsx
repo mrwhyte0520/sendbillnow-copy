@@ -160,9 +160,17 @@ export default function PublicDocumentPage() {
               <div class="company">${companyName}</div>
               ${companyRnc ? `<div class="meta">RNC: ${companyRnc}</div>` : ''}
             </div>
-            <div>
-              <div class="doc-title">${titleMap[doc.type]}</div>
-              <div class="doc-number">#${safeNumber}</div>
+            <div style="text-align:right;">
+              <div class="doc-title">${titleMap[doc.type]} ${(header as any).sale_type === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
+              <div class="doc-number">NCF: ${safeNumber}</div>
+              <div class="meta" style="margin-top:8px;">
+                ${(header as any).ncf_expiry_date ? `<div><strong>Válida hasta:</strong> ${new Date((header as any).ncf_expiry_date).toLocaleDateString('es-DO')}</div>` : ''}
+                ${(header as any).sequential_number ? `<div><strong>Número:</strong> ${(header as any).sequential_number}</div>` : ''}
+                ${(header as any).sales_reps?.name ? `<div><strong>Vendedor:</strong> ${(header as any).sales_reps.name}</div>` : ''}
+                <div><strong>Moneda:</strong> ${currency === 'DOP' ? 'Peso Dominicano' : currency}</div>
+                ${(header as any).store_name ? `<div><strong>Tienda:</strong> ${(header as any).store_name}</div>` : ''}
+                ${(header as any).due_date ? `<div><strong>Fecha Límite de Pago:</strong> ${new Date((header as any).due_date).toLocaleDateString('es-DO')}</div>` : ''}
+              </div>
             </div>
           </div>
           ${customerName ? `

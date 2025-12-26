@@ -1228,11 +1228,15 @@ export default function InvoicesPage() {
                 ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
               </div>
               <div class="doc">
-                <div class="doc-title">FACTURA</div>
-                <div class="doc-number">#${invoice.invoiceNumber}</div>
+                <div class="doc-title">FACTURA ${(invoice as any).saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
+                <div class="doc-number">NCF: ${invoice.invoiceNumber}</div>
                 <div class="doc-kv">
-                  <div><strong>Fecha:</strong> ${invoice.date ? formatDate(invoice.date) : ''}</div>
-                  ${invoice.dueDate ? `<div><strong>Vence:</strong> ${formatDate(invoice.dueDate)}</div>` : ''}
+                  ${(invoice as any).ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${formatDate((invoice as any).ncfExpiryDate)}</div>` : ''}
+                  ${(invoice as any).sequentialNumber ? `<div><strong>Número Factura:</strong> ${(invoice as any).sequentialNumber}</div>` : ''}
+                  ${(invoice as any).salesRepName ? `<div><strong>Vendedor:</strong> ${(invoice as any).salesRepName}</div>` : ''}
+                  <div><strong>Moneda:</strong> ${(invoice as any).currency === 'DOP' ? 'Peso Dominicano' : ((invoice as any).currency || 'DOP')}</div>
+                  ${(invoice as any).storeName ? `<div><strong>Tienda:</strong> ${(invoice as any).storeName}</div>` : ''}
+                  <div><strong>Fecha Límite de Pago:</strong> ${invoice.dueDate ? formatDate(invoice.dueDate) : ''}</div>
                 </div>
                 ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
               </div>

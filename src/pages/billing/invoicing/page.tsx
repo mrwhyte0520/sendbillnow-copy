@@ -38,7 +38,7 @@ interface UiInvoiceItem {
 }
 
 interface UiInvoice {
-  id: string; // número visible
+  id: string; // número visible (NCF)
   internalId: string; // id real en DB
   customerId?: string;
   customer: string;
@@ -54,9 +54,14 @@ interface UiInvoice {
   dueDate: string;
   items: UiInvoiceItem[];
   salesRepId?: string | null;
+  salesRepName?: string | null;
   currency: string;
   baseTotal?: number | null;
   publicToken?: string | null;
+  ncfExpiryDate?: string | null;
+  storeName?: string | null;
+  saleType?: 'credit' | 'cash' | null;
+  sequentialNumber?: number | null;
 }
 
 export default function InvoicingPage() {
@@ -270,9 +275,14 @@ export default function InvoicingPage() {
           dueDate: (inv.due_date as string) || (inv.invoice_date as string) || new Date().toISOString().slice(0, 10),
           items,
           salesRepId: (inv as any).sales_rep_id || null,
+          salesRepName: (inv as any).sales_reps?.name || null,
           currency: invCurrency,
           baseTotal,
           publicToken: (inv as any).public_token || null,
+          ncfExpiryDate: (inv as any).ncf_expiry_date || null,
+          storeName: (inv as any).store_name || null,
+          saleType: (inv as any).sale_type || null,
+          sequentialNumber: (inv as any).sequential_number || null,
         };
       }));
 
@@ -660,11 +670,15 @@ export default function InvoicingPage() {
                 ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
               </div>
               <div class="doc">
-                <div class="doc-title">FACTURA</div>
-                <div class="doc-number">#${invoice.id}</div>
+                <div class="doc-title">FACTURA ${invoice.saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
+                <div class="doc-number">NCF: ${invoice.id}</div>
                 <div class="doc-kv">
-                  <div><strong>Fecha:</strong> ${new Date(invoice.date).toLocaleDateString('es-DO')}</div>
-                  ${invoice.dueDate ? `<div><strong>Vence:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>` : ''}
+                  ${invoice.ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${new Date(invoice.ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
+                  ${invoice.sequentialNumber ? `<div><strong>Número Factura:</strong> ${invoice.sequentialNumber}</div>` : ''}
+                  ${invoice.salesRepName ? `<div><strong>Vendedor:</strong> ${invoice.salesRepName}</div>` : ''}
+                  <div><strong>Moneda:</strong> ${invoice.currency === 'DOP' ? 'Peso Dominicano' : invoice.currency}</div>
+                  ${invoice.storeName ? `<div><strong>Tienda:</strong> ${invoice.storeName}</div>` : ''}
+                  <div><strong>Fecha Límite de Pago:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
                 </div>
                 ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
               </div>
