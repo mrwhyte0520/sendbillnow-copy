@@ -11,11 +11,12 @@ import {
   supplierPaymentsService,
   bankReconciliationService,
   bankAccountsService,
+  customerPaymentsService,
 } from '../../services/database';
 import { formatDateEsDO } from '../../utils/date';
 import { formatAmount } from '../../utils/numberFormat';
 
-type MovementType = 'deposit' | 'check' | 'transfer' | 'credit' | 'charge' | 'supplier_payment';
+type MovementType = 'deposit' | 'check' | 'transfer' | 'credit' | 'charge' | 'supplier_payment' | 'customer_payment';
 
 type BankMovement = {
   id: string;
@@ -147,13 +148,14 @@ export default function BankReconciliationPage() {
       setLoading(true);
       setError(null);
       try {
-        const [deposits, checks, transfers, credits, charges, supplierPayments] = await Promise.all([
+        const [deposits, checks, transfers, credits, charges, supplierPayments, customerPayments] = await Promise.all([
           bankDepositsService.getAll(user.id),
           bankChecksService.getAll(user.id),
           bankTransfersService.getAll(user.id),
           bankCreditsService.getAll(user.id),
           bankChargesService.getAll(user.id),
           supplierPaymentsService.getAll(user.id),
+          customerPaymentsService.getAll(user.id),
         ]);
 
         const normalized: BankMovement[] = [];
@@ -260,6 +262,29 @@ export default function BankReconciliationPage() {
               amount: Number(p.amount) || 0,
               reference: p.reference ?? null,
               description: p.description || labelParts,
+            });
+          });
+
+        // Pagos de clientes (entradas bancarias) - solo con cuenta bancaria
+        (customerPayments as any[])
+          .filter((p) => Boolean(p?.bank_account_id))
+          .forEach((p) => {
+            const customerName = (p.customers as any)?.name || '';
+            const invoiceNo = (p.invoices as any)?.invoice_number || '';
+            const labelParts = [invoiceNo ? `Cobro factura ${invoiceNo}` : 'Cobro de cliente', customerName]
+              .filter(Boolean)
+              .join(' - ');
+
+            normalized.push({
+              id: `cp-${p.id}`,
+              date: p.payment_date,
+              type: 'customer_payment',
+              bank_id: p.bank_account_id ?? null,
+              bank_account_code: null,
+              currency: 'DOP',
+              amount: Number(p.amount) || 0,
+              reference: p.reference ?? null,
+              description: labelParts,
             });
           });
 
@@ -412,9 +437,9 @@ export default function BankReconciliationPage() {
 
   const getSignedAmount = (m: BankMovement) => {
     // Para conciliación, tratamos:
-    // - Depósitos y créditos como entradas (+)
-    // - Cheques, transferencias (origen) y cargos como salidas (-)
-    const positiveTypes: MovementType[] = ['deposit', 'credit'];
+    // - Depósitos, créditos y cobros de clientes como entradas (+)
+    // - Cheques, transferencias (origen), cargos y pagos a proveedores como salidas (-)
+    const positiveTypes: MovementType[] = ['deposit', 'credit', 'customer_payment'];
     const sign = positiveTypes.includes(m.type) ? 1 : -1;
     return sign * m.amount;
   };
@@ -448,36 +473,71 @@ export default function BankReconciliationPage() {
   }, [filteredMovements, reconciledIds, statement]);
 
   const reconciliationMetrics = useMemo(() => {
-    let chargesTotal = 0;
-    let depositsInTransit = 0;
-    let checksInTransit = 0;
+    // Fórmula de conciliación bancaria estándar:
+    // LADO BANCO: Saldo extracto + Depósitos en tránsito - Cheques en circulación = Saldo ajustado banco
+    // LADO LIBROS: Saldo libros + Notas crédito banco - Cargos bancarios = Saldo ajustado libros
+    // Ambos saldos ajustados deben coincidir
+
+    let depositsInTransit = 0;      // En libros pero NO en banco (no marcados)
+    let checksInTransit = 0;        // En libros pero NO cobrados en banco (no marcados)
+    let bankChargesNotRecorded = 0; // Cargos banco no registrados en libros
+    let bankCreditsNotRecorded = 0; // Créditos banco no registrados en libros
+    let customerPaymentsInTransit = 0; // Cobros en tránsito
 
     filteredMovements.forEach((m) => {
-      const signed = getSignedAmount(m);
-      if (m.type === 'charge') {
-        chargesTotal += signed;
-      }
-      if (!reconciledIds.has(m.id)) {
-        if (m.type === 'deposit') {
-          depositsInTransit += signed;
-        }
-        if (m.type === 'check') {
-          checksInTransit += Math.abs(signed);
+      const amount = Math.abs(m.amount);
+      const isReconciled = reconciledIds.has(m.id);
+      
+      // Partidas NO conciliadas (en tránsito)
+      if (!isReconciled) {
+        switch (m.type) {
+          case 'deposit':
+            depositsInTransit += amount;
+            break;
+          case 'customer_payment':
+            customerPaymentsInTransit += amount;
+            break;
+          case 'check':
+          case 'transfer':
+          case 'supplier_payment':
+            checksInTransit += amount;
+            break;
+          case 'charge':
+            bankChargesNotRecorded += amount;
+            break;
+          case 'credit':
+            bankCreditsNotRecorded += amount;
+            break;
         }
       }
     });
 
-    const saldoConciliado = totals.calculatedClosing;
-    const saldoPorConciliar = totals.difference;
+    // Total depósitos en tránsito (incluye cobros de clientes)
+    const totalDepositsInTransit = depositsInTransit + customerPaymentsInTransit;
+    
+    // Saldo ajustado del banco
+    const bankStatementBalance = totals.closing;
+    const adjustedBankBalance = bankStatementBalance + totalDepositsInTransit - checksInTransit;
+    
+    // Saldo ajustado de libros
+    const bookBalanceValue = bookBalance !== null && !Number.isNaN(bookBalance) ? bookBalance : 0;
+    const adjustedBookBalance = bookBalanceValue + bankCreditsNotRecorded - bankChargesNotRecorded;
+    
+    // Diferencia (debe ser 0 para conciliación perfecta)
+    const difference = adjustedBankBalance - adjustedBookBalance;
 
     return {
-      chargesTotal,
-      depositsInTransit,
+      depositsInTransit: totalDepositsInTransit,
       checksInTransit,
-      saldoConciliado,
-      saldoPorConciliar,
+      bankChargesNotRecorded,
+      bankCreditsNotRecorded,
+      bankStatementBalance,
+      adjustedBankBalance,
+      bookBalanceValue,
+      adjustedBookBalance,
+      difference,
     };
-  }, [filteredMovements, reconciledIds, totals]);
+  }, [filteredMovements, reconciledIds, totals, bookBalance]);
 
   const inTransitMovements = useMemo(
     () => filteredMovements.filter((m) => !reconciledIds.has(m.id)),
@@ -510,6 +570,8 @@ export default function BankReconciliationPage() {
         return 'Cargo bancario';
       case 'supplier_payment':
         return 'Pago a proveedor';
+      case 'customer_payment':
+        return 'Cobro de cliente';
       default:
         return type;
     }
@@ -688,73 +750,118 @@ export default function BankReconciliationPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4 space-y-3">
-            <h2 className="text-lg font-semibold">Resumen de conciliación</h2>
+          <div className="bg-white rounded-lg shadow p-4 space-y-4">
+            <h2 className="text-lg font-semibold">Conciliación Bancaria</h2>
 
-            <div className="text-sm space-y-2">
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Saldo en Libros (contable):</span>
-                <span className="font-mono">
-                  {bookBalance !== null ? formatCurrency(bookBalance) : '-'}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Saldo inicial extracto:</span>
-                <span className="font-mono">
-                  {formatCurrency(totals.opening)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Saldo final extracto (banco):</span>
-                <span className="font-mono">
-                  {formatCurrency(totals.closing)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Total movimientos conciliados:</span>
-                <span className="font-mono">
-                  {formatCurrency(totals.totalReconciled)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Saldo conciliado (sist.+conc.):</span>
-                <span className="font-mono">
-                  {formatCurrency(reconciliationMetrics.saldoConciliado)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Cargos bancarios del periodo:</span>
-                <span className="font-mono">
-                  {formatCurrency(reconciliationMetrics.chargesTotal)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Depósitos en tránsito:</span>
-                <span className="font-mono">
-                  {formatCurrency(reconciliationMetrics.depositsInTransit)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-dashed border-gray-200">
-                <span className="text-gray-600">Cheques en tránsito:</span>
-                <span className="font-mono">
-                  {formatCurrency(reconciliationMetrics.checksInTransit)}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 mt-1">
-                <span className="font-medium text-gray-700">Saldo por conciliar:</span>
-                <span
-                  className={`font-mono font-semibold ${
-                    Math.abs(reconciliationMetrics.saldoPorConciliar) < 0.01
-                      ? 'text-emerald-600'
-                      : 'text-red-600'
-                  }`}
-                >
-                  {formatCurrency(reconciliationMetrics.saldoPorConciliar)}
-                </span>
+            {/* LADO DEL BANCO */}
+            <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+              <h3 className="text-sm font-semibold text-blue-800 flex items-center">
+                <i className="ri-bank-line mr-2" />
+                Saldo según Banco
+              </h3>
+              <div className="text-sm space-y-1">
+                <div className="flex justify-between py-1">
+                  <span className="text-gray-700">Saldo según extracto bancario:</span>
+                  <span className="font-mono font-medium">
+                    {formatCurrency(reconciliationMetrics.bankStatementBalance)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-emerald-700">
+                  <span>(+) Depósitos en tránsito:</span>
+                  <span className="font-mono">
+                    {formatCurrency(reconciliationMetrics.depositsInTransit)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-red-700">
+                  <span>(-) Cheques en circulación:</span>
+                  <span className="font-mono">
+                    {formatCurrency(reconciliationMetrics.checksInTransit)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-t border-blue-200 mt-1 pt-2">
+                  <span className="font-semibold text-blue-900">= Saldo ajustado banco:</span>
+                  <span className="font-mono font-bold text-blue-900">
+                    {formatCurrency(reconciliationMetrics.adjustedBankBalance)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="text-xs text-gray-500">
+            {/* LADO DE LIBROS */}
+            <div className="bg-amber-50 rounded-lg p-3 space-y-2">
+              <h3 className="text-sm font-semibold text-amber-800 flex items-center">
+                <i className="ri-book-2-line mr-2" />
+                Saldo según Libros
+              </h3>
+              <div className="text-sm space-y-1">
+                <div className="flex justify-between py-1">
+                  <span className="text-gray-700">Saldo según libros contables:</span>
+                  <span className="font-mono font-medium">
+                    {formatCurrency(reconciliationMetrics.bookBalanceValue)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-emerald-700">
+                  <span>(+) Notas crédito banco no registradas:</span>
+                  <span className="font-mono">
+                    {formatCurrency(reconciliationMetrics.bankCreditsNotRecorded)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 text-red-700">
+                  <span>(-) Cargos bancarios no registrados:</span>
+                  <span className="font-mono">
+                    {formatCurrency(reconciliationMetrics.bankChargesNotRecorded)}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-t border-amber-200 mt-1 pt-2">
+                  <span className="font-semibold text-amber-900">= Saldo ajustado libros:</span>
+                  <span className="font-mono font-bold text-amber-900">
+                    {formatCurrency(reconciliationMetrics.adjustedBookBalance)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* DIFERENCIA */}
+            <div className={`rounded-lg p-3 ${
+              Math.abs(reconciliationMetrics.difference) < 0.01 
+                ? 'bg-emerald-50' 
+                : 'bg-red-50'
+            }`}>
+              <div className="flex justify-between items-center">
+                <span className={`font-semibold flex items-center ${
+                  Math.abs(reconciliationMetrics.difference) < 0.01 
+                    ? 'text-emerald-800' 
+                    : 'text-red-800'
+                }`}>
+                  <i className={`mr-2 ${
+                    Math.abs(reconciliationMetrics.difference) < 0.01 
+                      ? 'ri-checkbox-circle-line' 
+                      : 'ri-error-warning-line'
+                  }`} />
+                  Diferencia:
+                </span>
+                <span className={`font-mono font-bold text-lg ${
+                  Math.abs(reconciliationMetrics.difference) < 0.01 
+                    ? 'text-emerald-600' 
+                    : 'text-red-600'
+                }`}>
+                  {formatCurrency(reconciliationMetrics.difference)}
+                </span>
+              </div>
+              {Math.abs(reconciliationMetrics.difference) < 0.01 && (
+                <p className="text-xs text-emerald-700 mt-1">
+                  ✓ Conciliación perfecta - Los saldos coinciden
+                </p>
+              )}
+              {Math.abs(reconciliationMetrics.difference) >= 0.01 && (
+                <p className="text-xs text-red-700 mt-1">
+                  Revise las partidas no conciliadas para identificar la diferencia
+                </p>
+              )}
+            </div>
+
+            {/* Resumen adicional */}
+            <div className="text-xs text-gray-500 border-t pt-3 mt-2">
               Para una conciliación perfecta, el saldo por conciliar debe ser 0.00.
             </div>
           </div>
