@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { taxService, payrollService } from '../../../services/database';
+import { taxService, payrollSettingsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatAmount } from '../../../utils/numberFormat';
 
@@ -185,12 +185,12 @@ export default function TaxConfigurationPage() {
     if (!user?.id) return;
     try {
       setLoadingBrackets(true);
-      const brackets = await payrollService.getPayrollTaxBrackets();
+      const brackets = await payrollSettingsService.getPayrollTaxBrackets();
       if (brackets && brackets.length > 0) {
         setTaxBrackets(brackets);
       } else {
         // Inicializar con tramos por defecto si no hay ninguno
-        const defaultBrackets = await payrollService.initializeDefaultISRBrackets(user.id);
+        const defaultBrackets = await payrollSettingsService.initializeDefaultISRBrackets(user.id);
         setTaxBrackets(defaultBrackets);
       }
     } catch (error) {
@@ -207,10 +207,10 @@ export default function TaxConfigurationPage() {
       setLoadingBrackets(true);
       // Primero eliminar los existentes
       for (const bracket of taxBrackets) {
-        await payrollService.deletePayrollTaxBracket(bracket.id);
+        await payrollSettingsService.deletePayrollTaxBracket(bracket.id);
       }
       // Luego crear los por defecto
-      const defaultBrackets = await payrollService.initializeDefaultISRBrackets(user.id);
+      const defaultBrackets = await payrollSettingsService.initializeDefaultISRBrackets(user.id);
       setTaxBrackets(defaultBrackets);
       setMessage({ type: 'success', text: 'Tramos fiscales restablecidos a valores DGII' });
     } catch (error) {
