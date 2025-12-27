@@ -270,22 +270,15 @@ export default function TaxConfigurationPage() {
               />
             </div>
 
-            {/* ISR Rates */}
+            {/* ISR Withholding Rates */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tasas ISR (%)
+                Retenciones ISR en Fuente (%)
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Salarios</label>
-                  <input
-                    type="number" min="0"
-                    step="0.01"
-                    value={config.isr_rates.salary || 0}
-                    onChange={(e) => updateIsrRate('salary', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Tasas fijas de retención para pagos a terceros. El ISR de <strong>salarios</strong> se calcula con los <strong>Tramos Fiscales Progresivos</strong> configurados más abajo.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Servicios Profesionales</label>
                   <input
