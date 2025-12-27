@@ -514,7 +514,7 @@ const checkSupabaseConnection = async () => {
 };
 
 export default function QuotesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [showNewQuoteModal, setShowNewQuoteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -544,11 +544,14 @@ export default function QuotesPage() {
 
   // Cargar datos iniciales
   useEffect(() => {
+    // Esperar a que la autenticación termine de cargar
+    if (authLoading) return;
+    
     const loadInitialData = async () => {
       try {
         setLoading(true);
         if (!user?.id) {
-          toast.error('Debes iniciar sesión para ver tus cotizaciones');
+          // Usuario no autenticado - limpiar estado silenciosamente
           setQuotes([]);
           setCustomers([]);
           setServices([]);
@@ -655,13 +658,12 @@ export default function QuotesPage() {
         setProducts(mappedProducts);
       } catch (error) {
         console.error('Error al cargar datos:', error);
-        toast.error('Error al cargar los datos');
       } finally {
         setLoading(false);
       }
     };
     loadInitialData();
-  }, [user]);
+  }, [user, authLoading]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
