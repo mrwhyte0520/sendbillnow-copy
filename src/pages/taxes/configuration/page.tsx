@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { taxService } from '../../../services/database';
+import { taxService, payrollService } from '../../../services/database';
+import { useAuth } from '../../../hooks/useAuth';
+import { formatAmount } from '../../../utils/numberFormat';
 
 interface TaxConfiguration {
   itbis_rate: number;
@@ -75,10 +77,14 @@ export default function TaxConfigurationPage() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { user } = useAuth();
+  const [taxBrackets, setTaxBrackets] = useState<any[]>([]);
+  const [loadingBrackets, setLoadingBrackets] = useState(false);
 
   useEffect(() => {
     loadConfiguration();
-  }, []);
+    loadTaxBrackets();
+  }, [user]);
 
   const loadConfiguration = async () => {
     try {
@@ -173,6 +179,46 @@ export default function TaxConfigurationPage() {
         [type]: value
       }
     }));
+  };
+
+  const loadTaxBrackets = async () => {
+    if (!user?.id) return;
+    try {
+      setLoadingBrackets(true);
+      const brackets = await payrollService.getPayrollTaxBrackets();
+      if (brackets && brackets.length > 0) {
+        setTaxBrackets(brackets);
+      } else {
+        // Inicializar con tramos por defecto si no hay ninguno
+        const defaultBrackets = await payrollService.initializeDefaultISRBrackets(user.id);
+        setTaxBrackets(defaultBrackets);
+      }
+    } catch (error) {
+      console.error('Error loading tax brackets:', error);
+    } finally {
+      setLoadingBrackets(false);
+    }
+  };
+
+  const handleInitializeDefaultBrackets = async () => {
+    if (!user?.id) return;
+    if (!confirm('¿Desea restablecer los tramos fiscales a los valores por defecto de la DGII? Esto eliminará los tramos personalizados.')) return;
+    try {
+      setLoadingBrackets(true);
+      // Primero eliminar los existentes
+      for (const bracket of taxBrackets) {
+        await payrollService.deletePayrollTaxBracket(bracket.id);
+      }
+      // Luego crear los por defecto
+      const defaultBrackets = await payrollService.initializeDefaultISRBrackets(user.id);
+      setTaxBrackets(defaultBrackets);
+      setMessage({ type: 'success', text: 'Tramos fiscales restablecidos a valores DGII' });
+    } catch (error) {
+      console.error('Error initializing default brackets:', error);
+      setMessage({ type: 'error', text: 'Error al restablecer tramos fiscales' });
+    } finally {
+      setLoadingBrackets(false);
+    }
   };
 
   return (
@@ -433,6 +479,109 @@ export default function TaxConfigurationPage() {
                 <label htmlFor="ncf_validation" className="ml-2 block text-sm text-gray-900">
                   Validar formato de NCF
                 </label>
+              </div>
+            </div>
+
+            {/* ISR Tax Brackets Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Tramos Fiscales ISR - Personas Físicas</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Escala progresiva anual según normativa DGII - República Dominicana
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleInitializeDefaultBrackets}
+                    disabled={loadingBrackets}
+                    className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 whitespace-nowrap text-sm"
+                  >
+                    <i className="ri-refresh-line mr-2"></i>
+                    Restablecer a DGII
+                  </button>
+                </div>
+              </div>
+　　 　 　 　
+              <div className="p-6">
+                {loadingBrackets ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <i className="ri-loader-4-line animate-spin text-2xl"></i>
+                    <p className="mt-2">Cargando tramos fiscales...</p>
+                  </div>
+                ) : taxBrackets.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <i className="ri-file-list-3-line text-4xl mb-2"></i>
+                    <p>No hay tramos fiscales configurados</p>
+                    <button
+                      onClick={handleInitializeDefaultBrackets}
+                      className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Cargar tramos DGII por defecto
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tramo</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Renta Desde</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Renta Hasta</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa (%)</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Fijo</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {taxBrackets.map((bracket, index) => (
+                          <tr key={bracket.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                index === 0 ? 'bg-green-100 text-green-800' :
+                                index === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                index === 2 ? 'bg-orange-100 text-orange-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {index === 0 ? 'Exento' : `Tramo ${index}`}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              RD$ {formatAmount(bracket.min_amount)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {bracket.max_amount === null ? 'En adelante' : `RD$ ${formatAmount(bracket.max_amount)}`}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {bracket.rate_percent}%
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              RD$ {formatAmount(bracket.fixed_amount)}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-600">
+                              {bracket.description || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Info Box */}
+                <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <i className="ri-information-line text-blue-500 mt-0.5 mr-3 text-lg"></i>
+                    <div>
+                      <h4 className="text-sm font-medium text-blue-800">Cálculo del ISR Progresivo</h4>
+                      <p className="text-sm text-blue-700 mt-1">
+                        El ISR se calcula de forma progresiva: se aplica el <strong>monto fijo</strong> del tramo 
+                        más el <strong>porcentaje</strong> sobre el excedente que supera el límite inferior del tramo.
+                        Para retención mensual de nómina, el ISR anual calculado se divide entre 12.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

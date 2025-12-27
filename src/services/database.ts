@@ -14933,6 +14933,108 @@ export const payrollSettingsService = {
       console.error('Error deleting payroll tax bracket:', error);
       throw error;
     }
+  },
+
+  // Inicializar tramos ISR por defecto según DGII RD
+  async initializeDefaultISRBrackets(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('User ID required');
+
+      // Verificar si ya tiene tramos
+      const existing = await this.getPayrollTaxBrackets();
+      if (existing && existing.length > 0) {
+        return existing; // Ya tiene tramos configurados
+      }
+
+      // Tramos fiscales según DGII RD (escala anual vigente)
+      const defaultBrackets = [
+        {
+          user_id: tenantId,
+          min_amount: 0,
+          max_amount: 416220.00,
+          rate_percent: 0,
+          fixed_amount: 0,
+          description: 'Renta exenta',
+          is_annual: true
+        },
+        {
+          user_id: tenantId,
+          min_amount: 416220.01,
+          max_amount: 624329.00,
+          rate_percent: 15,
+          fixed_amount: 0,
+          description: '15% sobre excedente de RD$416,220.01',
+          is_annual: true
+        },
+        {
+          user_id: tenantId,
+          min_amount: 624329.01,
+          max_amount: 867123.00,
+          rate_percent: 20,
+          fixed_amount: 31216.00,
+          description: 'RD$31,216.00 + 20% sobre excedente de RD$624,329.01',
+          is_annual: true
+        },
+        {
+          user_id: tenantId,
+          min_amount: 867123.01,
+          max_amount: null,
+          rate_percent: 25,
+          fixed_amount: 79776.00,
+          description: 'RD$79,776.00 + 25% sobre excedente de RD$867,123.00',
+          is_annual: true
+        }
+      ];
+
+      const { data, error } = await supabase
+        .from('payroll_tax_brackets')
+        .insert(defaultBrackets)
+        .select();
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error initializing default ISR brackets:', error);
+      throw error;
+    }
+  },
+
+  // Calcular ISR para un ingreso gravable anual
+  calculateISR(taxableIncome: number, brackets: any[]): number {
+    if (!brackets || brackets.length === 0 || !Number.isFinite(taxableIncome) || taxableIncome <= 0) {
+      return 0;
+    }
+
+    // Encontrar el tramo correspondiente
+    const bracket = brackets.find((b: any) => {
+      const min = Number(b.min_amount ?? 0);
+      const hasMax = b.max_amount !== null && b.max_amount !== undefined;
+      const max = hasMax ? Number(b.max_amount) : Number.POSITIVE_INFINITY;
+      return taxableIncome >= min && taxableIncome <= max;
+    });
+
+    if (!bracket) return 0;
+
+    const min = Number(bracket.min_amount ?? 0);
+    const fixedAmount = Number(bracket.fixed_amount ?? 0);
+    const rate = Number(bracket.rate_percent ?? bracket.rate ?? 0);
+
+    const excess = Math.max(0, taxableIncome - min);
+    const variablePart = excess * (rate / 100);
+    const isr = fixedAmount + variablePart;
+
+    return Number.isFinite(isr) && isr > 0 ? Math.round(isr * 100) / 100 : 0;
+  },
+
+  // Calcular retención mensual de ISR
+  calculateMonthlyISRRetention(monthlyTaxableIncome: number, brackets: any[]): number {
+    // Proyectar ingreso anual
+    const annualIncome = monthlyTaxableIncome * 12;
+    // Calcular ISR anual
+    const annualISR = this.calculateISR(annualIncome, brackets);
+    // Retención mensual = ISR anual / 12
+    return Math.round((annualISR / 12) * 100) / 100;
   }
 };
 
