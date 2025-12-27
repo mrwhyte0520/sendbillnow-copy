@@ -823,7 +823,10 @@ export default function APInvoicesPage() {
       const supplierEmail = String((supplier as any)?.email || '').trim();
       const supplierAddress = String((supplier as any)?.address || '').trim();
       const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
-      const companyRnc = (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+      const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+      const companyPhone = (companyInfo as any)?.phone || '';
+      const companyEmail = (companyInfo as any)?.email || '';
+      const companyAddress = (companyInfo as any)?.address || '';
 
       const safeNumber = invoice.invoiceNumber || invoice.id;
 
@@ -900,7 +903,10 @@ export default function APInvoicesPage() {
               <div class="top">
                 <div class="company">
                   <div class="company-name">${companyName}</div>
-                  ${companyRnc ? `<div style="font-size: 14px; font-weight: 700; color: #0b2a6f; background: #e0e7ff; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-top: 4px;">RNC: ${companyRnc}</div>` : ''}
+                  ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                  ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+                  ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+                  ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
                 </div>
                 <div class="doc">
                   <div class="doc-title">FACTURA ${(invoice as any).saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>

@@ -584,7 +584,10 @@ export default function InvoicingPage() {
     const printCustomerAddress = fullCustomer?.address || invoice.customerAddress || '';
 
     const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
-    const companyRnc = (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+    const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+    const companyPhone = (companyInfo as any)?.phone || '';
+    const companyEmail = (companyInfo as any)?.email || '';
+    const companyAddress = (companyInfo as any)?.address || '';
 
     const itbisLabel = (taxConfig?.itbis_rate ?? 18).toFixed(2);
 
@@ -631,7 +634,7 @@ export default function InvoicingPage() {
             .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
             .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
             .qr { margin-top: 10px; width: 110px; height: 110px; }
-            .section-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; margin-top: 16px; }
+            .section-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
             .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
             .card-head { background: var(--primary); padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
             .card-head-title { font-weight: 800; font-size: 14px; color: #fff; }
@@ -668,6 +671,9 @@ export default function InvoicingPage() {
               <div class="company">
                 <div class="company-name">${companyName}</div>
                 ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+                ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
               </div>
               <div class="doc">
                 <div class="doc-title">FACTURA ${invoice.saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>

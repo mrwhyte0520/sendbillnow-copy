@@ -1079,7 +1079,18 @@ export default function QuotesPage() {
 
         // Determinar tipo de comprobante según configuración del cliente
         const customer = customers.find((c) => c.id === quote.customerId);
-        const documentType = customer?.documentType || customer?.ncfType || 'B02';
+        // Nota: `documentType` del cliente suele representar su documento (RNC/Cédula),
+        // mientras que el tipo NCF debe ser B01/B02/B04/B14...
+        const rawNcfType = customer?.ncfType;
+        const normalizedNcfType = String(rawNcfType || '').trim().toUpperCase();
+        const isValidNcfType = /^B\d{2}$/.test(normalizedNcfType);
+
+        // Fallback: si el cliente no tiene ncfType válido, intentar inferirlo del tipo de documento
+        // (RNC => B01, Cédula/consumidor => B02)
+        const normalizedDocType = String((customer as any)?.documentType || '').trim().toLowerCase();
+        const inferredNcfType = normalizedDocType.includes('rnc') ? 'B01' : 'B02';
+
+        const documentType = isValidNcfType ? normalizedNcfType : inferredNcfType;
 
         // Obtener NCF desde la serie configurada - obligatorio
         let invoiceNumber = '';

@@ -674,6 +674,9 @@ export default function PurchaseOrdersPage() {
   const printOrder = async (order: any) => {
     const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
     const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
+    const companyPhone = (companyInfo as any)?.phone || '';
+    const companyEmail = (companyInfo as any)?.email || '';
+    const companyAddress = (companyInfo as any)?.address || '';
 
     const supplier = suppliers.find((s: any) => String(s.id) === String(order.supplierId));
     const supplierName = supplier?.legalName || supplier?.name || order.supplier;
@@ -781,6 +784,9 @@ export default function PurchaseOrdersPage() {
               <div class="company">
                 <div class="company-name">${companyName}</div>
                 ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+                ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
               </div>
               <div class="doc">
                 <div class="doc-title">ORDEN</div>

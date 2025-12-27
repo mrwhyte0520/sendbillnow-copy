@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
 import { apSupplierAdvancesService, suppliersService, bankAccountsService, chartAccountsService, settingsService } from '../../../services/database';
+import { formatMoney } from '../../../utils/numberFormat';
 
 interface SupplierAdvance {
   id: string;
@@ -312,6 +314,129 @@ export default function AdvancesPage() {
     }
   };
 
+  const handlePrintAdvance = async (advance: SupplierAdvance) => {
+    let companyName = 'ContaBi';
+    let companyRnc = '';
+    let companyPhone = '';
+    let companyEmail = '';
+    let companyAddress = '';
+    try {
+      const info = await settingsService.getCompanyInfo();
+      if (info) {
+        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+        companyRnc = (info as any).rnc || (info as any).ruc || (info as any).tax_id || '';
+        companyPhone = (info as any).phone || '';
+        companyEmail = (info as any).email || '';
+        companyAddress = (info as any).address || '';
+      }
+    } catch { /* usar defaults */ }
+
+    const supplierName = advance.supplierName;
+
+    let qrDataUrl = '';
+    try {
+      const qrUrl = `${window.location.origin}/document/supplier-advance/${encodeURIComponent(advance.id)}`;
+      qrDataUrl = await QRCode.toDataURL(qrUrl, { errorCorrectionLevel: 'M', margin: 1, width: 160 });
+    } catch { qrDataUrl = ''; }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { alert('No se pudo abrir la ventana de impresión'); return; }
+
+    const advanceDate = advance.date ? new Date(advance.date).toLocaleDateString('es-DO') : '';
+    const dueDate = advance.dueDate ? new Date(advance.dueDate).toLocaleDateString('es-DO') : '';
+
+    const html = `
+      <html>
+        <head>
+          <title>Anticipo ${advance.number}</title>
+          <style>
+            :root { --primary:#0b2a6f; --accent:#19a34a; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; }
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 28px; color: var(--text); background: var(--bg); }
+            .top { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; }
+            .company-name { font-weight: 800; font-size: 18px; color: var(--primary); }
+            .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
+            .doc { text-align: right; }
+            .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
+            .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
+            .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+            .qr { margin-top: 10px; width: 110px; height: 110px; }
+            .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
+            .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
+            .card-head { background: var(--primary); padding: 10px 12px; color: #fff; font-weight: 800; font-size: 13px; }
+            .card-body { padding: 12px; font-size: 12px; }
+            .kv { display:grid; grid-template-columns: 140px 1fr; gap: 6px 10px; }
+            .kv .k { color: var(--muted); }
+            .kv .v { color: var(--text); font-weight: 600; }
+            .totals { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+            .totals-head { background: var(--primary); color: #fff; padding: 10px 12px; font-weight: 800; font-size: 13px; }
+            .totals-body { padding: 12px; }
+            .totals-row { display:grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+            .totals-row:last-child { border-bottom: none; }
+            .totals-row .label { color: var(--muted); font-weight: 700; }
+            .totals-row .value { font-weight: 800; color: var(--text); }
+            .totals-row.total .value { color: var(--primary); }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="top">
+            <div>
+              <div class="company-name">${companyName}</div>
+              ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+              ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+              ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+              ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
+            </div>
+            <div class="doc">
+              <div class="doc-title">ANTICIPO</div>
+              <div class="doc-number">#${advance.number}</div>
+              <div class="doc-kv">
+                <div><strong>Fecha:</strong> ${advanceDate}</div>
+                <div><strong>Estado:</strong> ${advance.status}</div>
+                ${dueDate ? `<div><strong>Vencimiento:</strong> ${dueDate}</div>` : ''}
+              </div>
+              ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <div class="card-head">Proveedor</div>
+              <div class="card-body">
+                <div class="kv">
+                  <div class="k">Nombre</div>
+                  <div class="v">${supplierName}</div>
+                </div>
+              </div>
+            </div>
+            <div class="totals">
+              <div class="totals-head">Resumen</div>
+              <div class="totals-body">
+                <div class="totals-row"><div class="label">Monto</div><div class="value">RD$ ${formatMoney(advance.amount, '')}</div></div>
+                <div class="totals-row"><div class="label">Aplicado</div><div class="value">RD$ ${formatMoney(advance.appliedAmount, '')}</div></div>
+                <div class="totals-row total"><div class="label">Balance</div><div class="value">RD$ ${formatMoney(advance.remainingBalance, '')}</div></div>
+              </div>
+            </div>
+          </div>
+
+          ${advance.reason ? `
+          <div style="margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 12px;">
+            <div style="font-weight: 700; color: var(--muted); margin-bottom: 6px;">Motivo</div>
+            <div style="font-size: 12px;">${advance.reason}</div>
+          </div>
+          ` : ''}
+
+          <script>
+            window.onload = function() { window.print(); setTimeout(function() { window.close(); }, 1000); };
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const handleApply = async (id: string) => {
     const advance = advances.find(a => a.id === id);
     if (!advance) return;
@@ -435,10 +560,6 @@ export default function AdvancesPage() {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     saveAs(blob, `anticipos-proveedores-${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  const printAdvance = (advance: SupplierAdvance) => {
-    alert(`Imprimiendo anticipo: ${advance.number}`);
   };
 
   return (
@@ -594,8 +715,8 @@ export default function AdvancesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => printAdvance(advance)}
-                          className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
+                          onClick={() => handlePrintAdvance(advance)}
+                          className="text-purple-600 hover:text-purple-900 whitespace-nowrap"
                         >
                           <i className="ri-printer-line"></i>
                         </button>

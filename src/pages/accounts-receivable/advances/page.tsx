@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
 import { customersService, invoicesService, customerAdvancesService, bankAccountsService, journalEntriesService, settingsService, accountingSettingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
@@ -360,6 +361,136 @@ export default function AdvancesPage() {
   const handleViewAdvance = (advance: Advance) => {
     setSelectedAdvance(advance);
     setShowAdvanceDetails(true);
+  };
+
+  const handlePrintAdvance = async (advance: Advance) => {
+    let companyName = 'ContaBi';
+    let companyRnc = '';
+    let companyPhone = '';
+    let companyEmail = '';
+    let companyAddress = '';
+    try {
+      const info = await settingsService.getCompanyInfo();
+      if (info) {
+        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+        companyRnc = (info as any).rnc || (info as any).ruc || (info as any).tax_id || '';
+        companyPhone = (info as any).phone || '';
+        companyEmail = (info as any).email || '';
+        companyAddress = (info as any).address || '';
+      }
+    } catch { /* usar defaults */ }
+
+    const customer = customers.find((c) => c.id === advance.customerId);
+    const customerName = customer?.name || advance.customerName;
+    const customerDoc = customer?.document || '';
+    const customerPhone = customer?.phone || '';
+    const customerEmail = customer?.email || '';
+    const customerAddress = customer?.address || '';
+
+    let qrDataUrl = '';
+    try {
+      const qrUrl = `${window.location.origin}/document/advance/${encodeURIComponent(advance.id)}`;
+      qrDataUrl = await QRCode.toDataURL(qrUrl, { errorCorrectionLevel: 'M', margin: 1, width: 160 });
+    } catch { qrDataUrl = ''; }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) { alert('No se pudo abrir la ventana de impresión'); return; }
+
+    const html = `
+      <html>
+        <head>
+          <title>Anticipo ${advance.advanceNumber}</title>
+          <style>
+            :root { --primary:#0b2a6f; --accent:#19a34a; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; }
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 28px; color: var(--text); background: var(--bg); }
+            .top { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; }
+            .company-name { font-weight: 800; font-size: 18px; color: var(--primary); }
+            .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
+            .doc { text-align: right; }
+            .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
+            .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
+            .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+            .qr { margin-top: 10px; width: 110px; height: 110px; }
+            .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
+            .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
+            .card-head { background: var(--primary); padding: 10px 12px; color: #fff; font-weight: 800; font-size: 13px; }
+            .card-body { padding: 12px; font-size: 12px; }
+            .kv { display:grid; grid-template-columns: 140px 1fr; gap: 6px 10px; }
+            .kv .k { color: var(--muted); }
+            .kv .v { color: var(--text); font-weight: 600; }
+            .totals { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+            .totals-head { background: var(--primary); color: #fff; padding: 10px 12px; font-weight: 800; font-size: 13px; }
+            .totals-body { padding: 12px; }
+            .totals-row { display:grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+            .totals-row:last-child { border-bottom: none; }
+            .totals-row .label { color: var(--muted); font-weight: 700; }
+            .totals-row .value { font-weight: 800; color: var(--text); }
+            .totals-row.total .value { color: var(--primary); }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="top">
+            <div>
+              <div class="company-name">${companyName}</div>
+              ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+              ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+              ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+              ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
+            </div>
+            <div class="doc">
+              <div class="doc-title">ANTICIPO</div>
+              <div class="doc-number">#${advance.advanceNumber}</div>
+              <div class="doc-kv">
+                <div><strong>Fecha:</strong> ${advance.date ? new Date(advance.date).toLocaleDateString('es-DO') : ''}</div>
+                <div><strong>Método:</strong> ${getPaymentMethodName(advance.paymentMethod)}</div>
+                <div><strong>Estado:</strong> ${getStatusName(advance.status)}</div>
+                ${advance.reference ? `<div><strong>Referencia:</strong> ${advance.reference}</div>` : ''}
+              </div>
+              ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="card">
+              <div class="card-head">Cliente</div>
+              <div class="card-body">
+                <div class="kv">
+                  <div class="k">Nombre</div>
+                  <div class="v">${customerName}</div>
+                  ${customerDoc ? `<div class="k">RNC/Cédula</div><div class="v">${customerDoc}</div>` : ''}
+                  ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
+                  ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
+                  ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="totals">
+              <div class="totals-head">Resumen</div>
+              <div class="totals-body">
+                <div class="totals-row"><div class="label">Monto</div><div class="value">RD$ ${formatMoney(advance.amount, '')}</div></div>
+                <div class="totals-row"><div class="label">Aplicado</div><div class="value">RD$ ${formatMoney(advance.appliedAmount, '')}</div></div>
+                <div class="totals-row total"><div class="label">Balance</div><div class="value">RD$ ${formatMoney(advance.balance, '')}</div></div>
+              </div>
+            </div>
+          </div>
+
+          ${advance.concept ? `
+          <div style="margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 12px;">
+            <div style="font-weight: 700; color: var(--muted); margin-bottom: 6px;">Concepto</div>
+            <div style="font-size: 12px;">${advance.concept}</div>
+          </div>
+          ` : ''}
+
+          <script>
+            window.onload = function() { window.print(); setTimeout(() => window.close(), 1000); };
+          <\/script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const handleApplyAdvance = (advance: Advance) => {
@@ -846,6 +977,13 @@ export default function AdvancesPage() {
                           title="Ver detalles"
                         >
                           <i className="ri-eye-line"></i>
+                        </button>
+                        <button
+                          onClick={() => handlePrintAdvance(advance)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="Imprimir"
+                        >
+                          <i className="ri-printer-line"></i>
                         </button>
                         {advance.balance > 0 && advance.status !== 'cancelled' && (
                           <button
