@@ -14948,11 +14948,13 @@ export const payrollSettingsService = {
       }
 
       // Tramos fiscales según DGII RD (escala anual vigente)
+      // Nota: rate y rate_percent ambos para compatibilidad con tabla existente
       const defaultBrackets = [
         {
           user_id: tenantId,
           min_amount: 0,
           max_amount: 416220.00,
+          rate: 0,
           rate_percent: 0,
           fixed_amount: 0,
           description: 'Renta exenta',
@@ -14962,6 +14964,7 @@ export const payrollSettingsService = {
           user_id: tenantId,
           min_amount: 416220.01,
           max_amount: 624329.00,
+          rate: 15,
           rate_percent: 15,
           fixed_amount: 0,
           description: '15% sobre excedente de RD$416,220.01',
@@ -14971,6 +14974,7 @@ export const payrollSettingsService = {
           user_id: tenantId,
           min_amount: 624329.01,
           max_amount: 867123.00,
+          rate: 20,
           rate_percent: 20,
           fixed_amount: 31216.00,
           description: 'RD$31,216.00 + 20% sobre excedente de RD$624,329.01',
@@ -14980,6 +14984,7 @@ export const payrollSettingsService = {
           user_id: tenantId,
           min_amount: 867123.01,
           max_amount: null,
+          rate: 25,
           rate_percent: 25,
           fixed_amount: 79776.00,
           description: 'RD$79,776.00 + 25% sobre excedente de RD$867,123.00',
