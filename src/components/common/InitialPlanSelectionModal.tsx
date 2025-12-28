@@ -41,7 +41,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
       icon: 'ri-store-2-line',
       color: 'from-purple-500 to-purple-600',
       features: [
-        '80 Usuarios',
+        '30 Usuarios',
         'Sistema POS completo',
         '2 Almacenes',
         'Productos ilimitados'

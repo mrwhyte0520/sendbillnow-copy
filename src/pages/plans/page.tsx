@@ -151,7 +151,7 @@ export default function PlansPage() {
       features: [
         'Dashboard completo',
         'Sistema POS',
-        '80 Usuarios',
+        '30 Usuarios',
         'Productos ilimitados',
         '2 Almacenes de inventario',
         'Gestión de clientes',
