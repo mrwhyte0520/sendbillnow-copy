@@ -1417,12 +1417,14 @@ export default function FinancialStatementsPage() {
   const expensesTotalsImbalance = expensesCategoriesTotal - (totals.totalExpenses || 0);
   const areExpensesTotalsConsistent = Math.abs(expensesTotalsImbalance) < 0.01;
 
-  // Helper para renderizar líneas - oculta en PDF si saldo es 0, pero muestra en pantalla
+  // Helper para renderizar líneas - oculta completamente si saldo es 0
   const renderBalanceLineIfNotZero = (label: string, amount: number) => {
     const isZero = Math.abs(amount) < 0.01;
+    if (isZero) return null; // No mostrar líneas con valor 0
+    
     const isNegative = amount < 0;
     return (
-      <div className={`flex justify-between py-0.5 pl-4 ${isZero ? 'hide-zero-on-print' : ''}`}>
+      <div className="flex justify-between py-0.5 pl-4">
         <span className="text-sm text-gray-700">{label}</span>
         <span
           className={`text-sm font-medium tabular-nums ${
