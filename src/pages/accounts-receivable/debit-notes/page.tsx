@@ -358,8 +358,8 @@ export default function DebitNotesPage() {
     const arAccountIdFromForm = String(formData.get('ar_account_id') || '');
     const creditAccountId = String(formData.get('credit_account_id') || '');
 
-    if (!customerId || !amount || !creditAccountId) {
-      alert('Cliente, monto y cuenta contable de crédito son obligatorios');
+    if (!customerId || !amount || !creditAccountId || !invoiceId || !arAccountIdFromForm) {
+      alert('Cliente, monto, factura, cuenta contable de crédito y cuenta por cobrar son obligatorios');
       return;
     }
 
@@ -812,10 +812,11 @@ export default function DebitNotesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada (Opcional)
+                      Factura Relacionada <span className="text-red-500">*</span>
                     </label>
                     <select 
                       name="invoice_id"
+                      required
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
                       <option value="">Seleccionar factura</option>
@@ -849,14 +850,15 @@ export default function DebitNotesPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta por Cobrar (opcional)
+                    Cuenta por Cobrar <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="ar_account_id"
+                    required
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     defaultValue=""
                   >
-                    <option value="">Usar cuenta CxC del cliente / ajustes</option>
+                    <option value="">Seleccionar cuenta CxC</option>
                     {arAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}

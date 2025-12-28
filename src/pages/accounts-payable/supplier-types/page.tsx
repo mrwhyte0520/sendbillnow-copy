@@ -36,6 +36,9 @@ export default function SupplierTypesPage() {
     is_rst: false,
     is_ong: false,
     is_non_taxpayer: false,
+    is_government: false,
+    default_invoice_type: '',
+    tax_regime: '',
     isr_withholding_rate: null as number | null,
     itbis_withholding_rate: null as number | null,
   });
@@ -69,6 +72,9 @@ export default function SupplierTypesPage() {
       is_rst: false,
       is_ong: false,
       is_non_taxpayer: false,
+      is_government: false,
+      default_invoice_type: '',
+      tax_regime: '',
       isr_withholding_rate: null,
       itbis_withholding_rate: null,
     });
@@ -125,6 +131,9 @@ export default function SupplierTypesPage() {
       is_rst: !!row.is_rst,
       is_ong: !!row.is_ong,
       is_non_taxpayer: !!row.is_non_taxpayer,
+      is_government: !!row.is_government,
+      default_invoice_type: row.default_invoice_type || '',
+      tax_regime: row.tax_regime || '',
       isr_withholding_rate: typeof row.isr_withholding_rate === 'number' ? row.isr_withholding_rate : null,
       itbis_withholding_rate: typeof row.itbis_withholding_rate === 'number' ? row.itbis_withholding_rate : defaultItbis,
     });
@@ -201,6 +210,9 @@ export default function SupplierTypesPage() {
                         )}
                         {t.is_non_taxpayer && (
                           <span className="px-2 py-0.5 text-xs rounded-full bg-red-50 text-red-700">No contribuyente</span>
+                        )}
+                        {t.is_government && (
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">Gobierno</span>
                         )}
                       </div>
                     </td>
@@ -352,16 +364,63 @@ export default function SupplierTypesPage() {
                     />
                     ONG / Fundación
                   </label>
-                  <label className="inline-flex items-center text-sm text-gray-700 col-span-full">
+                  <label className="inline-flex items-center text-sm text-gray-700">
                     <input
                       type="checkbox"
                       checked={formData.is_non_taxpayer}
                       onChange={(e) => setFormData({ ...formData, is_non_taxpayer: e.target.checked })}
                       className="mr-2"
                     />
-                    No contribuyente (no calcula ITBIS)
+                    No contribuyente
+                  </label>
+                  <label className="inline-flex items-center text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_government}
+                      onChange={(e) => setFormData({ ...formData, is_government: e.target.checked })}
+                      className="mr-2"
+                    />
+                    Gobierno / Entidad Pública
                   </label>
                 </div>
+
+                {formData.is_government && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Factura Habitual</label>
+                      <select
+                        value={formData.default_invoice_type}
+                        onChange={(e) => setFormData({ ...formData, default_invoice_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleccionar tipo</option>
+                        <option value="01">01 - Factura de Crédito Fiscal</option>
+                        <option value="02">02 - Factura de Consumo</option>
+                        <option value="03">03 - Nota de Débito</option>
+                        <option value="04">04 - Nota de Crédito</option>
+                        <option value="11">11 - Comprobante de Compras</option>
+                        <option value="12">12 - Registro Único de Ingresos</option>
+                        <option value="13">13 - Gastos Menores</option>
+                        <option value="14">14 - Regímenes Especiales</option>
+                        <option value="15">15 - Comprobante Gubernamental</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Régimen Tributario</label>
+                      <select
+                        value={formData.tax_regime}
+                        onChange={(e) => setFormData({ ...formData, tax_regime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Seleccionar régimen</option>
+                        <option value="ordinario">Ordinario</option>
+                        <option value="simplificado">Régimen Simplificado de Tributación (RST)</option>
+                        <option value="exento">Exento</option>
+                        <option value="especial">Régimen Especial</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"

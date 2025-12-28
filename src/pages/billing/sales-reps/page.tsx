@@ -73,13 +73,17 @@ export default function SalesRepsPage() {
 
   const openEditModal = (rep: SalesRep) => {
     setEditingRep(rep);
+    const typeId = (rep as any).sales_rep_type_id || '';
+    const selectedType = repTypes.find(t => t.id === typeId);
     setForm({
       name: rep.name,
       code: rep.code || '',
       email: rep.email || '',
       phone: rep.phone || '',
-      commission_rate: rep.commission_rate != null ? String(rep.commission_rate) : '',
-      sales_rep_type_id: (rep as any).sales_rep_type_id || '',
+      commission_rate: selectedType?.default_commission_rate != null 
+        ? String(selectedType.default_commission_rate) 
+        : '',
+      sales_rep_type_id: typeId,
     });
     setShowModal(true);
   };
@@ -299,8 +303,10 @@ export default function SalesRepsPage() {
                       max={100}
                       step={0.01}
                       value={form.commission_rate}
-                      onChange={e => setForm({ ...form, commission_rate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      readOnly
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 text-sm cursor-not-allowed"
+                      title="La comisión se asigna automáticamente según el tipo de vendedor"
                     />
                   </div>
                 </div>
@@ -316,7 +322,7 @@ export default function SalesRepsPage() {
                         sales_rep_type_id: typeId,
                         commission_rate: selectedType?.default_commission_rate != null 
                           ? String(selectedType.default_commission_rate) 
-                          : form.commission_rate
+                          : ''
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"

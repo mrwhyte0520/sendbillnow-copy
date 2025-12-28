@@ -9503,6 +9503,9 @@ export const supplierTypesService = {
     is_rst?: boolean;
     is_ong?: boolean;
     is_non_taxpayer?: boolean;
+    is_government?: boolean;
+    default_invoice_type?: string;
+    tax_regime?: string;
     isr_withholding_rate?: number | null;
     itbis_withholding_rate?: number | null;
   }) {
@@ -9518,6 +9521,9 @@ export const supplierTypesService = {
         is_rst: !!payload.is_rst,
         is_ong: !!payload.is_ong,
         is_non_taxpayer: !!payload.is_non_taxpayer,
+        is_government: !!payload.is_government,
+        default_invoice_type: payload.default_invoice_type || null,
+        tax_regime: payload.tax_regime || null,
         isr_withholding_rate:
           typeof payload.isr_withholding_rate === 'number' ? payload.isr_withholding_rate : null,
         itbis_withholding_rate:
@@ -9546,6 +9552,9 @@ export const supplierTypesService = {
     is_rst?: boolean;
     is_ong?: boolean;
     is_non_taxpayer?: boolean;
+    is_government?: boolean;
+    default_invoice_type?: string;
+    tax_regime?: string;
     isr_withholding_rate?: number | null;
     itbis_withholding_rate?: number | null;
   }) {
@@ -9560,6 +9569,9 @@ export const supplierTypesService = {
       if (typeof payload.is_rst === 'boolean') body.is_rst = payload.is_rst;
       if (typeof payload.is_ong === 'boolean') body.is_ong = payload.is_ong;
       if (typeof payload.is_non_taxpayer === 'boolean') body.is_non_taxpayer = payload.is_non_taxpayer;
+      if (typeof payload.is_government === 'boolean') body.is_government = payload.is_government;
+      if (payload.default_invoice_type !== undefined) body.default_invoice_type = payload.default_invoice_type || null;
+      if (payload.tax_regime !== undefined) body.tax_regime = payload.tax_regime || null;
       if (payload.isr_withholding_rate !== undefined) {
         body.isr_withholding_rate =
           typeof payload.isr_withholding_rate === 'number' ? payload.isr_withholding_rate : null;

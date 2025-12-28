@@ -325,6 +325,11 @@ export default function InventoryPage() {
     }
 
     if (!item && type === 'item') {
+      // Auto-generar SKU para nuevos productos
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+      baseForm.sku = `INV-${timestamp}-${random}`;
+      
       const itemType = baseForm.item_type || 'inventory';
       if (itemType === 'inventory' && accountingSettings) {
         if (!baseForm.inventory_account_id && accountingSettings.default_inventory_asset_account_id) {
@@ -1134,7 +1139,7 @@ export default function InventoryPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Stock Bajo</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {items.filter(item => item.current_stock <= item.minimum_stock).length}
+                {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length}
               </p>
             </div>
           </div>
@@ -1167,6 +1172,7 @@ export default function InventoryPage() {
             <p className="text-sm font-medium text-gray-500">Valor Total Costo (Promedio)</p>
             <p className="text-2xl font-bold text-blue-600">
               ${items
+                .filter(item => item.item_type !== 'service')
                 .reduce((sum, item) => {
                   const cost = item.average_cost ?? item.cost_price ?? 0;
                   return sum + ((item.current_stock || 0) * cost);
@@ -1178,6 +1184,7 @@ export default function InventoryPage() {
             <p className="text-sm font-medium text-gray-500">Valor Total Venta</p>
             <p className="text-2xl font-bold text-green-600">
               ${items
+                .filter(item => item.item_type !== 'service')
                 .reduce((sum, item) => sum + ((item.current_stock || 0) * (item.selling_price || 0)), 0)
                 .toLocaleString('es-DO')}
             </p>
@@ -1186,6 +1193,7 @@ export default function InventoryPage() {
             <p className="text-sm font-medium text-gray-500">Ganancia Potencial</p>
             <p className="text-2xl font-bold text-purple-600">
               ${items
+                .filter(item => item.item_type !== 'service')
                 .reduce((sum, item) => {
                   const cost = item.average_cost ?? item.cost_price ?? 0;
                   return sum + ((item.current_stock || 0) * ((item.selling_price || 0) - cost));
@@ -1202,11 +1210,11 @@ export default function InventoryPage() {
           <h3 className="text-lg font-semibold text-gray-900">Productos con Stock Bajo</h3>
         </div>
         <div className="p-6">
-          {items.filter(item => item.current_stock <= item.minimum_stock).length === 0 ? (
+          {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length === 0 ? (
             <p className="text-gray-500 text-center py-4">No hay productos con stock bajo</p>
           ) : (
             <div className="space-y-3">
-              {items.filter(item => item.current_stock <= item.minimum_stock).slice(0, 5).map(item => (
+              {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).slice(0, 5).map(item => (
                 <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-900">{item.name}</p>
@@ -2109,10 +2117,19 @@ export default function InventoryPage() {
                     </label>
                     <input
                       type="text"
+                      list="inventory-categories"
                       value={formData.category || ''}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Escribe o selecciona una categoría"
                     />
+                    <datalist id="inventory-categories">
+                      {categories
+                        .filter((c: any) => c != null && String(c).trim() !== '')
+                        .map((category: any) => (
+                          <option key={String(category)} value={String(category)} />
+                        ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2120,10 +2137,45 @@ export default function InventoryPage() {
                     </label>
                     <input
                       type="text"
+                      list="unit-of-measure-options"
                       value={formData.unit_of_measure || ''}
                       onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Seleccionar o escribir unidad"
                     />
+                    <datalist id="unit-of-measure-options">
+                      <option value="Unidad" />
+                      <option value="Pieza" />
+                      <option value="Caja" />
+                      <option value="Paquete" />
+                      <option value="Docena" />
+                      <option value="Par" />
+                      <option value="Kg" />
+                      <option value="Gramo" />
+                      <option value="Libra" />
+                      <option value="Onza" />
+                      <option value="Litro" />
+                      <option value="Galón" />
+                      <option value="Metro" />
+                      <option value="Pie" />
+                      <option value="Pulgada" />
+                      <option value="Metro cuadrado" />
+                      <option value="Pie cuadrado" />
+                      <option value="Rollo" />
+                      <option value="Bolsa" />
+                      <option value="Botella" />
+                      <option value="Lata" />
+                      <option value="Barril" />
+                      <option value="Saco" />
+                      <option value="Servicio" />
+                      <option value="Hora" />
+                      {/* Agregar unidades personalizadas existentes */}
+                      {Array.from(new Set(items.map((it: any) => it.unit_of_measure).filter((u: any) => u && String(u).trim() !== '')))
+                        .filter((u: any) => !['Unidad', 'Pieza', 'Caja', 'Paquete', 'Docena', 'Par', 'Kg', 'Gramo', 'Libra', 'Onza', 'Litro', 'Galón', 'Metro', 'Pie', 'Pulgada', 'Metro cuadrado', 'Pie cuadrado', 'Rollo', 'Bolsa', 'Botella', 'Lata', 'Barril', 'Saco', 'Servicio', 'Hora'].includes(u))
+                        .map((unit: any) => (
+                          <option key={String(unit)} value={String(unit)} />
+                        ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">

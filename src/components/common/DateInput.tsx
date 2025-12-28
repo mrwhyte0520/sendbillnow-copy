@@ -11,8 +11,8 @@ type DateInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' |
  * - Shows native date picker.
  * - Supports placeholder and custom className.
  */
-export default function DateInput({ value, onValueChange, className, ...rest }: DateInputProps) {
-  const initial = (value ?? (rest as any).defaultValue ?? '') as string;
+export default function DateInput({ value, onValueChange, className, defaultValue, ...rest }: DateInputProps) {
+  const initial = (value ?? defaultValue ?? '') as string;
   const [internalValue, setInternalValue] = useState<string>(initial);
 
   useEffect(() => {

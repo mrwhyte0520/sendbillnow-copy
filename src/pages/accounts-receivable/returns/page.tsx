@@ -85,19 +85,39 @@ export default function ReturnsPage() {
       setAccountingSettings(settings || null);
 
       // Preseleccionar cuentas por defecto desde Ajustes Contables cuando sea posible
-      if (settings && Array.isArray(accList) && accList.length > 0) {
+      if (Array.isArray(accList) && accList.length > 0) {
         const incomeAccs = (accList as any[]).filter((acc) => acc.allowPosting && acc.type === 'income');
-        const defaultOrigin = (settings as any).sales_account_id as string | undefined;
-        const defaultReturns = (settings as any).sales_returns_account_id as string | undefined;
+        const defaultOrigin = (settings as any)?.sales_account_id as string | undefined;
+        const defaultReturns = (settings as any)?.sales_returns_account_id as string | undefined;
 
         if (!originAccountId && defaultOrigin && incomeAccs.some((acc) => String(acc.id) === String(defaultOrigin))) {
           setOriginAccountId(String(defaultOrigin));
         }
 
+        // Buscar cuenta de devoluciones: primero de settings, luego por nombre/código
         if (!returnsAccountId) {
-          const target = defaultReturns || defaultOrigin;
-          if (target && incomeAccs.some((acc) => String(acc.id) === String(target))) {
-            setReturnsAccountId(String(target));
+          let targetReturnsId: string | undefined;
+          
+          // 1. Usar cuenta configurada en settings
+          if (defaultReturns && incomeAccs.some((acc) => String(acc.id) === String(defaultReturns))) {
+            targetReturnsId = String(defaultReturns);
+          }
+          
+          // 2. Si no hay en settings, buscar cuenta que contenga "devoluc" en nombre o código
+          if (!targetReturnsId) {
+            const returnsAccount = incomeAccs.find((acc) => {
+              const name = String(acc.name || '').toLowerCase();
+              const code = String(acc.code || '').toLowerCase();
+              return name.includes('devoluc') || code.includes('devoluc') || 
+                     name.includes('devolucion') || name.includes('devolución');
+            });
+            if (returnsAccount) {
+              targetReturnsId = String(returnsAccount.id);
+            }
+          }
+          
+          if (targetReturnsId) {
+            setReturnsAccountId(targetReturnsId);
           }
         }
       }
@@ -232,6 +252,11 @@ export default function ReturnsPage() {
       return;
     }
 
+    if (!invoiceId) {
+      alert('Debes seleccionar una factura para aplicar la devolución');
+      return;
+    }
+
     // Validar que no se pueda devolver más que el saldo pendiente de la factura seleccionada
     if (invoiceId) {
       const selectedInvoice = invoices.find((inv) => inv.id === invoiceId);
@@ -274,15 +299,15 @@ export default function ReturnsPage() {
 
     const lines = [
       {
-        account_id: originAccountFromForm,
-        description: 'Reverso de ingresos por devolución',
+        account_id: returnsAccountFromForm,
+        description: 'Devoluciones en ventas',
         debit_amount: amount,
         credit_amount: 0,
         line_number: 1,
       },
       {
-        account_id: returnsAccountFromForm,
-        description: 'Devoluciones en ventas',
+        account_id: originAccountFromForm,
+        description: 'Reverso de ingresos por devolución',
         debit_amount: 0,
         credit_amount: amount,
         line_number: 2,
@@ -495,7 +520,7 @@ export default function ReturnsPage() {
                       }}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">(Opcional) Seleccionar cliente</option>
+                      <option value="">Seleccionar cliente</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -535,12 +560,13 @@ export default function ReturnsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada (Opcional)
+                      Factura Relacionada <span className="text-red-500">*</span>
                     </label>
                     <select
                       name="invoice_id"
                       value={noteInvoiceId}
                       onChange={handleInvoiceChange}
+                      required
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
                       <option value="">Seleccionar factura</option>
@@ -555,7 +581,7 @@ export default function ReturnsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de ingresos original
+                    Cuenta de ingresos original <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="origin_account_id"
@@ -575,7 +601,7 @@ export default function ReturnsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta "Devoluciones en ventas"
+                    Cuenta "Devoluciones en ventas" <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="returns_account_id"
