@@ -2201,8 +2201,8 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Header y título */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">
-                  RESUMEN DE LOS GASTOS DE PERSONAL, DE VENTAS Y ADMINISTRATIVOS
+                <h1 className="text-xl font-bold text-gray-900">
+                  RELACION DE GASTOS GENERALES Y ADMINITRATIVOS
                 </h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
@@ -2457,7 +2457,7 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Header y título */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">NOTAS A LOS ESTADOS FINANCIEROS</h1>
+                <h1 className="text-xl font-bold text-gray-900">Estados de Costos de Ventas</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
                   <p className="text-xs text-gray-700 mb-0.5">
@@ -2931,7 +2931,7 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">NOTAS A LOS ESTADOS FINANCIEROS</h1>
+                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE RESULTADOS</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE RESULTADOS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
@@ -3283,7 +3283,7 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">NOTAS A LOS ESTADOS FINANCIEROS</h1>
+                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
