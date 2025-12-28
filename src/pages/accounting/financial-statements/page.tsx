@@ -2647,6 +2647,15 @@ export default function FinancialStatementsPage() {
                   <div className={`mb-4 ${Math.abs(activosFijos) < 0.01 ? 'hide-zero-on-print' : ''}`}>
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">ACTIVOS FIJOS</h3>
                     {renderBalanceLineIfNotZero('Activos Fijos', activosFijos)}
+
+                    <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
+                      <div className="flex justify-between font-semibold">
+                        <span className="text-sm">Total Activos Fijos</span>
+                        <div className="flex items-center gap-6">
+                          <span className="text-sm tabular-nums">{formatCurrencyRD(activosFijos)}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* OTROS ACTIVOS */}
