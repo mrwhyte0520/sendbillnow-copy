@@ -52,7 +52,9 @@ const printStyles = `
     tr { page-break-inside: avoid; }
     .print-hidden { display: none !important; }
     .hide-zero-on-print { display: none !important; }
+    .print-only { display: block !important; }
   }
+  .print-only { display: none; }
 `;
 
 // Fecha de arranque contable del sistema: permitir todos los movimientos históricos
@@ -2334,7 +2336,7 @@ export default function FinancialStatementsPage() {
               {/* Header y título */}
               <div className="text-center mb-8">
                 {!!companyNameForHeader && (
-                  <div className="mb-2">
+                  <div className="mb-2 print-only">
                     <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
                     {companyRncForHeader && (
                       <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
@@ -2608,7 +2610,7 @@ export default function FinancialStatementsPage() {
               {/* Header y título */}
               <div className="text-center mb-8">
                 {!!companyNameForHeader && (
-                  <div className="mb-2">
+                  <div className="mb-2 print-only">
                     <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
                     {companyRncForHeader && (
                       <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
@@ -2798,7 +2800,7 @@ export default function FinancialStatementsPage() {
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
                 {!!companyNameForHeader && (
-                  <div className="mb-2">
+                  <div className="mb-2 print-only">
                     <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
                     {companyRncForHeader && (
                       <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
@@ -3117,6 +3119,24 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE RESULTADOS</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE RESULTADOS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
@@ -3469,6 +3489,24 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
