@@ -36,6 +36,14 @@ interface CustomerOption {
   address?: string;
 }
 
+interface NewReceiptInvoiceOption {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  paidAmount: number;
+  balance: number;
+}
+
 export default function ReceiptsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +62,11 @@ export default function ReceiptsPage() {
   const [applyInvoices, setApplyInvoices] = useState<Array<{ id: string; invoiceNumber: string; totalAmount: number; paidAmount: number; balance: number }>>([]);
   const [loadingApplyInvoices, setLoadingApplyInvoices] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+
+  const [newReceiptInvoices, setNewReceiptInvoices] = useState<NewReceiptInvoiceOption[]>([]);
+  const [loadingNewReceiptInvoices, setLoadingNewReceiptInvoices] = useState(false);
+  const [newReceiptInvoiceId, setNewReceiptInvoiceId] = useState<string>('');
+  const [newReceiptAmount, setNewReceiptAmount] = useState<string>('');
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
@@ -123,6 +136,8 @@ export default function ReceiptsPage() {
     ? customers.find((c) => c.id === selectedReceipt.customerId) || null
     : null;
 
+  const selectedNewReceiptInvoice = newReceiptInvoices.find((inv) => inv.id === newReceiptInvoiceId) || null;
+
   const loadCustomers = async () => {
     if (!user?.id) return;
     setLoadingCustomers(true);
@@ -176,6 +191,53 @@ export default function ReceiptsPage() {
     loadReceipts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  const loadInvoicesForNewReceiptCustomer = async (customerId: string) => {
+    if (!user?.id || !customerId) {
+      setNewReceiptInvoices([]);
+      return;
+    }
+    setLoadingNewReceiptInvoices(true);
+    try {
+      const data = await invoicesService.getAll(user.id);
+      const mapped: NewReceiptInvoiceOption[] = (data as any[])
+        .filter((inv) => String(inv.customer_id) === String(customerId) && inv.status !== 'Cancelada')
+        .map((inv) => {
+          const total = Number(inv.total_amount) || 0;
+          const paid = Number(inv.paid_amount) || 0;
+          const balance = total - paid;
+          return {
+            id: String(inv.id),
+            invoiceNumber: String(inv.invoice_number || ''),
+            totalAmount: total,
+            paidAmount: paid,
+            balance: balance > 0 ? balance : 0,
+          };
+        })
+        .filter((inv) => inv.balance > 0);
+
+      setNewReceiptInvoices(mapped);
+    } finally {
+      setLoadingNewReceiptInvoices(false);
+    }
+  };
+
+  const handleNewReceiptCustomerChange = async (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setNewReceiptInvoiceId('');
+    setNewReceiptAmount('');
+    await loadInvoicesForNewReceiptCustomer(customerId);
+  };
+
+  const handleNewReceiptInvoiceChange = (invoiceId: string) => {
+    setNewReceiptInvoiceId(invoiceId);
+    const inv = newReceiptInvoices.find((x) => x.id === invoiceId);
+    if (inv) {
+      setNewReceiptAmount(inv.balance ? String(inv.balance) : '');
+    } else {
+      setNewReceiptAmount('');
+    }
+  };
 
   const exportToPDF = async () => {
     const doc = new jsPDF();
@@ -409,52 +471,15 @@ export default function ReceiptsPage() {
   const handleNewReceipt = () => {
     setSelectedReceipt(null);
     setSelectedCustomerId('');
+    setNewReceiptInvoices([]);
+    setNewReceiptInvoiceId('');
+    setNewReceiptAmount('');
     setShowReceiptModal(true);
   };
 
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt);
     setShowReceiptDetails(true);
-  };
-
-  const loadInvoicesForReceipt = async (receipt: Receipt) => {
-    if (!user?.id) return;
-    setLoadingApplyInvoices(true);
-    try {
-      const data = await invoicesService.getAll(user.id);
-      const base = (data as any[])
-        .filter((inv) => String(inv.customer_id) === receipt.customerId && inv.status !== 'Cancelada')
-        .map((inv) => {
-          const total = Number(inv.total_amount) || 0;
-          const paid = Number(inv.paid_amount) || 0;
-          const balance = total - paid;
-          return {
-            id: String(inv.id),
-            invoiceNumber: inv.invoice_number as string,
-            totalAmount: total,
-            paidAmount: paid,
-            balance,
-          };
-        });
-
-      const fullyPaid = base.filter((inv) => inv.totalAmount > 0 && inv.balance <= 0);
-
-      const withReceiptInfo = await Promise.all(
-        fullyPaid.map(async (inv) => {
-          const apps = await receiptApplicationsService.getByInvoice(user.id, inv.id);
-          const hasReceipt = (apps || []).length > 0;
-          return { ...inv, hasReceipt };
-        }),
-      );
-
-      const eligibleInvoices = withReceiptInfo
-        .filter((inv) => !inv.hasReceipt)
-        .map(({ hasReceipt, ...rest }) => rest);
-
-      setApplyInvoices(eligibleInvoices);
-    } finally {
-      setLoadingApplyInvoices(false);
-    }
   };
 
   const handleApplyReceipt = async (receipt: Receipt) => {
@@ -772,6 +797,7 @@ export default function ReceiptsPage() {
     const customerId = String(formData.get('customer_id') || '');
     const date = String(formData.get('date') || '');
     const amount = Number(formData.get('amount') || 0);
+    const invoiceId = String(formData.get('invoice_id') || '');
     const paymentMethod = String(formData.get('payment_method') || 'cash');
     const reference = String(formData.get('reference') || '');
     const concept = String(formData.get('concept') || '');
@@ -797,11 +823,36 @@ export default function ReceiptsPage() {
     };
 
     try {
-      await receiptsService.create(user.id, payload);
+      if (invoiceId) {
+        const inv = newReceiptInvoices.find((x) => x.id === invoiceId);
+        if (!inv) {
+          alert('La factura seleccionada no es válida');
+          return;
+        }
+        if (amount > inv.balance) {
+          alert('El monto no puede ser mayor que el saldo pendiente de la factura seleccionada');
+          return;
+        }
+      }
+
+      const created = await receiptsService.create(user.id, payload);
+
+      if (invoiceId && created?.id) {
+        await receiptApplicationsService.create(user.id, {
+          receipt_id: String(created.id),
+          invoice_id: invoiceId,
+          amount_applied: amount,
+          notes: null,
+        });
+      }
 
       await loadReceipts();
       alert('Recibo creado exitosamente');
       setShowReceiptModal(false);
+      setSelectedCustomerId('');
+      setNewReceiptInvoices([]);
+      setNewReceiptInvoiceId('');
+      setNewReceiptAmount('');
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('[Receipts] Error al crear recibo', error);
@@ -1186,7 +1237,13 @@ export default function ReceiptsPage() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Nuevo Recibo de Cobro</h3>
                 <button
-                  onClick={() => setShowReceiptModal(false)}
+                  onClick={() => {
+                    setShowReceiptModal(false);
+                    setSelectedCustomerId('');
+                    setNewReceiptInvoices([]);
+                    setNewReceiptInvoiceId('');
+                    setNewReceiptAmount('');
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="ri-close-line"></i>
@@ -1203,7 +1260,7 @@ export default function ReceiptsPage() {
                       required
                       name="customer_id"
                       value={selectedCustomerId}
-                      onChange={(e) => setSelectedCustomerId(e.target.value)}
+                      onChange={(e) => void handleNewReceiptCustomerChange(e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
                       <option value="">Seleccionar cliente</option>
@@ -1247,6 +1304,54 @@ export default function ReceiptsPage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Facturas
+                  </label>
+                  {!selectedCustomerId && (
+                    <div className="text-sm text-gray-500">
+                      Selecciona un cliente para ver sus facturas.
+                    </div>
+                  )}
+                  {selectedCustomerId && loadingNewReceiptInvoices && (
+                    <div className="text-sm text-gray-500">Cargando facturas...</div>
+                  )}
+                  {selectedCustomerId && !loadingNewReceiptInvoices && (
+                    <>
+                      <select
+                        name="invoice_id"
+                        value={newReceiptInvoiceId}
+                        onChange={(e) => handleNewReceiptInvoiceChange(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      >
+                        <option value="">Seleccionar factura</option>
+                        {newReceiptInvoices.map((inv) => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.invoiceNumber} - Saldo RD$ {formatAmount(inv.balance)}
+                          </option>
+                        ))}
+                      </select>
+
+                      {selectedNewReceiptInvoice && (
+                        <div className="mt-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <div>
+                            <span className="font-medium">Monto:</span>{' '}
+                            RD${formatAmount(selectedNewReceiptInvoice.totalAmount)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Pagado:</span>{' '}
+                            RD${formatAmount(selectedNewReceiptInvoice.paidAmount)}
+                          </div>
+                          <div>
+                            <span className="font-medium">Saldo:</span>{' '}
+                            <span className="text-emerald-700 font-semibold">RD${formatAmount(selectedNewReceiptInvoice.balance)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -1258,6 +1363,8 @@ export default function ReceiptsPage() {
                       step="0.01"
                       required
                       name="amount"
+                      value={newReceiptAmount}
+                      onChange={(e) => setNewReceiptAmount(e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="0.00"
                     />
@@ -1308,7 +1415,13 @@ export default function ReceiptsPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowReceiptModal(false)}
+                    onClick={() => {
+                      setShowReceiptModal(false);
+                      setSelectedCustomerId('');
+                      setNewReceiptInvoices([]);
+                      setNewReceiptInvoiceId('');
+                      setNewReceiptAmount('');
+                    }}
                     className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
                   >
                     Cancelar
