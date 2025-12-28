@@ -17,7 +17,7 @@ interface Plan {
   popular: boolean;
   color: string;
   icon: string;
-  category: 'facturacion' | 'pos';
+  category: 'contabilidad' | 'facturacion' | 'pos';
 }
 
 export default function PlansPage() {
@@ -56,7 +56,7 @@ export default function PlansPage() {
       popular: false,
       color: 'from-sky-500 to-sky-600',
       icon: 'ri-building-line',
-      category: 'facturacion'
+      category: 'contabilidad'
     },
     {
       id: 'pro',
@@ -77,7 +77,7 @@ export default function PlansPage() {
       popular: true,
       color: 'from-blue-500 to-blue-600',
       icon: 'ri-rocket-line',
-      category: 'facturacion'
+      category: 'contabilidad'
     },
     {
       id: 'plus',
@@ -100,7 +100,7 @@ export default function PlansPage() {
       popular: false,
       color: 'from-purple-500 to-purple-600',
       icon: 'ri-vip-diamond-line',
-      category: 'pos'
+      category: 'contabilidad'
     },
     // Planes existentes
     {
@@ -277,6 +277,7 @@ export default function PlansPage() {
 
   const trialStatus = getTrialStatus();
   const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
+  const contabilidadPlans = plans.filter(p => p.category === 'contabilidad');
   const facturacionPlans = plans.filter(p => p.category === 'facturacion');
   const posPlans = plans.filter(p => p.category === 'pos');
 
@@ -467,6 +468,20 @@ export default function PlansPage() {
             </div>
           </div>
         )}
+
+        {/* Contabilidad Plans Section */}
+        <div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <i className="ri-calculator-line mr-2 text-sky-600"></i>
+              Planes de Contabilidad
+            </h2>
+            <p className="text-gray-600">Soluciones integrales de contabilidad para tu empresa</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {contabilidadPlans.map(renderPlanCard)}
+          </div>
+        </div>
 
         {/* Facturación Plans Section */}
         <div>
