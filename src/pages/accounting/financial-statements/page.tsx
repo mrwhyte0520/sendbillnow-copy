@@ -2765,9 +2765,12 @@ export default function FinancialStatementsPage() {
                     }`}
                   >
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">PATRIMONIO</h3>
-                    {renderBalanceLineIfNotZero('Capital Suscrito y Pagado', capitalSuscrito)}
-                    {renderBalanceLineIfNotZero('Reservas (incluye Reserva Legal)', reservas)}
-                    {renderBalanceLineIfNotZero('Beneficios o Pérdidas Acumuladas', resultadosAcumulados)}
+                    {/* Mostrar cada cuenta de patrimonio individualmente */}
+                    {equityItems.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
                     {renderBalanceLineIfNotZero('Beneficios del periodo actual', beneficiosPeriodoActual)}
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
