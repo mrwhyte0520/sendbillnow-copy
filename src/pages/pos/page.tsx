@@ -688,7 +688,7 @@ export default function POSPage() {
 
             // 1) Update inventory item stock
             const newStock = (current.stock ?? 0) - cartItem.quantity;
-            await inventoryService.updateItem(current.id, {
+            await inventoryService.updateItem(user.id, current.id, {
               current_stock: newStock < 0 ? 0 : newStock,
             });
 

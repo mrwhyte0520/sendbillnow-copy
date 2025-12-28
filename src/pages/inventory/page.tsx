@@ -122,7 +122,6 @@ export default function InventoryPage() {
       if (activeTab === 'items' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
         try {
           itemsData = await inventoryService.getItems(user!.id);
-          // Si no hay datos, dejar vacío
           if (!itemsData || itemsData.length === 0) {
             itemsData = [];
           }
@@ -136,7 +135,6 @@ export default function InventoryPage() {
       if (activeTab === 'movements' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
         try {
           movementsData = await inventoryService.getMovements(user!.id);
-          // Si no hay datos, dejar vacío
           if (!movementsData || movementsData.length === 0) {
             movementsData = [];
           }
@@ -148,7 +146,6 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      // En caso de error, dejar vacío
       setItems([]);
       setMovements([]);
     } finally {
@@ -180,7 +177,6 @@ export default function InventoryPage() {
       await loadWarehouses();
       alert('Productos eliminados del almacén correctamente');
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error deleting warehouse products:', error);
       alert('No se pudieron eliminar todos los productos del almacén');
     }
@@ -198,7 +194,6 @@ export default function InventoryPage() {
         .map((acc: any) => ({ id: acc.id, code: acc.code, name: acc.name, type: acc.type }));
       setAccounts(options);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading accounts:', error);
       setAccounts([]);
     }
@@ -231,7 +226,6 @@ export default function InventoryPage() {
       await settingsService.deleteWarehouse(warehouse.id);
       await loadWarehouses();
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error deleting warehouse:', error);
       alert('No se pudo eliminar el almacén');
     }
@@ -360,6 +354,8 @@ export default function InventoryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let skipReloadAfterSave = false;
+
       if (modalType === 'item') {
         if (user) {
           // Validaciones numéricas básicas
@@ -423,14 +419,35 @@ export default function InventoryPage() {
 
           // Si hay usuario, intentar guardar en la base de datos
           if (selectedItem) {
-            await inventoryService.updateItem(selectedItem.id, normalizedItem);
+            const result = await inventoryService.updateItem(user!.id, selectedItem.id, normalizedItem);
+
+            if (result) {
+              setItems((prev) => {
+                const next = Array.isArray(prev) ? [...prev] : [];
+                const idx = next.findIndex((it: any) => String(it?.id) === String(result?.id));
+                if (idx >= 0) next[idx] = { ...next[idx], ...result };
+                else next.unshift(result);
+                return next;
+              });
+            }
           } else {
-            await inventoryService.createItem(user!.id, {
+            const created = await inventoryService.createItem(user!.id, {
               ...normalizedItem,
               sku: formData.sku || `SKU${Date.now()}`,
               is_active: formData.is_active !== false
             });
+
+            if (created) {
+              setItems((prev) => {
+                const next = Array.isArray(prev) ? [...prev] : [];
+                next.unshift(created);
+                return next;
+              });
+            }
           }
+
+          // Evitar recarga inmediata: puede traer datos stale y sobrescribir el estado local
+          skipReloadAfterSave = true;
         }
       } else if (modalType === 'movement') {
         if (user) {
@@ -746,8 +763,8 @@ export default function InventoryPage() {
       }
       
       handleCloseModal();
-      if (user) {
-        loadData();
+      if (user && !skipReloadAfterSave) {
+        await loadData();
       }
     } catch (error: any) {
       console.error('Error saving data:', error);
@@ -2270,36 +2287,95 @@ export default function InventoryPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {formData.item_type === 'inventory' || !formData.item_type ? (
-                    <>
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-file-list-3-line text-blue-600"></i>
+                    Cuentas Contables
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {formData.item_type === 'inventory' || !formData.item_type ? (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cuenta de inventario
+                          </label>
+                          <select
+                            value={formData.inventory_account_id || ''}
+                            onChange={(e) =>
+                              setFormData({ ...formData, inventory_account_id: e.target.value || null })
+                            }
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                          >
+                            <option value="">Seleccionar cuenta</option>
+                            {accounts
+                              .filter((acc) => {
+                                const code = String(acc.code || '').replace(/\./g, '');
+                                // Cuentas de activos: 1xxx (para inventario)
+                                return code.startsWith('1');
+                              })
+                              .map((acc) => (
+                                <option key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cuenta de ingresos
+                          </label>
+                          <select
+                            value={formData.income_account_id || ''}
+                            onChange={(e) =>
+                              setFormData({ ...formData, income_account_id: e.target.value || null })
+                            }
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                          >
+                            <option value="">Seleccionar cuenta</option>
+                            {accounts
+                              .filter((acc) => {
+                                const code = String(acc.code || '').replace(/\./g, '');
+                                // Cuentas de ingresos: 4xxx
+                                return code.startsWith('4');
+                              })
+                              .map((acc) => (
+                                <option key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cuenta de costos y Gastos
+                          </label>
+                          <select
+                            value={formData.cogs_account_id || ''}
+                            onChange={(e) =>
+                              setFormData({ ...formData, cogs_account_id: e.target.value || null })
+                            }
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                          >
+                            <option value="">Seleccionar cuenta</option>
+                            {accounts
+                              .filter((acc) => {
+                                const code = String(acc.code || '');
+                                const normalized = code.replace(/\./g, '');
+                                return normalized.startsWith('5') || normalized.startsWith('6');
+                              })
+                              .map((acc) => (
+                                <option key={acc.id} value={acc.id}>
+                                  {acc.code} - {acc.name}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </>
+                    ) : null}
+                    {formData.item_type === 'service' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Cuenta de inventario
-                        </label>
-                        <select
-                          value={formData.inventory_account_id || ''}
-                          onChange={(e) =>
-                            setFormData({ ...formData, inventory_account_id: e.target.value || null })
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-                        >
-                          <option value="">Seleccionar cuenta</option>
-                          {accounts
-                            .filter((acc) => {
-                              const t = (acc.type || '').toLowerCase();
-                              return t === 'asset' || acc.code?.startsWith('1');
-                            })
-                            .map((acc) => (
-                              <option key={acc.id} value={acc.id}>
-                                {acc.code} - {acc.name}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Cuenta de ingresos
+                          Cuenta de ingresos por servicios
                         </label>
                         <select
                           value={formData.income_account_id || ''}
@@ -2321,23 +2397,24 @@ export default function InventoryPage() {
                             ))}
                         </select>
                       </div>
+                    )}
+                    {formData.item_type === 'fixed_asset' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Cuenta de costos (COGS)
+                          Cuenta de activo fijo
                         </label>
                         <select
-                          value={formData.cogs_account_id || ''}
+                          value={formData.asset_account_id || ''}
                           onChange={(e) =>
-                            setFormData({ ...formData, cogs_account_id: e.target.value || null })
+                            setFormData({ ...formData, asset_account_id: e.target.value || null })
                           }
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         >
                           <option value="">Seleccionar cuenta</option>
                           {accounts
                             .filter((acc) => {
-                              const code = String(acc.code || '');
-                              const normalized = code.replace(/\./g, '');
-                              return normalized.startsWith('5');
+                              const t = (acc.type || '').toLowerCase();
+                              return t === 'asset' || acc.code?.startsWith('1');
                             })
                             .map((acc) => (
                               <option key={acc.id} value={acc.id}>
@@ -2346,60 +2423,8 @@ export default function InventoryPage() {
                             ))}
                         </select>
                       </div>
-                    </>
-                  ) : null}
-                  {formData.item_type === 'service' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cuenta de ingresos por servicios
-                      </label>
-                      <select
-                        value={formData.income_account_id || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, income_account_id: e.target.value || null })
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-                      >
-                        <option value="">Seleccionar cuenta</option>
-                        {accounts
-                          .filter((acc) => {
-                            const t = (acc.type || '').toLowerCase();
-                            return t === 'income' || acc.code?.startsWith('4');
-                          })
-                          .map((acc) => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.code} - {acc.name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
-                  {formData.item_type === 'fixed_asset' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cuenta de activo fijo
-                      </label>
-                      <select
-                        value={formData.asset_account_id || ''}
-                        onChange={(e) =>
-                          setFormData({ ...formData, asset_account_id: e.target.value || null })
-                        }
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-                      >
-                        <option value="">Seleccionar cuenta</option>
-                        {accounts
-                          .filter((acc) => {
-                            const t = (acc.type || '').toLowerCase();
-                            return t === 'asset' || acc.code?.startsWith('1');
-                          })
-                          .map((acc) => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.code} - {acc.name}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </>
             )}

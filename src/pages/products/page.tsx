@@ -264,7 +264,7 @@ export default function ProductsPage() {
         };
 
         if (editingProduct && isUuid(editingProduct.id)) {
-          await inventoryService.updateItem(editingProduct.id, itemData);
+          await inventoryService.updateItem(user.id, editingProduct.id, itemData);
         } else {
           await inventoryService.createItem(user.id, itemData);
         }

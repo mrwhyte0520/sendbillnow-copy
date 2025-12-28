@@ -345,7 +345,7 @@ export default function PurchaseOrdersPage() {
       // Actualizar existencias y crear movimientos de entrada por cada ítem
       const today = new Date().toISOString().split('T')[0];
 
-      for (const it of orderItems) {
+      for (const it of orderItems as any[]) {
         const quantity = Number(it.quantity) || 0;
         const unitCost = Number(it.unit_cost) || 0;
         if (quantity <= 0) continue;
@@ -364,7 +364,7 @@ export default function PurchaseOrdersPage() {
             ? (oldAvg * oldStock + unitCost * quantity) / newStock
             : oldAvg;
 
-          await inventoryService.updateItem(String(it.inventory_item_id), {
+          await inventoryService.updateItem(user.id as string, String(it.inventory_item_id), {
             current_stock: newStock,
             last_purchase_price: unitCost,
             last_purchase_date: today,

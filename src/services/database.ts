@@ -1518,7 +1518,7 @@ export const bankReconciliationsListService = {
 
         try {
           if (invItem.id) {
-            await inventoryService.updateItem(String(invItem.id), {
+            await inventoryService.updateItem(tenantId, String(invItem.id), {
               current_stock: newStock,
               last_purchase_price: unitCost,
               last_purchase_date: movementDate,
@@ -3133,6 +3133,7 @@ export const customersService = {
     invoiceType?: string; 
     ncfType?: string; 
     salesperson?: string; 
+    salesRepId?: string | null;
     paymentTermId?: string | null 
   }) {
     try {
@@ -3155,6 +3156,7 @@ export const customersService = {
         invoice_type: customer.invoiceType || null,
         ncf_type: customer.ncfType || null,
         salesperson: customer.salesperson || null,
+        sales_rep_id: customer.salesRepId || null,
         payment_term_id: customer.paymentTermId || null,
         updated_at: new Date().toISOString(),
       };
@@ -5278,6 +5280,7 @@ export const inventoryService = {
         .select('*')
         .eq('user_id', tenantId)
         .order('name');
+
       if (error) return handleDatabaseError(error, []);
       return data ?? [];
     } catch (error) {
@@ -5325,20 +5328,68 @@ export const inventoryService = {
     }
   },
 
-  async updateItem(id: string, item: any) {
+  async updateItem(userIdOrId: string, idOrItem: string | any, itemOrUndefined?: any) {
     try {
-      const { data, error } = await supabase
+      // Compatibilidad: acepta (userId, id, item) o (id, item)
+      let tenantId: string | null;
+      let itemId: string;
+      let itemData: any;
+
+      if (itemOrUndefined !== undefined) {
+        // Firma nueva: (userId, id, item)
+        tenantId = await resolveTenantId(userIdOrId);
+        itemId = idOrItem as string;
+        itemData = itemOrUndefined;
+      } else {
+        // Firma antigua: (id, item) - obtener tenantId del item existente
+        itemId = userIdOrId;
+        itemData = idOrItem;
+        // Buscar el item para obtener su user_id
+        const { data: existing } = await supabase
+          .from('inventory_items')
+          .select('user_id')
+          .eq('id', itemId)
+          .maybeSingle();
+        tenantId = existing?.user_id || null;
+      }
+
+      if (!tenantId) throw new Error('userId required or item not found');
+
+      // Limpiar campos que no deben enviarse en update
+      const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...cleanItem } = itemData;
+
+      // 1) Actualizar
+      const { data: updated, error } = await supabase
         .from('inventory_items')
-        .update(item)
-        .eq('id', id)
-        .select('*')
+        .update(cleanItem)
+        .eq('id', itemId)
+        .eq('user_id', tenantId)
+        .select('id')
         .maybeSingle();
-      if (error) throw error;
-      if (!data) {
-        console.warn('inventoryService.updateItem: item not found', id);
+
+      if (error) {
+        console.error('[DEBUG updateItem] Supabase error:', error);
+        throw error;
+      }
+      if (!updated) {
+        console.warn('inventoryService.updateItem: item not found', itemId);
         return null;
       }
-      return data;
+
+      // Reconsultar para devolver el registro completo
+      const { data: full, error: fetchError } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('id', itemId)
+        .eq('user_id', tenantId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('inventoryService.updateItem fetchError:', fetchError);
+        throw fetchError;
+      }
+
+      return full;
     } catch (error) {
       console.error('inventoryService.updateItem error', error);
       throw error;
@@ -5621,7 +5672,7 @@ export const warehouseEntriesService = {
 
         try {
           if (invItem.id) {
-            await inventoryService.updateItem(String(invItem.id), {
+            await inventoryService.updateItem(tenantId, String(invItem.id), {
               current_stock: newStock,
               last_purchase_price: unitCost,
               last_purchase_date: movementDate,
@@ -7570,7 +7621,7 @@ export const deliveryNotesService = {
         try {
           if (invItem.id) {
             const newStock = oldStock - qty;
-            await inventoryService.updateItem(String(invItem.id), {
+            await inventoryService.updateItem(tenantId, String(invItem.id), {
               current_stock: newStock < 0 ? 0 : newStock,
               cost_price: unitCost,
               average_cost: unitCost,
@@ -10539,7 +10590,7 @@ export const apInvoiceLinesService = {
               // Actualizar maestro de inventario
               try {
                 if (invItem.id) {
-                  await inventoryService.updateItem(String(invItem.id), {
+                  await inventoryService.updateItem(userId, String(invItem.id), {
                     current_stock: newStock,
                     last_purchase_price: unitCost,
                     last_purchase_date: movementDate,
@@ -14411,6 +14462,73 @@ export const settingsService = {
       return data;
     } catch (error) {
       console.error('Error creating warehouse:', error);
+      throw error;
+    }
+  },
+
+  async updateWarehouse(warehouseId: string, warehouseData: any) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.id) {
+        throw new Error('No authenticated user for warehouse update');
+      }
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('userId required');
+
+      const payload = {
+        name: warehouseData.name,
+        code: warehouseData.code ?? undefined,
+        location: warehouseData.location ?? null,
+        address: warehouseData.address ?? null,
+        manager: warehouseData.manager ?? null,
+        phone: warehouseData.phone ?? null,
+        inventory_account_id: warehouseData.inventory_account_id ?? null,
+        active: warehouseData.active ?? undefined,
+      };
+
+      const { data, error } = await supabase
+        .from('warehouses')
+        .update(payload)
+        .eq('id', warehouseId)
+        .eq('user_id', tenantId)
+        .select('*')
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating warehouse:', error);
+      throw error;
+    }
+  },
+
+  async deleteWarehouse(warehouseId: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user?.id) {
+        throw new Error('No authenticated user for warehouse deletion');
+      }
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('userId required');
+
+      const { error } = await supabase
+        .from('warehouses')
+        .delete()
+        .eq('id', warehouseId)
+        .eq('user_id', tenantId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting warehouse:', error);
       throw error;
     }
   },
