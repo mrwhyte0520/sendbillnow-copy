@@ -552,7 +552,7 @@ export default function DiscountsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada (Opcional)
+                      Factura Relacionada
                     </label>
                     <select
                       name="invoice_id"
