@@ -13,8 +13,8 @@ const printStyles = `
   @media print {
     @page { 
       size: letter portrait; 
-      /* Márgenes reducidos para caber en una página */
-      margin: 0.8cm 1.2cm;
+      /* Márgenes mínimos para maximizar espacio */
+      margin: 0.5cm 1cm;
     }
     body * { visibility: hidden; }
     #printable-statement, #printable-statement * { visibility: visible; }
@@ -23,23 +23,31 @@ const printStyles = `
       left: 0; 
       top: 0; 
       width: 100%; 
-      font-size: 9pt !important;
+      font-size: 7pt !important;
+      line-height: 1.2 !important;
     }
-    #printable-statement h1 { font-size: 12pt !important; }
-    #printable-statement h2 { font-size: 10pt !important; }
-    #printable-statement h3 { font-size: 9pt !important; }
-    #printable-statement .text-sm { font-size: 8pt !important; }
-    #printable-statement .text-base { font-size: 9pt !important; }
-    #printable-statement .py-0\\.5 { padding-top: 1px !important; padding-bottom: 1px !important; }
-    #printable-statement .mb-4 { margin-bottom: 8px !important; }
-    #printable-statement .mb-3 { margin-bottom: 6px !important; }
-    #printable-statement .mb-2 { margin-bottom: 4px !important; }
-    #printable-statement .mt-2 { margin-top: 4px !important; }
-    #printable-statement .pt-2 { padding-top: 4px !important; }
-    #printable-statement .pt-4 { padding-top: 8px !important; }
-    #printable-statement .space-y-6 > * + * { margin-top: 12px !important; }
+    #printable-statement h1 { font-size: 10pt !important; margin-bottom: 2px !important; }
+    #printable-statement h2 { font-size: 8pt !important; margin-bottom: 2px !important; }
+    #printable-statement h3 { font-size: 7pt !important; margin-bottom: 2px !important; }
+    #printable-statement .text-sm { font-size: 7pt !important; }
+    #printable-statement .text-base { font-size: 8pt !important; }
+    #printable-statement .text-xs { font-size: 6pt !important; }
+    #printable-statement div { line-height: 1.2 !important; }
+    #printable-statement .py-0\\.5 { padding-top: 0px !important; padding-bottom: 0px !important; }
+    #printable-statement .pl-4 { padding-left: 8px !important; }
+    #printable-statement .mb-8 { margin-bottom: 4px !important; }
+    #printable-statement .mb-4 { margin-bottom: 2px !important; }
+    #printable-statement .mb-3 { margin-bottom: 2px !important; }
+    #printable-statement .mb-2 { margin-bottom: 1px !important; }
+    #printable-statement .mt-2 { margin-top: 1px !important; }
+    #printable-statement .mt-3 { margin-top: 2px !important; }
+    #printable-statement .pt-2 { padding-top: 2px !important; }
+    #printable-statement .pt-4 { padding-top: 4px !important; }
+    #printable-statement .pb-1 { padding-bottom: 1px !important; }
+    #printable-statement .space-y-6 > * + * { margin-top: 4px !important; }
+    #printable-statement .gap-6 { gap: 12px !important; }
     body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    table { page-break-inside: avoid; font-size: 8pt; }
+    table { page-break-inside: avoid; font-size: 7pt; }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; }
     .print-hidden { display: none !important; }
