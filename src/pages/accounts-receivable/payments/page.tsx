@@ -74,6 +74,8 @@ export default function PaymentsPage() {
   const [paymentIsrWithheld, setPaymentIsrWithheld] = useState<number>(0);
   const [invoiceHasServiceLines, setInvoiceHasServiceLines] = useState<Record<string, boolean>>({});
   const [isrServiceRatePct] = useState<number>(0);
+  const [customers, setCustomers] = useState<Array<{ id: string; name: string }>>([]);
+  const [paymentCustomerId, setPaymentCustomerId] = useState<string>('');
 
   const receivableAccounts = accounts.filter((acc) => {
     if (!acc.allowPosting) return false;
@@ -181,6 +183,16 @@ export default function PaymentsPage() {
           return acc;
         }, {} as Record<string, string>);
         setCustomerArAccounts(mappedCustomerArAccounts);
+
+        // Mapear lista de clientes para el dropdown
+        const mappedCustomers = (customersData || [])
+          .map((c: any) => ({
+            id: String(c.id),
+            name: String(c.name || '').trim(),
+          }))
+          .filter((c: { id: string; name: string }) => c.name !== '')
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
+        setCustomers(mappedCustomers);
 
         const mappedCustomerDocuments = (customersData || []).reduce((acc: Record<string, string>, c: any) => {
           const id = String(c.id);
@@ -1345,6 +1357,11 @@ export default function PaymentsPage() {
                 <h3 className="text-lg font-semibold">Registrar Pago</h3>
                 <button
                   onClick={() => {
+                    setPaymentCustomerId('');
+                    setPaymentInvoiceId('');
+                    setPaymentAmount(0);
+                    setPaymentItbisWithheld(0);
+                    setPaymentIsrWithheld(0);
                     setShowPaymentModal(false);
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -1354,6 +1371,36 @@ export default function PaymentsPage() {
               </div>
               
               <form onSubmit={handleSavePayment} className="space-y-4">
+                {/* Dropdown de Cliente */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cliente
+                  </label>
+                  <select 
+                    required
+                    name="customerId"
+                    value={paymentCustomerId}
+                    onChange={(e) => {
+                      const nextCustomer = String(e.target.value || '');
+                      setPaymentCustomerId(nextCustomer);
+                      // Limpiar factura seleccionada al cambiar cliente
+                      setPaymentInvoiceId('');
+                      setPaymentAmount(0);
+                      setPaymentItbisWithheld(0);
+                      setPaymentIsrWithheld(0);
+                    }}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                  >
+                    <option value="">Seleccionar cliente</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Dropdown de Factura (filtrado por cliente) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Factura
@@ -1362,6 +1409,7 @@ export default function PaymentsPage() {
                     required
                     name="invoiceId"
                     value={paymentInvoiceId}
+                    disabled={!paymentCustomerId}
                     onChange={async (e) => {
                       const next = String(e.target.value || '');
                       setPaymentInvoiceId(next);
@@ -1402,12 +1450,14 @@ export default function PaymentsPage() {
                         recomputeWithheldDefaults(next, paymentAmount);
                       }
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="">Seleccionar factura</option>
-                    {invoices.filter(inv => inv.balance > 0 && inv.status !== 'cancelled' && inv.status !== 'paid').map((invoice) => (
+                    <option value="">{paymentCustomerId ? 'Seleccionar factura' : 'Primero seleccione un cliente'}</option>
+                    {invoices
+                      .filter(inv => inv.balance > 0 && inv.status !== 'cancelled' && inv.status !== 'paid' && inv.customerId === paymentCustomerId)
+                      .map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>
-                        {invoice.invoiceNumber} - {invoice.customerName} ({formatMoney(invoice.balance)})
+                        {invoice.invoiceNumber} ({formatMoney(invoice.balance)})
                       </option>
                     ))}
                   </select>
@@ -1552,6 +1602,7 @@ export default function PaymentsPage() {
                     type="button"
                     onClick={() => {
                       setPaymentInvoiceId('');
+                      setPaymentCustomerId('');
                       setPaymentAmount(0);
                       setPaymentItbisWithheld(0);
                       setPaymentIsrWithheld(0);

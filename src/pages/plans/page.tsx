@@ -38,6 +38,71 @@ export default function PlansPage() {
   } = usePlans();
 
   const plans: Plan[] = [
+    // Nuevos planes económicos
+    {
+      id: 'pyme',
+      name: 'PYME',
+      priceMonthly: 19.97,
+      priceAnnual: 199.97,
+      description: 'Ideal para pequeñas empresas que inician',
+      features: [
+        'Una empresa',
+        'Facturación básica',
+        'Dashboard básico',
+        'Inventario limitado (500)',
+        'Soporte por email',
+        'Prueba gratis 7 días'
+      ],
+      popular: false,
+      color: 'from-sky-500 to-sky-600',
+      icon: 'ri-building-line',
+      category: 'facturacion'
+    },
+    {
+      id: 'pro',
+      name: 'PRO',
+      priceMonthly: 49.97,
+      priceAnnual: 499.97,
+      description: 'Para empresas en crecimiento',
+      features: [
+        'Hasta 3 empresas',
+        'Contabilidad completa',
+        'Dashboard básico',
+        'Inventario limitado (2,000)',
+        'Gestión bancaria básica',
+        'Nómina básica (10 empleados)',
+        'Soporte prioritario',
+        'Prueba gratis 7 días'
+      ],
+      popular: true,
+      color: 'from-blue-500 to-blue-600',
+      icon: 'ri-rocket-line',
+      category: 'facturacion'
+    },
+    {
+      id: 'plus',
+      name: 'PLUS',
+      priceMonthly: 99.97,
+      priceAnnual: 999.97,
+      description: 'Solución completa para empresas establecidas',
+      features: [
+        'Empresas ilimitadas',
+        'Todas las funciones',
+        'Dashboard KPI avanzado',
+        'Inventario ilimitado',
+        'Nómina completa',
+        'Análisis financiero avanzado',
+        'Reportes personalizados',
+        'Soporte técnico especializado',
+        'Soporte 24/7',
+        'Prueba gratis 7 días'
+      ],
+      popular: false,
+      color: 'from-purple-500 to-purple-600',
+      icon: 'ri-vip-diamond-line',
+      category: 'pos'
+    },
+    // Planes existentes
     {
       id: 'facturacion-simple',
       name: 'Facturación Simple',
@@ -53,7 +118,7 @@ export default function PlansPage() {
         'Reportes básicos'
       ],
       popular: false,
-      color: 'from-blue-500 to-blue-600',
+      color: 'from-teal-500 to-teal-600',
       icon: 'ri-file-text-line',
       category: 'facturacion'
     },
@@ -104,8 +169,8 @@ export default function PlansPage() {
         'Cotizaciones',
         'Devoluciones'
       ],
-      popular: true,
-      color: 'from-purple-500 to-purple-600',
+      popular: false,
+      color: 'from-emerald-500 to-emerald-600',
       icon: 'ri-store-2-line',
       category: 'pos'
     },
