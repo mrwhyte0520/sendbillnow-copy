@@ -372,38 +372,15 @@ export default function FinancialStatementsPage() {
           }
         });
 
-        // Agrupar ITBIS pagado en compras (110201) y retención ITBIS pagado en servicios (110202)
-        // bajo la cuenta control Saldo a favor en ITBIS (1102) en el Balance General
-        try {
-          const normalize = (c: string | undefined) => (c || '').replace(/\./g, '');
-          const isITBISDetail = (code: string | undefined) => {
-            const n = normalize(code);
-            return n === '110201' || n === '110202';
-          };
-
-          // Sumar los montos de las cuentas detalle
-          const itbisSum = nextData.assets.current
-            .filter((i) => isITBISDetail(i.code))
-            .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
-
-          if (Math.abs(itbisSum) > 0.005) {
-            // Quitar las cuentas detalle del arreglo
-            nextData.assets.current = nextData.assets.current.filter((i) => !isITBISDetail(i.code));
-
-            // Intentar obtener el nombre de la cuenta control 1102 desde la balanza
-            let name1102 = 'Saldo a favor en ITBIS';
-            const parentAcc = (trialBalance || []).find((acc: any) => normalize(String(acc.code || '')) === '1102');
-            if (parentAcc?.name) {
-              name1102 = String(parentAcc.name);
-            }
-
-            // Agregar la cuenta control 1102 con el total
-            nextData.assets.current.push({ code: '1102', name: name1102, amount: itbisSum });
-          }
-        } catch (aggErr) {
-          // eslint-disable-next-line no-console
-          console.error('[Balance] Error aggregating ITBIS control account (1102):', aggErr);
-        }
+        // Ordenar cuentas por código para mejor presentación
+        nextData.assets.current.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.assets.nonCurrent.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.liabilities.current.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.liabilities.nonCurrent.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.equity.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.revenue.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.costs.sort((a, b) => String(a.code).localeCompare(String(b.code)));
+        nextData.expenses.sort((a, b) => String(a.code).localeCompare(String(b.code)));
 
         setFinancialData(nextData);
       } catch (error) {
@@ -2624,13 +2601,12 @@ export default function FinancialStatementsPage() {
                   <div className="mb-4">
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">ACTIVOS CORRIENTES</h3>
 
-                    {renderBalanceLineIfNotZero('Efectivo en Caja y Bancos', efectivoCajaBancos)}
-                    {renderBalanceLineIfNotZero('Cuentas por Cobrar Clientes', cxcClientes)}
-                    {renderBalanceLineIfNotZero('Otras Cuentas por Cobrar', otrasCxc)}
-                    {renderBalanceLineIfNotZero('ITBIS en compras', itbisCompras)}
-                    {renderBalanceLineIfNotZero('Inventarios', inventarios)}
-                    {renderBalanceLineIfNotZero('Gastos Pagados por Anticipado', gastosPagadosAnticipado)}
-                    {renderBalanceLineIfNotZero('Anticipos sobre la Renta Pagados', anticiposISR)}
+                    {/* Mostrar cada cuenta individual */}
+                    {currentAssets.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
 
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
@@ -2647,20 +2623,16 @@ export default function FinancialStatementsPage() {
                     </div>
                   </div>
 
-                  {/* ACTIVOS FIJOS */}
-                  <div className={`mb-4 ${Math.abs(activosFijos) < 0.01 ? 'hide-zero-on-print' : ''}`}>
-                    <h3 className="text-sm font-bold text-gray-800 mb-2 underline">ACTIVOS FIJOS</h3>
-                    {renderBalanceLineIfNotZero('Activos Fijos', activosFijos)}
-                  </div>
-
-                  {/* OTROS ACTIVOS */}
+                  {/* ACTIVOS NO CORRIENTES (incluye fijos y otros) */}
                   <div className={`mb-4 ${Math.abs(totals.totalNonCurrentAssets) < 0.01 ? 'hide-zero-on-print' : ''}`}>
-                    <h3 className="text-sm font-bold text-gray-800 mb-2 underline">OTROS ACTIVOS</h3>
-                    {renderBalanceLineIfNotZero('Inversiones en Otras Compañías', invAcciones)}
-                    {renderBalanceLineIfNotZero('Certificados Bancarios y Títulos Financieros', invCertificados)}
-                    {renderBalanceLineIfNotZero('Fianzas y Depósitos', fianzasDepositos)}
-                    {renderBalanceLineIfNotZero('Licencias y Softwares', licenciasSoftware)}
-                    {renderBalanceLineIfNotZero('Otros Activos', otrosActivos)}
+                    <h3 className="text-sm font-bold text-gray-800 mb-2 underline">ACTIVOS NO CORRIENTES</h3>
+                    
+                    {/* Mostrar cada cuenta individual */}
+                    {nonCurrentAssets.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
 
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
@@ -2698,18 +2670,21 @@ export default function FinancialStatementsPage() {
                   <h2 className="text-base font-bold text-gray-900 mb-3 pb-1 border-b-2 border-gray-300">PASIVO Y PATRIMONIO DE LOS SOCIOS</h2>
 
                   {/* PASIVOS CIRCULANTES */}
-                  <div className={`mb-4 ${Math.abs(pasivosCorrientes) < 0.01 ? 'hide-zero-on-print' : ''}`}>
+                  <div className={`mb-4 ${Math.abs(totals.totalCurrentLiabilities) < 0.01 ? 'hide-zero-on-print' : ''}`}>
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">PASIVOS CIRCULANTES</h3>
-                    {renderBalanceLineIfNotZero('Cuentas por Pagar Proveedores', cppProveedores)}
-                    {renderBalanceLineIfNotZero('Acumulaciones y Provisiones por Pagar', acumulacionesPorPagar)}
-                    {renderBalanceLineIfNotZero('Préstamos por Pagar a Corto Plazo', prestamosCortoPlazo)}
-                    {renderBalanceLineIfNotZero('Otras Cuentas por Pagar', otrasCxPCorrientes)}
+                    
+                    {/* Mostrar cada cuenta individual */}
+                    {currentLiabilities.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
 
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
                         <span className="text-sm">Total Pasivos Corrientes</span>
                         <div className="flex items-center gap-6">
-                          <span className="text-sm tabular-nums">{formatCurrencyRD(pasivosCorrientes)}</span>
+                          <span className="text-sm tabular-nums">{formatCurrencyRD(totals.totalCurrentLiabilities)}</span>
                           {comparisonTotals && (
                             <span className="text-sm tabular-nums text-gray-500">
                               {formatCurrencyRD(comparisonTotals.totalCurrentLiabilities)}
@@ -2721,15 +2696,22 @@ export default function FinancialStatementsPage() {
                   </div>
 
                   {/* PASIVOS A LARGO PLAZO */}
-                  <div className={`mb-4 ${Math.abs(pasivosLargoPlazo) < 0.01 ? 'hide-zero-on-print' : ''}`}>
+                  <div className={`mb-4 ${Math.abs(totals.totalNonCurrentLiabilities) < 0.01 ? 'hide-zero-on-print' : ''}`}>
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">PASIVOS A LARGO PLAZO</h3>
-                    {renderBalanceLineIfNotZero('Pasivos a Largo Plazo', pasivosLargoPlazo)}
+                    
+                    {/* Mostrar cada cuenta individual */}
+                    {nonCurrentLiabilities.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
+                    
                     {nonCurrentLiabilities.length > 0 && (
                       <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                         <div className="flex justify-between font-semibold">
                           <span className="text-sm">Total Pasivos a Largo Plazo</span>
                           <div className="flex items-center gap-6">
-                            <span className="text-sm tabular-nums">{formatCurrencyRD(pasivosLargoPlazo)}</span>
+                            <span className="text-sm tabular-nums">{formatCurrencyRD(totals.totalNonCurrentLiabilities)}</span>
                             {comparisonTotals && (
                               <span className="text-sm tabular-nums text-gray-500">
                                 {formatCurrencyRD(comparisonTotals.totalNonCurrentLiabilities)}
@@ -2759,22 +2741,27 @@ export default function FinancialStatementsPage() {
                   {/* PATRIMONIO */}
                   <div
                     className={`mb-4 ${
-                      Math.abs(patrimonioTotal) < 0.01 &&
+                      Math.abs(totals.totalEquity) < 0.01 &&
                       Math.abs(beneficiosPeriodoActual) < 0.01
                         ? 'hide-zero-on-print'
                         : ''
                     }`}
                   >
                     <h3 className="text-sm font-bold text-gray-800 mb-2 underline">PATRIMONIO</h3>
-                    {renderBalanceLineIfNotZero('Capital Suscrito y Pagado', capitalSuscrito)}
-                    {renderBalanceLineIfNotZero('Reservas (incluye Reserva Legal)', reservas)}
-                    {renderBalanceLineIfNotZero('Beneficios o Pérdidas Acumuladas', resultadosAcumulados)}
+                    
+                    {/* Mostrar cada cuenta individual */}
+                    {equityItems.map((item) => (
+                      <div key={item.code}>
+                        {renderBalanceLineIfNotZero(item.name, item.amount)}
+                      </div>
+                    ))}
                     {renderBalanceLineIfNotZero('Beneficios del periodo actual', beneficiosPeriodoActual)}
+                    
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
                         <span className="text-sm">Total Patrimonio</span>
                         <div className="flex items-center gap-6">
-                          <span className="text-sm tabular-nums">{formatCurrencyRD(patrimonioConResultado)}</span>
+                          <span className="text-sm tabular-nums">{formatCurrencyRD(totals.totalEquity + beneficiosPeriodoActual)}</span>
                           {comparisonPatrimonioConResultado !== null && (
                             <span className="text-sm tabular-nums text-gray-500">
                               {formatCurrencyRD(comparisonPatrimonioConResultado)}
