@@ -42,8 +42,8 @@ export default function PlansPage() {
     {
       id: 'pyme',
       name: 'PYME',
-      priceMonthly: 19.97,
-      priceAnnual: 199.97,
+      priceMonthly: 39.99,
+      priceAnnual: 239.88,
       description: 'Ideal para pequeñas empresas que inician',
       features: [
         'Una empresa',
@@ -61,8 +61,8 @@ export default function PlansPage() {
     {
       id: 'pro',
       name: 'PRO',
-      priceMonthly: 49.97,
-      priceAnnual: 499.97,
+      priceMonthly: 99.99,
+      priceAnnual: 719.88,
       description: 'Para empresas en crecimiento',
       features: [
         'Hasta 3 empresas',
@@ -82,8 +82,8 @@ export default function PlansPage() {
     {
       id: 'plus',
       name: 'PLUS',
-      priceMonthly: 99.97,
-      priceAnnual: 999.97,
+      priceMonthly: 199.99,
+      priceAnnual: 1559.88,
       description: 'Solución completa para empresas establecidas',
       features: [
         'Empresas ilimitadas',
@@ -106,8 +106,8 @@ export default function PlansPage() {
     {
       id: 'facturacion-simple',
       name: 'Facturación Simple',
-      priceMonthly: 349.97,
-      priceAnnual: 2400,
+      priceMonthly: 19.99,
+      priceAnnual: 107.88,
       description: 'Ideal para negocios que inician con facturación básica',
       features: [
         '1 Usuario',
@@ -125,8 +125,8 @@ export default function PlansPage() {
     {
       id: 'facturacion-premium',
       name: 'Facturación Premium',
-      priceMonthly: 549.97,
-      priceAnnual: 3700,
+      priceMonthly: 49.99,
+      priceAnnual: 239.88,
       description: 'Para empresas que necesitan más capacidad de facturación',
       features: [
         '8 Usuarios',
@@ -145,8 +145,8 @@ export default function PlansPage() {
     {
       id: 'pos-premium',
       name: 'POS Premium',
-      priceMonthly: 1299.97,
-      priceAnnual: 10000,
+      priceMonthly: 129.99,
+      priceAnnual: 719.88,
       description: 'Solución completa para puntos de venta y gestión empresarial',
       features: [
         'Dashboard completo',
@@ -172,38 +172,6 @@ export default function PlansPage() {
       popular: false,
       color: 'from-emerald-500 to-emerald-600',
       icon: 'ri-store-2-line',
-      category: 'pos'
-    },
-    {
-      id: 'pos-super-plus',
-      name: 'POS Super Plus',
-      priceMonthly: 15000,
-      priceAnnual: 150000,
-      description: 'La solución más completa para grandes empresas',
-      features: [
-        'Dashboard completo',
-        'Sistema POS',
-        '300 Usuarios',
-        'Productos ilimitados',
-        '5 Almacenes de inventario',
-        'Gestión de clientes',
-        'Factura electrónica ilimitada',
-        'Backup cada 48 horas',
-        'Caja chica',
-        'Cálculo de comisiones',
-        'Compras y gastos',
-        'Proveedores',
-        'Cuentas por cobrar',
-        'Cuentas por pagar',
-        'Nómina completa',
-        'Multisucursal',
-        'Servicio de reparaciones',
-        'Cotizaciones',
-        'Devoluciones'
-      ],
-      popular: false,
-      color: 'from-amber-500 to-orange-600',
-      icon: 'ri-vip-crown-line',
       category: 'pos'
     }
   ];
@@ -315,7 +283,7 @@ export default function PlansPage() {
           <i className={`${plan.icon} text-4xl mb-3`}></i>
           <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
           <div className="flex items-baseline justify-center mb-2">
-            <span className="text-sm">RD$</span>
+            <span className="text-sm">USD $</span>
             <span className="text-3xl font-bold mx-1">{formatMoney(getPrice(plan))}</span>
             <span className="text-sm">{getPeriodLabel()}</span>
           </div>
@@ -506,82 +474,12 @@ export default function PlansPage() {
             </h2>
             <p className="text-gray-600">Solución completa para puntos de venta y gestión empresarial</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
             {posPlans.map(renderPlanCard)}
           </div>
         </div>
 
-        {/* Features Comparison for POS */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-            Comparación de Planes POS
-          </h2>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900">Características</th>
-                  <th className="text-center py-3 px-4 font-semibold text-purple-600">POS Premium</th>
-                  <th className="text-center py-3 px-4 font-semibold text-orange-600">POS Super Plus</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Usuarios</td>
-                  <td className="py-3 px-4 text-center">80</td>
-                  <td className="py-3 px-4 text-center font-bold text-orange-600">300</td>
-                </tr>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-3 px-4 font-medium">Almacenes de Inventario</td>
-                  <td className="py-3 px-4 text-center">2</td>
-                  <td className="py-3 px-4 text-center font-bold text-orange-600">5</td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Facturas Electrónicas</td>
-                  <td className="py-3 px-4 text-center">2,000/mes</td>
-                  <td className="py-3 px-4 text-center font-bold text-orange-600">Ilimitadas</td>
-                </tr>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-3 px-4 font-medium">Dashboard</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Sistema POS</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-3 px-4 font-medium">Nómina</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Multisucursal</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-3 px-4 font-medium">Multimoneda</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="py-3 px-4 font-medium">Backup cada 48 horas</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <td className="py-3 px-4 font-medium">Servicio de Reparaciones</td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                  <td className="py-3 px-4 text-center"><i className="ri-check-line text-green-500"></i></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+        
 
         {/* Payment Modal */}
         {showPaymentModal && selectedPlanData && (
@@ -602,7 +500,7 @@ export default function PlansPage() {
                   <i className={`${selectedPlanData.icon} text-3xl mb-2`}></i>
                   <h4 className="text-lg font-bold">{selectedPlanData.name}</h4>
                   <div className="text-2xl font-bold">
-                    RD${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
+                    USD ${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
                   </div>
                   {billingPeriod === 'annual' && getSavingsPercent(selectedPlanData) > 0 && (
                     <div className="text-sm mt-1 bg-white/20 px-3 py-1 rounded-full inline-block">

@@ -13,27 +13,33 @@ export const getStripe = () => {
   return stripePromise;
 };
 
-// Configuración de precios por plan (en centavos - RD$)
+// Configuración de precios por plan (en centavos - USD)
 // Los precios se pasan directamente desde el componente, aquí solo para referencia
 export const PLAN_PRICES_MONTHLY = {
-  'facturacion-simple': 34997,   // RD$349.97
-  'facturacion-premium': 54997,  // RD$549.97
-  'pos-premium': 129997,         // RD$1,299.97
-  'pos-super-plus': 1500000      // RD$15,000
+  'pyme': 3999,                  // USD $39.99
+  'pro': 9999,                   // USD $99.99
+  'plus': 19999,                 // USD $199.99
+  'facturacion-simple': 1999,    // USD $19.99
+  'facturacion-premium': 4999,   // USD $49.99
+  'pos-premium': 12999           // USD $129.99
 };
 
 export const PLAN_PRICES_ANNUAL = {
-  'facturacion-simple': 240000,   // RD$2,400
-  'facturacion-premium': 370000,  // RD$3,700
-  'pos-premium': 1000000,         // RD$10,000
-  'pos-super-plus': 15000000      // RD$150,000
+  'pyme': 23988,                 // USD $239.88
+  'pro': 71988,                  // USD $719.88
+  'plus': 155988,                // USD $1,559.88
+  'facturacion-simple': 10788,   // USD $107.88
+  'facturacion-premium': 23988,  // USD $239.88
+  'pos-premium': 71988           // USD $719.88
 };
 
 export const PLAN_NAMES = {
+  'pyme': 'PYME',
+  'pro': 'PRO',
+  'plus': 'PLUS',
   'facturacion-simple': 'Facturación Simple',
   'facturacion-premium': 'Facturación Premium',
-  'pos-premium': 'POS Premium',
-  'pos-super-plus': 'POS Super Plus'
+  'pos-premium': 'POS Premium'
 };
 
 interface CreatePaymentIntentParams {
