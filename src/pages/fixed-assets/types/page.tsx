@@ -757,10 +757,9 @@ export default function AssetTypesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Depreciación *
+                      Método de Depreciación
                     </label>
                     <select
-                      required
                       name="depreciationMethod"
                       value={formDepreciationMethod}
                       onChange={(e) => setFormDepreciationMethod(e.target.value)}
@@ -795,10 +794,9 @@ export default function AssetTypesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Depreciación *
+                      Cuenta de Depreciación
                     </label>
                     <select
-                      required
                       name="depreciationAccount"
                       defaultValue={editingType?.depreciationAccount || ''}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
@@ -816,10 +814,9 @@ export default function AssetTypesPage() {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Depreciación Acumulada *
+                      Cuenta de Depreciación Acumulada
                     </label>
                     <select
-                      required
                       name="accumulatedDepreciationAccount"
                       defaultValue={editingType?.accumulatedDepreciationAccount || ''}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
