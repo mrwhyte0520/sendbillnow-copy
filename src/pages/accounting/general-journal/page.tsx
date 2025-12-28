@@ -1320,25 +1320,31 @@ const GeneralJournalPage = () => {
                           <td className="px-4 py-3">
                             <input
                               type="text"
-                              value={line.debit_amount > 0 ? formatAmount(line.debit_amount) : ''}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '');
-                                updateLine(index, 'debit_amount', parseFloat(value) || 0);
+                              inputMode="decimal"
+                              defaultValue={line.debit_amount || ''}
+                              key={`debit-${index}-${formData.lines.length}`}
+                              onBlur={(e) => {
+                                const num = parseFloat(e.target.value) || 0;
+                                updateLine(index, 'debit_amount', num);
                               }}
                               placeholder="0.00"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                              dir="ltr"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </td>
                           <td className="px-4 py-3">
                             <input
                               type="text"
-                              value={line.credit_amount > 0 ? formatAmount(line.credit_amount) : ''}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/[^0-9.]/g, '');
-                                updateLine(index, 'credit_amount', parseFloat(value) || 0);
+                              inputMode="decimal"
+                              defaultValue={line.credit_amount || ''}
+                              key={`credit-${index}-${formData.lines.length}`}
+                              onBlur={(e) => {
+                                const num = parseFloat(e.target.value) || 0;
+                                updateLine(index, 'credit_amount', num);
                               }}
                               placeholder="0.00"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right"
+                              dir="ltr"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </td>
                           <td className="px-4 py-3">

@@ -4623,55 +4623,84 @@ export const financialReportsService = {
       if (!userId) return [];
       const tenantId = await resolveTenantId(userId);
 
+      console.log('[getTrialBalance] Query params - tenantId:', tenantId, 'fromDate:', fromDate, 'toDate:', toDate);
+
+      // Query directa similar a como funciona el Diario General
       const { data, error } = await supabase
-        .from('journal_entry_lines')
+        .from('journal_entries')
         .select(`
-          account_id,
-          debit_amount,
-          credit_amount,
-          journal_entries!inner(entry_date, status, user_id),
-          chart_accounts!inner(id, user_id, code, name, type, normal_balance, level, allow_posting, parent_id)
+          id,
+          entry_number,
+          entry_date,
+          status,
+          journal_entry_lines (
+            account_id,
+            debit_amount,
+            credit_amount,
+            chart_accounts (
+              id,
+              code,
+              name,
+              type,
+              normal_balance,
+              level,
+              allow_posting,
+              parent_id
+            )
+          )
         `)
-        .eq('journal_entries.user_id', tenantId)
-        .eq('journal_entries.status', 'posted')
-        .gte('journal_entries.entry_date', fromDate)
-        .lte('journal_entries.entry_date', toDate);
+        .eq('user_id', tenantId)
+        .eq('status', 'posted')
+        .gte('entry_date', fromDate)
+        .lte('entry_date', toDate);
 
       if (error) {
-        console.error('financialReportsService.getTrialBalance error', error);
+        console.error('[getTrialBalance] Query error:', error);
         return [];
       }
 
+      console.log('[getTrialBalance] Found entries:', data?.length, 'First entry:', data?.[0]?.entry_number);
+
       const byAccount: Record<string, any> = {};
 
-      (data || []).forEach((line: any) => {
-        const account = line.chart_accounts;
-        // Multi-tenant fuerte: ignorar líneas cuya cuenta no pertenezca al mismo user_id
-        if (!account || account.user_id !== tenantId) return;
+      // Procesar cada entry y sus líneas
+      let totalLinesProcessed = 0;
+      (data || []).forEach((entry: any) => {
+        const lines = entry.journal_entry_lines || [];
+        lines.forEach((line: any) => {
+          const account = line.chart_accounts;
+          if (!account) {
+            console.log('[getTrialBalance] Skipping line without account:', line.account_id);
+            return;
+          }
 
-        const accountId = line.account_id as string;
-        const debit = Number(line.debit_amount) || 0;
-        const credit = Number(line.credit_amount) || 0;
+          totalLinesProcessed++;
+          const accountId = line.account_id as string;
+          const debit = Number(line.debit_amount) || 0;
+          const credit = Number(line.credit_amount) || 0;
 
-        if (!byAccount[accountId]) {
-          byAccount[accountId] = {
-            account_id: accountId,
-            code: account.code,
-            name: account.name,
-            type: account.type,
-            normal_balance: account.normal_balance,
-            level: account.level,
-            allow_posting: account.allow_posting,
-            parent_id: account.parent_id,
-            total_debit: 0,
-            total_credit: 0,
-            balance: 0,
-          };
-        }
+          if (!byAccount[accountId]) {
+            byAccount[accountId] = {
+              account_id: accountId,
+              code: account.code,
+              name: account.name,
+              type: account.type,
+              normal_balance: account.normal_balance,
+              level: account.level,
+              allow_posting: account.allow_posting,
+              parent_id: account.parent_id,
+              total_debit: 0,
+              total_credit: 0,
+              balance: 0,
+            };
+          }
 
-        byAccount[accountId].total_debit += debit;
-        byAccount[accountId].total_credit += credit;
+          byAccount[accountId].total_debit += debit;
+          byAccount[accountId].total_credit += credit;
+        });
       });
+
+      console.log('[getTrialBalance] Total lines processed:', totalLinesProcessed, 'Unique accounts:', Object.keys(byAccount).length);
 
       // Calcular saldo según el TIPO de cuenta (más confiable que normal_balance)
       Object.values(byAccount).forEach((acc: any) => {

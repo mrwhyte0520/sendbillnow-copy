@@ -28,8 +28,8 @@ const printStyles = `
   }
 `;
 
-// Fecha de arranque contable del sistema: ignorar movimientos anteriores a esta fecha en los estados
-const SYSTEM_START_DATE = '2025-12-01';
+// Fecha de arranque contable del sistema: permitir todos los movimientos históricos
+const SYSTEM_START_DATE = '2000-01-01';
 
 interface FinancialStatement {
   id: string;
