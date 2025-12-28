@@ -64,6 +64,7 @@ export default function SuppliersPage() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPaymentTerms, setFilterPaymentTerms] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
@@ -337,11 +338,12 @@ export default function SuppliersPage() {
   const filteredSuppliers = suppliers.filter((supplier) => {
     const matchesCategory = filterCategory === 'all' || supplier.category === filterCategory;
     const matchesStatus = filterStatus === 'all' || supplier.status === filterStatus;
+    const matchesPaymentTerms = filterPaymentTerms === 'all' || supplier.paymentTerms === filterPaymentTerms;
     const matchesSearch = searchTerm === '' ||
       supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.rnc.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.email.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesStatus && matchesSearch;
+    return matchesCategory && matchesStatus && matchesPaymentTerms && matchesSearch;
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -820,9 +822,25 @@ export default function SuppliersPage() {
                 <option value="Inactivo">Inactivo</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Términos de Pago</label>
+              <select 
+                value={filterPaymentTerms}
+                onChange={(e) => setFilterPaymentTerms(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Todos</option>
+                <option value="Sin especificar">Sin especificar</option>
+                <option value="Contado">Contado</option>
+                <option value="15 días">15 días</option>
+                <option value="30 días">30 días</option>
+                <option value="45 días">45 días</option>
+                <option value="60 días">60 días</option>
+              </select>
+            </div>
             <div className="flex items-end">
               <button 
-                onClick={() => {setSearchTerm(''); setFilterStatus('all'); setFilterCategory('all');}}
+                onClick={() => {setSearchTerm(''); setFilterStatus('all'); setFilterCategory('all'); setFilterPaymentTerms('all');}}
                 className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
                 Limpiar Filtros
