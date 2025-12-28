@@ -2627,7 +2627,7 @@ export default function FinancialStatementsPage() {
                     )}
                   </div>
                 )}
-                <h1 className="text-xl font-bold text-gray-900">Estados de Costos de Ventas</h1>
+                <h1 className="text-xl font-bold text-gray-900">ESTADO DE COSTOS DE VENTAS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
                   <p className="text-xs text-gray-700 mb-0.5">
@@ -2641,7 +2641,7 @@ export default function FinancialStatementsPage() {
                 {/* Título del estado */}
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 border-b-2 border-gray-800 pb-1">
-                    Estado de costos de ventas
+                    ESTADO DE COSTOS DE VENTAS
                   </h2>
                 </div>
 
@@ -3137,7 +3137,6 @@ export default function FinancialStatementsPage() {
                     )}
                   </div>
                 )}
-                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE RESULTADOS</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE RESULTADOS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
@@ -3507,7 +3506,6 @@ export default function FinancialStatementsPage() {
                     )}
                   </div>
                 )}
-                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
