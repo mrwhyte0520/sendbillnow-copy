@@ -1054,8 +1054,7 @@ export default function FinancialStatementsPage() {
     return sumByPrefixes(currentAssets, prefixes);
   })();
   const inventarios = sumByPrefixes(currentAssets, ['12']); // Inventarios
-  const anticiposISR = sumByPrefixes(currentAssets, ['1301']); // Anticipos ISR
-  const gastosPagadosAnticipado = sumByPrefixes(currentAssets, ['13']) - anticiposISR; // Gastos anticipados
+  const gastosPagadosAnticipado = sumByPrefixes(currentAssets, ['13']); // Gastos anticipados (incluye anticipos ISR)
 
   const activosFijos = sumByPrefixes(nonCurrentAssets, ['15']);
   const invAcciones = sumByPrefixes(nonCurrentAssets, ['1401']);
@@ -1495,7 +1494,6 @@ export default function FinancialStatementsPage() {
       addRowIfNotZero(dataRows, 'Otras Cuentas por Cobrar', otrasCxc);
       addRowIfNotZero(dataRows, 'Inventarios', inventarios);
       addRowIfNotZero(dataRows, 'Gastos Pagados por Anticipado', gastosPagadosAnticipado);
-      addRowIfNotZero(dataRows, 'Anticipos sobre la Renta Pagados', anticiposISR);
       dataRows.push(['  Total Activos Corrientes', '', '', totals.totalCurrentAssets]);
       dataRows.push(['', '', '', null]);
 
@@ -2629,7 +2627,6 @@ export default function FinancialStatementsPage() {
                     {renderBalanceLineIfNotZero('ITBIS en compras', itbisCompras)}
                     {renderBalanceLineIfNotZero('Inventarios', inventarios)}
                     {renderBalanceLineIfNotZero('Gastos Pagados por Anticipado', gastosPagadosAnticipado)}
-                    {renderBalanceLineIfNotZero('Anticipos sobre la Renta Pagados', anticiposISR)}
 
                     <div className="border-t border-gray-300 mt-2 pt-1 pl-4">
                       <div className="flex justify-between font-semibold">
