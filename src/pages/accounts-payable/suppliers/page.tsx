@@ -82,7 +82,7 @@ export default function SuppliersPage() {
     phone: '',
     email: '',
     address: '',
-    category: 'Materiales',
+    category: '',
     creditLimit: '',
     paymentTerms: '30 días',
     contact: '',
@@ -101,7 +101,8 @@ export default function SuppliersPage() {
     defaultBankAccountId: '',
   });
 
-  const categories = ['Materiales', 'Distribución', 'Servicios', 'Construcción', 'Tecnología'];
+  const defaultCategories = ['Materiales', 'Distribución', 'Servicios', 'Construcción', 'Tecnología'];
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(defaultCategories);
   const documentTypes = ['RNC', 'Cédula', 'Pasaporte', 'Otro'];
   const expenseTypes606 = [
     '01 - Gastos de Personal',
@@ -118,6 +119,83 @@ export default function SuppliersPage() {
   ];
   const taxRegimes = ['Régimen Normal', 'RST', 'ONG', 'Fundación', 'Sin fines de lucro', 'Otro'];
   const invoiceTypes = ['CREDITO_FISCAL', 'INFORMAL', 'INTERNACIONAL'];
+
+  const getSupplierCategoriesKey = (uid: string) => `supplier_categories_${uid}`;
+  const getSupplierCategoryMapKey = (uid: string) => `supplier_category_map_${uid}`;
+
+  const readStoredCategories = (uid: string): string[] => {
+    try {
+      const raw = localStorage.getItem(getSupplierCategoriesKey(uid));
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .map((v) => String(v || '').trim())
+        .filter((v) => v.length > 0);
+    } catch {
+      return [];
+    }
+  };
+
+  const readStoredCategoryMap = (uid: string): Record<string, string> => {
+    try {
+      const raw = localStorage.getItem(getSupplierCategoryMapKey(uid));
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return {};
+      const out: Record<string, string> = {};
+      Object.entries(parsed as any).forEach(([k, v]) => {
+        const key = String(k || '').trim();
+        const val = String(v || '').trim();
+        if (key && val) out[key] = val;
+      });
+      return out;
+    } catch {
+      return {};
+    }
+  };
+
+  const upsertStoredCategory = (uid: string, category: string) => {
+    const c = String(category || '').trim();
+    if (!c) return;
+
+    const existing = readStoredCategories(uid);
+    const normalized = new Set(existing.map((x) => x.toLowerCase()));
+    if (!normalized.has(c.toLowerCase())) {
+      const next = [...existing, c];
+      localStorage.setItem(getSupplierCategoriesKey(uid), JSON.stringify(next));
+    }
+  };
+
+  const setStoredSupplierCategory = (uid: string, supplierId: string, category: string) => {
+    const id = String(supplierId || '').trim();
+    const c = String(category || '').trim();
+    if (!id || !c) return;
+
+    const map = readStoredCategoryMap(uid);
+    map[id] = c;
+    localStorage.setItem(getSupplierCategoryMapKey(uid), JSON.stringify(map));
+    upsertStoredCategory(uid, c);
+  };
+
+  const syncCategoryOptions = (uid: string | null, supplierList: any[]) => {
+    const fromSuppliers = (supplierList || [])
+      .map((s: any) => String(s?.category || '').trim())
+      .filter((v) => v.length > 0);
+    const stored = uid ? readStoredCategories(uid) : [];
+
+    const all = [...defaultCategories, ...stored, ...fromSuppliers];
+    const unique: string[] = [];
+    const seen = new Set<string>();
+    for (const v of all) {
+      const key = v.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(v);
+      }
+    }
+    setCategoryOptions(unique);
+  };
 
   const normalizeSupplierTypeName = (value: any) => String(value || '').trim().toLowerCase();
   const getSupplierTypeKey = (typeRow: any | null) => {
@@ -176,6 +254,8 @@ export default function SuppliersPage() {
     }
     try {
       const rows = await suppliersService.getAll(user.id);
+
+      const categoryMap = readStoredCategoryMap(user.id);
       const mapped = (rows || []).map((s: any) => ({
         id: s.id,
         name: s.name,
@@ -184,7 +264,7 @@ export default function SuppliersPage() {
         email: s.email || '',
         address: s.address || '',
         // Campos solo de UI (no existen como columnas reales):
-        category: 'Materiales',
+        category: categoryMap[String(s.id)] || '',
         creditLimit: typeof s.credit_limit === 'number'
           ? s.credit_limit
           : (typeof s.current_balance === 'number' ? s.current_balance : 0),
@@ -208,6 +288,7 @@ export default function SuppliersPage() {
         default_invoice_type: s.default_invoice_type,
       }));
       setSuppliers(mapped);
+      syncCategoryOptions(user.id, mapped);
 
       // Cargar catálogo de cuentas para seleccionar cuentas por pagar específicas
       const accs = await chartAccountsService.getAll(user.id);
@@ -339,12 +420,8 @@ export default function SuppliersPage() {
       expense_type_606: normalizeExpenseType606(formData.expenseType606) || null,
       tax_regime: formData.taxRegime || null,
       default_invoice_type: formData.defaultInvoiceType || null,
-      supplier_type_id: formData.supplierTypeId || null,
-      payment_terms_id: formData.paymentTermsId || null,
-      default_bank_account_id: formData.defaultBankAccountId || null,
     };
 
-    // Cuenta por pagar específica (opcional)
     if (formData.apAccountId) {
       payload.ap_account_id = formData.apAccountId;
     } else {
@@ -354,9 +431,17 @@ export default function SuppliersPage() {
     try {
       if (editingSupplier?.id) {
         await suppliersService.update(editingSupplier.id, payload);
+        setStoredSupplierCategory(user.id, String(editingSupplier.id), formData.category);
       } else {
-        await suppliersService.create(user.id, payload);
+        const created = await suppliersService.create(user.id, payload);
+        if (created?.id) {
+          setStoredSupplierCategory(user.id, String(created.id), formData.category);
+        }
       }
+
+      // Guardar siempre la categoría en el historial de sugerencias (aunque no haya id retornado)
+      upsertStoredCategory(user.id, formData.category);
+
       await loadSuppliers();
       resetForm();
       alert(editingSupplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
@@ -376,7 +461,7 @@ export default function SuppliersPage() {
       phone: '',
       email: '',
       address: '',
-      category: 'Materiales',
+      category: '',
       creditLimit: '',
       paymentTerms: '30 días',
       contact: '',
@@ -408,7 +493,7 @@ export default function SuppliersPage() {
       phone: supplier.phone,
       email: supplier.email,
       address: supplier.address,
-      category: supplier.category,
+      category: supplier.category || '',
       creditLimit: supplier.creditLimit.toString(),
       paymentTerms: supplier.paymentTerms,
       contact: supplier.contact,
@@ -710,16 +795,18 @@ export default function SuppliersPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
-              <select 
+              <input
+                type="text"
+                list="supplier-category-options"
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Todas las Categorías</option>
-                {categories.map(category => (
-                  <option key={category} value={category}>{category}</option>
+              />
+              <datalist id="supplier-category-options">
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category} />
                 ))}
-              </select>
+              </datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
@@ -735,7 +822,7 @@ export default function SuppliersPage() {
             </div>
             <div className="flex items-end">
               <button 
-                onClick={() => {setSearchTerm(''); setFilterStatus('all');}}
+                onClick={() => {setSearchTerm(''); setFilterStatus('all'); setFilterCategory('all');}}
                 className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
                 Limpiar Filtros
@@ -1145,15 +1232,18 @@ export default function SuppliersPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
-                    <select 
+                    <input
+                      type="text"
+                      list="supplier-category-options"
                       value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
+                    />
+                    <datalist id="supplier-category-options">
+                      {categoryOptions.map((category) => (
+                        <option key={category} value={category} />
                       ))}
-                    </select>
+                    </datalist>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>

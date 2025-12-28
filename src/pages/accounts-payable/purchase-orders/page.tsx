@@ -28,6 +28,7 @@ export default function PurchaseOrdersPage() {
 
   const [formData, setFormData] = useState({
     supplierId: '',
+    startDate: '',
     deliveryDate: '',
     notes: '',
     products: [{ itemId: null as string | null, name: '', quantity: 1, price: 0 }],
@@ -250,7 +251,7 @@ export default function PurchaseOrdersPage() {
 
     const today = new Date().toISOString().split('T')[0];
     const delivery = formData.deliveryDate || today;
-    const orderDate = editingOrder?.date || today;
+    const orderDate = formData.startDate || editingOrder?.date || today;
     const poNumber = editingOrder?.number
       ? editingOrder.number
       : `PO-${new Date().getFullYear()}-${String(orders.length + 1).padStart(3, '0')}`;
@@ -295,6 +296,7 @@ export default function PurchaseOrdersPage() {
   const resetForm = () => {
     setFormData({
       supplierId: '',
+      startDate: '',
       deliveryDate: '',
       notes: '',
       products: [{ itemId: null, name: '', quantity: 1, price: 0 }],
@@ -308,6 +310,7 @@ export default function PurchaseOrdersPage() {
     setEditingOrder(order);
     setFormData({
       supplierId: order.supplierId || '',
+      startDate: order.date || '',
       deliveryDate: order.deliveryDate,
       notes: order.notes,
       products: order.products,
@@ -917,7 +920,8 @@ export default function PurchaseOrdersPage() {
     const headerRow = worksheet.addRow(['Producto', 'Cantidad', 'Precio', 'Total']);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
     });
 
     (order.products || []).forEach((product: any) => {
@@ -1253,12 +1257,25 @@ export default function PurchaseOrdersPage() {
                     )}
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de inicio *</label>
+                    <input 
+                      type="date"
+                      required
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Entrega *</label>
                     <input 
                       type="date"
                       required
                       value={formData.deliveryDate}
-                      onChange={(e) => setFormData({...formData, deliveryDate: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
