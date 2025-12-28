@@ -269,7 +269,7 @@ export default function SuppliersPage() {
         creditLimit: typeof s.credit_limit === 'number'
           ? s.credit_limit
           : (typeof s.current_balance === 'number' ? s.current_balance : 0),
-        paymentTerms: '30 días',
+        paymentTerms: s.payment_terms || 'Sin especificar',
         contact: '',
         contactName: s.contact_name || '',
         contactPhone: s.contact_phone || '',
@@ -422,6 +422,10 @@ export default function SuppliersPage() {
       expense_type_606: normalizeExpenseType606(formData.expenseType606) || null,
       tax_regime: formData.taxRegime || null,
       default_invoice_type: formData.defaultInvoiceType || null,
+      payment_terms: formData.paymentTerms || null,
+      payment_terms_id: formData.paymentTermsId || null,
+      supplier_type_id: formData.supplierTypeId || null,
+      default_bank_account_id: formData.defaultBankAccountId || null,
     };
 
     if (formData.apAccountId) {
