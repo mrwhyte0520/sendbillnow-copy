@@ -12,15 +12,34 @@ import DateInput from '../../../components/common/DateInput';
 const printStyles = `
   @media print {
     @page { 
-      size: portrait; 
-      /* Márgenes amplios en todo el contorno para que el contenido no quede pegado al borde */
-      margin: 1.5cm 1.8cm;
+      size: letter portrait; 
+      /* Márgenes reducidos para caber en una página */
+      margin: 0.8cm 1.2cm;
     }
     body * { visibility: hidden; }
     #printable-statement, #printable-statement * { visibility: visible; }
-    #printable-statement { position: absolute; left: 0; top: 0; width: 100%; }
+    #printable-statement { 
+      position: absolute; 
+      left: 0; 
+      top: 0; 
+      width: 100%; 
+      font-size: 9pt !important;
+    }
+    #printable-statement h1 { font-size: 12pt !important; }
+    #printable-statement h2 { font-size: 10pt !important; }
+    #printable-statement h3 { font-size: 9pt !important; }
+    #printable-statement .text-sm { font-size: 8pt !important; }
+    #printable-statement .text-base { font-size: 9pt !important; }
+    #printable-statement .py-0\\.5 { padding-top: 1px !important; padding-bottom: 1px !important; }
+    #printable-statement .mb-4 { margin-bottom: 8px !important; }
+    #printable-statement .mb-3 { margin-bottom: 6px !important; }
+    #printable-statement .mb-2 { margin-bottom: 4px !important; }
+    #printable-statement .mt-2 { margin-top: 4px !important; }
+    #printable-statement .pt-2 { padding-top: 4px !important; }
+    #printable-statement .pt-4 { padding-top: 8px !important; }
+    #printable-statement .space-y-6 > * + * { margin-top: 12px !important; }
     body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-    table { page-break-inside: avoid; font-size: 10pt; }
+    table { page-break-inside: avoid; font-size: 8pt; }
     thead { display: table-header-group; }
     tr { page-break-inside: avoid; }
     .print-hidden { display: none !important; }
