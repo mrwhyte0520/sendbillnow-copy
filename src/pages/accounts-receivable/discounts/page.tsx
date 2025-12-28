@@ -480,6 +480,7 @@ export default function DiscountsPage() {
                       Cliente
                     </label>
                     <select
+                      required
                       name="customer_id"
                       value={noteCustomerId}
                       onChange={(e) => {
@@ -491,7 +492,7 @@ export default function DiscountsPage() {
                       }}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">(Opcional) Seleccionar cliente</option>
+                      <option value="">Seleccionar cliente</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
