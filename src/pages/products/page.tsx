@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { inventoryService, chartAccountsService, settingsService } from '../../services/database';
 import { useAuth } from '../../hooks/useAuth';
+import { usePlanLimitations } from '../../hooks/usePlanLimitations';
 
 interface Product {
   id: string;
@@ -34,6 +35,7 @@ interface Category {
 
 export default function ProductsPage() {
   const { user } = useAuth();
+  const { checkQuantityLimit } = usePlanLimitations();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -219,6 +221,14 @@ export default function ProductsPage() {
     e.preventDefault();
     
     try {
+      if (!editingProduct) {
+        const { allowed, message } = checkQuantityLimit('maxProducts', products.length);
+        if (!allowed) {
+          alert(message || 'Has alcanzado el límite de productos de tu plan.');
+          return;
+        }
+      }
+
       const newProduct: Product = {
         id: editingProduct?.id || Date.now().toString(),
         name: formData.name,

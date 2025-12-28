@@ -317,7 +317,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/plans',
     ],
     limits: {
-      users: 1,
+      users: 2,
       invoicesPerMonth: -1, // ilimitado
       warehouses: 1,
       products: 500, // Inventario limitado (500)
@@ -370,7 +370,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/plans',
     ],
     limits: {
-      users: 3, // Hasta 3 empresas/usuarios
+      users: 5,
       invoicesPerMonth: -1, // ilimitado
       warehouses: 1,
       products: 2000, // Inventario limitado (2,000)
@@ -555,10 +555,26 @@ export function getMinimumPlanForModule(module: string): PlanId {
 
   // Módulos de inventario disponibles desde Facturación Premium
   const inventoryModules: string[] = [MODULES.INVENTORY, MODULES.PRODUCTS];
-  if (inventoryModules.includes(module)) return 'facturacion-premium';
+  if (inventoryModules.includes(module)) return 'pyme';
+
+  // Módulos contables / banca / nómina: mínimo PRO
+  const accountingModules: string[] = [
+    MODULES.ACCOUNTING,
+    MODULES.ACCOUNTING_SETTINGS,
+    MODULES.BANKS,
+    MODULES.ACCOUNTS_RECEIVABLE,
+    MODULES.ACCOUNTS_PAYABLE,
+    MODULES.PURCHASES,
+    MODULES.PAYROLL,
+    MODULES.TAXES,
+  ];
+  if (accountingModules.includes(module)) return 'pro';
+
+  // POS requiere al menos POS Premium
+  if (module === MODULES.POS) return 'pos-premium';
 
   // Todos los demás módulos requieren POS Premium
-  return 'pos-premium';
+  return 'plus';
 }
 
 // Función para obtener el nombre del plan mínimo requerido
