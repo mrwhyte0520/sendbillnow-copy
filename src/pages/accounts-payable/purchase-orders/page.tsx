@@ -6,6 +6,7 @@ import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
 import { purchaseOrdersService, purchaseOrderItemsService, suppliersService, inventoryService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
+import { useNavigate } from 'react-router-dom';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -15,10 +16,30 @@ declare module 'jspdf' {
 
 export default function PurchaseOrdersPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterSupplier, setFilterSupplier] = useState('all');
+
+  const handleCreateSupplierInvoice = (order: any) => {
+    const orderId = String(order?.id || '');
+    if (!orderId) return;
+    navigate('/accounts-payable/invoices', {
+      state: {
+        prefillPurchaseOrderId: orderId,
+        prefillPurchaseOrderLines: Array.isArray(order?.products)
+          ? order.products.map((p: any) => ({
+              inventoryItemId: p.itemId ? String(p.itemId) : '',
+              description: String(p.name || ''),
+              quantity: String(p.quantity ?? ''),
+              unitPrice: String(p.price ?? ''),
+              purchaseOrderItemId: p.purchaseOrderItemId ? String(p.purchaseOrderItemId) : undefined,
+            }))
+          : [],
+      },
+    });
+  };
 
   const [orders, setOrders] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -163,6 +184,7 @@ export default function PurchaseOrdersPage() {
           supplier: (po.suppliers as any)?.name || 'Proveedor',
           supplierId: po.supplier_id,
           products: orderItems.map((it: any) => ({
+            purchaseOrderItemId: it.id ? String(it.id) : undefined,
             itemId: it.inventory_item_id as string | null,
             name: it.description as string,
             quantity: Number(it.quantity) || 0,
@@ -329,76 +351,6 @@ export default function PurchaseOrdersPage() {
       // eslint-disable-next-line no-console
       console.error('Error approving purchase order', error);
       alert('No se pudo aprobar la orden');
-    }
-  };
-
-  const handleReceive = async (id: string | number) => {
-    if (!user?.id) {
-      alert('Debes iniciar sesión para registrar movimientos de inventario');
-      return;
-    }
-    if (!confirm('¿Marcar esta orden como recibida y actualizar inventario?')) return;
-
-    try {
-      const orderId = String(id);
-
-      // Cargar detalle de la orden directamente desde la BD
-      const orderItems = await purchaseOrderItemsService.getByOrder(orderId);
-
-      // Actualizar existencias y crear movimientos de entrada por cada ítem
-      const today = new Date().toISOString().split('T')[0];
-
-      for (const it of orderItems as any[]) {
-        const quantity = Number(it.quantity) || 0;
-        const unitCost = Number(it.unit_cost) || 0;
-        if (quantity <= 0) continue;
-
-        // Si la línea está asociada a un producto de inventario, actualizamos su stock y costos
-        if (it.inventory_item_id) {
-          const invItem = it.inventory_items as any | null;
-          const oldStock = Number(invItem?.current_stock) || 0;
-          const oldAvg =
-            invItem?.average_cost != null
-              ? Number(invItem.average_cost) || 0
-              : Number(invItem?.cost_price) || 0;
-
-          const newStock = oldStock + quantity;
-          const newAvg = newStock > 0
-            ? (oldAvg * oldStock + unitCost * quantity) / newStock
-            : oldAvg;
-
-          await inventoryService.updateItem(user.id as string, String(it.inventory_item_id), {
-            current_stock: newStock,
-            last_purchase_price: unitCost,
-            last_purchase_date: today,
-            average_cost: newAvg,
-            cost_price: newAvg,
-          });
-        }
-
-        // Registrar siempre un movimiento de entrada (aunque no haya producto vinculado)
-        await inventoryService.createMovement(user.id as string, {
-          item_id: it.inventory_item_id ? String(it.inventory_item_id) : null,
-          movement_type: 'entry',
-          quantity,
-          unit_cost: unitCost,
-          total_cost: quantity * unitCost,
-          movement_date: today,
-          reference: `PO ${orderId}`,
-          notes: it.description || null,
-          source_type: 'purchase_order',
-          source_id: orderId,
-          source_number: `PO-${orderId}`,
-        });
-      }
-
-      await purchaseOrdersService.updateStatus(orderId, mapUiStatusToDb('Recibida'));
-      await loadOrders();
-      alert('Orden marcada como recibida y entrada de inventario registrada');
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error marking purchase order as received', error);
-      alert('No se pudo marcar la orden como recibida');
     }
   };
 
@@ -1172,10 +1124,11 @@ export default function PurchaseOrdersPage() {
                         )}
                         {order.status === 'Aprobada' && (
                           <button 
-                            onClick={() => handleReceive(order.id)}
+                            onClick={() => handleCreateSupplierInvoice(order)}
                             className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
+                            title="Crear Factura de Suplidor"
                           >
-                            <i className="ri-inbox-line"></i>
+                            <i className="ri-file-list-3-line"></i>
                           </button>
                         )}
                         {(order.status === 'Pendiente' || order.status === 'Aprobada') && (

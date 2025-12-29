@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { settingsService, chartAccountsService } from '../../../services/database';
+import { settingsService, chartAccountsService, accountingSettingsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 
 interface InventorySettings {
@@ -45,11 +45,17 @@ export default function InventorySettingsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [skuSettings, setSkuSettings] = useState({
+    prefix: 'INV',
+    nextNumber: 1,
+    padding: 4,
+  });
 
   useEffect(() => {
     loadSettings();
     loadWarehouses();
     loadAccounts();
+    loadSkuSettings();
   }, [user?.id]);
 
   const loadSettings = async () => {
@@ -95,6 +101,30 @@ export default function InventorySettingsPage() {
     } catch (error) {
       console.error('Error loading accounts for warehouses:', error);
       setAccounts([]);
+    }
+  };
+
+  const loadSkuSettings = async () => {
+    if (!user?.id) return;
+    try {
+      const data = await accountingSettingsService.getSkuSettings(user.id);
+      setSkuSettings(data);
+    } catch (error) {
+      console.error('Error loading SKU settings:', error);
+    }
+  };
+
+  const handleSaveSkuSettings = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      await accountingSettingsService.updateSkuSettings(user.id, skuSettings);
+      setMessage({ type: 'success', text: 'Configuración de SKU guardada exitosamente' });
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error al guardar la configuración de SKU' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -318,6 +348,70 @@ export default function InventorySettingsPage() {
             </button>
           </div>
         </form>
+
+        {/* SKU Settings */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración de SKU Automático</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Define el formato de los códigos SKU que se generarán automáticamente para nuevos productos.
+            El SKU resultante tendrá el formato: <strong>{skuSettings.prefix}-{String(skuSettings.nextNumber).padStart(skuSettings.padding, '0')}</strong>
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prefijo
+              </label>
+              <input
+                type="text"
+                value={skuSettings.prefix}
+                onChange={(e) => setSkuSettings(prev => ({ ...prev, prefix: e.target.value.toUpperCase() }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="INV"
+                maxLength={10}
+              />
+              <p className="text-xs text-gray-400 mt-1">Ej: INV, PROD, SKU</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Siguiente Número
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={skuSettings.nextNumber}
+                onChange={(e) => setSkuSettings(prev => ({ ...prev, nextNumber: Math.max(1, parseInt(e.target.value) || 1) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-400 mt-1">El próximo SKU usará este número</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dígitos (padding)
+              </label>
+              <select
+                value={skuSettings.padding}
+                onChange={(e) => setSkuSettings(prev => ({ ...prev, padding: parseInt(e.target.value) }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value={3}>3 dígitos (001)</option>
+                <option value={4}>4 dígitos (0001)</option>
+                <option value={5}>5 dígitos (00001)</option>
+                <option value={6}>6 dígitos (000001)</option>
+              </select>
+              <p className="text-xs text-gray-400 mt-1">Cantidad de dígitos del número</p>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSaveSkuSettings}
+              disabled={loading}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            >
+              {loading ? 'Guardando...' : 'Guardar Configuración de SKU'}
+            </button>
+          </div>
+        </div>
 
         {/* Warehouses Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">

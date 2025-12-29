@@ -129,7 +129,6 @@ const ARReceiptsPage = lazy(() => import('../pages/accounts-receivable/receipts/
 const ARAdvancesPage = lazy(() => import('../pages/accounts-receivable/advances/page'));
 const ARCreditNotesPage = lazy(() => import('../pages/accounts-receivable/credit-notes/page'));
 const ARDebitNotesPage = lazy(() => import('../pages/accounts-receivable/debit-notes/page'));
-const ARReturnsPage = lazy(() => import('../pages/accounts-receivable/returns/page'));
 const ARDiscountsPage = lazy(() => import('../pages/accounts-receivable/discounts/page'));
 const ARCustomerTypesPage = lazy(() => import('../pages/accounts-receivable/customer-types/page'));
 const ARDeliveryNotesPage = lazy(() => import('../pages/accounts-receivable/delivery-notes/page'));
@@ -479,12 +478,8 @@ const routes: RouteObject[] = [
     element: <ProtectedRoute><ARAdvancesPage /></ProtectedRoute>
   },
   {
-    path: '/inventory/delivery-notes',
+    path: '/accounts-receivable/delivery-notes',
     element: <ProtectedRoute><ARDeliveryNotesPage /></ProtectedRoute>
-  },
-  {
-    path: '/accounts-receivable/returns',
-    element: <ProtectedRoute><ARReturnsPage /></ProtectedRoute>
   },
   {
     path: '/accounts-receivable/discounts',

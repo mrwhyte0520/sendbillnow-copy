@@ -740,6 +740,16 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleRegisterPayment = (invoice?: Invoice | null) => {
+    // Abre el modal de pago (sin guardar). El guardado lo hace handleSavePayment.
+    if (invoice) {
+      setSelectedInvoice(invoice);
+    } else {
+      setSelectedInvoice(null);
+    }
+    setShowPaymentModal(true);
+  };
+
   const handleSavePayment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -1040,27 +1050,42 @@ export default function InvoicesPage() {
     setShowInvoiceModal(true);
   };
 
-  const handleRegisterPayment = (invoice?: Invoice) => {
-    setSelectedInvoice(invoice ?? null);
-    setShowPaymentModal(true);
-  };
-
   const handleViewInvoice = async (invoiceId: string) => {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) return;
+    if (!user?.id) return;
+
     setSelectedInvoice(invoice);
     setShowViewInvoiceModal(true);
     setLoadingMovements(true);
     setInvoiceMovements([]);
-    
+
     try {
-      // Buscar asientos relacionados con esta factura
+      const invoiceNumber = String(invoice.invoiceNumber || '').trim();
+      const invoiceRef = String(invoice.id || '').trim();
+
+      const orFilters = [
+        invoiceRef ? `reference.eq.${invoiceRef}` : null,
+        invoiceNumber ? `description.ilike.%${invoiceNumber}%` : null,
+        invoiceNumber ? `entry_number.ilike.%${invoiceNumber}%` : null,
+        invoiceNumber ? `reference.ilike.%${invoiceNumber}%` : null,
+      ]
+        .filter(Boolean)
+        .join(',');
+
+      if (!orFilters) {
+        setInvoiceMovements([]);
+        return;
+      }
+
       const { data: entries, error } = await supabase
         .from('journal_entries')
         .select('*')
-        .or(`description.ilike.%${invoice.invoiceNumber}%,reference.ilike.%${invoice.invoiceNumber}%,entry_number.ilike.%${invoice.invoiceNumber}%`)
-        .order('entry_date', { ascending: false });
-      
+        .eq('user_id', user.id)
+        .or(orFilters)
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
       setInvoiceMovements(entries || []);
     } catch (error) {
@@ -1089,7 +1114,7 @@ export default function InvoicesPage() {
         `)
         .eq('journal_entry_id', movement.id)
         .order('line_number', { ascending: true });
-      
+
       if (error) throw error;
       setMovementLines(data || []);
     } catch (error) {
@@ -1165,7 +1190,7 @@ export default function InvoicesPage() {
 
       const itemsHtml = (invoice.items || [])
         .map(
-          (item, idx) => `
+          (item: any, idx: number) => `
             <tr>
               <td>${idx + 1}</td>
               <td>${item.description}</td>

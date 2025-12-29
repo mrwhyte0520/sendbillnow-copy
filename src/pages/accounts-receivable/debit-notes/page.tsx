@@ -348,6 +348,7 @@ export default function DebitNotesPage() {
       alert('Debes iniciar sesión para crear notas de débito');
       return;
     }
+
     const formData = new FormData(e.currentTarget);
     const customerId = String(formData.get('customer_id') || '');
     const date = String(formData.get('date') || '');
@@ -363,6 +364,17 @@ export default function DebitNotesPage() {
       return;
     }
 
+    if (amount <= 0) {
+      alert('El monto debe ser mayor que 0');
+      return;
+    }
+
+    const targetInvoice = invoices.find((inv) => String(inv.id) === invoiceId);
+    if (!targetInvoice) {
+      alert('No se pudo encontrar la factura seleccionada. Vuelve a cargar la página e inténtalo de nuevo.');
+      return;
+    }
+
     const noteNumber = `ND-${Date.now()}`;
     const noteDate = date || new Date().toISOString().slice(0, 10);
 
@@ -374,13 +386,32 @@ export default function DebitNotesPage() {
       note_date: noteDate,
       total_amount: amount,
       reason: reason || concept || null,
-      applied_amount: 0,
-      balance_amount: amount,
-      status: 'pending',
+      applied_amount: amount,
+      balance_amount: 0,
+      status: 'applied',
     };
 
     try {
       const created = await creditDebitNotesService.create(user.id, payload);
+
+      // Aplicar efecto inmediato en la factura: aumentar total y recalcular status
+      {
+        const originalTotal = Number(targetInvoice.totalAmount) || 0;
+        const paidAmount = Number(targetInvoice.paidAmount) || 0;
+        let newInvoiceTotal = originalTotal + amount;
+        if (newInvoiceTotal < 0) newInvoiceTotal = 0;
+
+        let newInvoiceStatus: string;
+        if (paidAmount >= newInvoiceTotal) {
+          newInvoiceStatus = 'paid';
+        } else if (paidAmount > 0) {
+          newInvoiceStatus = 'partial';
+        } else {
+          newInvoiceStatus = 'pending';
+        }
+
+        await invoicesService.updateTotals(String(invoiceId), newInvoiceTotal, newInvoiceStatus);
+      }
 
       // Best-effort: asiento contable de nota de débito (aumento de CxC: Debe CxC, Haber cuenta seleccionada)
       try {

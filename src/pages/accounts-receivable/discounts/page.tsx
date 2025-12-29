@@ -38,6 +38,8 @@ export default function DiscountsPage() {
   const [noteInvoiceId, setNoteInvoiceId] = useState<string>('');
   const [noteAmount, setNoteAmount] = useState<number>(0);
   const [notePercent, setNotePercent] = useState<number>(0);
+  const [noteOriginAccountId, setNoteOriginAccountId] = useState<string>('');
+  const [noteDiscountsAccountId, setNoteDiscountsAccountId] = useState<string>('');
 
   const incomeAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'income');
 
@@ -132,6 +134,25 @@ export default function DiscountsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!showModal) return;
+    if (!accounts.length) return;
+    if (noteDiscountsAccountId) return;
+
+    const norm = (v: any) => String(v || '').toLowerCase().trim();
+    const normalizeCode = (code: any) => String(code || '').replace(/\./g, '');
+
+    const candidates = accounts.filter((acc: any) => acc?.allowPosting);
+    const byName = candidates.find((acc: any) => norm(acc.name) === 'descuentos en ventas');
+    const byContains = candidates.find((acc: any) => norm(acc.name).includes('descuento') && norm(acc.name).includes('venta'));
+    const byCode = candidates.find((acc: any) => ['4104', '410401', '4204', '420401'].includes(normalizeCode(acc.code)));
+
+    const selected = byName || byContains || byCode;
+    if (selected?.id) {
+      setNoteDiscountsAccountId(String(selected.id));
+    }
+  }, [showModal, accounts, noteDiscountsAccountId]);
+
   const filteredDiscounts = discounts.filter((d) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -222,13 +243,18 @@ export default function DiscountsPage() {
     const discountsAccountId = String(formData.get('discounts_account_id') || '');
     const concept = String(formData.get('concept') || '');
 
+    if (!invoiceId) {
+      alert('Debes seleccionar una factura relacionada para aplicar el descuento');
+      return;
+    }
+
     if (!amount || amount <= 0) {
       alert('El monto debe ser mayor que 0');
       return;
     }
 
-    // Si hay factura relacionada, validar contra saldo pendiente
-    if (invoiceId) {
+    // Validar contra saldo pendiente
+    {
       const targetInvoice = invoices.find((inv) => inv.id === invoiceId);
       if (targetInvoice) {
         const pending = Number(targetInvoice.pendingAmount) || 0;
@@ -303,7 +329,7 @@ export default function DiscountsPage() {
           if (newInvoiceTotal < 0) newInvoiceTotal = 0;
 
           let newInvoiceStatus: string;
-          if (newInvoiceTotal <= 0) {
+          if (paidAmount >= newInvoiceTotal) {
             newInvoiceStatus = 'paid';
           } else if (paidAmount > 0) {
             newInvoiceStatus = 'partial';
@@ -551,10 +577,11 @@ export default function DiscountsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada (Opcional)
+                      Factura Relacionada
                     </label>
                     <select
                       name="invoice_id"
+                      required
                       value={noteInvoiceId}
                       onChange={handleInvoiceChange}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
@@ -576,8 +603,9 @@ export default function DiscountsPage() {
                   <select
                     name="origin_account_id"
                     required
+                    value={noteOriginAccountId}
+                    onChange={(e) => setNoteOriginAccountId(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    defaultValue=""
                   >
                     <option value="">Seleccionar cuenta de ingresos original</option>
                     {incomeAccounts.map((acc) => (
@@ -595,8 +623,9 @@ export default function DiscountsPage() {
                   <select
                     name="discounts_account_id"
                     required
+                    value={noteDiscountsAccountId}
+                    onChange={(e) => setNoteDiscountsAccountId(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    defaultValue=""
                   >
                     <option value="">Seleccionar cuenta de ingresos para descuentos</option>
                     {incomeAccounts.map((acc) => (
@@ -623,7 +652,15 @@ export default function DiscountsPage() {
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false);
+                      setNoteOriginAccountId('');
+                      setNoteDiscountsAccountId('');
+                      setNoteInvoiceId('');
+                      setNoteCustomerId('');
+                      setNoteAmount(0);
+                      setNotePercent(0);
+                    }}
                     className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
                   >
                     Cancelar

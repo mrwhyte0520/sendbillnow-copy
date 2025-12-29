@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import * as QRCode from 'qrcode';
 import {
   customersService,
   invoicesService,
   journalEntriesService,
   chartAccountsService,
   accountingSettingsService,
+  settingsService,
 } from '../../../services/database';
 import { formatAmount } from '../../../utils/numberFormat';
+import { formatDate } from '../../../utils/dateFormat';
 
 interface ArReturn {
   id: string;
@@ -30,15 +33,27 @@ export default function ReturnsPage() {
   const [invoices, setInvoices] = useState<
     Array<{
       id: string;
+      publicToken?: string | null;
       invoiceNumber: string;
       customerId: string;
+      customerName: string;
+      dueDate?: string;
       totalAmount: number;
+      subtotal: number;
+      tax: number;
       paidAmount: number;
       pendingAmount: number;
+      items: {
+        description: string;
+        quantity: number;
+        price: number;
+        total: number;
+      }[];
     }>
   >([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [accountingSettings, setAccountingSettings] = useState<any | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +64,18 @@ export default function ReturnsPage() {
   const [returnsAccountId, setReturnsAccountId] = useState<string>('');
 
   const incomeAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'income');
+
+  useEffect(() => {
+    const loadCompanyInfo = async () => {
+      try {
+        const info = await settingsService.getCompanyInfo();
+        setCompanyInfo(info);
+      } catch {
+        setCompanyInfo(null);
+      }
+    };
+    loadCompanyInfo();
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user?.id) return;
@@ -70,13 +97,36 @@ export default function ReturnsPage() {
         const paidAmount = Number((inv as any).paid_amount) || 0;
         const pendingAmount = totalAmount > 0 ? Math.max(totalAmount - paidAmount, 0) : 0;
 
+        const customerName = String((inv as any)?.customers?.name || '');
+        const publicToken = (inv as any)?.public_token ?? (inv as any)?.publicToken ?? null;
+        const dueDate = String((inv as any)?.due_date || (inv as any)?.dueDate || '');
+        const subtotal = Number((inv as any)?.subtotal_amount ?? (inv as any)?.subtotal ?? (totalAmount - (Number((inv as any)?.tax_amount) || 0))) || 0;
+        const tax = Number((inv as any)?.tax_amount ?? (inv as any)?.tax ?? 0) || 0;
+        const items = ((inv as any)?.invoice_lines || []).map((ln: any) => {
+          const quantity = Number(ln.quantity) || 0;
+          const price = Number(ln.unit_price) || 0;
+          const lineTotal = Number(ln.line_total) || quantity * price;
+          return {
+            description: String(ln.description || ''),
+            quantity,
+            price,
+            total: lineTotal,
+          };
+        });
+
         return {
           id: String(inv.id),
+          publicToken,
           invoiceNumber: inv.invoice_number as string,
           customerId: String(inv.customer_id),
+          customerName,
+          dueDate,
           totalAmount,
+          subtotal,
+          tax,
           paidAmount,
           pendingAmount,
+          items,
         };
       });
       setInvoices(invoicesArray);
@@ -180,6 +230,203 @@ export default function ReturnsPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  const handlePrintInvoice = (invoiceId: string, returnedAmount: number) => {
+    const invoice = invoices.find((inv) => inv.id === invoiceId);
+    if (!invoice) return;
+
+    (async () => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('No se pudo abrir la ventana de impresión');
+        return;
+      }
+
+      const fullCustomer = invoice.customerId
+        ? customers.find((c) => c.id === invoice.customerId)
+        : undefined;
+
+      const customerDocument = (fullCustomer as any)?.document || '';
+      const customerPhone = (fullCustomer as any)?.phone || '';
+      const customerEmail = (fullCustomer as any)?.email || '';
+      const customerAddress = (fullCustomer as any)?.address || '';
+
+      const companyName =
+        (companyInfo as any)?.name ||
+        (companyInfo as any)?.company_name ||
+        'ContaBi';
+
+      const companyRnc =
+        (companyInfo as any)?.rnc ||
+        (companyInfo as any)?.tax_id ||
+        (companyInfo as any)?.ruc ||
+        '';
+
+      const companyPhone =
+        (companyInfo as any)?.phone ||
+        (companyInfo as any)?.company_phone ||
+        (companyInfo as any)?.contact_phone ||
+        '';
+
+      const companyEmail =
+        (companyInfo as any)?.email ||
+        (companyInfo as any)?.company_email ||
+        (companyInfo as any)?.contact_email ||
+        '';
+
+      const companyAddress =
+        (companyInfo as any)?.address ||
+        (companyInfo as any)?.company_address ||
+        '';
+
+      let qrDataUrl = '';
+      try {
+        const token = invoice.publicToken;
+        const qrUrl = token
+          ? `${window.location.origin}/public/document/invoice/${encodeURIComponent(String(token))}`
+          : `${window.location.origin}/document/invoice/${encodeURIComponent(String(invoice.id))}`;
+        qrDataUrl = await QRCode.toDataURL(qrUrl, {
+          errorCorrectionLevel: 'M',
+          margin: 1,
+          width: 160,
+        });
+      } catch {
+        qrDataUrl = '';
+      }
+
+      const itemsHtml = (invoice.items || [])
+        .map(
+          (item, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td>${item.description}</td>
+              <td class="num">RD$ ${formatAmount(item.price)}</td>
+              <td class="num">${item.quantity}</td>
+              <td class="num">RD$ ${formatAmount(item.total)}</td>
+            </tr>`,
+        )
+        .join('');
+
+      const invoiceTotal = Number(invoice.totalAmount) || 0;
+      const returned = Number(returnedAmount) || 0;
+      const remaining = Math.max(invoiceTotal - returned, 0);
+
+      const html = `
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Factura ${invoice.invoiceNumber}</title>
+            <style>
+              :root { --primary:#0b2a6f; --accent:#19a34a; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; }
+              * { box-sizing: border-box; }
+              body { font-family: Arial, sans-serif; padding: 28px; color: var(--text); background: var(--bg); }
+              .top { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; }
+              .company-name { font-weight: 800; font-size: 18px; color: var(--primary); }
+              .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
+              .doc { text-align: right; }
+              .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
+              .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
+              .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+              .qr { margin-top: 10px; width: 110px; height: 110px; }
+              .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
+              .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
+              .card-head { background: var(--primary); padding: 10px 12px; color: #fff; font-weight: 800; font-size: 13px; }
+              .card-body { padding: 12px; font-size: 12px; }
+              .kv { display:grid; grid-template-columns: 140px 1fr; gap: 6px 10px; }
+              .kv .k { color: var(--muted); }
+              .kv .v { color: var(--text); font-weight: 600; }
+              .table-wrap { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+              table { width: 100%; border-collapse: collapse; }
+              thead th { background: var(--primary); color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; padding: 10px; text-align: left; }
+              tbody td { border-bottom: 1px solid var(--border); padding: 10px; font-size: 12px; vertical-align: top; }
+              tbody tr:last-child td { border-bottom: none; }
+              .num { text-align: right; font-variant-numeric: tabular-nums; }
+              .totals { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+              .totals-head { background: var(--primary); color: #fff; padding: 10px 12px; font-weight: 800; font-size: 13px; }
+              .totals-body { padding: 12px; }
+              .totals-row { display:grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+              .totals-row:last-child { border-bottom: none; }
+              .totals-row .label { color: var(--muted); font-weight: 700; }
+              .totals-row .value { font-weight: 800; color: var(--text); }
+              .totals-row.total .value { color: var(--primary); }
+              @media print { body { padding: 0; } }
+            </style>
+          </head>
+          <body>
+            <div class="top">
+              <div>
+                <div class="company-name">${companyName}</div>
+                ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
+                ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
+                ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
+                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
+              </div>
+              <div class="doc">
+                <div class="doc-title">FACTURA</div>
+                <div class="doc-number">NCF: ${invoice.invoiceNumber}</div>
+                <div class="doc-kv">
+                  <div><strong>Fecha Límite de Pago:</strong> ${invoice.dueDate ? formatDate(invoice.dueDate) : ''}</div>
+                </div>
+                ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card-head">Cliente</div>
+                <div class="card-body">
+                  <div class="kv">
+                    <div class="k">Nombre</div>
+                    <div class="v">${invoice.customerName}</div>
+                    ${customerDocument ? `<div class="k">Documento</div><div class="v">${customerDocument}</div>` : ''}
+                    ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
+                    ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
+                    ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
+                  </div>
+                </div>
+              </div>
+              <div class="totals">
+                <div class="totals-head">Resumen</div>
+                <div class="totals-body">
+                  <div class="totals-row"><div class="label">Monto factura</div><div class="value">RD$ ${formatAmount(invoiceTotal)}</div></div>
+                  <div class="totals-row"><div class="label">Devuelto</div><div class="value">RD$ ${formatAmount(returned)}</div></div>
+                  <div class="totals-row total"><div class="label">Resto</div><div class="value">RD$ ${formatAmount(remaining)}</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 54px;">No.</th>
+                    <th>Descripción</th>
+                    <th class="num" style="width: 110px;">Precio</th>
+                    <th class="num" style="width: 80px;">Cant.</th>
+                    <th class="num" style="width: 120px;">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.write(html);
+      printWindow.document.close();
+    })();
+  };
 
   const filteredReturns = returns.filter((r) => {
     const term = searchTerm.toLowerCase();
@@ -452,6 +699,9 @@ export default function ReturnsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Concepto
                   </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -475,11 +725,30 @@ export default function ReturnsPage() {
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {ret.concept}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!ret.invoiceId) return;
+                          handlePrintInvoice(ret.invoiceId, ret.amount);
+                        }}
+                        disabled={!ret.invoiceId}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-lg border transition-colors whitespace-nowrap ${
+                          ret.invoiceId
+                            ? 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                            : 'border-gray-200 text-gray-300 cursor-not-allowed'
+                        }`}
+                        title={ret.invoiceId ? 'Imprimir factura' : 'Sin factura asociada'}
+                      >
+                        <i className="ri-printer-line mr-2"></i>
+                        Imprimir
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {filteredReturns.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-sm text-gray-500 text-center">
+                    <td colSpan={7} className="px-6 py-4 text-sm text-gray-500 text-center">
                       No hay devoluciones registradas.
                     </td>
                   </tr>

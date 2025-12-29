@@ -302,6 +302,7 @@ export default function InventoryPage() {
     setSelectedItem(item);
 
     const baseForm: any = item ? { ...item } : {};
+
     if (!item && type === 'item' && !baseForm.warehouse_id && warehouses.length > 0) {
       baseForm.warehouse_id = warehouses[0].id;
     }
@@ -325,11 +326,6 @@ export default function InventoryPage() {
     }
 
     if (!item && type === 'item') {
-      // Auto-generar SKU para nuevos productos
-      const timestamp = Date.now().toString().slice(-6);
-      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-      baseForm.sku = `INV-${timestamp}-${random}`;
-      
       const itemType = baseForm.item_type || 'inventory';
       if (itemType === 'inventory' && accountingSettings) {
         if (!baseForm.inventory_account_id && accountingSettings.default_inventory_asset_account_id) {
@@ -346,6 +342,27 @@ export default function InventoryPage() {
     }
 
     setFormData(baseForm);
+
+    if (!item && type === 'item') {
+      // Auto-generar SKU usando secuencia configurable del usuario
+      if (user?.id) {
+        accountingSettingsService.generateNextSku(user.id)
+          .then((sku) => {
+            setFormData((prev: any) => ({ ...prev, sku }));
+          })
+          .catch(() => {
+            // Fallback si hay error
+            const timestamp = Date.now().toString().slice(-6);
+            const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+            setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
+          });
+      } else {
+        const timestamp = Date.now().toString().slice(-6);
+        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+        setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
+      }
+    }
+
     setShowModal(true);
   };
 
@@ -798,10 +815,22 @@ export default function InventoryPage() {
     }
   };
 
-  const generateSKU = () => {
+  const generateSKU = async () => {
+    if (user?.id) {
+      try {
+        const sku = await accountingSettingsService.generateNextSku(user.id);
+        setFormData((prev: any) => ({ ...prev, sku }));
+        return sku;
+      } catch (error) {
+        console.error('Error generating SKU:', error);
+      }
+    }
+    // Fallback
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `INV-${timestamp}-${random}`;
+    const fallbackSku = `INV-${timestamp}-${random}`;
+    setFormData((prev: any) => ({ ...prev, sku: fallbackSku }));
+    return fallbackSku;
   };
 
   // Funciones de exportación
@@ -1688,7 +1717,17 @@ export default function InventoryPage() {
               {warehouseEntries.map((entry: any) => (
                 <tr key={entry.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {entry.document_date ? new Date(entry.document_date).toLocaleDateString('es-DO') : 'N/A'}
+                    {(() => {
+                      const raw = entry.document_date ? String(entry.document_date) : '';
+                      if (!raw) return 'N/A';
+                      // Evitar corrimiento por timezone: tratar YYYY-MM-DD como fecha local
+                      const parts = raw.split('T')[0].split('-');
+                      if (parts.length === 3) {
+                        const [y, m, d] = parts;
+                        return `${d}/${m}/${y}`;
+                      }
+                      return raw;
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.document_number || 'N/A'}
@@ -1701,6 +1740,8 @@ export default function InventoryPage() {
                       ? 'Conduce suplidor'
                       : entry.source_type === 'devolucion_cliente'
                         ? 'Devolución cliente'
+                        : entry.source_type === 'ap_invoice'
+                          ? 'Factura suplidor'
                         : entry.source_type || 'Otros'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -2099,12 +2140,7 @@ export default function InventoryPage() {
                       />
                       <button
                         type="button"
-                        onClick={() =>
-                          setFormData((prev: any) => ({
-                            ...prev,
-                            sku: generateSKU(),
-                          }))
-                        }
+                        onClick={generateSKU}
                         className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
                       >
                         Generar

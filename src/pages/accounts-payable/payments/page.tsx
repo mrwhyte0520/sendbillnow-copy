@@ -30,6 +30,16 @@ export default function PaymentsPage() {
 
   const paymentMethods = ['Transferencia', 'Cheque', 'Efectivo', 'Tarjeta de Crédito'];
 
+  const resolveApInvoiceBalance = (inv: any) => {
+    const totalToPay = Number(inv?.total_to_pay ?? inv?.total_gross ?? 0) || 0;
+    const paidAmount = Number(inv?.paid_amount ?? 0) || 0;
+    const explicitBalance = Number(inv?.balance_amount ?? 0) || 0;
+
+    if (explicitBalance > 0) return explicitBalance;
+    if (totalToPay > 0) return Math.max(totalToPay - paidAmount, 0);
+    return 0;
+  };
+
   const filteredPayments = payments.filter(payment => {
     const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
     const matchesMethod = filterMethod === 'all' || payment.method === filterMethod;
@@ -483,7 +493,15 @@ export default function PaymentsPage() {
                     <select 
                       required
                       value={formData.supplierId}
-                      onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                      onChange={(e) => {
+                        const supplierId = e.target.value;
+                        setFormData({
+                          ...formData,
+                          supplierId,
+                          invoice: '',
+                          amount: '',
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Seleccionar proveedor</option>
@@ -495,8 +513,19 @@ export default function PaymentsPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Factura (CxP) <span className="text-red-500">*</span></label>
                     <select
+                      required
                       value={formData.invoice}
-                      onChange={(e) => setFormData({ ...formData, invoice: e.target.value })}
+                      onChange={(e) => {
+                        const invoiceNumber = e.target.value;
+                        const selectedInv = apInvoices.find((inv: any) => String(inv.invoice_number || '') === String(invoiceNumber));
+                        const balance = selectedInv ? resolveApInvoiceBalance(selectedInv) : 0;
+
+                        setFormData({
+                          ...formData,
+                          invoice: invoiceNumber,
+                          amount: balance > 0 ? balance.toFixed(2) : '',
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Sin factura seleccionada</option>

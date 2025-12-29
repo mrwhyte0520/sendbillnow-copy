@@ -102,6 +102,7 @@ const TrialBalancePage: FC = () => {
         .from('accounting_periods')
         .select('*')
         .eq('user_id', user.id)
+        .order('fiscal_year', { ascending: false })
         .order('start_date', { ascending: true });
 
       if (error) throw error;
@@ -350,6 +351,20 @@ const TrialBalancePage: FC = () => {
 
   const formatAmount = (value: number) => {
     return formatMoney(value);
+  };
+
+  const renderMoney = (value: number) => {
+    const formatted = formatMoney(value);
+    const splitAt = formatted.indexOf(' ');
+    const label = splitAt > -1 ? formatted.slice(0, splitAt) : '';
+    const amount = splitAt > -1 ? formatted.slice(splitAt + 1) : formatted;
+
+    return (
+      <span className="inline-flex w-full justify-end items-baseline gap-1">
+        {label ? <span className="shrink-0">{label}</span> : null}
+        <span className="tabular-nums">{amount}</span>
+      </span>
+    );
   };
 
   const totalPrevDebit = rows.reduce((sum, r) => sum + r.prevDebit, 0);
@@ -691,22 +706,22 @@ const TrialBalancePage: FC = () => {
                     {row.name}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.prevDebit)}
+                    {renderMoney(row.prevDebit)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.prevCredit)}
+                    {renderMoney(row.prevCredit)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.movDebit)}
+                    {renderMoney(row.movDebit)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.movCredit)}
+                    {renderMoney(row.movCredit)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.finalDebit)}
+                    {renderMoney(row.finalDebit)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-900">
-                    {formatAmount(row.finalCredit)}
+                    {renderMoney(row.finalCredit)}
                   </td>
                 </tr>
               ))
@@ -719,22 +734,22 @@ const TrialBalancePage: FC = () => {
                   Totales:
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalPrevDebit)}
+                  {renderMoney(totalPrevDebit)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalPrevCredit)}
+                  {renderMoney(totalPrevCredit)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalMovDebit)}
+                  {renderMoney(totalMovDebit)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalMovCredit)}
+                  {renderMoney(totalMovCredit)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalFinalDebit)}
+                  {renderMoney(totalFinalDebit)}
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                  {formatAmount(totalFinalCredit)}
+                  {renderMoney(totalFinalCredit)}
                 </td>
               </tr>
             </tfoot>

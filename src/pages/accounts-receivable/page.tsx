@@ -251,14 +251,6 @@ export default function AccountsReceivablePage() {
       stats: ''
     },
     {
-      title: 'Devoluciones en Ventas',
-      description: 'Reclasificación de ingresos a devoluciones en ventas',
-      icon: 'ri-refresh-line',
-      path: '/accounts-receivable/returns',
-      color: 'bg-amber-500',
-      stats: ''
-    },
-    {
       title: 'Descuentos en Ventas',
       description: 'Reclasificación de ingresos a descuentos en ventas',
       icon: 'ri-percent-line',

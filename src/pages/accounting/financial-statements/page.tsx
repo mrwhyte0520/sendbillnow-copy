@@ -104,7 +104,7 @@ interface FinancialTotals {
 
 export default function FinancialStatementsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'statements' | 'balance' | 'income' | 'costs' | 'expenses' | 'cashflow'>('statements');
+  const [activeTab, setActiveTab] = useState<'statements' | 'balance' | 'income' | 'costs' | 'expenses' | 'cashflow' | 'anexos'>('statements');
   const [statements, setStatements] = useState<FinancialStatement[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [incomeFromDate, setIncomeFromDate] = useState(() => {
@@ -135,6 +135,15 @@ export default function FinancialStatementsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedStatement, setSelectedStatement] = useState<FinancialStatement | null>(null);
   const [showExpensesDetail, setShowExpensesDetail] = useState(false);
+
+  // Estado para Anexos a los Estados Financieros
+  const [anexosData, setAnexosData] = useState<{
+    accounts: { code: string; name: string; type: string; balance: number }[];
+    groupedByType: Record<string, { accounts: { code: string; name: string; balance: number }[]; subtotal: number }>;
+  }>({
+    accounts: [],
+    groupedByType: {},
+  });
 
   const [periodOptions] = useState(() => {
     const options: { value: string; label: string }[] = [];
@@ -630,11 +639,14 @@ export default function FinancialStatementsPage() {
           return ids;
         })();
 
-        const [openingTrial, closingTrial, periodTrial, inventoryAccountIds] = await Promise.all([
+        const movementsPromise = inventoryService.getMovements(user.id);
+
+        const [openingTrial, closingTrial, periodTrial, inventoryAccountIds, movements] = await Promise.all([
           openingTrialPromise,
           closingTrialPromise,
           financialReportsService.getTrialBalance(user.id, periodFromDate, toDate),
           inventoryAccountIdsPromise,
+          movementsPromise,
         ]);
 
         const shouldDebugCostOfSales =
@@ -705,6 +717,101 @@ export default function FinancialStatementsPage() {
         const openingInventory = sumInventory(openingTrial as any[], inventoryAccountIds);
         const closingInventory = sumInventory(closingTrial as any[], inventoryAccountIds);
 
+        // ==========================================================
+        // Preferir movimientos de inventario cuando existan
+        // ==========================================================
+        type InventoryMovement = {
+          movement_type?: string | null;
+          movement_date?: string | null;
+          total_cost?: number | string | null;
+          unit_cost?: number | string | null;
+          quantity?: number | string | null;
+          adjustment_direction?: string | null;
+        };
+
+        const parseNumber = (v: any) => {
+          const n = typeof v === 'number' ? v : Number(v);
+          return Number.isFinite(n) ? n : 0;
+        };
+
+        const normalizeDate = (d: string | null | undefined) => {
+          if (!d) return '';
+          return String(d).slice(0, 10);
+        };
+
+        const movementSignedCost = (m: InventoryMovement) => {
+          const type = String(m.movement_type || '').toLowerCase();
+          if (!type) return 0;
+
+          const qty = parseNumber(m.quantity);
+          const totalCost = parseNumber(m.total_cost);
+          const unitCost = parseNumber(m.unit_cost);
+          const cost = totalCost !== 0 ? totalCost : qty * unitCost;
+          if (cost === 0) return 0;
+
+          if (type === 'entry') return cost;
+          if (type === 'exit') return -cost;
+          if (type === 'adjustment') {
+            const dir = String(m.adjustment_direction || '').toLowerCase();
+            const isNegative = dir === 'negative' || dir === 'decrease' || dir === 'down';
+            return isNegative ? -cost : cost;
+          }
+
+          // Transferencias no cambian el valor total del inventario
+          return 0;
+        };
+
+        const sumMovementsUpTo = (list: InventoryMovement[], dateToInclusive: string) => {
+          const toKey = String(dateToInclusive);
+          return (list || []).reduce((sum, m) => {
+            const d = normalizeDate(m.movement_date);
+            if (!d || d > toKey) return sum;
+            return sum + movementSignedCost(m);
+          }, 0);
+        };
+
+        const sumMovementEntriesInRange = (list: InventoryMovement[], dateFrom: string, dateTo: string) => {
+          const fromKey = String(dateFrom);
+          const toKey = String(dateTo);
+          return (list || []).reduce((sum, m) => {
+            const type = String(m.movement_type || '').toLowerCase();
+            if (type !== 'entry') return sum;
+            const d = normalizeDate(m.movement_date);
+            if (!d || d < fromKey || d > toKey) return sum;
+
+            const cost = movementSignedCost(m);
+            return sum + Math.max(cost, 0);
+          }, 0);
+        };
+
+        const sumMovementExitsInRange = (list: InventoryMovement[], dateFrom: string, dateTo: string) => {
+          const fromKey = String(dateFrom);
+          const toKey = String(dateTo);
+          return (list || []).reduce((sum, m) => {
+            const type = String(m.movement_type || '').toLowerCase();
+            if (type !== 'exit') return sum;
+            const d = normalizeDate(m.movement_date);
+            if (!d || d < fromKey || d > toKey) return sum;
+            const cost = movementSignedCost(m);
+            return sum + Math.abs(cost);
+          }, 0);
+        };
+
+        const movementsList = (movements || []) as InventoryMovement[];
+        const hasAnyMovementsInRange = movementsList.some((m) => {
+          const d = normalizeDate(m.movement_date);
+          return !!d && d >= periodFromDate && d <= toDate;
+        });
+
+        const openingInventoryByMovements =
+          prevToDate && prevToDate >= SYSTEM_START_DATE
+            ? sumMovementsUpTo(movementsList, prevToDate)
+            : 0;
+        const closingInventoryByMovements = sumMovementsUpTo(movementsList, toDate);
+        const purchasesByMovements = hasAnyMovementsInRange
+          ? sumMovementEntriesInRange(movementsList, periodFromDate, toDate)
+          : 0;
+
         const sumCostByPrefixes = (trial: any[], prefixes: string[]) => {
           return (trial || []).reduce((sum, acc: any) => {
             const code = String(acc.code || '');
@@ -756,22 +863,25 @@ export default function FinancialStatementsPage() {
         const rawLocal = sumCostByPrefixes(periodTrial as any[], ['5001', '500101']);
         const rawImports = sumCostByPrefixes(periodTrial as any[], ['500102']);
 
-        // Preferir compras por movimiento de inventario (débitos a 12xx), que cuadra con InvInicial + Compras - COGS = InvFinal
-        const purchasesLocal = invPeriodTotals.debit > 0 ? invPeriodTotals.debit : rawLocal;
-        const purchasesImports = invPeriodTotals.debit > 0 ? 0 : rawImports;
+        // Preferir movimientos de inventario (inventory_movements) si existen.
+        // Si no hay movimientos, usar el método anterior (débitos a inventario en el mayor).
+        const purchasesLocal = purchasesByMovements > 0 ? purchasesByMovements : invPeriodTotals.debit > 0 ? invPeriodTotals.debit : rawLocal;
+        const purchasesImports = purchasesByMovements > 0 ? 0 : invPeriodTotals.debit > 0 ? 0 : rawImports;
         const totalPurchases = purchasesLocal + purchasesImports;
 
         const indirectCosts = 0; // Placeholder para futuros desarrollos
-        const availableForSale = openingInventory + totalPurchases + indirectCosts;
+        const openingInvEffective = hasAnyMovementsInRange ? openingInventoryByMovements : openingInventory;
+        const closingInvEffective = hasAnyMovementsInRange ? closingInventoryByMovements : closingInventory;
+        const availableForSale = openingInvEffective + totalPurchases + indirectCosts;
 
         setCostOfSalesData({
-          openingInventory,
+          openingInventory: openingInvEffective,
           purchasesLocal,
           purchasesImports,
           totalPurchases,
           indirectCosts,
           availableForSale,
-          closingInventory,
+          closingInventory: closingInvEffective,
         });
       } catch (error) {
         // eslint-disable-next-line no-console
@@ -793,6 +903,89 @@ export default function FinancialStatementsPage() {
       void loadCostOfSales();
     }
   }, [user, selectedPeriod, incomeFromDate, incomeToDate, useCustomRange, activeTab, financialData.costs]);
+
+  // ====================================================
+  // Cargar datos para Anexos a los Estados Financieros
+  // ====================================================
+  useEffect(() => {
+    const loadAnexosData = async () => {
+      try {
+        if (!user) return;
+
+        const now = new Date();
+        const basePeriod = selectedPeriod || now.toISOString().slice(0, 7);
+        const [yearStr, monthStr] = basePeriod.split('-');
+        const baseYear = parseInt(yearStr, 10);
+        const baseMonth = parseInt(monthStr, 10);
+        if (!baseYear || !baseMonth) return;
+
+        const monthToDate = new Date(baseYear, baseMonth, 0).toISOString().slice(0, 10);
+        const toDate = useCustomRange && incomeToDate ? incomeToDate : monthToDate;
+
+        // Obtener trial balance acumulado hasta la fecha de corte
+        const trialBalance = await financialReportsService.getTrialBalance(
+          user.id,
+          SYSTEM_START_DATE,
+          toDate
+        );
+
+        // Filtrar cuentas con saldo != 0
+        const accountsWithBalance = (trialBalance || [])
+          .filter((acc: any) => Math.abs(Number(acc.balance) || 0) >= 0.01)
+          .map((acc: any) => ({
+            code: String(acc.code || ''),
+            name: String(acc.name || ''),
+            type: String(acc.type || '').toLowerCase(),
+            balance: Number(acc.balance) || 0,
+          }))
+          .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code)));
+
+        // Agrupar por tipo de cuenta
+        const typeLabels: Record<string, string> = {
+          asset: 'ACTIVOS',
+          activo: 'ACTIVOS',
+          liability: 'PASIVOS',
+          pasivo: 'PASIVOS',
+          equity: 'PATRIMONIO',
+          patrimonio: 'PATRIMONIO',
+          income: 'INGRESOS',
+          ingreso: 'INGRESOS',
+          cost: 'COSTOS',
+          costo: 'COSTOS',
+          costos: 'COSTOS',
+          expense: 'GASTOS',
+          gasto: 'GASTOS',
+        };
+
+        const grouped: Record<string, { accounts: { code: string; name: string; balance: number }[]; subtotal: number }> = {};
+
+        accountsWithBalance.forEach((acc: any) => {
+          const typeKey = typeLabels[acc.type] || 'OTROS';
+          if (!grouped[typeKey]) {
+            grouped[typeKey] = { accounts: [], subtotal: 0 };
+          }
+          grouped[typeKey].accounts.push({
+            code: acc.code,
+            name: acc.name,
+            balance: acc.balance,
+          });
+          grouped[typeKey].subtotal += acc.balance;
+        });
+
+        setAnexosData({
+          accounts: accountsWithBalance,
+          groupedByType: grouped,
+        });
+      } catch (error) {
+        console.error('Error loading anexos data:', error);
+        setAnexosData({ accounts: [], groupedByType: {} });
+      }
+    };
+
+    if (activeTab === 'anexos' && user) {
+      void loadAnexosData();
+    }
+  }, [user, selectedPeriod, incomeToDate, useCustomRange, activeTab]);
 
   const loadStatements = async () => {
     try {
@@ -1984,7 +2177,8 @@ export default function FinancialStatementsPage() {
               { id: 'income', label: 'Estado de Resultados', icon: 'ri-line-chart-line' },
               { id: 'costs', label: 'Estado de Costos de Ventas', icon: 'ri-bill-line' },
               { id: 'expenses', label: 'Estado de Gastos G. y Adm.', icon: 'ri-bar-chart-2-line' },
-              { id: 'cashflow', label: 'Flujo de Efectivo', icon: 'ri-money-dollar-circle-line' }
+              { id: 'cashflow', label: 'Flujo de Efectivo', icon: 'ri-money-dollar-circle-line' },
+              { id: 'anexos', label: 'Anexos a EE.FF.', icon: 'ri-attachment-2' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -3487,6 +3681,123 @@ export default function FinancialStatementsPage() {
                 );
               })()}
               </div> {/* Cierre de printable-statement */}
+            </div>
+          </div>
+        )}
+
+        {/* Pestaña de Anexos a los Estados Financieros */}
+        {activeTab === 'anexos' && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-6 print-hidden">
+              <h2 className="text-lg font-semibold">Anexos a los Estados Financieros</h2>
+              <div className="flex items-center gap-4">
+                <select
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm pr-8"
+                >
+                  {periodOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => window.print()}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <i className="ri-printer-line"></i>
+                  Imprimir
+                </button>
+              </div>
+            </div>
+
+            <div id="printable-statement">
+              {/* Título centrado estilo profesional */}
+              <div className="text-center mb-8">
+                <h1 className="text-xl font-bold text-gray-900">ANEXOS A LOS ESTADOS FINANCIEROS</h1>
+                <p className="text-sm text-gray-600">{periodDates.asOfDateLabel}</p>
+                <p className="text-xs text-gray-500 mt-1">Valores en RD$</p>
+              </div>
+
+              {/* Listado de cuentas agrupadas por tipo */}
+              <div className="space-y-8">
+                {Object.keys(anexosData.groupedByType).length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    No hay cuentas con saldo para el período seleccionado.
+                  </div>
+                ) : (
+                  ['ACTIVOS', 'PASIVOS', 'PATRIMONIO', 'INGRESOS', 'COSTOS', 'GASTOS', 'OTROS']
+                    .filter((typeKey) => anexosData.groupedByType[typeKey])
+                    .map((typeKey) => {
+                      const group = anexosData.groupedByType[typeKey];
+                      return (
+                        <div key={typeKey} className="mb-6">
+                          <h2 className="text-base font-bold text-gray-900 mb-3 pb-1 border-b-2 border-gray-300">
+                            {typeKey}
+                          </h2>
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="text-left py-2 px-2 text-xs font-semibold text-gray-600 w-24">
+                                    Código
+                                  </th>
+                                  <th className="text-left py-2 px-2 text-xs font-semibold text-gray-600">
+                                    Cuenta
+                                  </th>
+                                  <th className="text-right py-2 px-2 text-xs font-semibold text-gray-600 w-32">
+                                    Saldo
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.accounts.map((acc, idx) => (
+                                  <tr key={`${acc.code}-${idx}`} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <td className="py-1.5 px-2 text-sm text-gray-700 font-mono">
+                                      {acc.code}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-sm text-gray-800">
+                                      {acc.name}
+                                    </td>
+                                    <td className="py-1.5 px-2 text-sm text-right tabular-nums">
+                                      <span className={acc.balance < 0 ? 'text-red-600' : 'text-gray-900'}>
+                                        {formatCurrency(acc.balance)}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t-2 border-gray-300 bg-gray-50">
+                                  <td colSpan={2} className="py-2 px-2 text-sm font-bold text-gray-900">
+                                    Subtotal {typeKey}
+                                  </td>
+                                  <td className="py-2 px-2 text-sm text-right font-bold tabular-nums">
+                                    <span className={group.subtotal < 0 ? 'text-red-600' : 'text-gray-900'}>
+                                      {formatCurrency(group.subtotal)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Total general */}
+              {Object.keys(anexosData.groupedByType).length > 0 && (
+                <div className="mt-8 pt-4 border-t-2 border-gray-400">
+                  <div className="flex justify-between items-center">
+                    <span className="text-base font-bold text-gray-900">
+                      Total de cuentas con saldo: {anexosData.accounts.length}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

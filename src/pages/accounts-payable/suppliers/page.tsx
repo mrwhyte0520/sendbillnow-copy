@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { normalizeExpenseType606 } from '../../../utils/expenseType606';
 import {
   suppliersService,
   chartAccountsService,
@@ -9,48 +11,88 @@ import {
   bankAccountsService,
   settingsService,
 } from '../../../services/database';
-import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
+const CATEGORY_MAP_KEY_PREFIX = 'suppliers_category_map_v1:';
+const CATEGORY_OPTIONS_KEY_PREFIX = 'suppliers_category_options_v1:';
+
+const onlyDigits = (value: any) => String(value || '').replace(/\D/g, '');
+
+const formatTaxId = (documentType: string, digitsRaw: string) => {
+  const digits = onlyDigits(digitsRaw);
+  if (!digits) return '';
+
+  const type = String(documentType || '').toLowerCase();
+
+  if (type === 'rnc') {
+    const d = digits.slice(0, 9);
+    if (d.length <= 3) return d;
+    if (d.length <= 8) return `${d.slice(0, 3)}-${d.slice(3)}`;
+    return `${d.slice(0, 3)}-${d.slice(3, 8)}-${d.slice(8, 9)}`;
   }
-}
 
-function onlyDigits(value: string) {
-  return value.replace(/\D+/g, '');
-}
+  if (type === 'cédula' || type === 'cedula') {
+    const d = digits.slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 10) return `${d.slice(0, 3)}-${d.slice(3)}`;
+    return `${d.slice(0, 3)}-${d.slice(3, 10)}-${d.slice(10, 11)}`;
+  }
 
-function formatRnc(digits: string) {
-  const d = digits.slice(0, 9);
-  const a = d.slice(0, 1);
-  const b = d.slice(1, 3);
-  const c = d.slice(3, 8);
-  const e = d.slice(8, 9);
-  if (!d) return '';
-  if (d.length <= 1) return a;
-  if (d.length <= 3) return `${a}-${b}`;
-  if (d.length <= 8) return `${a}-${b}-${c}`;
-  return `${a}-${b}-${c}-${e}`;
-}
+  return digits;
+};
 
-function formatCedula(digits: string) {
-  const d = digits.slice(0, 11);
-  const a = d.slice(0, 3);
-  const b = d.slice(3, 10);
-  const c = d.slice(10, 11);
-  if (!d) return '';
-  if (d.length <= 3) return a;
-  if (d.length <= 10) return `${a}-${b}`;
-  return `${a}-${b}-${c}`;
-}
+const readStoredCategoryMap = (userId: string) => {
+  try {
+    const raw = localStorage.getItem(`${CATEGORY_MAP_KEY_PREFIX}${userId}`);
+    if (!raw) return {} as Record<string, string>;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, string>) : ({} as Record<string, string>);
+  } catch {
+    return {} as Record<string, string>;
+  }
+};
 
-function formatTaxId(documentType: string, inputValue: string) {
-  const digits = onlyDigits(inputValue);
-  if (documentType === 'RNC') return formatRnc(digits);
-  if (documentType === 'Cédula') return formatCedula(digits);
-  return inputValue;
-}
+const writeStoredCategoryMap = (userId: string, map: Record<string, string>) => {
+  try {
+    localStorage.setItem(`${CATEGORY_MAP_KEY_PREFIX}${userId}`, JSON.stringify(map || {}));
+  } catch {
+  }
+};
+
+const setStoredSupplierCategory = (userId: string, supplierId: string, category: string) => {
+  if (!userId || !supplierId) return;
+  const map = readStoredCategoryMap(userId);
+  map[String(supplierId)] = String(category || '').trim();
+  writeStoredCategoryMap(userId, map);
+};
+
+const readStoredCategoryOptions = (userId: string) => {
+  try {
+    const raw = localStorage.getItem(`${CATEGORY_OPTIONS_KEY_PREFIX}${userId}`);
+    if (!raw) return [] as string[];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as string[]) : ([] as string[]);
+  } catch {
+    return [] as string[];
+  }
+};
+
+const writeStoredCategoryOptions = (userId: string, options: string[]) => {
+  try {
+    localStorage.setItem(`${CATEGORY_OPTIONS_KEY_PREFIX}${userId}`, JSON.stringify(options || []));
+  } catch {
+  }
+};
+
+const upsertStoredCategory = (userId: string, category: string) => {
+  const clean = String(category || '').trim();
+  if (!userId || !clean) return;
+  const existing = readStoredCategoryOptions(userId);
+  const normalized = clean.toLowerCase();
+  const has = existing.some((c) => String(c || '').trim().toLowerCase() === normalized);
+  if (has) return;
+  const next = [...existing, clean].sort((a, b) => String(a).localeCompare(String(b), 'es'));
+  writeStoredCategoryOptions(userId, next);
+};
 
 function getTaxIdDigitsLimit(documentType: string) {
   if (documentType === 'RNC') return 9;
@@ -103,6 +145,7 @@ export default function SuppliersPage() {
 
   const defaultCategories = ['Materiales', 'Distribución', 'Servicios', 'Construcción', 'Tecnología'];
   const [categoryOptions, setCategoryOptions] = useState<string[]>(defaultCategories);
+
   const documentTypes = ['RNC', 'Cédula', 'Pasaporte', 'Otro'];
   const expenseTypes606 = [
     '01 - Gastos de Personal',
@@ -120,84 +163,52 @@ export default function SuppliersPage() {
   const taxRegimes = ['Régimen Normal', 'RST', 'ONG', 'Fundación', 'Sin fines de lucro', 'Otro'];
   const invoiceTypes = ['CREDITO_FISCAL', 'INFORMAL', 'INTERNACIONAL'];
 
-  const getSupplierCategoriesKey = (uid: string) => `supplier_categories_${uid}`;
-  const getSupplierCategoryMapKey = (uid: string) => `supplier_category_map_${uid}`;
+  const syncCategoryOptions = (userId: string, supplierRows: any[]) => {
+    const options = new Set<string>();
+    defaultCategories.forEach((c) => options.add(c));
 
-  const readStoredCategories = (uid: string): string[] => {
-    try {
-      const raw = localStorage.getItem(getSupplierCategoriesKey(uid));
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed
-        .map((v) => String(v || '').trim())
-        .filter((v) => v.length > 0);
-    } catch {
-      return [];
-    }
-  };
+    const stored = readStoredCategoryOptions(userId);
+    stored.forEach((c) => options.add(String(c || '').trim()));
 
-  const readStoredCategoryMap = (uid: string): Record<string, string> => {
-    try {
-      const raw = localStorage.getItem(getSupplierCategoryMapKey(uid));
-      if (!raw) return {};
-      const parsed = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object') return {};
-      const out: Record<string, string> = {};
-      Object.entries(parsed as any).forEach(([k, v]) => {
-        const key = String(k || '').trim();
-        const val = String(v || '').trim();
-        if (key && val) out[key] = val;
-      });
-      return out;
-    } catch {
-      return {};
-    }
-  };
+    (supplierRows || []).forEach((s: any) => {
+      const cat = String(s?.category || '').trim();
+      if (cat) options.add(cat);
+    });
 
-  const upsertStoredCategory = (uid: string, category: string) => {
-    const c = String(category || '').trim();
-    if (!c) return;
+    const unique = Array.from(options)
+      .map((v) => String(v || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, 'es'));
 
-    const existing = readStoredCategories(uid);
-    const normalized = new Set(existing.map((x) => x.toLowerCase()));
-    if (!normalized.has(c.toLowerCase())) {
-      const next = [...existing, c];
-      localStorage.setItem(getSupplierCategoriesKey(uid), JSON.stringify(next));
-    }
-  };
-
-  const setStoredSupplierCategory = (uid: string, supplierId: string, category: string) => {
-    const id = String(supplierId || '').trim();
-    const c = String(category || '').trim();
-    if (!id || !c) return;
-
-    const map = readStoredCategoryMap(uid);
-    map[id] = c;
-    localStorage.setItem(getSupplierCategoryMapKey(uid), JSON.stringify(map));
-    upsertStoredCategory(uid, c);
-  };
-
-  const syncCategoryOptions = (uid: string | null, supplierList: any[]) => {
-    const fromSuppliers = (supplierList || [])
-      .map((s: any) => String(s?.category || '').trim())
-      .filter((v) => v.length > 0);
-    const stored = uid ? readStoredCategories(uid) : [];
-
-    const all = [...defaultCategories, ...stored, ...fromSuppliers];
-    const unique: string[] = [];
-    const seen = new Set<string>();
-    for (const v of all) {
-      const key = v.toLowerCase();
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(v);
-      }
-    }
     setCategoryOptions(unique);
+    writeStoredCategoryOptions(userId, unique);
   };
+
+  const defaultSupplierTypes = [
+    { name: 'Sin especificar', affects_itbis: false, affects_isr: false, is_non_taxpayer: false },
+    { name: 'Persona Jurídica', affects_itbis: true, affects_isr: false, is_non_taxpayer: false, itbis_withholding_rate: 0 },
+    { name: 'Persona Física', affects_itbis: true, affects_isr: true, is_non_taxpayer: false, isr_withholding_rate: 10, itbis_withholding_rate: 30 },
+    { name: 'Prestador de Servicios', affects_itbis: true, affects_isr: true, is_non_taxpayer: false, isr_withholding_rate: 10, itbis_withholding_rate: 100 },
+    { name: 'Proveedor informal', affects_itbis: false, affects_isr: false, is_non_taxpayer: true },
+  ];
 
   const normalizeSupplierTypeName = (value: any) => String(value || '').trim().toLowerCase();
+  const supplierTypesSeedStateRef = useRef<{ userId: string; done: boolean; running: boolean } | null>(null);
+
+  const dedupeSupplierTypes = (rows: any[]) => {
+    const seen = new Set<string>();
+    const out: any[] = [];
+    (rows || []).forEach((t: any) => {
+      const key = normalizeSupplierTypeName(t?.name);
+      if (!key) return;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(t);
+    });
+    out.sort((a: any, b: any) => String(a?.name || '').localeCompare(String(b?.name || ''), 'es'));
+    return out;
+  };
+
   const getSupplierTypeKey = (typeRow: any | null) => {
     const name = normalizeSupplierTypeName(typeRow?.name);
     if (name === 'sin especificar') return 'unspecified';
@@ -208,44 +219,7 @@ export default function SuppliersPage() {
     return null;
   };
 
-  const defaultSupplierTypes = [
-    { name: 'Sin especificar', affects_itbis: false, affects_isr: false, is_non_taxpayer: false },
-    { name: 'Persona Jurídica', affects_itbis: true, affects_isr: false, is_non_taxpayer: false, itbis_withholding_rate: 0 },
-    { name: 'Persona Física', affects_itbis: true, affects_isr: true, is_non_taxpayer: false, isr_withholding_rate: 10, itbis_withholding_rate: 30 },
-    { name: 'Prestador de Servicios', affects_itbis: true, affects_isr: true, is_non_taxpayer: false, itbis_withholding_rate: 30 },
-    { name: 'Proveedor informal', affects_itbis: false, affects_isr: true, is_non_taxpayer: true, itbis_withholding_rate: 100 },
-  ];
-
-  const normalizeExpenseType606 = (value: any) => {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
-    const needle = raw.toLowerCase();
-
-    // Compatibilidad con valores antiguos que usaban otra codificación o descripciones
-    if (needle.includes('gastos de seguros')) {
-      return '11 - Gastos de Seguros';
-    }
-
-    const legacyCodeMap: Record<string, string> = {
-      '06': '07', // antes: financieros
-      '07': '11', // antes: seguros
-      '08': '02', // antes: provisión bienes/servicios
-      '09': '08', // antes: otros conceptos
-      '10': '09', // antes: compras de bienes
-      '11': '02', // antes: servicios profesionales
-    };
-
-    const match = expenseTypes606.find((opt) => opt.toLowerCase() === needle);
-    if (match) return match;
-    const codeMatch = needle.match(/^\s*(\d{2})\s*-/);
-    if (codeMatch) {
-      const code = codeMatch[1];
-      const mappedCode = legacyCodeMap[code] ?? code;
-      const byCode = expenseTypes606.find((opt) => opt.startsWith(`${mappedCode} -`));
-      if (byCode) return byCode;
-    }
-    return raw;
-  };
+  // ... (rest of the code remains the same)
 
   const loadSuppliers = async () => {
     if (!user?.id) {
@@ -295,17 +269,30 @@ export default function SuppliersPage() {
       setAccounts(accs || []);
 
       // Cargar tipos de suplidor
-      let types = await supplierTypesService.getAll(user.id);
-      const existingNames = new Set((types || []).map((t: any) => normalizeSupplierTypeName(t?.name)));
-      for (const row of defaultSupplierTypes) {
-        const key = normalizeSupplierTypeName((row as any).name);
-        if (!existingNames.has(key)) {
-          await supplierTypesService.create(user.id, row as any);
-          existingNames.add(key);
+      if (!supplierTypesSeedStateRef.current || supplierTypesSeedStateRef.current.userId !== user.id) {
+        supplierTypesSeedStateRef.current = { userId: user.id, done: false, running: false };
+      }
+
+      if (!supplierTypesSeedStateRef.current.running && !supplierTypesSeedStateRef.current.done) {
+        supplierTypesSeedStateRef.current.running = true;
+        try {
+          const types = await supplierTypesService.getAll(user.id);
+          const existingNames = new Set((types || []).map((t: any) => normalizeSupplierTypeName(t?.name)));
+          for (const row of defaultSupplierTypes) {
+            const key = normalizeSupplierTypeName((row as any).name);
+            if (!existingNames.has(key)) {
+              await supplierTypesService.create(user.id, row as any);
+              existingNames.add(key);
+            }
+          }
+          supplierTypesSeedStateRef.current.done = true;
+        } finally {
+          supplierTypesSeedStateRef.current.running = false;
         }
       }
-      types = await supplierTypesService.getAll(user.id);
-      setSupplierTypes(types || []);
+
+      const typesAfterSeed = await supplierTypesService.getAll(user.id);
+      setSupplierTypes(dedupeSupplierTypes(typesAfterSeed || []));
 
       // Cargar términos de pago reales
       const terms = await paymentTermsService.getAll(user.id);

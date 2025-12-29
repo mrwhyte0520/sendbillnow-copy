@@ -7486,6 +7486,74 @@ export const accountingSettingsService = {
       console.error('accountingSettingsService.markChartAccountsSeeded error', error);
     }
   },
+
+  // Obtener configuración de secuencia de SKU
+  async getSkuSettings(userId: string): Promise<{ prefix: string; nextNumber: number; padding: number }> {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      const { data, error } = await supabase
+        .from('accounting_settings')
+        .select('sku_prefix, sku_next_number, sku_padding')
+        .eq('user_id', tenantId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return {
+        prefix: data?.sku_prefix || 'INV',
+        nextNumber: data?.sku_next_number || 1,
+        padding: data?.sku_padding || 4,
+      };
+    } catch (error) {
+      console.error('accountingSettingsService.getSkuSettings error', error);
+      return { prefix: 'INV', nextNumber: 1, padding: 4 };
+    }
+  },
+
+  // Actualizar configuración de secuencia de SKU
+  async updateSkuSettings(userId: string, settings: { prefix?: string; nextNumber?: number; padding?: number }): Promise<void> {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      const updateData: any = { updated_at: new Date().toISOString() };
+      
+      if (settings.prefix !== undefined) updateData.sku_prefix = settings.prefix;
+      if (settings.nextNumber !== undefined) updateData.sku_next_number = settings.nextNumber;
+      if (settings.padding !== undefined) updateData.sku_padding = settings.padding;
+
+      const { error } = await supabase
+        .from('accounting_settings')
+        .upsert(
+          { user_id: tenantId, ...updateData },
+          { onConflict: 'user_id' }
+        );
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('accountingSettingsService.updateSkuSettings error', error);
+    }
+  },
+
+  // Generar próximo SKU y actualizar secuencia
+  async generateNextSku(userId: string): Promise<string> {
+    try {
+      const settings = await this.getSkuSettings(userId);
+      const { prefix, nextNumber, padding } = settings;
+      
+      const paddedNumber = String(nextNumber).padStart(padding, '0');
+      const sku = `${prefix}-${paddedNumber}`;
+
+      // Incrementar el siguiente número
+      await this.updateSkuSettings(userId, { nextNumber: nextNumber + 1 });
+
+      return sku;
+    } catch (error) {
+      console.error('accountingSettingsService.generateNextSku error', error);
+      // Fallback a SKU aleatorio si hay error
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+      return `INV-${timestamp}-${random}`;
+    }
+  },
 };
 
 /* ==========================================================
@@ -8788,6 +8856,62 @@ export const invoicesService = {
           console.error('Error cleaning up invoice after invoice posting failure:', cleanupError);
         }
         throw error;
+      }
+
+      // Registrar movimientos de salida de inventario para cada línea con producto
+      try {
+        const shouldUpdateInventory = String((invoiceData as any).status || '') !== 'draft';
+        if (shouldUpdateInventory && linesData && linesData.length > 0) {
+          for (const line of linesData) {
+            const itemId = line.item_id;
+            const qty = Number(line.quantity) || 0;
+            if (!itemId || qty <= 0) continue;
+
+            // Obtener datos del producto para el movimiento
+            const { data: invItem } = await supabase
+              .from('inventory_items')
+              .select('id, name, sku, warehouse_id, cost_price, average_cost, item_type, current_stock')
+              .eq('id', itemId)
+              .maybeSingle();
+
+            if (!invItem) continue;
+            // Solo productos de inventario (no servicios)
+            if (invItem.item_type === 'service') continue;
+
+            const unitCost = Number(invItem.average_cost) || Number(invItem.cost_price) || 0;
+
+            // Crear movimiento de salida
+            try {
+              await inventoryService.createMovement(userId, {
+                item_id: invItem.id ? String(invItem.id) : null,
+                movement_type: 'exit',
+                quantity: qty,
+                unit_cost: unitCost,
+                total_cost: qty * unitCost,
+                reference: `Factura ${invoiceData.invoice_number || invoiceData.id}`,
+                notes: `Venta - ${line.description || invItem.name || ''}`,
+                movement_date: invoiceData.invoice_date || new Date().toISOString().split('T')[0],
+                from_warehouse_id: invItem.warehouse_id || null,
+                to_warehouse_id: null,
+              });
+            } catch (movError) {
+              console.error('invoicesService.create createMovement error', movError);
+            }
+
+            // Actualizar stock del producto
+            try {
+              const currentStock = Number(invItem.current_stock) || 0;
+              const newStock = Math.max(currentStock - qty, 0);
+              await inventoryService.updateItem(userId, String(invItem.id), {
+                current_stock: newStock,
+              });
+            } catch (stockError) {
+              console.error('invoicesService.create updateStock error', stockError);
+            }
+          }
+        }
+      } catch (inventoryError) {
+        console.error('Error registering inventory movements for invoice:', inventoryError);
       }
 
       return { invoice: invoiceData, lines: linesData };
@@ -10559,16 +10683,23 @@ export const apInvoiceLinesService = {
           return insertedLines;
         }
 
-        const { data: existingMovements, error: existingMovError } = await supabase
-          .from('inventory_movements')
-          .select('id')
-          .eq('user_id', invoiceUserId)
-          .eq('source_type', 'ap_invoice')
-          .eq('source_id', apInvoiceId)
-          .limit(1);
+        // Nota: NO podemos usar related_invoice_id para ap_invoices porque tiene FK hacia invoices (clientes).
+        // La idempotencia se resuelve más abajo usando (source_type, document_number).
+        let hasWarehouseEntry = false;
 
-        if (!existingMovError && existingMovements && existingMovements.length > 0) {
-          return insertedLines;
+        let hasMovements = false;
+        try {
+          const { data: existingMovements, error: existingMovError } = await supabase
+            .from('inventory_movements')
+            .select('id')
+            .eq('user_id', invoiceUserId)
+            .eq('source_type', 'ap_invoice')
+            .eq('source_id', apInvoiceId)
+            .limit(1);
+          hasMovements = !existingMovError && !!existingMovements && existingMovements.length > 0;
+        } catch (movCheckError) {
+          console.error('apInvoiceLinesService.createMany movements idempotency check error', movCheckError);
+          hasMovements = false;
         }
 
         // Cargar líneas con detalle de ítems de inventario
@@ -10604,63 +10735,134 @@ export const apInvoiceLinesService = {
               ? String(invoice.invoice_date)
               : new Date().toISOString().split('T')[0];
 
-            for (const rawLine of invLines as any[]) {
-              if (!rawLine.inventory_item_id) continue;
+            const entryDocDate = new Date().toISOString().split('T')[0];
 
-              const invItem = rawLine.inventory_items as any | null;
-              const rawQty = Number(rawLine.quantity) || 0;
-              const qty = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
+            const warehouseEntryDocNumber = String(invoice.invoice_number || apInvoiceId);
 
-              if (!invItem || qty <= 0) continue;
+            // Idempotencia: si ya existe una entrada de almacén generada por esta factura, no recrear.
+            try {
+              const { data: existingWhEntries, error: existingWhEntryError } = await supabase
+                .from('warehouse_entries')
+                .select('id')
+                .eq('user_id', invoiceUserId)
+                .eq('source_type', 'ap_invoice')
+                .eq('document_number', warehouseEntryDocNumber)
+                .limit(1);
+              hasWarehouseEntry = !existingWhEntryError && !!existingWhEntries && existingWhEntries.length > 0;
+            } catch (whCheckError) {
+              console.error('apInvoiceLinesService.createMany warehouse entry idempotency check error', whCheckError);
+              hasWarehouseEntry = false;
+            }
 
-              const oldStock = Number(invItem.current_stock ?? 0) || 0;
-              const oldAvg =
-                invItem.average_cost != null
-                  ? Number(invItem.average_cost) || 0
-                  : Number(invItem.cost_price) || 0;
+            if (!hasMovements) {
+              for (const rawLine of invLines as any[]) {
+                if (!rawLine.inventory_item_id) continue;
 
-              const lineUnitCost = Number(rawLine.unit_price) || 0;
-              const unitCost = lineUnitCost > 0 ? lineUnitCost : oldAvg;
-              const lineCost = qty * unitCost;
+                const invItem = rawLine.inventory_items as any | null;
+                const rawQty = Number(rawLine.quantity) || 0;
+                const qty = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
 
-              if (lineCost <= 0) continue;
+                if (!invItem || qty <= 0) continue;
 
-              const newStock = oldStock + qty;
-              const newAvg = newStock > 0 ? (oldAvg * oldStock + unitCost * qty) / newStock : oldAvg;
+                const oldStock = Number(invItem.current_stock ?? 0) || 0;
+                const oldAvg =
+                  invItem.average_cost != null
+                    ? Number(invItem.average_cost) || 0
+                    : Number(invItem.cost_price) || 0;
 
-              // Actualizar maestro de inventario
-              try {
-                if (invItem.id) {
-                  await inventoryService.updateItem(userId, String(invItem.id), {
-                    current_stock: newStock,
-                    last_purchase_price: unitCost,
-                    last_purchase_date: movementDate,
-                    average_cost: newAvg,
-                    cost_price: newAvg,
-                  });
+                const lineUnitCost = Number(rawLine.unit_price) || 0;
+                const unitCost = lineUnitCost > 0 ? lineUnitCost : oldAvg;
+                const lineCost = qty * unitCost;
+
+                if (lineCost <= 0) continue;
+
+                const newStock = oldStock + qty;
+                const newAvg = newStock > 0 ? (oldAvg * oldStock + unitCost * qty) / newStock : oldAvg;
+
+                // Actualizar maestro de inventario
+                try {
+                  if (invItem.id) {
+                    await inventoryService.updateItem(userId, String(invItem.id), {
+                      current_stock: newStock,
+                      last_purchase_price: unitCost,
+                      last_purchase_date: movementDate,
+                      average_cost: newAvg,
+                      cost_price: newAvg,
+                    });
+                  }
+                } catch (updateError) {
+                  console.error('apInvoiceLinesService.createMany updateItem error', updateError);
                 }
-              } catch (updateError) {
-                console.error('apInvoiceLinesService.createMany updateItem error', updateError);
-              }
 
-              // Registrar movimiento de entrada de inventario
+                // Registrar movimiento de entrada de inventario
+                try {
+                  await inventoryService.createMovement(userId, {
+                    item_id: invItem.id ? String(invItem.id) : null,
+                    movement_type: 'entry',
+                    quantity: qty,
+                    unit_cost: unitCost,
+                    total_cost: lineCost,
+                    movement_date: movementDate,
+                    reference: invoice.invoice_number || invoice.id,
+                    notes: rawLine.description || invItem.name || null,
+                    source_type: 'ap_invoice',
+                    source_id: apInvoiceId,
+                    source_number: invoice.invoice_number || (apInvoiceId ? String(apInvoiceId) : null),
+                    to_warehouse_id: (invItem as any)?.warehouse_id || null,
+                  });
+                } catch (movError) {
+                  console.error('apInvoiceLinesService.createMany createMovement error', movError);
+                }
+              }
+            }
+
+            if (!hasWarehouseEntry) {
+              // Best-effort: crear registro de Entrada de Almacén para que aparezca en el módulo (sin repostear stock)
               try {
-                await inventoryService.createMovement(userId, {
-                  item_id: invItem.id ? String(invItem.id) : null,
-                  movement_type: 'entry',
-                  quantity: qty,
-                  unit_cost: unitCost,
-                  total_cost: lineCost,
-                  movement_date: movementDate,
-                  reference: invoice.invoice_number || invoice.id,
-                  notes: rawLine.description || invItem.name || null,
-                  source_type: 'ap_invoice',
-                  source_id: apInvoiceId,
-                  source_number: invoice.invoice_number || (apInvoiceId ? String(apInvoiceId) : null),
-                  to_warehouse_id: (invItem as any)?.warehouse_id || null,
-                });
-              } catch (movError) {
-                console.error('apInvoiceLinesService.createMany createMovement error', movError);
+                const headerWarehouseId =
+                  (invLines as any[])
+                    .map((l: any) => (l?.inventory_items as any)?.warehouse_id)
+                    .find((w: any) => w != null && String(w).trim() !== '') || null;
+
+                if (headerWarehouseId) {
+                  const entryPayload: any = {
+                    warehouse_id: String(headerWarehouseId),
+                    source_type: 'ap_invoice',
+                    related_invoice_id: null,
+                    related_delivery_note_id: null,
+                    issuer_name: (invoice as any).legal_name || (invoice as any).supplier_name || null,
+                    document_number: warehouseEntryDocNumber,
+                    document_date: entryDocDate,
+                    description: `Entrada automática por Factura Suplidor ${invoice.invoice_number || ''}`.trim(),
+                    status: 'posted',
+                  };
+
+                  const { data: whEntry, error: whEntryError } = await supabase
+                    .from('warehouse_entries')
+                    .insert({ ...entryPayload, user_id: userId })
+                    .select('*')
+                    .single();
+
+                  if (!whEntryError && whEntry?.id) {
+                    const linesPayload = (invLines as any[])
+                      .filter((l: any) => l?.inventory_item_id && (Number(l.quantity) || 0) > 0)
+                      .map((l: any) => ({
+                        entry_id: whEntry.id,
+                        inventory_item_id: String(l.inventory_item_id),
+                        quantity: Number(l.quantity) || 0,
+                        unit_cost: l.unit_price != null ? Number(l.unit_price) || 0 : null,
+                        notes: l.description || null,
+                      }));
+
+                    if (linesPayload.length > 0) {
+                      await supabase.from('warehouse_entry_lines').insert(linesPayload);
+                    }
+                  } else if (whEntryError) {
+                    console.error('apInvoiceLinesService.createMany create warehouse_entries error', whEntryError);
+                  }
+                }
+              } catch (whEntryCreateError) {
+                console.error('apInvoiceLinesService.createMany create warehouse entry unexpected error', whEntryCreateError);
               }
             }
           }
@@ -10860,6 +11062,89 @@ export const purchaseOrderItemsService = {
     }
   },
 
+  async getWithInvoicedByOrderAccessible(userId: string, orderId: string) {
+    try {
+      // 1) intentar con user_id tenantId OR userId (subusuario)
+      const attempt = await this.getWithInvoicedByOrderForUser(userId, orderId);
+      if (attempt && attempt.length > 0) return attempt;
+      // 2) fallback sin filtro de user_id (si la RLS permite acceso por otra vía)
+      return await this.getWithInvoicedByOrder(orderId);
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async getWithInvoicedByOrderForUser(userId: string, orderId: string) {
+    try {
+      if (!userId || !orderId) return [];
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+
+      const { data: items, error: itemsError } = await supabase
+        .from('purchase_order_items')
+        .select(`
+          *,
+          inventory_items (current_stock, name, sku, cost_price, average_cost, last_purchase_price)
+        `)
+        .eq('purchase_order_id', orderId)
+        .or(`user_id.eq.${tenantId},user_id.eq.${userId}`)
+        .order('created_at', { ascending: true });
+
+      if (itemsError) return handleDatabaseError(itemsError, []);
+
+      const rows = items ?? [];
+      if (rows.length === 0) return rows;
+
+      const ids = rows
+        .map((it: any) => it.id)
+        .filter((id: any) => id);
+
+      if (ids.length === 0) {
+        return rows.map((it: any) => ({
+          ...it,
+          quantity_invoiced: 0,
+          remaining_quantity: Number(it.quantity) || 0,
+        }));
+      }
+
+      const { data: invLines, error: invError } = await supabase
+        .from('ap_invoice_lines')
+        .select('purchase_order_item_id, quantity')
+        .in('purchase_order_item_id', ids);
+
+      if (invError) {
+        console.error('purchaseOrderItemsService.getWithInvoicedByOrderForUser invoice lines error', invError);
+        return rows.map((it: any) => ({
+          ...it,
+          quantity_invoiced: 0,
+          remaining_quantity: Number(it.quantity) || 0,
+        }));
+      }
+
+      const quantityByItemId: Record<string, number> = {};
+      (invLines || []).forEach((l: any) => {
+        const key = l.purchase_order_item_id ? String(l.purchase_order_item_id) : '';
+        if (!key) return;
+        const qty = Number(l.quantity) || 0;
+        if (qty <= 0) return;
+        quantityByItemId[key] = (quantityByItemId[key] || 0) + qty;
+      });
+
+      return rows.map((it: any) => {
+        const orderedQty = Number(it.quantity) || 0;
+        const invoicedQty = quantityByItemId[String(it.id)] || 0;
+        const remainingQty = Math.max(orderedQty - invoicedQty, 0);
+        return {
+          ...it,
+          quantity_invoiced: invoicedQty,
+          remaining_quantity: remainingQty,
+        };
+      });
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
   async getByOrder(orderId: string) {
     try {
       if (!orderId) return [];
@@ -10873,6 +11158,39 @@ export const purchaseOrderItemsService = {
         .order('created_at', { ascending: true });
       if (error) return handleDatabaseError(error, []);
       return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async getByOrderForUser(userId: string, orderId: string) {
+    try {
+      if (!userId || !orderId) return [];
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('purchase_order_items')
+        .select(`
+          *,
+          inventory_items (current_stock, name, sku, cost_price, average_cost, last_purchase_price)
+        `)
+        .eq('purchase_order_id', orderId)
+        .or(`user_id.eq.${tenantId},user_id.eq.${userId}`)
+        .order('created_at', { ascending: true });
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async getByOrderAccessible(userId: string, orderId: string) {
+    try {
+      // 1) intentar con user_id tenantId OR userId (subusuario)
+      const attempt = await this.getByOrderForUser(userId, orderId);
+      if (attempt && attempt.length > 0) return attempt;
+      // 2) fallback sin filtro de user_id (si la RLS permite acceso por otra vía)
+      return await this.getByOrder(orderId);
     } catch (error) {
       return handleDatabaseError(error, []);
     }
@@ -10964,11 +11282,14 @@ export const purchaseOrderItemsService = {
     try {
       if (!userId || !orderId || !items || items.length === 0) return [];
 
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
+
       const rows = items.map((it) => {
         const quantity = Number(it.quantity) || 0;
         const unitCost = Number(it.price) || 0;
         return {
-          user_id: userId,
+          user_id: tenantId,
           purchase_order_id: orderId,
           inventory_item_id: it.itemId,
           description: it.name || '',

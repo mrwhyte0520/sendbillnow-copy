@@ -3,6 +3,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
+import { useLocation } from 'react-router-dom';
 import {
   apInvoicesService,
   apInvoiceLinesService,
@@ -35,7 +36,12 @@ interface APInvoice {
   currency: string;
   totalGross: number;
   totalItbis: number;
+  totalItbisWithheld?: number;
   totalIsrWithheld: number;
+  totalDiscount?: number;
+  totalOtherTaxes?: number;
+  otherTaxes?: Array<{ name: string; rate: number; amount: number }>;
+  itbisToCost?: boolean;
   totalToPay: number;
   status: string;
   storeName?: string;
@@ -58,6 +64,7 @@ interface LineFormRow {
 
 export default function APInvoicesPage() {
   const { user } = useAuth();
+  const location = useLocation();
 
   const [invoices, setInvoices] = useState<APInvoice[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -93,6 +100,8 @@ export default function APInvoicesPage() {
   const [documentPreviewRows, setDocumentPreviewRows] = useState<Array<Array<string | number>>>([]);
   const [documentPreviewSummary, setDocumentPreviewSummary] = useState<Array<{ label: string; value: string }>>([]);
   const documentPreviewIframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  const didApplyPrefillRef = useRef(false);
 
   const formatTaxId = (raw: string) => {
     const digits = (raw || '').replace(/\D/g, '');
@@ -303,7 +312,28 @@ export default function APInvoicesPage() {
         const currency = (inv.currency as string) || baseCode;
         const totalGross = Number(inv.total_gross) || 0;
         const totalItbis = Number(inv.total_itbis) || 0;
+        const totalItbisWithheld = Number(inv.total_itbis_withheld) || 0;
         const totalIsrWithheld = Number(inv.total_isr_withheld) || 0;
+        const totalDiscount = Number(inv.total_discount) || 0;
+        const totalOtherTaxes = Number(inv.total_other_taxes) || 0;
+        let otherTaxes: Array<{ name: string; rate: number; amount: number }> = [];
+        try {
+          const rawOther = (inv.other_taxes as any) || null;
+          if (rawOther) {
+            const parsed = typeof rawOther === 'string' ? JSON.parse(rawOther) : rawOther;
+            if (Array.isArray(parsed)) {
+              otherTaxes = parsed
+                .map((t: any) => ({
+                  name: String(t?.name || ''),
+                  rate: Number(t?.rate || 0) || 0,
+                  amount: Number(t?.amount || 0) || 0,
+                }))
+                .filter((t) => t.name && Number.isFinite(t.amount));
+            }
+          }
+        } catch {
+          otherTaxes = [];
+        }
         const totalToPay = Number(inv.total_to_pay) || 0;
 
         let baseTotalToPay: number | null = totalToPay;
@@ -341,7 +371,12 @@ export default function APInvoicesPage() {
           currency,
           totalGross,
           totalItbis,
+          totalItbisWithheld,
           totalIsrWithheld,
+          totalDiscount,
+          totalOtherTaxes,
+          otherTaxes,
+          itbisToCost: !!(inv as any).itbis_to_cost,
           totalToPay,
           status: inv.status || 'pending',
           storeName: (inv as any).store_name || '',
@@ -367,6 +402,81 @@ export default function APInvoicesPage() {
     loadTaxConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (didApplyPrefillRef.current) return;
+
+    const state: any = (location as any)?.state || null;
+    const prefillPurchaseOrderId = state?.prefillPurchaseOrderId ? String(state.prefillPurchaseOrderId) : '';
+    const prefillPurchaseOrderLines = Array.isArray(state?.prefillPurchaseOrderLines)
+      ? (state.prefillPurchaseOrderLines as any[])
+      : [];
+    if (!prefillPurchaseOrderId) return;
+
+    // Esperar a que las OCs estén cargadas para poder resolver suplidor y líneas
+    const po = (purchaseOrders || []).find((p: any) => String(p.id) === prefillPurchaseOrderId) || null;
+    if (!po) return;
+
+    const supplierId = po?.supplier_id ? String(po.supplier_id) : '';
+    if (!supplierId) return;
+
+    didApplyPrefillRef.current = true;
+
+    // Abrir modal y precargar OC
+    (async () => {
+      try {
+        resetForm();
+
+        // Usar la lógica existente para completar campos dependientes del suplidor
+        handleSupplierChange(supplierId);
+
+        // Re-aplicar OC porque handleSupplierChange limpia purchaseOrderId
+        setHeaderForm((prev) => ({
+          ...prev,
+          supplierId,
+          purchaseOrderId: prefillPurchaseOrderId,
+        }));
+
+        setShowModal(true);
+
+        // Si vienen líneas desde la pantalla de OC, usarlas directamente (no depende de RLS/consultas)
+        const incomingLines = (prefillPurchaseOrderLines || [])
+          .map((l: any) => {
+            const qty = Number(l?.quantity) || 0;
+            const price = Number(l?.unitPrice) || 0;
+            const invId = l?.inventoryItemId ? String(l.inventoryItemId) : '';
+            if (qty <= 0) return null;
+            return {
+              description: String(l?.description || ''),
+              expenseAccountId: '',
+              quantity: String(qty),
+              unitPrice: String(price),
+              inventoryItemId: invId,
+              discountPercentage: '0',
+              purchaseOrderItemId: l?.purchaseOrderItemId ? String(l.purchaseOrderItemId) : undefined,
+            } as LineFormRow;
+          })
+          .filter((x: any) => x !== null) as LineFormRow[];
+
+        if (incomingLines.length > 0) {
+          setLines(incomingLines);
+        } else {
+          // Mantener la lógica existente de carga de líneas desde OC
+          await handlePurchaseOrderChange(prefillPurchaseOrderId);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error applying Purchase Order prefill to AP Invoice', error);
+        setShowModal(true);
+        setHeaderForm((prev) => ({
+          ...prev,
+          supplierId,
+          purchaseOrderId: prefillPurchaseOrderId,
+        }));
+      }
+    })();
+  }, [user?.id, location, purchaseOrders]);
 
   useEffect(() => {
     const loadCompanyInfo = async () => {
@@ -661,14 +771,38 @@ export default function APInvoicesPage() {
     if (!poId || !user?.id) return;
 
     try {
-      const orderItems = await purchaseOrderItemsService.getWithInvoicedByOrder(poId);
+      let orderItems: any[] = [];
+      try {
+        orderItems = await purchaseOrderItemsService.getWithInvoicedByOrderAccessible(user.id, poId);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('handlePurchaseOrderChange getWithInvoicedByOrderAccessible error', error);
+        orderItems = [];
+      }
 
-      if (!orderItems || orderItems.length === 0) return;
+      // Fallback: si por cualquier razón la consulta con “invoiced” no devuelve filas,
+      // cargar al menos las líneas básicas de la OC.
+      if (!orderItems || orderItems.length === 0) {
+        try {
+          orderItems = await purchaseOrderItemsService.getByOrderAccessible(user.id, poId);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('handlePurchaseOrderChange getByOrderAccessible error', error);
+          orderItems = [];
+        }
+      }
+
+      if (!orderItems || orderItems.length === 0) {
+        setLines([{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+        return;
+      }
 
       const rawLines = (orderItems as any[]).map((it: any) => {
         const orderedQty = Number(it.quantity) || 0;
         const invoicedQty = Number(it.quantity_invoiced || 0);
-        const remainingQty = Math.max(orderedQty - invoicedQty, 0);
+        const remainingQty = Number.isFinite(Number(it.quantity_invoiced))
+          ? Math.max(orderedQty - invoicedQty, 0)
+          : orderedQty;
 
         if (remainingQty <= 0) {
           return null;
@@ -830,6 +964,10 @@ export default function APInvoicesPage() {
 
       const safeNumber = invoice.invoiceNumber || invoice.id;
 
+      const subtotalAfterDiscount = Math.max(0, Number(invoice.totalGross || 0) - Number(invoice.totalDiscount || 0));
+      const otherTaxesDetail = Array.isArray((invoice as any).otherTaxes) ? (invoice as any).otherTaxes : [];
+      const totalItbisWithheld = Number(invoice.totalItbisWithheld || 0) || 0;
+
       let qrDataUrl = '';
       try {
         const qrUrl = `${window.location.origin}/document/ap-invoice/${encodeURIComponent(String(invoice.id || safeNumber))}`;
@@ -909,14 +1047,14 @@ export default function APInvoicesPage() {
                   ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
                 </div>
                 <div class="doc">
-                  <div class="doc-title">FACTURA ${(invoice as any).saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
-                  <div class="doc-number">NCF: ${safeNumber}</div>
+                  <div class="doc-title">FACTURA DE SUPLIDOR</div>
+                  <div class="doc-number">${safeNumber}</div>
                   <div class="doc-kv">
-                    ${(invoice as any).ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${new Date((invoice as any).ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
-                    ${(invoice as any).sequentialNumber ? `<div><strong>Número Factura:</strong> ${(invoice as any).sequentialNumber}</div>` : ''}
+                    ${invoice.documentType ? `<div><strong>NCF / Tipo:</strong> ${invoice.documentType}</div>` : ''}
+                    <div><strong>Fecha:</strong> ${invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('es-DO') : ''}</div>
                     <div><strong>Moneda:</strong> ${invoice.currency === 'DOP' ? 'Peso Dominicano' : (invoice.currency || 'DOP')}</div>
                     ${invoice.storeName ? `<div><strong>Tienda:</strong> ${invoice.storeName}</div>` : ''}
-                    <div><strong>Fecha Límite de Pago:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('es-DO') : ''}</div>
+                    <div><strong>Vencimiento:</strong> ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('es-DO') : ''}</div>
                   </div>
                   ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
                 </div>
@@ -946,48 +1084,67 @@ export default function APInvoicesPage() {
                   </div>
                 </div>
 
-                <div class="totals">
-                  <div class="totals-head">Resumen</div>
-                  <div class="totals-body">
-                    <div class="totals-row"><div class="label">Bruto</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalGross)}</div></div>
-                    <div class="totals-row"><div class="label">ITBIS</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalItbis)}</div></div>
-                    <div class="totals-row total"><div class="label">Total a pagar</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalToPay)}</div></div>
-                  </div>
-                </div>
-              </div>
+<div class="totals">
+<div class="totals-head">Resumen</div>
+<div class="totals-body">
+<div class="totals-row"><div class="label">Bruto</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalGross)}</div></div>
+${(Number(invoice.totalDiscount || 0) > 0)
+? `<div class="totals-row"><div class="label">Descuentos</div><div class="value">-${invoice.currency} ${formatAmount(Number(invoice.totalDiscount || 0))}</div></div>
+<div class="totals-row"><div class="label">Subtotal</div><div class="value">${invoice.currency} ${formatAmount(subtotalAfterDiscount)}</div></div>`
+: ''}
+<div class="totals-row"><div class="label">ITBIS${invoice.itbisToCost ? ' (al costo)' : ''}</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalItbis)}</div></div>
+${(totalItbisWithheld > 0)
+? `<div class="totals-row"><div class="label">ITBIS Retenido</div><div class="value">-${invoice.currency} ${formatAmount(totalItbisWithheld)}</div></div>`
+: ''}
+${otherTaxesDetail
+.map((t: any) => {
+const name = String(t?.name || '').trim();
+const amount = Number(t?.amount || 0) || 0;
+const rate = Number(t?.rate || 0) || 0;
+if (!name || amount <= 0) return '';
+return `<div class="totals-row"><div class="label">${name}${rate ? ` (${rate}%)` : ''}</div><div class="value">${invoice.currency} ${formatAmount(amount)}</div></div>`;
+})
+.join('')}
+${(Number(invoice.totalIsrWithheld || 0) > 0)
+? `<div class="totals-row"><div class="label">ISR Retenido</div><div class="value">-${invoice.currency} ${formatAmount(Number(invoice.totalIsrWithheld || 0))}</div></div>`
+: ''}
+<div class="totals-row total"><div class="label">Total a pagar</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalToPay)}</div></div>
+</div>
+</div>
+</div>
 
-              <div class="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th style="width: 54px;">No.</th>
-                      <th>Descripción</th>
-                      <th class="num" style="width: 110px;">Precio</th>
-                      <th class="num" style="width: 80px;">Cant.</th>
-                      <th class="num" style="width: 120px;">Importe</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${items
-                      .map(
-                        (item: any, idx: number) => `
-                        <tr>
-                          <td>${idx + 1}</td>
-                          <td>${item.description}</td>
-                          <td class="num">${invoice.currency} ${formatAmount(item.unitPrice)}</td>
-                          <td class="num">${item.quantity}</td>
-                          <td class="num">${invoice.currency} ${formatAmount(item.total)}</td>
-                        </tr>`
-                      )
-                      .join('')}
-                  </tbody>
-                </table>
-              </div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th style="width: 54px;">No.</th>
+<th>Descripción</th>
+<th class="num" style="width: 110px;">Precio</th>
+<th class="num" style="width: 80px;">Cant.</th>
+<th class="num" style="width: 120px;">Importe</th>
+</tr>
+</thead>
+<tbody>
+${items
+.map(
+(item: any, idx: number) => `
+<tr>
+<td>${idx + 1}</td>
+<td>${item.description}</td>
+<td class="num">${invoice.currency} ${formatAmount(item.unitPrice)}</td>
+<td class="num">${item.quantity}</td>
+<td class="num">${invoice.currency} ${formatAmount(item.total)}</td>
+</tr>`
+)
+.join('')}
+</tbody>
+</table>
+</div>
 
               <div class="footer-grid">
                 <div class="notes">
-                  <div class="notes-head">Notas</div>
-                  <div class="notes-body">${invoice.notes ? invoice.notes : 'Gracias por su compra.'}</div>
+                  <div class="notes-head">Observaciones</div>
+                  <div class="notes-body">${invoice.notes ? invoice.notes : 'Sin observaciones.'}</div>
                 </div>
                 <div></div>
               </div>
@@ -1064,7 +1221,9 @@ export default function APInvoicesPage() {
 
       const ncfRow = headerStartRow + 1;
       worksheet.mergeCells(`A${ncfRow}:D${ncfRow}`);
-      worksheet.getCell(`A${ncfRow}`).value = `NCF: ${invoice.invoiceNumber}`;
+      worksheet.getCell(`A${ncfRow}`).value = invoice.documentType
+        ? `NCF / Tipo: ${invoice.documentType}`
+        : 'NCF / Tipo: -';
       worksheet.getCell(`A${ncfRow}`).font = { bold: true, size: 14, color: { argb: 'FF166534' } };
       worksheet.getCell(`A${ncfRow}`).fill = {
         type: 'pattern',
@@ -1139,7 +1298,22 @@ export default function APInvoicesPage() {
 
       worksheet.addRow([]);
       worksheet.addRow(['', '', 'Bruto', invoice.totalGross]);
+      if (Number((invoice as any).totalDiscount || 0) > 0) {
+        worksheet.addRow(['', '', 'Descuentos', -Number((invoice as any).totalDiscount || 0)]);
+        worksheet.addRow(['', '', 'Subtotal', Math.max(0, Number(invoice.totalGross || 0) - Number((invoice as any).totalDiscount || 0))]);
+      }
       worksheet.addRow(['', '', 'ITBIS', invoice.totalItbis]);
+      if (Number((invoice as any).totalItbisWithheld || 0) > 0) {
+        worksheet.addRow(['', '', 'ITBIS Retenido', -Number((invoice as any).totalItbisWithheld || 0)]);
+      }
+      const otherTaxesDetail = Array.isArray((invoice as any).otherTaxes) ? (invoice as any).otherTaxes : [];
+      otherTaxesDetail.forEach((t: any) => {
+        const name = String(t?.name || '').trim();
+        const amount = Number(t?.amount || 0) || 0;
+        const rate = Number(t?.rate || 0) || 0;
+        if (!name || amount <= 0) return;
+        worksheet.addRow(['', '', `${name}${rate ? ` (${rate}%)` : ''}`, amount]);
+      });
       worksheet.addRow(['', '', 'Total a pagar', invoice.totalToPay]);
       if (invoice.totalIsrWithheld) {
         worksheet.addRow(['', '', 'ISR Retenido', invoice.totalIsrWithheld]);

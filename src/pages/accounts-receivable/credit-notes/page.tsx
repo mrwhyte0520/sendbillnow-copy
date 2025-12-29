@@ -334,8 +334,8 @@ export default function CreditNotesPage() {
       alert('Nota de crédito cancelada exitosamente');
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error('[CreditNotes] Error al cancelar nota', error);
-      alert(`Error al cancelar la nota: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[CreditNotes] Error cancelando nota de crédito', error);
+      alert(`Error al cancelar la nota de crédito: ${error?.message || 'revisa la consola para más detalles'}`);
     }
   };
 
@@ -360,6 +360,29 @@ export default function CreditNotesPage() {
       return;
     }
 
+    // Validación contra saldo pendiente de la factura
+    const targetInvoice = invoices.find((inv) => String(inv.id) === invoiceId);
+    if (!targetInvoice) {
+      alert('No se pudo encontrar la factura seleccionada. Vuelve a cargar la página e inténtalo de nuevo.');
+      return;
+    }
+
+    const originalTotal = Number(targetInvoice.totalAmount) || 0;
+    const paidAmount = Number(targetInvoice.paidAmount) || 0;
+    const pendingAmount = Math.max(originalTotal - paidAmount, 0);
+
+    if (pendingAmount <= 0) {
+      alert('La factura seleccionada no tiene saldo pendiente para aplicar una nota de crédito.');
+      return;
+    }
+
+    if (amount > pendingAmount) {
+      alert(
+        `El monto de la nota de crédito no puede ser mayor que el saldo pendiente de la factura (pendiente: RD$${pendingAmount.toLocaleString()}).`,
+      );
+      return;
+    }
+
     const noteNumber = `NC-${Date.now()}`;
     const noteDate = date || new Date().toISOString().slice(0, 10);
 
@@ -371,13 +394,30 @@ export default function CreditNotesPage() {
       note_date: noteDate,
       total_amount: amount,
       reason: reason || concept || null,
-      applied_amount: 0,
-      balance_amount: amount,
-      status: 'pending',
+      applied_amount: amount,
+      balance_amount: 0,
+      status: 'applied',
     };
 
     try {
       const created = await creditDebitNotesService.create(user.id, payload);
+
+      // Aplicar efecto inmediato en la factura: disminuir total y recalcular status
+      {
+        let newInvoiceTotal = originalTotal - amount;
+        if (newInvoiceTotal < 0) newInvoiceTotal = 0;
+
+        let newInvoiceStatus: string;
+        if (paidAmount >= newInvoiceTotal) {
+          newInvoiceStatus = 'paid';
+        } else if (paidAmount > 0) {
+          newInvoiceStatus = 'partial';
+        } else {
+          newInvoiceStatus = 'pending';
+        }
+
+        await invoicesService.updateTotals(String(invoiceId), newInvoiceTotal, newInvoiceStatus);
+      }
 
       // Best-effort: asiento contable de nota de crédito (reverso parcial de venta: Debe Ventas, Haber CxC)
       try {
@@ -491,10 +531,11 @@ export default function CreditNotesPage() {
     }
 
     const paidAmount = Number(invoice.paid_amount) || 0;
-    const newInvoiceTotal = originalTotal - amountToApply;
+    let newInvoiceTotal = originalTotal - amountToApply;
+    if (newInvoiceTotal < 0) newInvoiceTotal = 0;
 
     let newInvoiceStatus = invoice.status as string;
-    if (newInvoiceTotal <= 0) {
+    if (paidAmount >= newInvoiceTotal) {
       newInvoiceStatus = 'paid';
     } else if (paidAmount > 0) {
       newInvoiceStatus = 'partial';

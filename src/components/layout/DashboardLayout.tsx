@@ -278,7 +278,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Cuentas por Cobrar',
       href: '/accounts-receivable',
       icon: 'ri-money-dollar-circle-line',
-      current: location.pathname.startsWith('/accounts-receivable')
+      current: location.pathname.startsWith('/accounts-receivable'),
+      submenu: [
+        { name: 'Facturas por Cobrar', href: '/accounts-receivable/invoices' },
+        { name: 'Clientes', href: '/accounts-receivable/customers' },
+        { name: 'Tipos de Clientes', href: '/accounts-receivable/customer-types' },
+        { name: 'Condiciones de Pago', href: '/accounts-receivable/payment-terms' },
+        { name: 'Pagos Recibidos', href: '/accounts-receivable/payments' },
+        { name: 'Recibos de Cobro', href: '/accounts-receivable/receipts' },
+        { name: 'Anticipos de Clientes', href: '/accounts-receivable/advances' },
+        { name: 'Descuentos en Ventas', href: '/accounts-receivable/discounts' },
+        { name: 'Notas de Crédito', href: '/accounts-receivable/credit-notes' },
+        { name: 'Notas de Débito', href: '/accounts-receivable/debit-notes' },
+        { name: 'Reportes CxC', href: '/accounts-receivable/reports' },
+      ]
     },
     // 4. Cuentas por pagar
     {
