@@ -26,6 +26,7 @@ export default function SalesReportsPage() {
 
   const [salesSummary, setSalesSummary] = useState({
     totalSales: 'RD$ 0',
+    salesWithoutTax: 'RD$ 0',
     totalInvoices: 0,
     averageTicket: 'RD$ 0',
     totalTax: 'RD$ 0',
@@ -193,9 +194,14 @@ export default function SalesReportsPage() {
         receiptsService.getAll(user.id),
       ]);
 
-      // Filtrar por rango de fechas (invoice_date)
+      // Filtrar por rango de fechas (invoice_date) y excluir facturas anuladas
       const filteredInvoices = (invoices || []).filter((inv: any) => {
         if (!inv.invoice_date) return false;
+        // Excluir facturas anuladas
+        const status = String(inv.status || '').toLowerCase();
+        if (status === 'voided' || status === 'cancelled' || status === 'anulada' || status === 'anulado') {
+          return false;
+        }
         const d = String(inv.invoice_date).slice(0, 10);
         return d >= fromDate && d <= toDate;
       });
@@ -204,6 +210,7 @@ export default function SalesReportsPage() {
       if (filteredInvoices.length === 0) {
         setSalesSummary({
           totalSales: 'RD$ 0',
+          salesWithoutTax: 'RD$ 0',
           totalInvoices: 0,
           averageTicket: 'RD$ 0',
           totalTax: 'RD$ 0',
@@ -226,12 +233,16 @@ export default function SalesReportsPage() {
       const totalTaxNum = filteredInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.tax_amount) || 0), 0);
       const netSalesNum = totalSalesNum - totalTaxNum;
 
+      // Calcular ventas sin ITBIS (subtotal)
+      const salesWithoutTaxNum = filteredInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.subtotal) || 0), 0);
+
       // Por ahora margen aproximado: 30% de ventas netas si hay datos
       const grossProfitNum = netSalesNum > 0 ? netSalesNum * 0.3 : 0;
       const profitMarginNum = netSalesNum > 0 ? (grossProfitNum / netSalesNum) * 100 : 0;
 
       setSalesSummary({
         totalSales: `RD$ ${totalSalesNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        salesWithoutTax: `RD$ ${salesWithoutTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
         totalInvoices,
         averageTicket: `RD$ ${avgTicketNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
         totalTax: `RD$ ${totalTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
@@ -723,11 +734,11 @@ export default function SalesReportsPage() {
         )}
 
         {/* Sales Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Ventas Totales</p>
+                <p className="text-sm font-medium text-gray-600">Ventas Totales (con ITBIS)</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.totalSales}</p>
               </div>
               <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
@@ -735,8 +746,22 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm font-medium text-green-600">+12.5%</span>
-              <span className="text-sm text-gray-500 ml-1">vs período anterior</span>
+              <span className="text-xs text-gray-500">Suma de totales de facturas</span>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Ventas sin ITBIS</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.salesWithoutTax}</p>
+              </div>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-teal-100">
+                <i className="ri-receipt-line text-xl text-teal-600"></i>
+              </div>
+            </div>
+            <div className="mt-4">
+              <span className="text-xs text-gray-500">Subtotal antes de impuestos</span>
             </div>
           </div>
 
@@ -751,8 +776,7 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm font-medium text-green-600">+8.2%</span>
-              <span className="text-sm text-gray-500 ml-1">vs período anterior</span>
+              <span className="text-xs text-gray-500">No incluye anuladas</span>
             </div>
           </div>
 
@@ -767,8 +791,7 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm font-medium text-green-600">+5.1%</span>
-              <span className="text-sm text-gray-500 ml-1">vs período anterior</span>
+              <span className="text-xs text-gray-500">Promedio por factura</span>
             </div>
           </div>
 
@@ -783,8 +806,7 @@ export default function SalesReportsPage() {
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm font-medium text-green-600">+2.3%</span>
-              <span className="text-sm text-gray-500 ml-1">vs período anterior</span>
+              <span className="text-xs text-gray-500">Estimado (30% de ventas netas)</span>
             </div>
           </div>
         </div>
