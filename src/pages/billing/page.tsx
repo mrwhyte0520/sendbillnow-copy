@@ -89,22 +89,31 @@ export default function BillingPage() {
         yesterdayDate.setDate(today.getDate() - 1);
         const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
 
-        const ventasHoy = invoicesArr
+        // Función para verificar si una factura está anulada
+        const isVoided = (inv: any) => {
+          const status = String(inv.status || '').toLowerCase();
+          return status === 'voided' || status === 'cancelled' || status === 'anulada' || status === 'anulado';
+        };
+
+        // Filtrar facturas válidas (no anuladas)
+        const validInvoices = invoicesArr.filter((inv: any) => !isVoided(inv));
+
+        const ventasHoy = validInvoices
           .filter((inv: any) => (inv.invoice_date || '').slice(0, 10) === todayStr)
           .reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
 
-        const ventasAyer = invoicesArr
+        const ventasAyer = validInvoices
           .filter((inv: any) => (inv.invoice_date || '').slice(0, 10) === yesterdayStr)
           .reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
 
-        const ingresosMensuales = invoicesArr
+        const ingresosMensuales = validInvoices
           .filter((inv: any) => (inv.invoice_date || '').slice(0, 7) === monthStr)
           .reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
 
         const ingresosAyer = ventasAyer;
 
-        const totalFacturas = invoicesArr.length;
-        const totalFacturasAyer = invoicesArr
+        const totalFacturas = validInvoices.length;
+        const totalFacturasAyer = validInvoices
           .filter((inv: any) => (inv.invoice_date || '').slice(0, 10) === yesterdayStr)
           .length;
 

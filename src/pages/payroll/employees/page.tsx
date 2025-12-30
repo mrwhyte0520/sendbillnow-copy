@@ -3,6 +3,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
 import { departmentsService, positionsService, employeesService, employeeTypesService, salaryTypesService } from '../../../services/database';
+import { usePlanLimitations } from '../../../hooks/usePlanLimitations';
 
 interface Employee {
   id: string;
@@ -56,6 +57,7 @@ interface SalaryType {
 
 export default function EmployeesPage() {
   const { user } = useAuth();
+  const { checkQuantityLimit } = usePlanLimitations();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -75,81 +77,18 @@ export default function EmployeesPage() {
     loadData();
   }, [user]);
 
-  const loadData = async () => {
+  const handleSave = async () => {
     if (!user) return;
-    setLoading(true);
     try {
-      const [emps, depts, poss, empTypes, salTypes] = await Promise.all([
-        employeesService.getAll(user.id),
-        departmentsService.getAll(user.id),
-        positionsService.getAll(user.id),
-        employeeTypesService.getAll(user.id),
-        salaryTypesService.getAll(user.id)
-      ]);
-      const mappedEmployees: Employee[] = (emps || []).map((e: any) => ({
-        id: e.id,
-        employee_code: e.employee_code || '',
-        first_name: e.first_name || '',
-        last_name: e.last_name || '',
-        email: e.email || '',
-        phone: e.phone || '',
-        identification: e.identification || '',
-        department_id: e.department_id || '',
-        position_id: e.position_id || '',
-        employee_type_id: e.employee_type_id || '',
-        salary_type_id: e.salary_type_id || '',
-        base_salary: Number(e.base_salary) || 0,
-        hire_date: e.hire_date || '',
-        birth_date: e.birth_date || '',
-        gender: (e.gender as 'M' | 'F') || 'M',
-        marital_status: (e.marital_status as Employee['marital_status']) || 'single',
-        address: e.address || '',
-        bank_account: e.bank_account || '',
-        bank_name: e.bank_name || '',
-        emergency_contact: e.emergency_contact || '',
-        emergency_phone: e.emergency_phone || '',
-        status: (e.status as Employee['status']) || 'active',
-        photo_url: e.photo_url || undefined,
-      }));
+      setLoading(true);
 
-      setEmployees(mappedEmployees);
-      setDepartments(depts || []);
-      setPositions(poss || []);
-      setEmployeeTypes(empTypes || []);
-      setSalaryTypes(salTypes || []);
-    } catch (error) {
-      console.error('Error loading payroll catalogs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenModal = (type: string, employee: Employee | null = null) => {
-    setModalType(type);
-    setSelectedEmployee(employee);
-    setFormData(employee || {
-      gender: 'M',
-      marital_status: 'single',
-      status: 'active',
-      employee_type_id: '1',
-      salary_type_id: '1'
-    });
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setModalType('');
-    setSelectedEmployee(null);
-    setFormData({});
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (!user) return;
+      if (!selectedEmployee) {
+        const { allowed, message } = checkQuantityLimit('maxEmployees', employees.length);
+        if (!allowed) {
+          alert(message || 'Has alcanzado el límite de empleados de tu plan.');
+          return;
+        }
+      }
 
       const payload: any = {
         first_name: formData.first_name || '',

@@ -42,6 +42,9 @@ export function usePlanPermissions(): PlanPermissions {
     if (hasActivePlan && currentPlan?.id) {
       // Mapear el ID del plan guardado a nuestros IDs
       const planId = currentPlan.id.toLowerCase();
+      if (planId.includes('pyme') || planId === 'pyme') return 'pyme';
+      if (planId.includes('pro') || planId === 'pro') return 'pro';
+      if (planId.includes('plus') || planId === 'plus') return 'plus';
       if (planId.includes('facturacion-simple') || planId === 'facturacion-simple') return 'facturacion-simple';
       if (planId.includes('facturacion-premium') || planId === 'facturacion-premium') return 'facturacion-premium';
       if (planId.includes('pos-premium') || planId === 'pos-premium') return 'pos-premium';
@@ -144,7 +147,7 @@ export function usePlanPermissions(): PlanPermissions {
 
   // Determinar si el plan requiere configuración contable completa
   // Los planes básicos (facturacion-simple, facturacion-premium) no requieren períodos contables
-  const basicPlans: PlanId[] = ['facturacion-simple', 'facturacion-premium'];
+  const basicPlans: PlanId[] = ['facturacion-simple', 'facturacion-premium', 'pyme'];
   const requiresAccountingSetup = !basicPlans.includes(currentPlanId) && currentPlanId !== 'none';
   
   // skipPeriodValidation es true para planes básicos (no necesitan validar períodos)

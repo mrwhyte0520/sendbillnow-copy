@@ -12,7 +12,7 @@ interface StripePaymentFormProps {
   userEmail: string;
 }
 
-// El precio se recibe como prop directamente en RD$
+// El precio se recibe como prop directamente en USD
 // Se convierte a centavos para Stripe
 
 export default function StripePaymentFormDirect({
@@ -78,7 +78,7 @@ export default function StripePaymentFormDirect({
         },
         body: new URLSearchParams({
           amount: Math.round(amount * 100).toString(),
-          currency: 'dop',
+          currency: 'usd',
           'automatic_payment_methods[enabled]': 'true',
           'metadata[planId]': planId,
           'metadata[userId]': userId,
@@ -155,7 +155,7 @@ export default function StripePaymentFormDirect({
         </div>
         <div className="flex justify-between items-center">
           <span className="text-gray-700 font-medium">Monto a pagar:</span>
-          <span className="text-2xl font-bold text-blue-600">RD${amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+          <span className="text-2xl font-bold text-blue-600">USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ export default function StripePaymentFormDirect({
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pagar RD${amount.toLocaleString('es-DO', { minimumFractionDigits: 2 })}
+              Pagar USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </>
           )}
         </button>

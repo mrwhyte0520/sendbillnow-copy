@@ -299,9 +299,12 @@ export function usePlans() {
 
   const getPlanPrice = (planId: string): number => {
     const prices: Record<string, number> = {
-      'pyme': 19.97,
-      'pro': 49.97,
-      'plus': 99.97
+      'pyme': 39.99,
+      'pro': 99.99,
+      'plus': 199.99,
+      'facturacion-simple': 19.99,
+      'facturacion-premium': 49.99,
+      'pos-premium': 129.99
     };
     return prices[planId] || 0;
   };
@@ -389,10 +392,12 @@ export function usePlans() {
 
   const getPlanNameFromId = (planId: string): string => {
     const names: Record<string, string> = {
+      'pyme': 'PYME',
+      'pro': 'PRO',
+      'plus': 'PLUS',
       'facturacion-simple': 'Facturación Simple',
       'facturacion-premium': 'Facturación Premium',
-      'pos-premium': 'POS Premium',
-      'pos-super-plus': 'POS Super Plus'
+      'pos-premium': 'POS Premium'
     };
     return names[planId] || planId;
   };

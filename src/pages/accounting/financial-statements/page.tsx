@@ -52,7 +52,9 @@ const printStyles = `
     tr { page-break-inside: avoid; }
     .print-hidden { display: none !important; }
     .hide-zero-on-print { display: none !important; }
+    .print-only { display: block !important; }
   }
+  .print-only { display: none; }
 `;
 
 // Fecha de arranque contable del sistema: permitir todos los movimientos históricos
@@ -106,6 +108,7 @@ export default function FinancialStatementsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'statements' | 'balance' | 'income' | 'costs' | 'expenses' | 'cashflow' | 'anexos'>('statements');
   const [statements, setStatements] = useState<FinancialStatement[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState(() => new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [incomeFromDate, setIncomeFromDate] = useState(() => {
     const now = new Date();
@@ -196,9 +199,28 @@ export default function FinancialStatementsPage() {
     closingCash: number;
   } | null>(null);
 
+  const companyNameForHeader = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
+  const companyRncForHeader = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
+  const companyAddressForHeader = (companyInfo as any)?.address || '';
+  const companyPhoneForHeader = (companyInfo as any)?.phone || '';
+  const companyEmailForHeader = (companyInfo as any)?.email || '';
+
   useEffect(() => {
     loadStatements();
   }, [user, selectedPeriod]);
+
+  useEffect(() => {
+    const loadCompanyInfo = async () => {
+      try {
+        const info = await settingsService.getCompanyInfo();
+        setCompanyInfo(info);
+      } catch {
+        setCompanyInfo(null);
+      }
+    };
+
+    loadCompanyInfo();
+  }, [user?.id]);
 
   useEffect(() => {
     const period = selectedPeriod || new Date().toISOString().slice(0, 7);
@@ -1683,24 +1705,37 @@ export default function FinancialStatementsPage() {
     try {
       if (!user) return;
 
-      // Obtener nombre de empresa desde el perfil
-      let companyName: string | null = null;
-      try {
-        // settingsService incluye helpers generales, usamos getUserCompanyName
-        // eslint-disable-next-line @typescript-eslint/no-var-requires,global-require
-        const { settingsService } = await import('../../../services/database');
-        companyName = await settingsService.getUserCompanyName(user.id);
-      } catch (err) {
-        // Si falla, seguimos sin nombre de empresa
-        // eslint-disable-next-line no-console
-        console.error('No se pudo obtener el nombre de la empresa para el Balance:', err);
-      }
+      const resolvedInfo = await settingsService.getCompanyInfo();
+      const companyName =
+        (resolvedInfo as any)?.name ||
+        (resolvedInfo as any)?.company_name ||
+        '';
+      const companyRnc =
+        (resolvedInfo as any)?.rnc ||
+        (resolvedInfo as any)?.tax_id ||
+        (resolvedInfo as any)?.ruc ||
+        '';
+      const companyAddress = (resolvedInfo as any)?.address || '';
+      const companyPhone = (resolvedInfo as any)?.phone || '';
+      const companyEmail = (resolvedInfo as any)?.email || '';
 
       const titleRows: any[] = [];
       const dataRows: any[] = [];
 
       // Encabezado (solo texto en la primera columna)
       titleRows.push([companyName || '', '', '', null]);
+      if (companyRnc) titleRows.push([`RNC/RUC: ${companyRnc}`, '', '', null]);
+      if (companyAddress) titleRows.push([companyAddress, '', '', null]);
+      if (companyPhone || companyEmail) {
+        titleRows.push([
+          [companyPhone ? `Tel: ${companyPhone}` : '', companyEmail ? `Email: ${companyEmail}` : '']
+            .filter(Boolean)
+            .join('  ·  '),
+          '',
+          '',
+          null,
+        ]);
+      }
       titleRows.push(['ESTADO DE SITUACION FINANCIERA', '', '', null]);
       titleRows.push([periodDates.asOfDateLabel.toUpperCase(), '', '', null]);
       titleRows.push(['VALORES EN DOP', '', '', null]);
@@ -1803,7 +1838,7 @@ export default function FinancialStatementsPage() {
       ws.getColumn(4).numFmt = '#,##0.00';
 
       // Centrar y negrita para las primeras filas de título (empresa, título, fecha, moneda)
-      const titleRowCount = 4;
+      const titleRowCount = titleRows.length - 1;
       for (let i = 0; i < titleRowCount; i++) {
         const excelRowIndex = 1 + i;
         ws.mergeCells(excelRowIndex, 1, excelRowIndex, 4);
@@ -1861,7 +1896,32 @@ export default function FinancialStatementsPage() {
       const today = new Date().toISOString().split('T')[0];
 
       const headerRow = ['Grupo', 'Cuenta', 'Monto'];
+      const resolvedInfo = await settingsService.getCompanyInfo();
+      const companyName =
+        (resolvedInfo as any)?.name ||
+        (resolvedInfo as any)?.company_name ||
+        '';
+      const companyRnc =
+        (resolvedInfo as any)?.rnc ||
+        (resolvedInfo as any)?.tax_id ||
+        (resolvedInfo as any)?.ruc ||
+        '';
+      const companyAddress = (resolvedInfo as any)?.address || '';
+      const companyPhone = (resolvedInfo as any)?.phone || '';
+      const companyEmail = (resolvedInfo as any)?.email || '';
       const titleRows = [
+        [companyName || '', '', ''],
+        ...(companyRnc ? [[`RNC/RUC: ${companyRnc}`, '', '']] : []),
+        ...(companyAddress ? [[companyAddress, '', '']] : []),
+        ...((companyPhone || companyEmail)
+          ? [[
+            [companyPhone ? `Tel: ${companyPhone}` : '', companyEmail ? `Email: ${companyEmail}` : '']
+              .filter(Boolean)
+              .join('  ·  '),
+            '',
+            '',
+          ]]
+          : []),
         ['ESTADO DE RESULTADOS', '', ''],
         [incomePeriodDates.periodLabel.toUpperCase(), '', ''],
         ['VALORES EN RD$', '', ''],
@@ -1882,7 +1942,7 @@ export default function FinancialStatementsPage() {
         ws.addRow(r as any[]);
       });
 
-      const titleRowCount = 3;
+      const titleRowCount = titleRows.length - 1;
       for (let i = 0; i < titleRowCount; i++) {
         const excelRowIndex = 1 + i;
         ws.mergeCells(excelRowIndex, 1, excelRowIndex, 3);
@@ -1932,7 +1992,32 @@ export default function FinancialStatementsPage() {
       const today = new Date().toISOString().split('T')[0];
 
       const headerRow = ['Categoría', 'Cuenta', 'Monto'];
+      const resolvedInfo = await settingsService.getCompanyInfo();
+      const companyName =
+        (resolvedInfo as any)?.name ||
+        (resolvedInfo as any)?.company_name ||
+        '';
+      const companyRnc =
+        (resolvedInfo as any)?.rnc ||
+        (resolvedInfo as any)?.tax_id ||
+        (resolvedInfo as any)?.ruc ||
+        '';
+      const companyAddress = (resolvedInfo as any)?.address || '';
+      const companyPhone = (resolvedInfo as any)?.phone || '';
+      const companyEmail = (resolvedInfo as any)?.email || '';
       const titleRows = [
+        [companyName || '', '', ''],
+        ...(companyRnc ? [[`RNC/RUC: ${companyRnc}`, '', '']] : []),
+        ...(companyAddress ? [[companyAddress, '', '']] : []),
+        ...((companyPhone || companyEmail)
+          ? [[
+            [companyPhone ? `Tel: ${companyPhone}` : '', companyEmail ? `Email: ${companyEmail}` : '']
+              .filter(Boolean)
+              .join('  ·  '),
+            '',
+            '',
+          ]]
+          : []),
         ['ESTADO DE GASTOS GENERALES Y ADMINISTRATIVOS', '', ''],
         [periodDates.periodLabel.toUpperCase(), '', ''],
         ['VALORES EN RD$', '', ''],
@@ -1953,7 +2038,7 @@ export default function FinancialStatementsPage() {
         ws.addRow(r as any[]);
       });
 
-      const titleRowCount = 3;
+      const titleRowCount = titleRows.length - 1;
       for (let i = 0; i < titleRowCount; i++) {
         const excelRowIndex = 1 + i;
         ws.mergeCells(excelRowIndex, 1, excelRowIndex, 3);
@@ -2004,7 +2089,31 @@ export default function FinancialStatementsPage() {
       const today = new Date().toISOString().split('T')[0];
 
       const headerRow = ['Concepto', 'Monto'];
+      const resolvedInfo = await settingsService.getCompanyInfo();
+      const companyName =
+        (resolvedInfo as any)?.name ||
+        (resolvedInfo as any)?.company_name ||
+        '';
+      const companyRnc =
+        (resolvedInfo as any)?.rnc ||
+        (resolvedInfo as any)?.tax_id ||
+        (resolvedInfo as any)?.ruc ||
+        '';
+      const companyAddress = (resolvedInfo as any)?.address || '';
+      const companyPhone = (resolvedInfo as any)?.phone || '';
+      const companyEmail = (resolvedInfo as any)?.email || '';
       const titleRows = [
+        [companyName || '', ''],
+        ...(companyRnc ? [[`RNC/RUC: ${companyRnc}`, '']] : []),
+        ...(companyAddress ? [[companyAddress, '']] : []),
+        ...((companyPhone || companyEmail)
+          ? [[
+            [companyPhone ? `Tel: ${companyPhone}` : '', companyEmail ? `Email: ${companyEmail}` : '']
+              .filter(Boolean)
+              .join('  ·  '),
+            '',
+          ]]
+          : []),
         ['ESTADO DE COSTOS DE VENTAS', ''],
         [periodDates.periodLabel.toUpperCase(), ''],
         ['VALORES EN RD$', ''],
@@ -2024,7 +2133,7 @@ export default function FinancialStatementsPage() {
         ws.addRow(r as any[]);
       });
 
-      const titleRowCount = 3;
+      const titleRowCount = titleRows.length - 1;
       for (let i = 0; i < titleRowCount; i++) {
         const excelRowIndex = 1 + i;
         ws.mergeCells(excelRowIndex, 1, excelRowIndex, 2);
@@ -2063,7 +2172,32 @@ export default function FinancialStatementsPage() {
       const today = new Date().toISOString().split('T')[0];
 
       const headerRow = ['Actividad', 'Concepto', 'Monto'];
+      const resolvedInfo = await settingsService.getCompanyInfo();
+      const companyName =
+        (resolvedInfo as any)?.name ||
+        (resolvedInfo as any)?.company_name ||
+        '';
+      const companyRnc =
+        (resolvedInfo as any)?.rnc ||
+        (resolvedInfo as any)?.tax_id ||
+        (resolvedInfo as any)?.ruc ||
+        '';
+      const companyAddress = (resolvedInfo as any)?.address || '';
+      const companyPhone = (resolvedInfo as any)?.phone || '';
+      const companyEmail = (resolvedInfo as any)?.email || '';
       const titleRows = [
+        [companyName || '', '', ''],
+        ...(companyRnc ? [[`RNC/RUC: ${companyRnc}`, '', '']] : []),
+        ...(companyAddress ? [[companyAddress, '', '']] : []),
+        ...((companyPhone || companyEmail)
+          ? [[
+            [companyPhone ? `Tel: ${companyPhone}` : '', companyEmail ? `Email: ${companyEmail}` : '']
+              .filter(Boolean)
+              .join('  ·  '),
+            '',
+            '',
+          ]]
+          : []),
         ['ESTADO DE FLUJOS DE EFECTIVO', '', ''],
         [periodDates.periodLabel.toUpperCase(), '', ''],
         ['VALORES EN RD$', '', ''],
@@ -2084,7 +2218,7 @@ export default function FinancialStatementsPage() {
         ws.addRow(r as any[]);
       });
 
-      const titleRowCount = 3;
+      const titleRowCount = titleRows.length - 1;
       for (let i = 0; i < titleRowCount; i++) {
         const excelRowIndex = 1 + i;
         ws.mergeCells(excelRowIndex, 1, excelRowIndex, 3);
@@ -2395,6 +2529,24 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Header y título */}
               <div className="text-center mb-8">
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-xl font-bold text-gray-900">
                   RELACION DE GASTOS GENERALES Y ADMINITRATIVOS
                 </h1>
@@ -2651,7 +2803,25 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Header y título */}
               <div className="text-center mb-8">
-                <h1 className="text-xl font-bold text-gray-900">Estados de Costos de Ventas</h1>
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <h1 className="text-xl font-bold text-gray-900">ESTADO DE COSTOS DE VENTAS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
                   <p className="text-xs text-gray-700 mb-0.5">
@@ -2665,7 +2835,7 @@ export default function FinancialStatementsPage() {
                 {/* Título del estado */}
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 border-b-2 border-gray-800 pb-1">
-                    Estado de costos de ventas
+                    ESTADO DE COSTOS DE VENTAS
                   </h2>
                 </div>
 
@@ -2823,8 +2993,26 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-xl font-bold text-gray-900">BALANCE GENERAL</h1>
-                <p className="text-sm text-gray-600">{periodDates.asOfDateLabel}</p>
+                <p className="text-sm text-gray-700 mb-0.5">{periodDates.asOfDateLabel}</p>
                 {comparisonPeriodLabel && (
                   <p className="text-xs text-gray-700 mb-0.5">
                     Período comparativo: {comparisonPeriodLabel}
@@ -3125,7 +3313,24 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE RESULTADOS</h1>
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE RESULTADOS</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (
@@ -3477,7 +3682,24 @@ export default function FinancialStatementsPage() {
               <div id="printable-statement">
               {/* Título centrado estilo profesional */}
               <div className="text-center mb-8">
-                <h1 className="text-base font-semibold text-gray-800 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
+                {!!companyNameForHeader && (
+                  <div className="mb-2 print-only">
+                    <div className="text-sm font-semibold text-gray-900">{companyNameForHeader}</div>
+                    {companyRncForHeader && (
+                      <div className="text-xs text-gray-700">RNC/RUC: {companyRncForHeader}</div>
+                    )}
+                    {companyAddressForHeader && (
+                      <div className="text-xs text-gray-700">{companyAddressForHeader}</div>
+                    )}
+                    {(companyPhoneForHeader || companyEmailForHeader) && (
+                      <div className="text-xs text-gray-600">
+                        {[companyPhoneForHeader ? `Tel: ${companyPhoneForHeader}` : '', companyEmailForHeader ? `Email: ${companyEmailForHeader}` : '']
+                          .filter(Boolean)
+                          .join('  ·  ')}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <h1 className="text-xl font-bold text-gray-900 mb-1">ESTADO DE FLUJOS DE EFECTIVO</h1>
                 <p className="text-sm text-gray-700 mb-0.5">{incomePeriodDates.periodLabel}</p>
                 {comparisonPeriodLabel && (

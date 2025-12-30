@@ -8833,6 +8833,44 @@ export const invoicesService = {
           };
 
           await journalEntriesService.createWithLines(userId, entryPayload, entryLines);
+
+          // Crear movimientos de salida de inventario para cada línea con item_id
+          try {
+            const { data: invLines, error: invLinesError } = await supabase
+              .from('invoice_lines')
+              .select(`
+                *,
+                inventory_items (id, name, cost_price, warehouse_id)
+              `)
+              .eq('invoice_id', invoiceData.id);
+
+            if (!invLinesError && invLines && invLines.length > 0) {
+              for (const line of invLines) {
+                const invItem = line.inventory_items as any | null;
+                const qty = Number(line.quantity) || 0;
+
+                if (!invItem || qty <= 0) continue;
+
+                const unitCost = Number(invItem.cost_price) || 0;
+
+                await inventoryService.createMovement(tenantId, {
+                  item_id: invItem.id ? String(invItem.id) : null,
+                  movement_type: 'exit',
+                  quantity: qty,
+                  unit_cost: unitCost,
+                  total_cost: qty * unitCost,
+                  reference: invoiceData.invoice_number || invoiceData.id,
+                  notes: `Venta - Factura ${invoiceData.invoice_number || ''}`.trim(),
+                  source_type: 'invoice',
+                  source_id: invoiceData.id,
+                  from_warehouse_id: invItem.warehouse_id || null,
+                  to_warehouse_id: null,
+                });
+              }
+            }
+          } catch (movError) {
+            console.error('Error creating inventory movements for invoice:', movError);
+          }
         }
       } catch (error) {
         console.error('Error posting invoice to ledger:', error);
@@ -8916,6 +8954,87 @@ export const invoicesService = {
 
       return { invoice: invoiceData, lines: linesData };
     } catch (error) {
+      throw error;
+    }
+  },
+
+  async regenerateInventoryMovements(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
+
+      // Obtener todas las facturas no anuladas
+      const { data: invoices, error: invError } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, invoice_date, status')
+        .eq('user_id', tenantId)
+        .not('status', 'in', '("cancelled","voided")');
+
+      if (invError) throw invError;
+      if (!invoices || invoices.length === 0) {
+        return { processed: 0, created: 0 };
+      }
+
+      let totalCreated = 0;
+
+      for (const invoice of invoices) {
+        // Verificar si ya tiene movimientos de salida
+        const { data: existingMovements } = await supabase
+          .from('inventory_movements')
+          .select('id')
+          .eq('user_id', tenantId)
+          .eq('source_type', 'invoice')
+          .eq('source_id', invoice.id)
+          .limit(1);
+
+        if (existingMovements && existingMovements.length > 0) {
+          continue; // Ya tiene movimientos, saltar
+        }
+
+        // Obtener líneas de la factura con items de inventario
+        const { data: lines, error: linesError } = await supabase
+          .from('invoice_lines')
+          .select(`
+            *,
+            inventory_items (id, name, cost_price, warehouse_id)
+          `)
+          .eq('invoice_id', invoice.id);
+
+        if (linesError || !lines) continue;
+
+        for (const line of lines) {
+          const invItem = line.inventory_items as any | null;
+          const qty = Number(line.quantity) || 0;
+
+          if (!invItem || qty <= 0) continue;
+
+          const unitCost = Number(invItem.cost_price) || 0;
+
+          try {
+            await inventoryService.createMovement(tenantId, {
+              item_id: invItem.id ? String(invItem.id) : null,
+              movement_type: 'exit',
+              quantity: qty,
+              unit_cost: unitCost,
+              total_cost: qty * unitCost,
+              reference: invoice.invoice_number || invoice.id,
+              notes: `Venta - Factura ${invoice.invoice_number || ''}`.trim(),
+              source_type: 'invoice',
+              source_id: invoice.id,
+              from_warehouse_id: invItem.warehouse_id || null,
+              to_warehouse_id: null,
+              movement_date: invoice.invoice_date || new Date().toISOString().slice(0, 10),
+            });
+            totalCreated++;
+          } catch (movError) {
+            console.error(`Error creating movement for invoice ${invoice.id}:`, movError);
+          }
+        }
+      }
+
+      return { processed: invoices.length, created: totalCreated };
+    } catch (error) {
+      console.error('invoicesService.regenerateInventoryMovements error', error);
       throw error;
     }
   },

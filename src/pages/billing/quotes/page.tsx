@@ -569,16 +569,18 @@ export default function QuotesPage() {
           inventoryService.getItems(user.id),
         ]);
 
-        setCustomers((cust || []).map((c: any) => ({
+        const mappedCustomers = (cust || []).map((c: any) => ({
           id: c.id,
           name: c.name || c.customer_name || c.full_name || c.fullname || c.company || c.company_name || 'Cliente',
           email: c.email || c.contact_email || '',
           phone: c.phone || c.contact_phone || '',
           address: c.address || c.company_address || c.billing_address || c.address_line || '',
           documentType: c.document_type || c.documentType || null,
-          ncfType: c.ncf_type || c.ncfType || 'B02',
+          ncfType: c.ncfType || c.ncf_type || null,
           document: c.document || null,
-        })));
+        }));
+        console.log('DEBUG - Clientes cargados con ncfType:', mappedCustomers.map(c => ({ id: c.id, name: c.name, ncfType: c.ncfType })));
+        setCustomers(mappedCustomers);
 
         const mapped = (qts || []).map((q: any) => {
           // Procesar items primero para calcular totales
@@ -1079,20 +1081,46 @@ export default function QuotesPage() {
       try {
         const todayStr = new Date().toISOString().slice(0, 10);
 
-        // Determinar tipo de comprobante según configuración del cliente
-        const customer = customers.find((c) => c.id === quote.customerId);
-        // Nota: `documentType` del cliente suele representar su documento (RNC/Cédula),
-        // mientras que el tipo NCF debe ser B01/B02/B04/B14...
-        const rawNcfType = customer?.ncfType;
-        const normalizedNcfType = String(rawNcfType || '').trim().toUpperCase();
-        const isValidNcfType = /^B\d{2}$/.test(normalizedNcfType);
+        // Obtener cliente directamente de la BD para tener datos actualizados
+        const allCustomers = await customersService.getAll(user.id as string);
+        const freshCustomer = allCustomers.find((c: any) => c.id === quote.customerId);
+        
+        // DEBUG: Ver qué valores tiene el cliente
+        console.log('DEBUG NCF - Cliente desde BD:', freshCustomer);
+        console.log('DEBUG NCF - ncfType del cliente:', freshCustomer?.ncfType);
+        console.log('DEBUG NCF - documentType del cliente:', freshCustomer?.documentType);
+        
+        // Mapeo de valores de texto del cliente a códigos NCF
+        const ncfTypeMap: Record<string, string> = {
+          'credito_fiscal': 'B01',
+          'consumo': 'B02',
+          'gubernamental': 'B04',
+          'especial': 'B14',
+          'exportacion': 'B16',
+        };
+        
+        const rawNcfType = String(freshCustomer?.ncfType || '').trim().toLowerCase();
+        console.log('DEBUG NCF - rawNcfType procesado:', rawNcfType);
+        
+        // Verificar si ya es un código NCF válido (B01, B02, etc.)
+        const isAlreadyNcfCode = /^b\d{2}$/i.test(rawNcfType);
+        
+        // Obtener el código NCF: si ya es código válido usarlo, si no mapear desde texto
+        let documentType = '';
+        if (isAlreadyNcfCode) {
+          documentType = rawNcfType.toUpperCase();
+        } else if (ncfTypeMap[rawNcfType]) {
+          documentType = ncfTypeMap[rawNcfType];
+        } else {
+          // Fallback: inferir del tipo de documento del cliente (RNC => B01, otro => B02)
+          const normalizedDocType = String((freshCustomer as any)?.documentType || '').trim().toLowerCase();
+          documentType = normalizedDocType.includes('rnc') ? 'B01' : 'B02';
+        }
+        
+        console.log('DEBUG NCF - documentType final:', documentType);
 
-        // Fallback: si el cliente no tiene ncfType válido, intentar inferirlo del tipo de documento
-        // (RNC => B01, Cédula/consumidor => B02)
-        const normalizedDocType = String((customer as any)?.documentType || '').trim().toLowerCase();
-        const inferredNcfType = normalizedDocType.includes('rnc') ? 'B01' : 'B02';
-
-        const documentType = isValidNcfType ? normalizedNcfType : inferredNcfType;
+        // Mostrar al usuario qué tipo de NCF se usará
+        toast.info(`Cliente: ${freshCustomer?.name || 'N/A'} | NCF configurado: "${freshCustomer?.ncfType || '(vacío)'}" → Usando: ${documentType}`);
 
         // Obtener NCF desde la serie configurada - obligatorio
         let invoiceNumber = '';

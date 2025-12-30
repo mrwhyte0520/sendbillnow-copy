@@ -1,7 +1,7 @@
 // Configuración de permisos por plan
 // Define qué módulos y rutas están disponibles para cada plan
 
-export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-premium' | 'pos-super-plus' | 'trial' | 'none';
+export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-premium' | 'pos-super-plus' | 'pyme' | 'pro' | 'plus' | 'trial' | 'none';
 
 export interface PlanLimits {
   users: number;
@@ -286,6 +286,139 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       products: -1, // ilimitado
     }
   },
+  'pyme': {
+    id: 'pyme',
+    name: 'PYME',
+    modules: [
+      MODULES.DASHBOARD,
+      MODULES.BILLING,
+      MODULES.INVOICING,
+      MODULES.QUOTES,
+      MODULES.CREDIT_NOTES,
+      MODULES.REPORTS,
+      MODULES.INVENTORY,
+      MODULES.PRODUCTS,
+      MODULES.CUSTOMERS,
+      MODULES.SETTINGS,
+    ],
+    routes: [
+      '/dashboard',
+      '/billing',
+      '/billing/invoicing',
+      '/billing/quotes',
+      '/billing/credit-notes',
+      '/billing/debit-notes',
+      '/reports',
+      '/inventory',
+      '/inventory/products',
+      '/customers',
+      '/settings',
+      '/profile',
+      '/plans',
+    ],
+    limits: {
+      users: 2,
+      invoicesPerMonth: -1, // ilimitado
+      warehouses: 1,
+      products: 500, // Inventario limitado (500)
+    }
+  },
+  'pro': {
+    id: 'pro',
+    name: 'PRO',
+    modules: [
+      MODULES.DASHBOARD,
+      MODULES.BILLING,
+      MODULES.INVOICING,
+      MODULES.QUOTES,
+      MODULES.CREDIT_NOTES,
+      MODULES.REPORTS,
+      MODULES.INVENTORY,
+      MODULES.PRODUCTS,
+      MODULES.CUSTOMERS,
+      MODULES.SUPPLIERS,
+      MODULES.PURCHASES,
+      MODULES.ACCOUNTS_RECEIVABLE,
+      MODULES.ACCOUNTS_PAYABLE,
+      MODULES.PAYROLL,
+      MODULES.BANKS,
+      MODULES.ACCOUNTING,
+      MODULES.SETTINGS,
+    ],
+    routes: [
+      '/dashboard',
+      '/billing',
+      '/billing/invoicing',
+      '/billing/quotes',
+      '/billing/credit-notes',
+      '/billing/debit-notes',
+      '/reports',
+      '/inventory',
+      '/inventory/products',
+      '/inventory/warehouses',
+      '/customers',
+      '/suppliers',
+      '/purchases',
+      '/accounts-receivable',
+      '/accounts-payable',
+      '/payroll',
+      '/banks',
+      '/banks-module',
+      '/accounting',
+      '/settings',
+      '/profile',
+      '/plans',
+    ],
+    limits: {
+      users: 5,
+      invoicesPerMonth: -1, // ilimitado
+      warehouses: 1,
+      products: 2000, // Inventario limitado (2,000)
+    }
+  },
+  'plus': {
+    id: 'plus',
+    name: 'PLUS',
+    modules: [
+      MODULES.DASHBOARD,
+      MODULES.POS,
+      MODULES.BILLING,
+      MODULES.INVOICING,
+      MODULES.QUOTES,
+      MODULES.CREDIT_NOTES,
+      MODULES.REPORTS,
+      MODULES.INVENTORY,
+      MODULES.PRODUCTS,
+      MODULES.CUSTOMERS,
+      MODULES.SUPPLIERS,
+      MODULES.PURCHASES,
+      MODULES.EXPENSES,
+      MODULES.ACCOUNTS_RECEIVABLE,
+      MODULES.ACCOUNTS_PAYABLE,
+      MODULES.PAYROLL,
+      MODULES.BANKS,
+      MODULES.PETTY_CASH,
+      MODULES.COMMISSIONS,
+      MODULES.REPAIRS,
+      MODULES.RETURNS,
+      MODULES.MULTI_BRANCH,
+      MODULES.ACCOUNTING,
+      MODULES.TAXES,
+      MODULES.SETTINGS,
+      MODULES.USERS,
+      MODULES.FIXED_ASSETS,
+      MODULES.STATISTICS,
+      MODULES.REFERRALS,
+      MODULES.ACCOUNTING_SETTINGS,
+    ],
+    routes: ['*'], // Todas las rutas - todas las funciones
+    limits: {
+      users: -1, // Empresas ilimitadas
+      invoicesPerMonth: -1, // ilimitado
+      warehouses: -1, // ilimitado
+      products: -1, // Inventario ilimitado
+    }
+  },
   'trial': {
     id: 'trial',
     name: 'Prueba Gratuita',
@@ -433,10 +566,26 @@ export function getMinimumPlanForModule(module: string): PlanId {
 
   // Módulos de inventario disponibles desde Facturación Premium
   const inventoryModules: string[] = [MODULES.INVENTORY, MODULES.PRODUCTS];
-  if (inventoryModules.includes(module)) return 'facturacion-premium';
+  if (inventoryModules.includes(module)) return 'pyme';
+
+  // Módulos contables / banca / nómina: mínimo PRO
+  const accountingModules: string[] = [
+    MODULES.ACCOUNTING,
+    MODULES.ACCOUNTING_SETTINGS,
+    MODULES.BANKS,
+    MODULES.ACCOUNTS_RECEIVABLE,
+    MODULES.ACCOUNTS_PAYABLE,
+    MODULES.PURCHASES,
+    MODULES.PAYROLL,
+    MODULES.TAXES,
+  ];
+  if (accountingModules.includes(module)) return 'pro';
+
+  // POS requiere al menos POS Premium
+  if (module === MODULES.POS) return 'pos-premium';
 
   // Todos los demás módulos requieren POS Premium
-  return 'pos-premium';
+  return 'plus';
 }
 
 // Función para obtener el nombre del plan mínimo requerido

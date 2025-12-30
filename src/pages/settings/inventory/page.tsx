@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { settingsService, chartAccountsService, accountingSettingsService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
+import { usePlanPermissions } from '../../../hooks/usePlanPermissions';
 
 interface InventorySettings {
   id?: string;
@@ -23,6 +24,7 @@ interface Warehouse {
 
 export default function InventorySettingsPage() {
   const { user } = useAuth();
+  const { limits } = usePlanPermissions();
   const [settings, setSettings] = useState<InventorySettings>({
     valuation_method: 'fifo',
     auto_reorder: true,
@@ -148,6 +150,11 @@ export default function InventorySettingsPage() {
     setLoading(true);
 
     try {
+      if (limits.warehouses !== -1 && warehouses.length >= limits.warehouses) {
+        alert(`Has alcanzado el límite de ${limits.warehouses} almacén(es) para tu plan.`);
+        setLoading(false);
+        return;
+      }
       await settingsService.createWarehouse({
         name: newWarehouse.name,
         location: newWarehouse.location,

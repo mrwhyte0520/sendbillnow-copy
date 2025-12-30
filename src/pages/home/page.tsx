@@ -62,7 +62,7 @@ export default function HomePage() {
   const plans = [
     {
       name: 'PYME',
-      price: '$19.97',
+      price: 'USD $39.99',
       period: '/mes',
       features: [
         'Una empresa',
@@ -76,7 +76,7 @@ export default function HomePage() {
     },
     {
       name: 'PRO',
-      price: '$49.97',
+      price: 'USD $99.99',
       period: '/mes',
       features: [
         'Hasta 3 empresas',
@@ -92,7 +92,7 @@ export default function HomePage() {
     },
     {
       name: 'PLUS',
-      price: '$99.97',
+      price: 'USD $199.99',
       period: '/mes',
       features: [
         'Empresas ilimitadas',
@@ -110,7 +110,7 @@ export default function HomePage() {
     },
     {
       name: 'ESTUDIANTIL',
-      price: '$49.97',
+      price: 'USD $99.99',
       period: '/mes',
       features: [
         'Empresas ilimitadas',

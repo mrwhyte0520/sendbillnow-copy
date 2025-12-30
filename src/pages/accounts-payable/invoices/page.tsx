@@ -132,6 +132,7 @@ export default function APInvoicesPage() {
     notes: '',
     expenseType606: '',
     itbisToCost: false,
+    exentoItbis: false,
     discountType: '',
     discountValue: '',
     purchaseOrderId: '',
@@ -599,7 +600,9 @@ export default function APInvoicesPage() {
   };
 
   const calculateTotals = () => {
-    const { affectsItbis, affectsIsr, itbisWithholdingRate, isrWithholdingRate } = getCurrentSupplierTaxProfile();
+    const { affectsItbis: baseAffectsItbis, affectsIsr, itbisWithholdingRate, isrWithholdingRate } = getCurrentSupplierTaxProfile();
+    // Si está marcado como exento de ITBIS, no aplicar ITBIS
+    const affectsItbis = headerForm.exentoItbis ? false : baseAffectsItbis;
     // Calcular subtotales por línea (con descuentos de línea)
     let grossBeforeDiscount = 0;
     let totalLineDiscounts = 0;
@@ -688,6 +691,7 @@ export default function APInvoicesPage() {
       notes: '',
       expenseType606: '',
       itbisToCost: false,
+      exentoItbis: false,
       discountType: '',
       discountValue: '',
       purchaseOrderId: '',
@@ -720,6 +724,7 @@ export default function APInvoicesPage() {
       notes: invoice.notes || '',
       expenseType606: invoice.expenseType606 || '',
       itbisToCost: false,
+      exentoItbis: false,
       discountType: '',
       discountValue: '',
       purchaseOrderId: '',
@@ -2088,11 +2093,26 @@ ${items
                     <label className="inline-flex items-center text-sm text-gray-700">
                       <input
                         type="checkbox"
+                        checked={headerForm.exentoItbis}
+                        onChange={(e) => setHeaderForm(prev => ({ ...prev, exentoItbis: e.target.checked, itbisToCost: e.target.checked ? false : prev.itbisToCost }))}
+                        className="mr-2 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <span>
+                        Sin ITBIS (Exento)
+                        <span className="block text-xs text-gray-500">Activos fijos, bienes inmuebles u otros exentos</span>
+                      </span>
+                    </label>
+                  </div>
+                  <div className="flex items-center">
+                    <label className="inline-flex items-center text-sm text-gray-700">
+                      <input
+                        type="checkbox"
                         checked={headerForm.itbisToCost}
                         onChange={(e) => setHeaderForm(prev => ({ ...prev, itbisToCost: e.target.checked }))}
                         className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={headerForm.exentoItbis}
                       />
-                      <span>
+                      <span className={headerForm.exentoItbis ? 'text-gray-400' : ''}>
                         ITBIS llevado al costo
                         <span className="block text-xs text-gray-500">El ITBIS se suma al gasto en vez de crédito fiscal</span>
                       </span>

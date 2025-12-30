@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { auxiliariesReconciliationService, settingsService, chartAccountsService } from '../../../services/database';
+import { auxiliariesReconciliationService, settingsService, chartAccountsService, invoicesService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
 import { useAccountingFormat } from '../../../providers/AccountingFormatProvider';
 
@@ -54,6 +54,7 @@ export default function AccountingSettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [reconcilingAuxiliaries, setReconcilingAuxiliaries] = useState(false);
   const [recalculatingBalances, setRecalculatingBalances] = useState(false);
+  const [regeneratingMovements, setRegeneratingMovements] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
 
@@ -167,6 +168,26 @@ export default function AccountingSettingsPage() {
     }
   };
 
+  const handleRegenerateInventoryMovements = async () => {
+    if (!user?.id) return;
+    if (!confirm('¿Regenerar movimientos de salida de inventario para facturas existentes? Esto creará las salidas faltantes para el Estado de Costos.')) return;
+    setRegeneratingMovements(true);
+    setMessage(null);
+    try {
+      const res = await invoicesService.regenerateInventoryMovements(user.id);
+      setMessage({
+        type: 'success',
+        text: `Movimientos regenerados. Facturas procesadas: ${res.processed}, Movimientos creados: ${res.created}.`,
+      });
+    } catch (error) {
+      setMessage({ type: 'error', text: 'No se pudieron regenerar los movimientos. Revisa la consola.' });
+      // eslint-disable-next-line no-console
+      console.error('Error regenerando movimientos de inventario:', error);
+    } finally {
+      setRegeneratingMovements(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -214,6 +235,14 @@ export default function AccountingSettingsPage() {
                 className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {recalculatingBalances ? 'Recalculando...' : 'Recalcular saldos auxiliares'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRegenerateInventoryMovements}
+                disabled={regeneratingMovements}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {regeneratingMovements ? 'Regenerando...' : 'Regenerar salidas de inventario'}
               </button>
             </div>
           </div>

@@ -32,8 +32,11 @@ export default function DepreciationPage() {
 
   const [depreciations, setDepreciations] = useState<DepreciationEntry[]>([]);
   const [periods, setPeriods] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDepreciation, setSelectedDepreciation] = useState<DepreciationEntry | null>(null);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [calculationPeriod, setCalculationPeriod] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     const loadData = async () => {
@@ -64,7 +67,9 @@ export default function DepreciationPage() {
         setPeriods(periodSet);
 
         const categorySet = Array.from(new Set((assetsData || []).map((a: any) => a.category).filter(Boolean)));
+        setAvailableCategories(categorySet);
         setSelectedCategories(categorySet);
+        setAssets(assetsData || []);
       } catch (error) {
         console.error('Error loading depreciation data:', error);
       }
@@ -82,9 +87,11 @@ export default function DepreciationPage() {
     return matchesSearch && matchesPeriod && matchesStatus;
   });
 
-  const totalDepreciationMonth = filteredDepreciations.reduce((sum, dep) => sum + dep.monthlyDepreciation, 0);
-  const totalAccumulated = filteredDepreciations.reduce((sum, dep) => sum + dep.accumulatedDepreciation, 0);
-  const totalRemainingValue = filteredDepreciations.reduce((sum, dep) => sum + dep.remainingValue, 0);
+  // Excluir depreciaciones reversadas de los totales del dashboard
+  const activeDepreciations = filteredDepreciations.filter(dep => dep.status !== 'Reversado');
+  const totalDepreciationMonth = activeDepreciations.reduce((sum, dep) => sum + dep.monthlyDepreciation, 0);
+  const totalAccumulated = activeDepreciations.reduce((sum, dep) => sum + dep.accumulatedDepreciation, 0);
+  const totalRemainingValue = activeDepreciations.reduce((sum, dep) => sum + dep.remainingValue, 0);
 
   const handleCalculateDepreciation = () => {
     setShowCalculateModal(true);
@@ -544,6 +551,9 @@ export default function DepreciationPage() {
                     Valor Remanente
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha Depreciación
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Período
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -574,6 +584,9 @@ export default function DepreciationPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
                       {formatCurrency(depreciation.remainingValue)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {depreciation.depreciationDate ? new Date(depreciation.depreciationDate).toLocaleDateString('es-DO') : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {depreciation.period}
@@ -660,6 +673,27 @@ export default function DepreciationPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha Depreciación
+                    </label>
+                    <p className="text-sm text-gray-900">{selectedDepreciation.depreciationDate ? new Date(selectedDepreciation.depreciationDate).toLocaleDateString('es-DO') : '-'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Período
+                    </label>
+                    <p className="text-sm text-gray-900">{selectedDepreciation.period}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Estado
+                    </label>
+                    <p className="text-sm text-gray-900">{selectedDepreciation.status}</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -672,21 +706,6 @@ export default function DepreciationPage() {
                       Valor Remanente
                     </label>
                     <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.remainingValue)}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Período
-                    </label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.period}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
-                    </label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.status}</p>
                   </div>
                 </div>
               </div>
@@ -720,7 +739,8 @@ export default function DepreciationPage() {
                       type="month"
                       required
                       name="period"
-                      defaultValue={new Date().toISOString().slice(0, 7)}
+                      value={calculationPeriod}
+                      onChange={(e) => setCalculationPeriod(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -743,11 +763,11 @@ export default function DepreciationPage() {
                     Categorías a Incluir
                   </label>
                   <div className="space-y-2">
-                    {selectedCategories.map(category => (
+                    {availableCategories.map(category => (
                       <label key={category} className="flex items-center">
                         <input
                           type="checkbox"
-                          className="mr-2"
+                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                           checked={selectedCategories.includes(category)}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -766,9 +786,62 @@ export default function DepreciationPage() {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">Resumen del Cálculo</h4>
                   <div className="text-sm text-blue-800 space-y-1">
-                    <p>• Activos a depreciar: 5</p>
-                    <p>• Depreciación total estimada: {formatCurrency(11896)}</p>
-                    <p>• Período: Enero 2024</p>
+                    {(() => {
+                      // Filtrar activos depreciables según las categorías seleccionadas
+                      // Debe tener status activo, categoría seleccionada, y valor depreciable
+                      const depreciableAssets = assets.filter((a: any) => {
+                        const cat = a.category || '';
+                        const status = String(a.status || '').toLowerCase();
+                        const isActive = status === 'active' || status === 'activo';
+                        const inCategory = selectedCategories.includes(cat);
+                        
+                        // Calcular si tiene valor depreciable
+                        const purchaseValue = Number(a.purchase_value ?? a.purchase_cost ?? 0) || 0;
+                        const salvageValue = Number(a.salvage_value ?? 0) || 0;
+                        const depreciableAmount = purchaseValue - salvageValue;
+                        const accumulatedDepr = Number(a.accumulated_depreciation ?? 0) || 0;
+                        const remainingValue = depreciableAmount - accumulatedDepr;
+                        
+                        return isActive && inCategory && depreciableAmount > 0 && remainingValue > 0;
+                      });
+                      
+                      // Calcular depreciación mensual estimada (igual que el servicio)
+                      const totalEstimatedDepr = depreciableAssets.reduce((sum: number, a: any) => {
+                        const purchaseValue = Number(a.purchase_value ?? a.purchase_cost ?? 0) || 0;
+                        const salvageValue = Number(a.salvage_value ?? 0) || 0;
+                        const depreciableAmount = purchaseValue - salvageValue;
+                        const usefulLifeYears = Number(a.useful_life ?? 0) || 0;
+                        const accumulatedDepr = Number(a.accumulated_depreciation ?? 0) || 0;
+                        
+                        let monthlyDepr = 0;
+                        if (usefulLifeYears > 0) {
+                          monthlyDepr = depreciableAmount / (usefulLifeYears * 12);
+                        } else {
+                          const depreciationRate = Number(a.depreciation_rate ?? 0) || 0;
+                          if (depreciationRate > 0) {
+                            const usefulLifeMonths = Math.round(100 / depreciationRate * 12);
+                            monthlyDepr = depreciableAmount / usefulLifeMonths;
+                          }
+                        }
+                        
+                        // No exceder el valor remanente
+                        const remainingValue = depreciableAmount - accumulatedDepr;
+                        const finalDepr = Math.min(monthlyDepr, remainingValue);
+                        
+                        return sum + (finalDepr > 0 ? finalDepr : 0);
+                      }, 0);
+                      
+                      const periodDate = new Date(calculationPeriod + '-01');
+                      const periodLabel = periodDate.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+                      
+                      return (
+                        <>
+                          <p>• Activos a depreciar: {depreciableAssets.length}</p>
+                          <p>• Depreciación total estimada: {formatCurrency(totalEstimatedDepr)}</p>
+                          <p>• Período: {periodLabel}</p>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
