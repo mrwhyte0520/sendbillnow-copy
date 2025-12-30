@@ -5827,9 +5827,36 @@ export const warehouseTransfersService = {
       if (!tenantId) throw new Error('userId required');
       if (!lines || lines.length === 0) throw new Error('At least one line is required');
 
+      // Auto-generar número de documento si no se proporciona
+      let transferPayload = { ...transfer };
+      const hasDocNumber =
+        typeof transferPayload?.document_number === 'string' &&
+        transferPayload.document_number.trim().length > 0;
+
+      if (!hasDocNumber) {
+        try {
+          const { data: nextNum, error: nextNumError } = await supabase.rpc(
+            'next_document_number',
+            {
+              p_tenant_id: tenantId,
+              p_doc_key: 'warehouse_transfer',
+              p_prefix: 'TRF',
+              p_padding: 6,
+            },
+          );
+
+          if (nextNumError) throw nextNumError;
+          if (typeof nextNum === 'string' && nextNum.trim().length > 0) {
+            transferPayload = { ...transferPayload, document_number: nextNum };
+          }
+        } catch (seqError) {
+          console.warn('warehouseTransfersService.create: could not auto-generate document_number', seqError);
+        }
+      }
+
       const { data: transferData, error: transferError } = await supabase
         .from('warehouse_transfers')
-        .insert({ ...transfer, user_id: tenantId })
+        .insert({ ...transferPayload, user_id: tenantId })
         .select('*')
         .single();
 
@@ -16539,8 +16566,47 @@ export const assetDepreciationService = {
         return { depreciationAccountId, accumulatedAccountId };
       };
 
+      const isLandLikeCategory = (rawCategory: string) => {
+        const s = String(rawCategory || '').toLowerCase();
+        if (!s) return false;
+        const keywords = [
+          'terreno',
+          'terrenos',
+          'land',
+          'solar',
+          'solares',
+          'lote',
+          'lotes',
+          'parcela',
+          'parcelas',
+          'finca',
+          'fincas',
+          'siti',
+          'sitio',
+          'sitios',
+        ];
+        return keywords.some((k) => s.includes(k));
+      };
+
       // Calcular depreciación para cada activo
       for (const asset of assets) {
+        const categoryName = String((asset as any).category || '');
+
+        // Terrenos y equivalentes no se deprecian
+        if (isLandLikeCategory(categoryName)) {
+          continue;
+        }
+
+        // Si el tipo de activo no tiene parámetros de depreciación (vida útil y tasa), tratarlo como no depreciable
+        const assetType = (assetTypes || []).find((t: any) => String(t.name || '') === categoryName);
+        if (assetType) {
+          const typeUsefulLife = Number((assetType as any).useful_life ?? 0) || 0;
+          const typeRate = Number((assetType as any).depreciation_rate ?? 0) || 0;
+          if (typeUsefulLife <= 0 && typeRate <= 0) {
+            continue;
+          }
+        }
+
         const purchaseValue = Number((asset as any).purchase_value ?? (asset as any).purchase_cost ?? 0) || 0;
         const salvageValue = Number((asset as any).salvage_value ?? 0) || 0;
         const depreciableAmount = purchaseValue - salvageValue;
@@ -16614,7 +16680,7 @@ export const assetDepreciationService = {
       }
 
       // Crear registros de depreciación
-      const createdDepreciations = await this.createMany(userId, depreciationRecords);
+      let createdDepreciations = await this.createMany(userId, depreciationRecords);
 
       // Crear asiento contable automático
       let journalEntry = null;
@@ -16653,6 +16719,28 @@ export const assetDepreciationService = {
           };
 
           journalEntry = await journalEntriesService.createWithLines(tenantId, entryPayload, entryLines);
+
+          // Guardar el asiento asociado en cada depreciación creada, para poder navegar "exacto" desde la UI.
+          const resolvedEntryNumber =
+            (journalEntry as any)?.entry_number || (journalEntry as any)?.entryNumber || entryPayload.entry_number;
+
+          if (resolvedEntryNumber && Array.isArray(createdDepreciations) && createdDepreciations.length > 0) {
+            const ids = createdDepreciations
+              .map((d: any) => d?.id)
+              .filter((id: any) => typeof id === 'string' && id.trim().length > 0);
+
+            if (ids.length > 0) {
+              await supabase
+                .from('fixed_asset_depreciations')
+                .update({ journal_entry_number: resolvedEntryNumber })
+                .in('id', ids);
+
+              createdDepreciations = createdDepreciations.map((d: any) => ({
+                ...d,
+                journal_entry_number: resolvedEntryNumber,
+              }));
+            }
+          }
         } catch (jeError) {
           console.error('Error creating depreciation journal entry:', jeError);
         }

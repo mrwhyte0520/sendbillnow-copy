@@ -174,6 +174,29 @@ export default function AssetRegisterPage() {
   const handleCategoryChange = (value: string) => {
     setFormCategory(value);
     if (!value) return;
+
+    const categoryLower = String(value).toLowerCase();
+    const landKeywords = [
+      'terreno',
+      'terrenos',
+      'land',
+      'solar',
+      'solares',
+      'lote',
+      'lotes',
+      'parcela',
+      'parcelas',
+      'finca',
+      'fincas',
+      'sitio',
+      'sitios',
+    ];
+    if (landKeywords.some((k) => categoryLower.includes(k))) {
+      setUsefulLifeValue('0');
+      setDepreciationMethodValue('');
+      return;
+    }
+
     const type = assetTypes.find((t: any) => String(t.name || '') === value);
     if (type) {
       if (type.useful_life != null) {
@@ -205,6 +228,28 @@ export default function AssetRegisterPage() {
       supplier: String(formData.get('supplier') || '').trim() || null,
       description: String(formData.get('description') || '').trim() || null,
     };
+
+    // Terrenos no se deprecian
+    const categoryLower = String(payload.category || '').toLowerCase();
+    const landKeywords = [
+      'terreno',
+      'terrenos',
+      'land',
+      'solar',
+      'solares',
+      'lote',
+      'lotes',
+      'parcela',
+      'parcelas',
+      'finca',
+      'fincas',
+      'sitio',
+      'sitios',
+    ];
+    if (landKeywords.some((k) => categoryLower.includes(k))) {
+      payload.useful_life = 0;
+      payload.depreciation_method = '';
+    }
 
     try {
       if (editingAsset) {

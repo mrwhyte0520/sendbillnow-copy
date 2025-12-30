@@ -300,6 +300,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: 'ri-file-list-3-line',
       current: location.pathname.startsWith('/accounts-payable'),
       submenu: [
+        { name: 'Facturas de Suplidor', href: '/accounts-payable/invoices' },
         { name: 'Reportes CxP', href: '/accounts-payable/reports' },
         { name: 'Suplidores', href: '/accounts-payable/suppliers' },
         { name: 'Emisión de Pagos', href: '/accounts-payable/payments' },
@@ -308,7 +309,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Tipos de Suplidor', href: '/accounts-payable/supplier-types' },
         { name: 'Términos de Pago', href: '/accounts-payable/payment-terms' },
         { name: 'Anticipos a Proveedores', href: '/accounts-payable/advances' },
-        { name: 'Facturas de Suplidor', href: '/accounts-payable/invoices' },
         { name: 'Notas Débito/Crédito', href: '/accounts-payable/debit-credit-notes' },
       ]
     },
@@ -336,14 +336,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Punto de Ventas',
       href: '/pos',
       icon: 'ri-shopping-cart-line',
-      current: location.pathname.startsWith('/pos')
+      current: location.pathname.startsWith('/pos'),
+      submenu: [
+        { name: 'Inicio', href: '/pos' },
+      ]
     },
     // 7. Inventario
     {
       name: 'Inventario',
       href: '/inventory',
       icon: 'ri-archive-line',
-      current: location.pathname.startsWith('/inventory')
+      current: location.pathname.startsWith('/inventory'),
+      submenu: [
+        { name: 'Inicio', href: '/inventory' },
+      ]
     },
     // 8. Activos fijos
     {
@@ -410,21 +416,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Planes',
       href: '/plans',
       icon: 'ri-vip-crown-line',
-      current: location.pathname.startsWith('/plans')
+      current: location.pathname.startsWith('/plans'),
+      submenu: [
+        { name: 'Inicio', href: '/plans' },
+      ]
     },
     // 12. Referidos
     {
       name: 'Referidos',
       href: '/referrals',
       icon: 'ri-share-forward-line',
-      current: location.pathname.startsWith('/referrals')
+      current: location.pathname.startsWith('/referrals'),
+      submenu: [
+        { name: 'Inicio', href: '/referrals' },
+      ]
     },
     // 13. Usuarios (solo para owners)
     ...(isOwner ? [{
       name: 'Usuarios',
       href: '/users',
       icon: 'ri-shield-user-line',
-      current: location.pathname.startsWith('/users')
+      current: location.pathname.startsWith('/users'),
+      submenu: [
+        { name: 'Inicio', href: '/users' },
+      ]
     }] : []),
     // 14. Configuración (solo para owners)
     ...(isOwner ? [{

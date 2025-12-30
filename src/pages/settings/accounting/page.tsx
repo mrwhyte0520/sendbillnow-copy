@@ -37,7 +37,7 @@ export default function AccountingSettingsPage() {
     fiscal_year_end: '2024-12-31',
     default_currency: 'DOP',
     decimal_places: 2,
-    date_format: 'DD/MM/YYYY',
+    date_format: 'MM/DD/YYYY',
     number_format: '1,234.56',
     auto_backup: true,
     backup_frequency: 'daily',

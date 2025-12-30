@@ -3,7 +3,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { toast } from 'sonner';
 import { useAuth } from '../../../hooks/useAuth';
 import { bankAccountsService, chartAccountsService } from '../../../services/database';
-import { formatMoney } from '../../../utils/numberFormat';
+import { formatMoney, getCurrencyPrefix } from '../../../utils/numberFormat';
 
 interface Bank {
   id: string;
@@ -38,7 +38,7 @@ export default function BanksPage() {
 
   // Función para formatear moneda
   const formatCurrency = (value: number, currency: string = 'DOP') => {
-    const label = currency === 'DOP' ? 'RD$' : currency === 'USD' ? '$' : currency;
+    const label = getCurrencyPrefix(currency);
     return formatMoney(value, label);
   };
 

@@ -5,6 +5,7 @@ import { chartAccountsService, journalEntriesService } from '../../services/data
 import { useAuth } from '../../hooks/useAuth';
 import { exportToExcelWithHeaders, exportToExcelStyled } from '../../utils/exportImportUtils';
 import { formatAmount } from '../../utils/numberFormat';
+import { formatDate } from '../../utils/dateFormat';
 
 interface JournalEntry {
   id: string;
@@ -428,12 +429,12 @@ export default function AccountingPage() {
             entries.forEach((entry: any) => {
               entry.journal_entry_lines?.forEach((line: any) => {
                 rows.push({
-                  date: new Date(entry.entry_date).toLocaleDateString('es-DO'),
+                  date: formatDate(entry.entry_date),
                   number: entry.entry_number,
                   description: entry.description,
                   account: `${line.chart_accounts?.code || ''} - ${line.chart_accounts?.name || ''}`,
-                  debit: line.debit_amount || 0,
-                  credit: line.credit_amount || 0,
+                  debit: formatAmount(Number(line.debit_amount || 0)),
+                  credit: formatAmount(Number(line.credit_amount || 0)),
                 });
               });
             });
@@ -454,12 +455,12 @@ export default function AccountingPage() {
               { key: 'total_credit', title: 'Crédito Total' },
             ];
             const rows = journalData.map((entry: any) => ({
-              date: new Date(entry.entry_date).toLocaleDateString('es-DO'),
+              date: formatDate(entry.entry_date),
               number: entry.entry_number,
               description: entry.description,
               reference: entry.reference || '',
-              total_debit: entry.total_debit || 0,
-              total_credit: entry.total_credit || 0,
+              total_debit: formatAmount(entry.total_debit),
+              total_credit: formatAmount(entry.total_credit),
             }));
             exportToExcelWithHeaders(rows, headers, filename.replace('.xlsx',''), 'Libro Diario', [12,14,40,18,16,16]);
           }
@@ -492,7 +493,7 @@ export default function AccountingPage() {
 
   const generateBalanceSheetCSV = (data: any) => {
     let csv = 'BALANCE GENERAL\n';
-    csv += `Al ${new Date(data.asOfDate).toLocaleDateString('es-DO')}\n\n`;
+    csv += `Al ${formatDate(data.asOfDate)}\n\n`;
     
     csv += 'ACTIVOS\n';
     csv += 'Código,Nombre,Saldo\n';
@@ -522,7 +523,7 @@ export default function AccountingPage() {
 
   const generateIncomeStatementCSV = (data: any) => {
     let csv = 'ESTADO DE RESULTADOS\n';
-    csv += `Del ${new Date(data.fromDate).toLocaleDateString('es-DO')} al ${new Date(data.toDate).toLocaleDateString('es-DO')}\n\n`;
+    csv += `Del ${formatDate(data.fromDate)} al ${formatDate(data.toDate)}\n\n`;
     
     csv += 'INGRESOS\n';
     csv += 'Código,Nombre,Saldo\n';
@@ -545,7 +546,7 @@ export default function AccountingPage() {
 
   const generateTrialBalanceCSV = (data: any) => {
     let csv = 'BALANZA DE COMPROBACIÓN\n';
-    csv += `Al ${new Date(data.asOfDate).toLocaleDateString('es-DO')}\n\n`;
+    csv += `Al ${formatDate(data.asOfDate)}\n\n`;
     csv += 'Código,Nombre,Débito,Crédito\n';
     
     data.accounts.forEach((account: any) => {
@@ -560,7 +561,7 @@ export default function AccountingPage() {
 
   const generateCashFlowCSV = (data: any) => {
     let csv = 'ESTADO DE FLUJO DE EFECTIVO\n';
-    csv += `Del ${new Date(data.fromDate).toLocaleDateString('es-DO')} al ${new Date(data.toDate).toLocaleDateString('es-DO')}\n\n`;
+    csv += `Del ${formatDate(data.fromDate)} al ${formatDate(data.toDate)}\n\n`;
     
     csv += 'Concepto,Monto\n';
     csv += `Flujo de Efectivo Operativo,${formatAmount(data.operatingCashFlow)}\n`;
@@ -573,12 +574,12 @@ export default function AccountingPage() {
 
   const generateGeneralLedgerCSV = (entries: any[]) => {
     let csv = 'MAYOR GENERAL\n';
-    csv += `Generado el ${new Date().toLocaleDateString('es-DO')}\n\n`;
+    csv += `Generado el ${formatDate(new Date())}\n\n`;
     csv += 'Fecha,Número,Descripción,Cuenta,Débito,Crédito\n';
     
     entries.forEach(entry => {
       entry.journal_entry_lines?.forEach((line: any) => {
-        csv += `${new Date(entry.entry_date).toLocaleDateString('es-DO')},${entry.entry_number},${entry.description},${line.chart_accounts?.code} - ${line.chart_accounts?.name},${formatAmount(line.debit_amount || 0)},${formatAmount(line.credit_amount || 0)}\n`;
+        csv += `${formatDate(entry.entry_date)},${entry.entry_number},${entry.description},${line.chart_accounts?.code} - ${line.chart_accounts?.name},${formatAmount(line.debit_amount || 0)},${formatAmount(line.credit_amount || 0)}\n`;
       });
     });
 
@@ -587,11 +588,11 @@ export default function AccountingPage() {
 
   const generateJournalReportCSV = (entries: any[]) => {
     let csv = 'LIBRO DIARIO\n';
-    csv += `Generado el ${new Date().toLocaleDateString('es-DO')}\n\n`;
+    csv += `Generado el ${formatDate(new Date())}\n\n`;
     csv += 'Fecha,Número,Descripción,Referencia,Débito Total,Crédito Total\n';
     
     entries.forEach(entry => {
-      csv += `${new Date(entry.entry_date).toLocaleDateString('es-DO')},${entry.entry_number},${entry.description},${entry.reference || ''},${formatAmount(entry.total_debit)},${formatAmount(entry.total_credit)}\n`;
+      csv += `${formatDate(entry.entry_date)},${entry.entry_number},${entry.description},${entry.reference || ''},${formatAmount(entry.total_debit)},${formatAmount(entry.total_credit)}\n`;
     });
 
     return csv;
@@ -915,7 +916,7 @@ export default function AccountingPage() {
                               {breakdownLines.map((l) => (
                                 <tr key={l.id}>
                                   <td className="px-4 py-2 text-sm text-gray-900">{l.journal_entries?.entry_number || ''}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-500">{l.journal_entries?.entry_date ? new Date(l.journal_entries.entry_date).toLocaleDateString('es-DO') : ''}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-500">{l.journal_entries?.entry_date ? formatDate(l.journal_entries.entry_date) : ''}</td>
                                   <td className="px-4 py-2 text-sm text-gray-900">{l.chart_accounts ? `${l.chart_accounts.code} - ${l.chart_accounts.name}` : ''}</td>
                                   <td className="px-4 py-2 text-sm text-gray-900 text-right">RD${formatAmount(Number(l.debit_amount || 0))}</td>
                                   <td className="px-4 py-2 text-sm text-gray-900 text-right">RD${formatAmount(Number(l.credit_amount || 0))}</td>
@@ -980,7 +981,7 @@ export default function AccountingPage() {
                           {entry.entry_number}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(entry.entry_date).toLocaleDateString('es-DO')}
+                          {formatDate(entry.entry_date)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {entry.description}
@@ -1052,7 +1053,7 @@ export default function AccountingPage() {
                         {entry.entry_number}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(entry.entry_date).toLocaleDateString('es-DO')}
+                        {formatDate(entry.entry_date)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {entry.description}

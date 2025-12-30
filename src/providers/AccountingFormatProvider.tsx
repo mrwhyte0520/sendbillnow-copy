@@ -24,7 +24,7 @@ export function AccountingFormatProvider({ children }: { children: React.ReactNo
   const [settings, setSettings] = useState<AccountingFormatSettings>({
     default_currency: 'DOP',
     decimal_places: 2,
-    date_format: 'DD/MM/YYYY',
+    date_format: 'MM/DD/YYYY',
     number_format: '1,234.56',
   });
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export function AccountingFormatProvider({ children }: { children: React.ReactNo
         const next: AccountingFormatSettings = {
           default_currency: (data as any).default_currency ?? 'DOP',
           decimal_places: (data as any).decimal_places ?? 2,
-          date_format: (data as any).date_format ?? 'DD/MM/YYYY',
+          date_format: (data as any).date_format ?? 'MM/DD/YYYY',
           number_format: (data as any).number_format ?? '1,234.56',
         };
         setSettings(next);
@@ -52,7 +52,7 @@ export function AccountingFormatProvider({ children }: { children: React.ReactNo
         const defaultSettings: AccountingFormatSettings = {
           default_currency: 'DOP',
           decimal_places: 2,
-          date_format: 'DD/MM/YYYY',
+          date_format: 'MM/DD/YYYY',
           number_format: '1,234.56',
         };
         setSettings(defaultSettings);
@@ -91,7 +91,7 @@ export function useAccountingFormat() {
       settings: {
         default_currency: 'DOP',
         decimal_places: 2,
-        date_format: 'DD/MM/YYYY',
+        date_format: 'MM/DD/YYYY',
         number_format: '1,234.56',
       },
       loading: false,

@@ -20,7 +20,7 @@ import {
   taxService,
   settingsService,
 } from '../../../services/database';
-import { formatAmount } from '../../../utils/numberFormat';
+import { formatAmount, getCurrencyPrefix } from '../../../utils/numberFormat';
 
 interface APInvoice {
   id: string;
@@ -1092,14 +1092,14 @@ export default function APInvoicesPage() {
 <div class="totals">
 <div class="totals-head">Resumen</div>
 <div class="totals-body">
-<div class="totals-row"><div class="label">Bruto</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalGross)}</div></div>
+<div class="totals-row"><div class="label">Bruto</div><div class="value">${getCurrencyPrefix(invoice.currency, { forTotals: true }) ? `${getCurrencyPrefix(invoice.currency, { forTotals: true })} ` : ''}${formatAmount(invoice.totalGross)}</div></div>
 ${(Number(invoice.totalDiscount || 0) > 0)
-? `<div class="totals-row"><div class="label">Descuentos</div><div class="value">-${invoice.currency} ${formatAmount(Number(invoice.totalDiscount || 0))}</div></div>
-<div class="totals-row"><div class="label">Subtotal</div><div class="value">${invoice.currency} ${formatAmount(subtotalAfterDiscount)}</div></div>`
+? `<div class="totals-row"><div class="label">Descuentos</div><div class="value">-${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(Number(invoice.totalDiscount || 0))}</div></div>
+<div class="totals-row"><div class="label">Subtotal</div><div class="value">${getCurrencyPrefix(invoice.currency, { forTotals: true }) ? `${getCurrencyPrefix(invoice.currency, { forTotals: true })} ` : ''}${formatAmount(subtotalAfterDiscount)}</div></div>`
 : ''}
-<div class="totals-row"><div class="label">ITBIS${invoice.itbisToCost ? ' (al costo)' : ''}</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalItbis)}</div></div>
+<div class="totals-row"><div class="label">ITBIS${invoice.itbisToCost ? ' (al costo)' : ''}</div><div class="value">${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(invoice.totalItbis)}</div></div>
 ${(totalItbisWithheld > 0)
-? `<div class="totals-row"><div class="label">ITBIS Retenido</div><div class="value">-${invoice.currency} ${formatAmount(totalItbisWithheld)}</div></div>`
+? `<div class="totals-row"><div class="label">ITBIS Retenido</div><div class="value">-${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(totalItbisWithheld)}</div></div>`
 : ''}
 ${otherTaxesDetail
 .map((t: any) => {
@@ -1107,13 +1107,13 @@ const name = String(t?.name || '').trim();
 const amount = Number(t?.amount || 0) || 0;
 const rate = Number(t?.rate || 0) || 0;
 if (!name || amount <= 0) return '';
-return `<div class="totals-row"><div class="label">${name}${rate ? ` (${rate}%)` : ''}</div><div class="value">${invoice.currency} ${formatAmount(amount)}</div></div>`;
+return `<div class="totals-row"><div class="label">${name}${rate ? ` (${rate}%)` : ''}</div><div class="value">${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(amount)}</div></div>`;
 })
 .join('')}
 ${(Number(invoice.totalIsrWithheld || 0) > 0)
-? `<div class="totals-row"><div class="label">ISR Retenido</div><div class="value">-${invoice.currency} ${formatAmount(Number(invoice.totalIsrWithheld || 0))}</div></div>`
+? `<div class="totals-row"><div class="label">ISR Retenido</div><div class="value">-${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(Number(invoice.totalIsrWithheld || 0))}</div></div>`
 : ''}
-<div class="totals-row total"><div class="label">Total a pagar</div><div class="value">${invoice.currency} ${formatAmount(invoice.totalToPay)}</div></div>
+<div class="totals-row total"><div class="label">Total a pagar</div><div class="value">${getCurrencyPrefix(invoice.currency, { forTotals: true }) ? `${getCurrencyPrefix(invoice.currency, { forTotals: true })} ` : ''}${formatAmount(invoice.totalToPay)}</div></div>
 </div>
 </div>
 </div>
@@ -1136,9 +1136,9 @@ ${items
 <tr>
 <td>${idx + 1}</td>
 <td>${item.description}</td>
-<td class="num">${invoice.currency} ${formatAmount(item.unitPrice)}</td>
+<td class="num">${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(item.unitPrice)}</td>
 <td class="num">${item.quantity}</td>
-<td class="num">${invoice.currency} ${formatAmount(item.total)}</td>
+<td class="num">${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(item.total)}</td>
 </tr>`
 )
 .join('')}
@@ -1349,13 +1349,13 @@ ${items
         rows: items.map((item: any) => [
           item.description,
           item.quantity,
-          `${invoice.currency} ${formatAmount(Number(item.unitPrice || 0))}`,
-          `${invoice.currency} ${formatAmount(Number(item.total || 0))}`,
+          `${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(Number(item.unitPrice || 0))}`,
+          `${getCurrencyPrefix(invoice.currency) ? `${getCurrencyPrefix(invoice.currency)} ` : ''}${formatAmount(Number(item.total || 0))}`,
         ]),
         summary: [
           { label: 'Suplidor', value: supplierName },
           { label: 'Fecha', value: invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString('es-DO') : '' },
-          { label: 'Total a pagar', value: `${invoice.currency} ${formatAmount(invoice.totalToPay)}` },
+          { label: 'Total a pagar', value: `${getCurrencyPrefix(invoice.currency, { forTotals: true }) ? `${getCurrencyPrefix(invoice.currency, { forTotals: true })} ` : ''}${formatAmount(invoice.totalToPay)}` },
         ],
       });
     } catch (error) {

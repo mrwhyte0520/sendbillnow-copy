@@ -1137,11 +1137,7 @@ export default function FinancialStatementsPage() {
     const endDate = new Date(year, month, 0);
 
     const formatLongDate = (date: Date) => {
-      return date.toLocaleDateString('es-DO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      return formatDate(date);
     };
 
     return {
@@ -1190,11 +1186,7 @@ export default function FinancialStatementsPage() {
     if (to.getTime() < from.getTime()) to = new Date(from);
 
     const formatLongDate = (date: Date) => {
-      return date.toLocaleDateString('es-DO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      return formatDate(date);
     };
 
     return {
@@ -1235,11 +1227,7 @@ export default function FinancialStatementsPage() {
     }
 
     const formatLongDate = (date: Date) => {
-      return date.toLocaleDateString('es-DO', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      return formatDate(date);
     };
 
     return `Del ${formatLongDate(startDate)} al ${formatLongDate(endDate)}`;
@@ -2431,7 +2419,7 @@ export default function FinancialStatementsPage() {
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Día / Mes / Año</div>
+                  <div className="text-xs text-gray-500 mb-1">Mes / Día / Año</div>
                   <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-700">Desde:</label>
                   <DateInput
@@ -2442,6 +2430,7 @@ export default function FinancialStatementsPage() {
                       setIncomeFromDate(e.target.value);
                     }}
                   />
+                  <span className="text-xs text-gray-500">({formatDate(incomeFromDate)})</span>
                   <span className="text-sm text-gray-700">Hasta:</span>
                   <DateInput
                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
@@ -2451,6 +2440,7 @@ export default function FinancialStatementsPage() {
                       setIncomeToDate(e.target.value || null);
                     }}
                   />
+                  <span className="text-xs text-gray-500">({formatDate(incomeToDate || '')})</span>
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
@@ -2491,7 +2481,7 @@ export default function FinancialStatementsPage() {
               {showComparisonControls && (
                 <div className="flex items-center justify-end gap-2 mb-2 print-hidden">
                   <div>
-                    <div className="text-[11px] text-gray-500 mb-1">Día / Mes / Año</div>
+                    <div className="text-[11px] text-gray-500 mb-1">Mes / Día / Año</div>
                     <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-700">Comparativo desde:</label>
                     <DateInput
@@ -2705,7 +2695,7 @@ export default function FinancialStatementsPage() {
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Día / Mes / Año</div>
+                  <div className="text-xs text-gray-500 mb-1">Mes / Día / Año</div>
                   <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-700">Desde:</label>
                   <DateInput
@@ -2765,7 +2755,7 @@ export default function FinancialStatementsPage() {
               {showComparisonControls && (
                 <div className="flex items-center justify-end gap-2 mb-2 print-hidden">
                   <div>
-                    <div className="text-[11px] text-gray-500 mb-1">Día / Mes / Año</div>
+                    <div className="text-[11px] text-gray-500 mb-1">Mes / Día / Año</div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-700">Comparativo desde:</label>
                       <DateInput
@@ -2946,7 +2936,7 @@ export default function FinancialStatementsPage() {
               {showComparisonControls && (
                 <div className="flex items-center justify-end gap-2 mb-2 print-hidden">
                   <div>
-                    <div className="text-[11px] text-gray-500 mb-1">Día / Mes / Año</div>
+                    <div className="text-[11px] text-gray-500 mb-1">Mes / Día / Año</div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-700">Comparativo desde:</label>
                       <DateInput
@@ -3229,7 +3219,7 @@ export default function FinancialStatementsPage() {
               {/* Header con selector de período y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Día / Mes / Año</div>
+                  <div className="text-xs text-gray-500 mb-1">Mes / Día / Año</div>
                   <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-700">Desde:</label>
                   <DateInput
@@ -3581,7 +3571,7 @@ export default function FinancialStatementsPage() {
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
                 <div>
-                  <div className="text-xs text-gray-500 mb-1">Día / Mes / Año</div>
+                  <div className="text-xs text-gray-500 mb-1">Mes / Día / Año</div>
                   <div className="flex items-center gap-2">
                   <label className="text-sm text-gray-700">Desde:</label>
                   <DateInput
@@ -3644,7 +3634,7 @@ export default function FinancialStatementsPage() {
               {showComparisonControls && (
                 <div className="flex items-center justify-end gap-2 mb-2 print-hidden">
                   <div>
-                    <div className="text-[11px] text-gray-500 mb-1">Día / Mes / Año</div>
+                    <div className="text-[11px] text-gray-500 mb-1">Mes / Día / Año</div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-gray-700">Comparativo desde:</label>
                       <DateInput

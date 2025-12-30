@@ -11,7 +11,7 @@ import {
   quotesService,
   settingsService,
 } from '../../services/database';
-import { formatAmount } from '../../utils/numberFormat';
+import { formatAmount, getCurrencyPrefix } from '../../utils/numberFormat';
 
 type DocType = 'quote' | 'invoice' | 'ap-invoice' | 'purchase-order';
 
@@ -129,6 +129,10 @@ export default function DocumentPage() {
       '';
 
     const currency = header.currency || 'DOP';
+    const money = (value: number, opts?: { forTotals?: boolean }) => {
+      const prefix = getCurrencyPrefix(currency, { forTotals: opts?.forTotals });
+      return `${prefix ? `${prefix} ` : ''}${formatAmount(value)}`;
+    };
 
     const linesHtml = (doc.lines || [])
       .map((ln: any, idx: number) => {
@@ -140,9 +144,9 @@ export default function DocumentPage() {
           <tr>
             <td>${idx + 1}</td>
             <td>${desc}</td>
-            <td style="text-align:right;">${currency} ${formatAmount(unit)}</td>
+            <td style="text-align:right;">${money(unit)}</td>
             <td style="text-align:right;">${qty}</td>
-            <td style="text-align:right;">${currency} ${formatAmount(total)}</td>
+            <td style="text-align:right;">${money(total)}</td>
           </tr>`;
       })
       .join('');
@@ -240,9 +244,9 @@ export default function DocumentPage() {
             </tbody>
           </table>
           <div class="totals">
-            <div class="totals-row"><span>Subtotal</span><span>${currency} ${formatAmount(subtotal)}</span></div>
-            <div class="totals-row"><span>ITBIS/Impuestos</span><span>${currency} ${formatAmount(tax)}</span></div>
-            <div class="totals-row"><span>Total</span><span>${currency} ${formatAmount(total)}</span></div>
+            <div class="totals-row"><span>Subtotal</span><span>${money(subtotal, { forTotals: true })}</span></div>
+            <div class="totals-row"><span>ITBIS/Impuestos</span><span>${money(tax)}</span></div>
+            <div class="totals-row"><span>Total</span><span>${money(total, { forTotals: true })}</span></div>
           </div>
         </body>
       </html>

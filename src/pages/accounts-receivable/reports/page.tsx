@@ -13,7 +13,7 @@ import {
 } from '../../../services/database';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatAmount, formatMoney } from '../../../utils/numberFormat';
+import { formatAmount, formatMoney, getCurrencyPrefix } from '../../../utils/numberFormat';
 
 interface ReportCustomer {
   id: string;
@@ -434,12 +434,14 @@ export default function ReportsPage() {
         currentY += 10;
 
         const invoiceData = customerInvoices.map(inv => {
+          const invPrefix = getCurrencyPrefix(inv.currency);
+          const basePrefix = getCurrencyPrefix(baseCurrencyCode);
           const amountStr = inv.baseAmount != null && inv.currency !== baseCurrencyCode
-            ? `${inv.currency} ${formatAmount(inv.amount)} (≈ ${baseCurrencyCode} ${formatAmount(inv.baseAmount)})`
-            : `${inv.currency} ${formatAmount(inv.amount)}`;
+            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.amount)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseAmount)})`
+            : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.amount)}`;
           const balanceStr = inv.baseBalance != null && inv.currency !== baseCurrencyCode
-            ? `${inv.currency} ${formatAmount(inv.balance)} (≈ ${baseCurrencyCode} ${formatAmount(inv.baseBalance)})`
-            : `${inv.currency} ${formatAmount(inv.balance)}`;
+            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.balance)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseBalance)})`
+            : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.balance)}`;
 
           return [
             inv.invoiceNumber,
@@ -838,12 +840,14 @@ export default function ReportsPage() {
       doc.text('Detalle de Facturas Vencidas', 20, (doc as any).lastAutoTable.finalY + 20);
 
       const overdueData = overdueInvoices.map(invoice => {
+        const invPrefix = getCurrencyPrefix(invoice.currency);
+        const basePrefix = getCurrencyPrefix(baseCurrencyCode);
         const amountStr = invoice.baseAmount != null && invoice.currency !== baseCurrencyCode
-          ? `${invoice.currency} ${formatAmount(invoice.amount)} (≈ ${baseCurrencyCode} ${formatAmount(invoice.baseAmount)})`
-          : `${invoice.currency} ${formatAmount(invoice.amount)}`;
+          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.amount)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseAmount)})`
+          : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.amount)}`;
         const balanceStr = invoice.baseBalance != null && invoice.currency !== baseCurrencyCode
-          ? `${invoice.currency} ${formatAmount(invoice.balance)} (≈ ${baseCurrencyCode} ${formatAmount(invoice.baseBalance)})`
-          : `${invoice.currency} ${formatAmount(invoice.balance)}`;
+          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.balance)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseBalance)})`
+          : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.balance)}`;
 
         return [
           invoice.invoiceNumber,

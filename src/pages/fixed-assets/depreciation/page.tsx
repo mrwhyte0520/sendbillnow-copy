@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
@@ -19,6 +19,7 @@ interface DepreciationEntry {
   period: string;
   status: string;
   method: string;
+  journalEntryNumber?: string | null;
 }
 
 export default function DepreciationPage() {
@@ -29,6 +30,7 @@ export default function DepreciationPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPeriod, setFilterPeriod] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [lastJournalEntryNumber, setLastJournalEntryNumber] = useState<string | null>(null);
 
   const [depreciations, setDepreciations] = useState<DepreciationEntry[]>([]);
   const [periods, setPeriods] = useState<string[]>([]);
@@ -60,6 +62,7 @@ export default function DepreciationPage() {
           period: d.period,
           status: d.status,
           method: d.method,
+          journalEntryNumber: d.journal_entry_number,
         }));
         setDepreciations(mappedDepr);
 
@@ -97,7 +100,7 @@ export default function DepreciationPage() {
     setShowCalculateModal(true);
   };
 
-  const handleProcessDepreciation = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleProcessDepreciation = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
 
@@ -114,6 +117,9 @@ export default function DepreciationPage() {
       // y genera el asiento contable automático en el Diario.
       const result = await assetDepreciationService.calculateMonthlyDepreciation(user.id, processDate);
 
+      const entryNumber = result?.journalEntry?.entry_number || result?.journalEntry?.entryNumber || null;
+      setLastJournalEntryNumber(typeof entryNumber === 'string' && entryNumber.trim().length > 0 ? entryNumber : null);
+
       const created = result?.depreciations || [];
       const mappedCreated: DepreciationEntry[] = (created || []).map((d: any) => ({
         id: d.id,
@@ -128,6 +134,7 @@ export default function DepreciationPage() {
         period: d.depreciation_date ? String(d.depreciation_date).slice(0, 7) : period,
         status: d.status || 'Calculado',
         method: d.method || 'Línea Recta',
+        journalEntryNumber: d.journal_entry_number,
       }));
 
       // Refrescar la lista mostrando primero las depreciaciones más recientes
@@ -379,6 +386,15 @@ export default function DepreciationPage() {
     return formatMoney(amount, 'RD$');
   };
 
+  const getDepreciationJournalEntryNumber = (dep: DepreciationEntry) => {
+    const explicit = typeof dep.journalEntryNumber === 'string' ? dep.journalEntryNumber.trim() : '';
+    if (explicit) return explicit;
+
+    const period = String(dep.period || '').trim();
+    if (!period) return null;
+    return `DEP-${period}`;
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -397,6 +413,13 @@ export default function DepreciationPage() {
           </div>
           <div className="flex space-x-3">
             <button
+              onClick={exportToPDF}
+              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+            >
+              <i className="ri-printer-line mr-2"></i>
+              Exportar PDF
+            </button>
+            <button
               onClick={exportToExcel}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
@@ -412,6 +435,21 @@ export default function DepreciationPage() {
             </button>
           </div>
         </div>
+
+        {lastJournalEntryNumber && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-4 py-3 flex items-center justify-between">
+            <div className="text-sm">
+              Asiento generado: <span className="font-semibold">{lastJournalEntryNumber}</span>
+            </div>
+
+            <button
+              onClick={() => navigate(`/accounting/general-journal?entry=${encodeURIComponent(lastJournalEntryNumber)}`)}
+              className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+            >
+              Ver en Diario
+            </button>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -465,9 +503,7 @@ export default function DepreciationPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
@@ -480,24 +516,20 @@ export default function DepreciationPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Período
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
               <select
                 value={filterPeriod}
                 onChange={(e) => setFilterPeriod(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos los períodos</option>
-                {periods.map(period => (
+                {periods.map((period) => (
                   <option key={period} value={period}>{period}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -535,33 +567,15 @@ export default function DepreciationPage() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activo
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Costo Adquisición
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Depreciación Mensual
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Depreciación Acumulada
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Remanente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha Depreciación
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Período
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costo Adquisición</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación Mensual</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación Acumulada</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Remanente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Depreciación</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -609,6 +623,23 @@ export default function DepreciationPage() {
                         >
                           <i className="ri-eye-line"></i>
                         </button>
+
+                        {getDepreciationJournalEntryNumber(depreciation) && (
+                          <button
+                            onClick={() =>
+                              navigate(
+                                `/accounting/general-journal?entry=${encodeURIComponent(
+                                  String(getDepreciationJournalEntryNumber(depreciation)),
+                                )}`,
+                              )
+                            }
+                            className="text-indigo-600 hover:text-indigo-900"
+                            title="Ver en Diario"
+                          >
+                            <i className="ri-book-open-line"></i>
+                          </button>
+                        )}
+
                         {(depreciation.status === 'Calculado' || depreciation.status === 'Reversado') && (
                           <button
                             onClick={() => handleReverseDepreciation(depreciation.id)}
@@ -627,84 +658,84 @@ export default function DepreciationPage() {
           </div>
         </div>
 
-        {selectedDepreciation && (
+        {showModal && selectedDepreciation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Detalle de Depreciación
-                </h3>
-                <button
-                  onClick={() => setSelectedDepreciation(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <i className="ri-close-line text-xl"></i>
-                </button>
+                <h3 className="text-lg font-semibold text-gray-900">Detalle de Depreciación</h3>
+                <div className="flex items-center space-x-2">
+                  {getDepreciationJournalEntryNumber(selectedDepreciation) && (
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/accounting/general-journal?entry=${encodeURIComponent(
+                            String(getDepreciationJournalEntryNumber(selectedDepreciation)),
+                          )}`,
+                        )
+                      }
+                      className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm whitespace-nowrap"
+                    >
+                      Ver en Diario
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setSelectedDepreciation(null);
+                      setShowModal(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <i className="ri-close-line text-xl"></i>
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Activo
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Activo</label>
                     <p className="text-sm text-gray-900">{selectedDepreciation.assetName}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Código
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Código</label>
                     <p className="text-sm text-gray-900">{selectedDepreciation.assetCode}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Costo Adquisición
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Costo Adquisición</label>
                     <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.acquisitionCost)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Depreciación Mensual
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Depreciación Mensual</label>
                     <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.monthlyDepreciation)}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha Depreciación
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Depreciación</label>
                     <p className="text-sm text-gray-900">{selectedDepreciation.depreciationDate ? new Date(selectedDepreciation.depreciationDate).toLocaleDateString('es-DO') : '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Período
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
                     <p className="text-sm text-gray-900">{selectedDepreciation.period}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
                     <p className="text-sm text-gray-900">{selectedDepreciation.status}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Depreciación Acumulada
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Depreciación Acumulada</label>
                     <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.accumulatedDepreciation)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Valor Remanente
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor Remanente</label>
                     <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.remainingValue)}</p>
                   </div>
                 </div>

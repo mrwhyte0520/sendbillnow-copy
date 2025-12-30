@@ -2,11 +2,14 @@ export type DateFormatSettings = {
   date_format?: string | null;
 };
 
-let globalDateFormat: string = 'DD/MM/YYYY';
+let globalDateFormat: string = 'MM/DD/YYYY';
 
 export const setGlobalDateFormatSettings = (settings: DateFormatSettings) => {
   const fmt = String(settings?.date_format || '').trim();
-  if (fmt) globalDateFormat = fmt;
+  if (!fmt) return;
+  // Mandato: mostrar Mes/Día/Año en reportes/estados
+  // (si existe configuración vieja en Día/Mes/Año la normalizamos)
+  globalDateFormat = fmt === 'DD/MM/YYYY' ? 'MM/DD/YYYY' : fmt;
 };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');

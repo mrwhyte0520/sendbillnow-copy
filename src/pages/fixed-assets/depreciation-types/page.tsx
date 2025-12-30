@@ -216,8 +216,10 @@ export default function DepreciationTypesPage() {
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
                       {type.annualRate != null ? type.annualRate.toFixed(2) : '-'}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {type.description || '-'}
+                    <td className="px-4 py-2 text-sm text-gray-500">
+                      <div className="max-w-md whitespace-normal break-words">
+                        {type.description || '-'}
+                      </div>
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
                       <button

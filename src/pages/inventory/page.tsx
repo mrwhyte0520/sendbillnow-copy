@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { inventoryService, settingsService, chartAccountsService, journalEntriesService, accountingSettingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService } from '../../services/database';
+import { inventoryService, settingsService, chartAccountsService, journalEntriesService, accountingSettingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, resolveTenantId } from '../../services/database';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
@@ -13,6 +13,8 @@ export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
+  const [realSalesTotal, setRealSalesTotal] = useState(0);
+
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [warehouseEntries, setWarehouseEntries] = useState<any[]>([]);
@@ -27,7 +29,8 @@ export default function InventoryPage() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+  const transferNumberRequestRef = useRef(0);
+
   // Filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -62,6 +65,53 @@ export default function InventoryPage() {
       setLoading(false);
     }
   }, [user, activeTab]);
+
+  useEffect(() => {
+    const loadRealSalesTotal = async () => {
+      try {
+        if (!user?.id) return;
+        if (activeTab !== 'dashboard') return;
+
+        const tenantId = await resolveTenantId(user.id);
+        if (!tenantId) {
+          setRealSalesTotal(0);
+          return;
+        }
+
+        // Ventas reales = sumatoria de líneas de factura asociadas a ítems de inventario (no servicios)
+        const { data, error } = await supabase
+          .from('invoice_lines')
+          .select(`
+            quantity,
+            unit_price,
+            line_total,
+            item_id,
+            inventory_items ( item_type ),
+            invoices!inner ( user_id )
+          `)
+          .eq('invoices.user_id', tenantId);
+
+        if (error) throw error;
+
+        const total = (data || [])
+          .filter((ln: any) => ln?.item_id && ln?.inventory_items?.item_type !== 'service')
+          .reduce((sum: number, ln: any) => {
+            const lineTotal = Number(ln?.line_total ?? 0) || 0;
+            if (lineTotal) return sum + lineTotal;
+            const qty = Number(ln?.quantity ?? 0) || 0;
+            const unit = Number(ln?.unit_price ?? 0) || 0;
+            return sum + (qty * unit);
+          }, 0);
+
+        setRealSalesTotal(total);
+      } catch (e) {
+        console.error('Error loading real sales total:', e);
+        setRealSalesTotal(0);
+      }
+    };
+
+    loadRealSalesTotal();
+  }, [user?.id, activeTab]);
 
   useEffect(() => {
     const loadEntrySources = async () => {
@@ -115,10 +165,10 @@ export default function InventoryPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
       let itemsData = [];
       let movementsData = [];
-      
+
       if (activeTab === 'items' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
         try {
           itemsData = await inventoryService.getItems(user!.id);
@@ -131,7 +181,7 @@ export default function InventoryPage() {
         }
         setItems(itemsData);
       }
-      
+
       if (activeTab === 'movements' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
         try {
           movementsData = await inventoryService.getMovements(user!.id);
@@ -364,6 +414,43 @@ export default function InventoryPage() {
     }
 
     setShowModal(true);
+
+    // Prellenar número de documento para transferencias internas (editable)
+    if (!item && type === 'warehouse_transfer' && user?.id) {
+      const requestId = Date.now();
+      transferNumberRequestRef.current = requestId;
+
+      (async () => {
+        try {
+          const tenantId = await resolveTenantId(user.id);
+          if (!tenantId) return;
+
+          const { data: nextNum, error: nextNumError } = await supabase.rpc(
+            'peek_document_number',
+            {
+              p_tenant_id: tenantId,
+              p_doc_key: 'warehouse_transfer',
+              p_prefix: 'TRF',
+              p_padding: 6,
+            },
+          );
+
+          if (nextNumError) throw nextNumError;
+          if (transferNumberRequestRef.current !== requestId) return;
+
+          if (typeof nextNum === 'string' && nextNum.trim().length > 0) {
+            setFormData((prev: any) => {
+              const current = typeof prev?.document_number === 'string' ? prev.document_number.trim() : '';
+              if (current.length > 0) return prev;
+              return { ...prev, document_number: nextNum };
+            });
+          }
+        } catch (err) {
+          // Si la RPC no existe aún o falla, se deja editable en blanco
+          console.warn('Could not prefill warehouse transfer document number:', err);
+        }
+      })();
+    }
   };
 
   const handleCloseModal = () => {
@@ -1212,10 +1299,7 @@ export default function InventoryPage() {
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Valor Total Venta</p>
             <p className="text-2xl font-bold text-green-600">
-              ${items
-                .filter(item => item.item_type !== 'service')
-                .reduce((sum, item) => sum + ((item.current_stock || 0) * (item.selling_price || 0)), 0)
-                .toLocaleString('es-DO')}
+              ${realSalesTotal.toLocaleString('es-DO')}
             </p>
           </div>
           <div className="text-center">

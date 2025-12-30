@@ -26,8 +26,19 @@ const resolveCurrencyLabel = (currency: string | null | undefined): string => {
   const c = String(currency || '').toUpperCase();
   if (c === 'USD') return 'US$';
   if (c === 'EUR') return '€';
-  if (c === 'DOP') return 'RD$';
+  if (c === 'DOP') return '';
   return c || 'RD$';
+};
+
+export const getCurrencyPrefix = (
+  currency: string | null | undefined,
+  options?: { forTotals?: boolean },
+): string => {
+  const c = String(currency || '').toUpperCase();
+  if (c === 'DOP') {
+    return options?.forTotals ? 'RD$' : '';
+  }
+  return resolveCurrencyLabel(c);
 };
 
 export const setGlobalAccountingFormatSettings = (settings: GlobalAccountingFormatSettings) => {
@@ -80,5 +91,6 @@ export const formatMoney = (
   const amount = formatAmount(value);
   if (!amount) return '';
   const label = currencyLabel ?? globalCurrencyLabel;
+  if (!label) return amount;
   return `${label} ${amount}`;
 };

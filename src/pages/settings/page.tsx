@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { settingsService } from '../../services/database';
+import { payrollSettingsService, settingsService } from '../../services/database';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useAuth } from '../../hooks/useAuth';
@@ -85,10 +85,10 @@ export default function SettingsPage() {
         settingsService.getAccountingSettings(user.id),
         settingsService.getTaxSettings(),
         settingsService.getInventorySettings(),
-        settingsService.getPayrollSettings(),
+        payrollSettingsService.getPayrollSettings(),
         settingsService.getTaxRates(),
         settingsService.getWarehouses(),
-        settingsService.getPayrollConcepts()
+        payrollSettingsService.getPayrollConcepts()
       ]);
 
       const wb = new ExcelJS.Workbook();
@@ -180,7 +180,7 @@ export default function SettingsPage() {
 
       // Hoja 6: Tasas de Impuestos
       if (taxRates && taxRates.length > 0) {
-        const taxRatesRows = taxRates.map(rate => [
+        const taxRatesRows = taxRates.map((rate: any) => [
           rate.name || '',
           rate.type || '',
           rate.rate || '',
@@ -192,7 +192,7 @@ export default function SettingsPage() {
 
       // Hoja 7: Almacenes
       if (warehouses && warehouses.length > 0) {
-        const warehousesRows = warehouses.map(wh => [
+        const warehousesRows = warehouses.map((wh: any) => [
           wh.name || '',
           wh.code || '',
           wh.address || '',
@@ -205,7 +205,7 @@ export default function SettingsPage() {
 
       // Hoja 8: Conceptos de Nómina
       if (payrollConcepts && payrollConcepts.length > 0) {
-        const conceptsRows = payrollConcepts.map(c => [
+        const conceptsRows = payrollConcepts.map((c: any) => [
           c.name || '',
           c.code || '',
           c.type || '',
@@ -294,7 +294,7 @@ export default function SettingsPage() {
         }
 
         if (configData.payrollSettings) {
-          await settingsService.savePayrollSettings(configData.payrollSettings);
+          await payrollSettingsService.savePayrollSettings(configData.payrollSettings);
           importedSections++;
         }
 
@@ -326,7 +326,7 @@ export default function SettingsPage() {
         if (configData.payrollConcepts && Array.isArray(configData.payrollConcepts)) {
           for (const concept of configData.payrollConcepts) {
             try {
-              await settingsService.createPayrollConcept(concept);
+              await payrollSettingsService.createPayrollConcept(concept);
             } catch (error) {
               // Continuar si ya existe
               console.warn('Payroll concept already exists or error creating:', error);
@@ -369,7 +369,7 @@ export default function SettingsPage() {
         fiscal_year_end: '2024-12-31',
         default_currency: 'DOP',
         decimal_places: 2,
-        date_format: 'DD/MM/YYYY',
+        date_format: 'MM/DD/YYYY',
         number_format: '1,234.56',
         auto_backup: true,
         backup_frequency: 'daily',
@@ -407,7 +407,7 @@ export default function SettingsPage() {
         settingsService.saveAccountingSettings(defaultAccountingSettings, user.id),
         settingsService.saveTaxSettings(defaultTaxSettings),
         settingsService.saveInventorySettings(defaultInventorySettings),
-        settingsService.savePayrollSettings(defaultPayrollSettings)
+        payrollSettingsService.savePayrollSettings(defaultPayrollSettings)
       ]);
 
       setMessage({ 
