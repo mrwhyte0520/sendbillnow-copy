@@ -77,7 +77,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
           <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
             <i className="ri-gift-line text-4xl text-white"></i>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">¡Bienvenido a Contabi RD!</h2>
+          <h2 className="text-3xl font-bold text-white mb-2">¡Bienvenido a Sendbillnow!</h2>
           <p className="text-blue-100 text-lg">Selecciona tu plan y comienza tu prueba gratuita de 7 días</p>
           <div className="mt-4 inline-flex items-center bg-white/20 rounded-full px-4 py-2">
             <i className="ri-timer-line text-white mr-2"></i>

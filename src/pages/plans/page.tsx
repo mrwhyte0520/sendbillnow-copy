@@ -405,7 +405,7 @@ export default function PlansPage() {
               <div>
                 <h3 className="font-semibold">¡Tu prueba gratuita está por vencer!</h3>
                 <p className="text-sm opacity-90">
-                  Te quedan {formatTimeLeft()}. Selecciona un plan para continuar usando Contabi RD.
+                  Te quedan {formatTimeLeft()}. Selecciona un plan para continuar usando Sendbillnow.
                 </p>
               </div>
             </div>
@@ -417,7 +417,7 @@ export default function PlansPage() {
             <i className="ri-lock-line text-4xl mb-3"></i>
             <h3 className="text-xl font-bold mb-2">Prueba gratuita expirada</h3>
             <p className="mb-4">
-              Tu período de prueba ha terminado. Para continuar usando Contabi RD, 
+              Tu período de prueba ha terminado. Para continuar usando Sendbillnow, 
               selecciona un plan de suscripción y completa el pago.
             </p>
           </div>
@@ -532,7 +532,7 @@ export default function PlansPage() {
                     <span className="font-semibold">Período de prueba expirado</span>
                   </div>
                   <p className="text-sm text-red-600 mt-1">
-                    Debes completar el pago para reactivar tu acceso a Contabi RD.
+                    Debes completar el pago para reactivar tu acceso a Sendbillnow.
                   </p>
                 </div>
               )}

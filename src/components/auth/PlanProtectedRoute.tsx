@@ -65,7 +65,7 @@ export default function PlanProtectedRoute({ children }: PlanProtectedRouteProps
                 <div>
                   <h3 className="font-semibold text-red-800">Período de prueba expirado</h3>
                   <p className="text-sm text-red-600 mt-1">
-                    Tu período de prueba ha terminado. Suscríbete a un plan para continuar usando Contabi RD.
+                    Tu período de prueba ha terminado. Suscríbete a un plan para continuar usando Sendbillnow.
                   </p>
                 </div>
               </div>
@@ -119,7 +119,7 @@ export default function PlanProtectedRoute({ children }: PlanProtectedRouteProps
           </div>
 
           <p className="text-xs text-gray-500 text-center pt-2">
-            Actualiza tu plan para desbloquear todas las funcionalidades de Contabi RD
+            Actualiza tu plan para desbloquear todas las funcionalidades de Sendbillnow
           </p>
         </div>
       </div>

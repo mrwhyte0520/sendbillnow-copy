@@ -72,7 +72,7 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
                   <div>
                     <h3 className="font-semibold text-red-800">Período de prueba expirado</h3>
                     <p className="text-sm text-red-600 mt-1">
-                      Tu período de prueba ha terminado. Suscríbete a un plan para continuar usando Contabi RD.
+                      Tu período de prueba ha terminado. Suscríbete a un plan para continuar usando Sendbillnow.
                     </p>
                   </div>
                 </div>

@@ -55,12 +55,12 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-white to-stone-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo y título */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] rounded-2xl mb-4">
               <i className="ri-shield-user-line text-3xl text-white"></i>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido</h1>
@@ -90,7 +90,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="tu@email.com"
                   disabled={loading}
                 />
@@ -110,7 +110,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="••••••••"
                   disabled={loading}
                 />
@@ -130,7 +130,7 @@ export default function Login() {
                 <input
                   id="remember"
                   type="checkbox"
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                  className="h-4 w-4 text-[#4a5d23] focus:ring-[#4a5d23] border-stone-300 rounded cursor-pointer"
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Recordarme
@@ -138,7 +138,7 @@ export default function Login() {
               </div>
               <Link
                 to="/auth/reset-password"
-                className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap"
+                className="text-sm font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -147,7 +147,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+              className="w-full bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white py-3 px-4 rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] focus:outline-none focus:ring-2 focus:ring-[#4a5d23] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
             >
               {loading ? (
                 <>
@@ -169,7 +169,7 @@ export default function Login() {
               ¿No tienes una cuenta?{' '}
               <Link
                 to="/auth/register"
-                className="font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap"
+                className="font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
                 Regístrate aquí
               </Link>

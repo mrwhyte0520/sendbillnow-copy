@@ -88,7 +88,7 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-stone-100 via-white to-stone-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
@@ -98,8 +98,8 @@ export default function Register() {
             <p className="text-gray-600 mb-6">
               Hemos enviado un correo de confirmación a <strong>{formData.email}</strong>
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
+            <div className="bg-[#4a5d23]/10 border border-[#4a5d23]/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#4a5d23]">
                 <i className="ri-information-line mr-2"></i>
                 Por favor revisa tu bandeja de entrada y haz clic en el enlace de confirmación para activar tu cuenta.
               </p>
@@ -109,7 +109,7 @@ export default function Register() {
             </p>
             <Link
               to="/auth/login"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] transition-all whitespace-nowrap"
             >
               <i className="ri-login-box-line mr-2"></i>
               Ir a Iniciar Sesión
@@ -121,12 +121,12 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-white to-stone-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo y título */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] rounded-2xl mb-4">
               <i className="ri-user-add-line text-3xl text-white"></i>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Crear Cuenta</h1>
@@ -157,7 +157,7 @@ export default function Register() {
                   type="text"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="Juan Pérez"
                   disabled={loading}
                 />
@@ -178,7 +178,7 @@ export default function Register() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="tu@email.com"
                   disabled={loading}
                 />
@@ -199,7 +199,7 @@ export default function Register() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="Mínimo 6 caracteres"
                   disabled={loading}
                 />
@@ -228,7 +228,7 @@ export default function Register() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
                   placeholder="Repite tu contraseña"
                   disabled={loading}
                 />
@@ -248,16 +248,16 @@ export default function Register() {
                 id="terms"
                 type="checkbox"
                 required
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer mt-1"
+                className="h-4 w-4 text-[#4a5d23] focus:ring-[#4a5d23] border-stone-300 rounded cursor-pointer mt-1"
                 disabled={loading}
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 Acepto los{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap">
+                <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
                   términos y condiciones
                 </a>{' '}
                 y la{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap">
+                <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
                   política de privacidad
                 </a>
               </label>
@@ -266,7 +266,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+              className="w-full bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white py-3 px-4 rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] focus:outline-none focus:ring-2 focus:ring-[#4a5d23] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
             >
               {loading ? (
                 <>
@@ -288,7 +288,7 @@ export default function Register() {
               ¿Ya tienes una cuenta?{' '}
               <Link
                 to="/auth/login"
-                className="font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap"
+                className="font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
                 Inicia sesión aquí
               </Link>

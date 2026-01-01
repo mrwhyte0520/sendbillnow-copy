@@ -45,21 +45,21 @@ function buildNotification(event, userEmail) {
     case 'login':
       return {
         title: 'Inicio de sesión',
-        message: `Se inició sesión en Contabi RD (${safeEmail}).`,
+        message: `Se inició sesión en Sendbillnow (${safeEmail}).`,
         type: 'info',
         priority: 'normal',
       };
     case 'register':
       return {
         title: 'Cuenta creada',
-        message: `Se creó una cuenta nueva en Contabi RD (${safeEmail}).`,
+        message: `Se creó una cuenta nueva en Sendbillnow (${safeEmail}).`,
         type: 'info',
         priority: 'normal',
       };
     case 'plan_purchase':
       return {
         title: 'Plan activado',
-        message: `Se activó un plan en Contabi RD (${safeEmail}).`,
+        message: `Se activó un plan en Sendbillnow (${safeEmail}).`,
         type: 'success',
         priority: 'high',
       };

@@ -218,7 +218,7 @@ export default function SettingsPage() {
       // Hoja 9: Información de Exportación
       addStyledSheet('Info Exportación', ['Campo', 'Valor'], [
         ['Fecha de Exportación', new Date().toLocaleString('es-DO')],
-        ['Sistema', 'Contabi RD'],
+        ['Sistema', 'Sendbillnow'],
         ['Versión', '1.0'],
         ['Usuario', 'Administrador'],
         ['Descripción', 'Configuración completa del sistema contable']
@@ -265,9 +265,9 @@ export default function SettingsPage() {
           throw new Error('Archivo de configuración inválido o corrupto');
         }
 
-        // Verificar que es un archivo de Contabi RD
-        if (configData.exportInfo.systemName !== 'Contabi RD') {
-          throw new Error('Este archivo no es compatible con Contabi RD');
+        // Verificar que es un archivo de Sendbillnow
+        if (configData.exportInfo.systemName !== 'Sendbillnow') {
+          throw new Error('Este archivo no es compatible con Sendbillnow');
         }
 
         let importedSections = 0;

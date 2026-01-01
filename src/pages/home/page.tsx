@@ -139,8 +139,8 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600" style={{ fontFamily: '"Pacifico", serif' }}>
-                Contabi RD
+              <h1 className="text-2xl font-bold text-[#4a5d23]" style={{ fontFamily: '"Pacifico", serif' }}>
+                Sendbillnow
               </h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -156,10 +156,10 @@ export default function HomePage() {
               >
                 Precios
               </button>
-              <Link to="/auth/login" className="text-blue-600 hover:text-blue-700 cursor-pointer">Iniciar Sesión</Link>
+              <Link to="/auth/login" className="text-[#4a5d23] hover:text-[#3d4d1c] cursor-pointer">Iniciar Sesión</Link>
               <Link 
                 to="/auth/register" 
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 whitespace-nowrap cursor-pointer"
+                className="bg-[#4a5d23] text-white px-4 py-2 rounded-lg hover:bg-[#3d4d1c] whitespace-nowrap cursor-pointer"
               >
                 Prueba Gratis
               </Link>
@@ -174,12 +174,12 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
+      <section className="relative bg-gradient-to-br from-stone-100 to-stone-200 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-                Contabilidad <span className="text-blue-600">Inteligente</span> para República Dominicana
+                Contabilidad <span className="text-[#4a5d23]">Inteligente</span> para República Dominicana
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
                 El sistema de contabilidad más completo para empresas dominicanas. Cumple con DGII y 
@@ -188,7 +188,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
                   to="/auth/register"
-                  className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 text-center font-semibold whitespace-nowrap cursor-pointer"
+                  className="bg-[#4a5d23] text-white px-8 py-4 rounded-lg hover:bg-[#3d4d1c] text-center font-semibold whitespace-nowrap cursor-pointer"
                 >
                   Comenzar Prueba Gratis
                 </Link>
@@ -197,7 +197,7 @@ export default function HomePage() {
             <div className="relative">
               <img 
                 src="https://readdy.ai/api/search-image?query=Modern%20accounting%20dashboard%20interface%20showing%20financial%20charts%2C%20invoices%2C%20and%20Dominican%20Republic%20business%20data%20with%20clean%20professional%20design%2C%20blue%20and%20white%20color%20scheme%2C%20realistic%20business%20environment&width=600&height=400&seq=hero-dashboard&orientation=landscape"
-                alt="Dashboard de Contabi RD"
+                alt="Dashboard de Sendbillnow"
                 className="rounded-lg shadow-2xl object-top"
               />
             </div>
@@ -221,8 +221,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-8 hover:shadow-lg transition-shadow cursor-pointer">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <i className={`${feature.icon} text-2xl text-blue-600`}></i>
+                <div className="w-12 h-12 bg-[#4a5d23]/10 rounded-lg flex items-center justify-center mb-4">
+                  <i className={`${feature.icon} text-2xl text-[#4a5d23]`}></i>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">{feature.title}</h3>
                 <p className="text-gray-600">{feature.description}</p>
@@ -247,11 +247,11 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {plans.filter(p => p.name !== 'ESTUDIANTIL').map((plan, index) => (
               <div key={index} className={`bg-white rounded-lg shadow-lg p-8 relative ${
-                plan.popular ? 'ring-2 ring-blue-500' : ''
+                plan.popular ? 'ring-2 ring-[#4a5d23]' : ''
               }`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-[#4a5d23] text-white px-4 py-1 rounded-full text-sm font-medium">
                       Más Popular
                     </span>
                   </div>
@@ -278,8 +278,8 @@ export default function HomePage() {
                   to="/auth/register"
                   className={`w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer ${
                     plan.popular
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                      ? 'bg-[#4a5d23] text-white hover:bg-[#3d4d1c]'
+                      : 'bg-stone-100 text-stone-900 hover:bg-stone-200'
                   }`}
                 >
                   Comenzar Ahora
@@ -291,18 +291,18 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-blue-600">
+      <section className="py-20 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
             ¿Listo para modernizar tu contabilidad?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Únete a cientos de empresas dominicanas que ya confían en Contabi RD 
+          <p className="text-xl text-stone-200 mb-8 max-w-2xl mx-auto">
+            Únete a cientos de empresas dominicanas que ya confían en Sendbillnow 
             para su gestión contable y fiscal.
           </p>
           <Link 
             to="/auth/register"
-            className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 font-semibold text-lg whitespace-nowrap cursor-pointer"
+            className="bg-white text-[#4a5d23] px-8 py-4 rounded-lg hover:bg-stone-100 font-semibold text-lg whitespace-nowrap cursor-pointer"
           >
             Comenzar Prueba Gratis de 15 Días
           </Link>
@@ -315,7 +315,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4" style={{ fontFamily: '"Pacifico", serif' }}>
-                Contabi RD
+                Sendbillnow
               </h3>
               <p className="text-gray-400">
                 El sistema de contabilidad más completo para empresas dominicanas.
@@ -388,7 +388,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Contabi RD. Todos los derechos reservados.</p>
+            <p>&copy; 2024 Sendbillnow. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>

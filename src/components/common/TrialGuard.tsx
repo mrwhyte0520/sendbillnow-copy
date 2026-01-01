@@ -36,7 +36,7 @@ export default function TrialGuard({ children, feature }: TrialGuardProps) {
             </h2>
             <p className="text-gray-600">
               {trialStatus === 'expired' 
-                ? 'Tu período de prueba de 15 días ha expirado. Para continuar usando Contabi RD, selecciona un plan de suscripción.'
+                ? 'Tu período de prueba de 15 días ha expirado. Para continuar usando Sendbillnow, selecciona un plan de suscripción.'
                 : 'No tienes acceso a esta función. Verifica tu suscripción.'
               }
             </p>
@@ -115,7 +115,7 @@ export default function TrialGuard({ children, feature }: TrialGuardProps) {
             </p>
             <div className="flex items-center justify-center text-xs text-gray-400">
               <i className="ri-shield-check-line mr-1"></i>
-              <span>Contabi RD - Sistema Contable Dominicano</span>
+              <span>Sendbillnow - Sistema Contable Dominicano</span>
             </div>
           </div>
         </div>

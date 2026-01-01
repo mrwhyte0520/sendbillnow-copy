@@ -65,11 +65,14 @@ export default {
         '.scrollbar-thin': {
           scrollbarWidth: 'thin',
         },
-        '.scrollbar-thumb-slate-600': {
-          scrollbarColor: '#475569 transparent',
+        '.scrollbar-thumb-gray-300': {
+          scrollbarColor: '#d1d5db transparent',
+        },
+        '.scrollbar-thumb-stone-300': {
+          scrollbarColor: '#d6d3d1 transparent',
         },
         '.scrollbar-track-transparent': {
-          scrollbarColor: '#475569 transparent',
+          scrollbarColor: '#d6d3d1 transparent',
         },
         '.scrollbar-thin::-webkit-scrollbar': {
           width: '6px',
@@ -78,11 +81,11 @@ export default {
           background: 'transparent',
         },
         '.scrollbar-thin::-webkit-scrollbar-thumb': {
-          background: '#475569',
+          background: '#d1d5db',
           borderRadius: '3px',
         },
         '.scrollbar-thin::-webkit-scrollbar-thumb:hover': {
-          background: '#64748b',
+          background: '#9ca3af',
         },
       }
       addUtilities(newUtilities)

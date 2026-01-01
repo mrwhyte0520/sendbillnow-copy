@@ -105,15 +105,15 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] rounded-lg p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-              <p className="text-blue-100">Panel de acceso rápido a módulos principales</p>
+              <p className="text-stone-200">Panel de acceso rápido a módulos principales</p>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
+              className="flex items-center px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
             >
               <i className="ri-logout-box-line mr-2"></i>
               Cerrar Sesión
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-900">
               Calendario - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <i className="ri-calendar-line text-2xl text-blue-600"></i>
+            <i className="ri-calendar-line text-2xl text-[#4a5d23]"></i>
           </div>
           
           <div className="grid grid-cols-7 gap-2">
@@ -170,8 +170,8 @@ export default function DashboardPage() {
                   day === null
                     ? 'bg-transparent'
                     : day === currentDate.getDate()
-                    ? 'bg-blue-600 text-white font-bold shadow-lg'
-                    : 'bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 cursor-pointer'
+                    ? 'bg-[#4a5d23] text-white font-bold shadow-lg'
+                    : 'bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-[#4a5d23] cursor-pointer'
                 }`}
               >
                 {day}

@@ -504,7 +504,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // Item restringido por plan - mostrar con candado
             <div
               onClick={handleRestrictedClick}
-              className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-slate-500 hover:bg-slate-700/30 cursor-pointer"
+              className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer"
               title={`Requiere ${requiredPlan}`}
             >
               <i className={`${item.icon} mr-3 text-lg flex-shrink-0 opacity-50`}></i>
@@ -517,8 +517,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               to={item.href}
               className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 ${
                 item.current
-                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-[1.02]'
-                  : 'text-slate-300 hover:bg-slate-700/50 hover:text-white hover:transform hover:scale-[1.01]'
+                  ? 'bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white font-semibold shadow-md'
+                  : 'text-stone-700 hover:bg-stone-200 hover:text-stone-900'
               }`}
               onClick={() => setSidebarOpen(false)}
             >
@@ -529,14 +529,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {hasFilteredSubmenu && !isPlanRestricted && (
             <button
               onClick={() => toggleSubmenu(item.href)}
-              className="p-2 ml-1 text-slate-400 hover:text-white transition-colors duration-200 rounded-md hover:bg-slate-700/50"
+              className="p-2 ml-1 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
             >
               <i className={`ri-arrow-${isExpanded ? 'up' : 'down'}-s-line text-sm`}></i>
             </button>
           )}
         </div>
         {hasFilteredSubmenu && isExpanded && !isPlanRestricted && (
-          <div className="ml-6 mt-2 space-y-1 border-l border-slate-700 pl-4">
+          <div className="ml-6 mt-2 space-y-1 border-l border-stone-300 pl-4">
             {submenu!.map((subItem: any) => {
               const isSubItemRestricted = !canAccessRoute(subItem.href);
               const subRequiredPlan = isSubItemRestricted ? getRequiredPlanForRoute(subItem.href) : '';
@@ -553,7 +553,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         requiredPlan: subRequiredPlan
                       });
                     }}
-                    className="flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 text-slate-500 hover:bg-slate-700/30 cursor-pointer"
+                    className="flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer"
                     title={`Requiere ${subRequiredPlan}`}
                   >
                     <span className="truncate opacity-70">{subItem.name}</span>
@@ -568,8 +568,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   to={subItem.href}
                   className={`block px-3 py-2 text-sm rounded-md transition-all duration-200 ${
                     location.pathname === subItem.href
-                      ? 'text-blue-400 bg-slate-700/50 font-medium'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/30'
+                      ? 'text-[#4a5d23] bg-stone-200 font-medium'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -679,25 +679,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+      <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div className="flex h-16 shrink-0 items-center px-6 border-b border-slate-700/50 bg-slate-900/50">
+          {/* Header */}
+          <div className="flex h-16 shrink-0 items-center px-6 border-b border-stone-200 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33]">
             <div className="flex items-center">
-              <img
-                src="https://i.postimg.cc/25S0htqg/Contabi-L-removebg-preview.png"
-                alt="Logo Contabi"
-                className="h-10 w-auto object-contain"
-              />
-              <div className="ml-3">
-                <h1 className="brand-serif text-xl font-bold text-white">Contabi RD</h1>
-                <p className="text-xs text-slate-400">Sistema de Finanzas</p>
+              <div>
+                <h1 className="brand-serif text-xl font-bold text-white">Sendbillnow</h1>
+                <p className="text-xs text-stone-200">Sistema de Finanzas</p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          <nav className="flex-1 px-4 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent">
             <div className="space-y-1">
               {navigation.map(renderNavItem)}
               
@@ -705,7 +700,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="mb-1">
                 <button
                   onClick={handleProfileClick}
-                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-slate-300 hover:bg-slate-700/50 hover:text-white hover:transform hover:scale-[1.01]"
+                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-stone-700 hover:bg-stone-200 hover:text-stone-900"
                 >
                   <i className="ri-user-line mr-3 text-lg flex-shrink-0"></i>
                   <span className="truncate">Mi Perfil</span>
@@ -715,25 +710,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* User info */}
-          <div className="border-t border-slate-700/50 p-4 bg-slate-900/30">
+          <div className="border-t border-stone-200 p-4 bg-gradient-to-r from-stone-100 to-stone-50">
             <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] flex items-center justify-center shadow-lg">
                 <span className="text-sm font-bold text-white">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-sm font-medium text-stone-800 truncate">
                   {user?.email || 'Usuario'}
                 </p>
-                <p className="text-xs text-slate-400 truncate">
+                <p className="text-xs text-stone-500 truncate">
                   {currentPlan?.name || (trialStatus === 'expired' ? 'Sin plan activo' : 'Plan de Prueba')}
                   {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d restantes)`}
                 </p>
               </div>
               <button
                 onClick={handleSignOut}
-                className="ml-2 p-2 text-slate-400 hover:text-white transition-colors duration-200 rounded-md hover:bg-slate-700/50"
+                className="ml-2 p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
                 title="Cerrar Sesión"
               >
                 <i className="ri-logout-box-line text-lg"></i>
@@ -1272,7 +1267,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   Tu período de prueba gratuito de <span className="font-bold">7 días</span> ha finalizado.
                 </p>
                 <p className="text-gray-600 mb-6">
-                  Para continuar usando Contabi RD, necesitas seleccionar un plan de pago.
+                  Para continuar usando Sendbillnow, necesitas seleccionar un plan de pago.
                 </p>
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
                   <div className="flex items-start">

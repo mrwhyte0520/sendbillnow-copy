@@ -323,7 +323,7 @@ export default function AdvancedKPIDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#4a5d23]" />
       </div>
     );
   }
@@ -339,7 +339,7 @@ export default function AdvancedKPIDashboard() {
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => fetchData()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-[#4a5d23] text-white rounded-lg hover:bg-[#3d4d1c]"
           >
             Reintentar
           </button>
@@ -375,8 +375,8 @@ export default function AdvancedKPIDashboard() {
             onClick={() => setSelectedPeriod(opt.key)}
             className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors ${
               selectedPeriod === opt.key
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                ? 'bg-[#4a5d23] text-white border-[#4a5d23]'
+                : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-100'
             }`}
           >
             {opt.label}
@@ -391,7 +391,7 @@ export default function AdvancedKPIDashboard() {
           onClick={() => setShowBankModal(true)}
         >
           <p className="text-sm text-gray-600">Disponibilidades en Bancos</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(Math.abs(kpi.bankBalance))}</p>
+          <p className="text-2xl font-bold text-[#4a5d23]">{formatCurrency(Math.abs(kpi.bankBalance))}</p>
           <p className="text-xs text-gray-400 mt-1">Click para ver detalle</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
@@ -408,21 +408,21 @@ export default function AdvancedKPIDashboard() {
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Ingresos, Costos, Gastos y Utilidad</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-purple-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Ingresos</p>
-            <p className="text-xl font-bold text-purple-600">{formatCurrency(Math.abs(kpi.revenue))}</p>
+          <div className="bg-[#4a5d23]/10 p-4 rounded">
+            <p className="text-sm text-stone-600">Ingresos</p>
+            <p className="text-xl font-bold text-[#4a5d23]">{formatCurrency(Math.abs(kpi.revenue))}</p>
           </div>
           <div className="bg-amber-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Costos</p>
+            <p className="text-sm text-stone-600">Costos</p>
             <p className="text-xl font-bold text-amber-700">{formatCurrency(kpi.costs)}</p>
           </div>
-          <div className="bg-red-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Gastos</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(kpi.expenses)}</p>
+          <div className="bg-rose-50 p-4 rounded">
+            <p className="text-sm text-stone-600">Gastos</p>
+            <p className="text-xl font-bold text-rose-600">{formatCurrency(kpi.expenses)}</p>
           </div>
-          <div className="bg-teal-50 p-4 rounded">
-            <p className="text-sm text-gray-600">Utilidad</p>
-            <p className="text-xl font-bold text-teal-600">{formatCurrency(kpi.profit)}</p>
+          <div className="bg-stone-100 p-4 rounded">
+            <p className="text-sm text-stone-600">Utilidad</p>
+            <p className="text-xl font-bold text-stone-800">{formatCurrency(kpi.profit)}</p>
           </div>
         </div>
       </div>
@@ -437,7 +437,7 @@ export default function AdvancedKPIDashboard() {
                 <div key={d.label} className="flex flex-col items-center space-y-2 flex-1 max-w-[100px]">
                   <div className="flex items-end justify-center space-x-1 h-48 w-full">
                     <div
-                      className="bg-purple-500 rounded-t flex-1"
+                      className="bg-[#4a5d23] rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.revenue) / maxValue) * 100, 2)}%` }}
                       title={`Ingresos: ${formatCurrency(d.revenue)}`}
                     />
@@ -447,12 +447,12 @@ export default function AdvancedKPIDashboard() {
                       title={`Costos: ${formatCurrency(d.costs)}`}
                     />
                     <div
-                      className="bg-red-500 rounded-t flex-1"
+                      className="bg-rose-500 rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.expenses) / maxValue) * 100, 2)}%` }}
                       title={`Gastos: ${formatCurrency(d.expenses)}`}
                     />
                     <div
-                      className="bg-teal-500 rounded-t flex-1"
+                      className="bg-stone-600 rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.profit) / maxValue) * 100, 2)}%` }}
                       title={`Utilidad: ${formatCurrency(d.profit)}`}
                     />
@@ -468,7 +468,7 @@ export default function AdvancedKPIDashboard() {
                 <div key={d.label} className="bg-gray-50 rounded-lg p-4 text-xs space-y-1">
                   <p className="font-semibold text-gray-700 text-center mb-1">{d.label}</p>
                   <div className="flex justify-between">
-                    <span className="text-purple-600 font-medium">Ingresos</span>
+                    <span className="text-[#4a5d23] font-medium">Ingresos</span>
                     <span className="font-semibold">100%</span>
                   </div>
                   <div className="flex justify-between">
@@ -476,11 +476,11 @@ export default function AdvancedKPIDashboard() {
                     <span className="font-semibold">{formatPercentage(d.costs, d.revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-red-600 font-medium">Gastos</span>
+                    <span className="text-rose-600 font-medium">Gastos</span>
                     <span className="font-semibold">{formatPercentage(d.expenses, d.revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-teal-600 font-medium">Utilidad</span>
+                    <span className="text-stone-700 font-medium">Utilidad</span>
                     <span className="font-semibold">{formatPercentage(d.profit, d.revenue)}</span>
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export default function AdvancedKPIDashboard() {
                   {bankAccounts.map((b) => (
                     <div
                       key={b.id}
-                      className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200 hover:border-blue-300 transition-colors"
+                      className="bg-stone-50 rounded-lg px-4 py-3 border border-stone-200 hover:border-[#4a5d23]/50 transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
@@ -531,7 +531,7 @@ export default function AdvancedKPIDashboard() {
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-blue-600">
+                          <p className="text-lg font-bold text-[#4a5d23]">
                             {b.currency === 'DOP' ? 'RD$' : b.currency === 'USD' ? '$' : b.currency || 'RD$'}{' '}
                             {formatAmount(b.balance || 0)}
                           </p>
@@ -542,9 +542,9 @@ export default function AdvancedKPIDashboard() {
                       </div>
                     </div>
                   ))}
-                  <div className="border-t-2 border-gray-300 pt-4 mt-4 flex items-center justify-between bg-blue-50 rounded-lg px-4 py-3">
-                    <p className="font-bold text-gray-900 text-lg">Total en Bancos</p>
-                    <p className="text-blue-600 font-bold text-xl">{formatCurrency(kpi.bankBalance)}</p>
+                  <div className="border-t-2 border-stone-300 pt-4 mt-4 flex items-center justify-between bg-[#4a5d23]/10 rounded-lg px-4 py-3">
+                    <p className="font-bold text-stone-900 text-lg">Total en Bancos</p>
+                    <p className="text-[#4a5d23] font-bold text-xl">{formatCurrency(kpi.bankBalance)}</p>
                   </div>
                 </>
               ) : (
