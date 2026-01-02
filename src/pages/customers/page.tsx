@@ -84,7 +84,7 @@ export default function CustomersPage() {
 
         const mapped: Customer[] = (rows || []).map((c: any) => ({
           id: c.id,
-          name: c.name || c.customer_name || 'Cliente',
+          name: c.name || c.customer_name || 'Customer',
           document: c.document || c.tax_id || '',
           phone: c.phone || c.contact_phone || '',
           email: c.email || c.contact_email || '',
@@ -132,11 +132,11 @@ export default function CustomersPage() {
   };
 
   const onCreate = async () => {
-    if (!form.name || !form.document) { alert('Nombre y Documento son requeridos'); return; }
+    if (!form.name || !form.document) { alert('Name and Document are required'); return; }
     const docOk = /^\d{3}-\d{7}-\d$/.test(form.document);
     const phoneOk = !form.phone || /^\d{3}-\d{3}-\d{4}$/.test(form.phone);
-    if (!docOk) return alert('Documento inválido. 000-0000000-0');
-    if (!phoneOk) return alert('Teléfono inválido. 000-000-0000');
+    if (!docOk) return alert('Invalid document. 000-0000000-0');
+    if (!phoneOk) return alert('Invalid phone. 000-000-0000');
 
     if (user?.id) {
       try {
@@ -164,11 +164,11 @@ export default function CustomersPage() {
 
   const onUpdate = async () => {
     if (!editing) return;
-    if (!editing.name || !editing.document) { alert('Nombre y Documento son requeridos'); return; }
+    if (!editing.name || !editing.document) { alert('Name and Document are required'); return; }
     const docOk = /^\d{3}-\d{7}-\d$/.test(editing.document);
     const phoneOk = !editing.phone || /^\d{3}-\d{3}-\d{4}$/.test(editing.phone);
-    if (!docOk) return alert('Documento inválido. 000-0000000-0');
-    if (!phoneOk) return alert('Teléfono inválido. 000-000-0000');
+    if (!docOk) return alert('Invalid document. 000-0000000-0');
+    if (!phoneOk) return alert('Invalid phone. 000-000-0000');
 
     if (user?.id && isUuid(editing.id)) {
       try {
@@ -195,7 +195,7 @@ export default function CustomersPage() {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('¿Eliminar cliente?')) return;
+    if (!confirm('Delete customer?')) return;
     if (user?.id && isUuid(id)) {
       try {
         await customersService.delete(id);
@@ -209,20 +209,20 @@ export default function CustomersPage() {
   const exportCSV = async () => {
     try {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Clientes');
+      const ws = wb.addWorksheet('Customers');
 
-      // Definir columnas con anchos adecuados
+      // Define columns with appropriate widths
       ws.columns = [
-        { header: 'Nombre', key: 'name', width: 30 },
-        { header: 'RNC/Cédula', key: 'document', width: 18 },
-        { header: 'Teléfono', key: 'phone', width: 15 },
+        { header: 'Name', key: 'name', width: 30 },
+        { header: 'Tax ID/Document', key: 'document', width: 18 },
+        { header: 'Phone', key: 'phone', width: 15 },
         { header: 'Email', key: 'email', width: 30 },
-        { header: 'Dirección', key: 'address', width: 40 },
-        { header: 'Tipo', key: 'type', width: 12 },
-        { header: 'Términos de Pago', key: 'paymentTerms', width: 20 },
+        { header: 'Address', key: 'address', width: 40 },
+        { header: 'Type', key: 'type', width: 12 },
+        { header: 'Payment Terms', key: 'paymentTerms', width: 20 },
       ];
 
-      // Estilo del header
+      // Header style
       ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
       ws.getRow(1).fill = {
         type: 'pattern',
@@ -232,11 +232,11 @@ export default function CustomersPage() {
       ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
       ws.getRow(1).height = 25;
 
-      // Agregar datos
+      // Add data
       filtered.forEach((customer) => {
         const paymentTermName = customer.paymentTermId 
           ? paymentTerms.find(t => t.id === customer.paymentTermId)?.name || 'N/A'
-          : 'Contado';
+          : 'Cash';
 
         ws.addRow({
           name: customer.name || '',
@@ -249,7 +249,7 @@ export default function CustomersPage() {
         });
       });
 
-      // Aplicar bordes a todas las celdas
+      // Apply borders to all cells
       ws.eachRow((row, rowNumber) => {
         row.eachCell((cell) => {
           cell.border = {
@@ -258,23 +258,23 @@ export default function CustomersPage() {
             bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
             right: { style: 'thin', color: { argb: 'FFD1D5DB' } },
           };
-          // Alineación para filas de datos
+          // Alignment for data rows
           if (rowNumber > 1) {
             cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
           }
         });
       });
 
-      // Generar archivo
+      // Generate file
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
-      const fileName = `clientes_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `customers_${new Date().toISOString().split('T')[0]}.xlsx`;
       saveAs(blob, fileName);
     } catch (error) {
-      console.error('Error exportando clientes:', error);
-      alert('Error al exportar clientes a Excel');
+      console.error('Error exporting customers:', error);
+      alert('Error exporting customers to Excel');
     }
   };
 
@@ -283,8 +283,8 @@ export default function CustomersPage() {
       <div className="p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-            <p className="text-gray-600">Gestión centralizada de clientes</p>
+            <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+            <p className="text-gray-600">Centralized customer management</p>
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-80">
@@ -293,7 +293,7 @@ export default function CustomersPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por nombre, documento o email..."
+                placeholder="Search by name, document or email..."
                 className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
@@ -302,14 +302,14 @@ export default function CustomersPage() {
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-download-line mr-2" />
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={() => { setForm({ name: '', document: '', phone: '', email: '', address: '', type: 'regular' }); setShowNew(true); }}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2" />
-              Nuevo Cliente
+              New Customer
             </button>
           </div>
         </div>
@@ -319,12 +319,12 @@ export default function CustomersPage() {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Document</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -339,14 +339,14 @@ export default function CustomersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => { setEditing({ ...c }); setShowEdit(true); }} className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" title="Editar"><i className="ri-edit-line" /></button>
-                        <button onClick={() => onDelete(c.id)} className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700" title="Eliminar"><i className="ri-delete-bin-line" /></button>
+                        <button onClick={() => { setEditing({ ...c }); setShowEdit(true); }} className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" title="Edit"><i className="ri-edit-line" /></button>
+                        <button onClick={() => onDelete(c.id)} className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700" title="Delete"><i className="ri-delete-bin-line" /></button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">No hay clientes</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-sm text-gray-500">No customers</td></tr>
                 )}
               </tbody>
             </table>
@@ -356,81 +356,81 @@ export default function CustomersPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Página {page} de {totalPages} · {filtered.length} registros
+            Page {page} of {totalPages} · {filtered.length} records
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
               className={`px-3 py-1 rounded border ${page <= 1 ? 'text-gray-400 bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-gray-50'}`}
-            >Anterior</button>
+            >Previous</button>
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setPage(1); }}
               className="px-2 py-1 border rounded"
             >
-              {[10,20,50,100].map(s => <option key={s} value={s}>{s}/página</option>)}
+              {[10,20,50,100].map(s => <option key={s} value={s}>{s}/page</option>)}
             </select>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className={`px-3 py-1 rounded border ${page >= totalPages ? 'text-gray-400 bg-gray-100 cursor-not-allowed' : 'bg-white hover:bg-gray-50'}`}
-            >Siguiente</button>
+            >Next</button>
           </div>
         </div>
 
         {showNew && (
           <Modal onClose={() => setShowNew(false)}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Nuevo Cliente</h3>
+              <h3 className="text-lg font-semibold">New Customer</h3>
               <button onClick={() => setShowNew(false)} className="text-gray-400 hover:text-gray-600"><i className="ri-close-line" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                 <input type="text" value={form.name} onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Documento *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Document *</label>
                 <input type="text" value={form.document} onChange={e => setForm(prev => ({ ...prev, document: e.target.value }))} onBlur={e => setForm(prev => ({ ...prev, document: formatDocument(e.target.value) }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="001-1234567-8" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
                 <input type="tel" value={form.phone} onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))} onBlur={e => setForm(prev => ({ ...prev, phone: formatPhone(e.target.value) }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="809-123-4567" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" value={form.email} onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="cliente@email.com" />
+                <input type="email" value={form.email} onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="customer@email.com" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
-                <textarea value={form.address} onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={2} placeholder="Dirección completa" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                <textarea value={form.address} onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={2} placeholder="Full address" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cliente</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
                 <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value as 'regular' | 'vip' }))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8">
                   <option value="regular">Regular</option>
                   <option value="vip">VIP</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Condición de pago</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
                 <select
                   value={form.paymentTermId ?? ''}
                   onChange={e => setForm(prev => ({ ...prev, paymentTermId: e.target.value || null }))}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                 >
-                  <option value="">Sin condición específica</option>
+                  <option value="">No specific terms</option>
                   {paymentTerms.map(term => (
                     <option key={term.id} value={term.id}>
-                      {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                      {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button onClick={() => setShowNew(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">Cancelar</button>
-                <button onClick={onCreate} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+                <button onClick={() => setShowNew(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">Cancel</button>
+                <button onClick={onCreate} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
               </div>
             </div>
           </Modal>
@@ -439,20 +439,20 @@ export default function CustomersPage() {
         {showEdit && editing && (
           <Modal onClose={() => { setShowEdit(false); setEditing(null); }}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Editar Cliente</h3>
+              <h3 className="text-lg font-semibold">Edit Customer</h3>
               <button onClick={() => { setShowEdit(false); setEditing(null); }} className="text-gray-400 hover:text-gray-600"><i className="ri-close-line" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                 <input type="text" value={editing.name} onChange={e => setEditing(prev => ({ ...(prev as Customer), name: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Documento *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Document *</label>
                 <input type="text" value={editing.document} onChange={e => setEditing(prev => ({ ...(prev as Customer), document: e.target.value }))} onBlur={e => setEditing(prev => ({ ...(prev as Customer), document: formatDocument(e.target.value) }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <input type="tel" value={editing.phone} onChange={e => setEditing(prev => ({ ...(prev as Customer), phone: e.target.value }))} onBlur={e => setEditing(prev => ({ ...(prev as Customer), phone: formatPhone(e.target.value) }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
               <div>
@@ -460,34 +460,34 @@ export default function CustomersPage() {
                 <input type="email" value={editing.email} onChange={e => setEditing(prev => ({ ...(prev as Customer), email: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                 <textarea value={editing.address} onChange={e => setEditing(prev => ({ ...(prev as Customer), address: e.target.value }))} autoComplete="off" spellCheck={false} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows={2} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cliente</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
                 <select value={editing.type} onChange={e => setEditing(prev => ({ ...(prev as Customer), type: e.target.value as 'regular' | 'vip' }))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8">
                   <option value="regular">Regular</option>
                   <option value="vip">VIP</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Condición de pago</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Terms</label>
                 <select
                   value={editing.paymentTermId ?? ''}
                   onChange={e => setEditing(prev => ({ ...(prev as Customer), paymentTermId: e.target.value || null }))}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                 >
-                  <option value="">Sin condición específica</option>
+                  <option value="">No specific terms</option>
                   {paymentTerms.map(term => (
                     <option key={term.id} value={term.id}>
-                      {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                      {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button onClick={() => { setShowEdit(false); setEditing(null); }} className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">Cancelar</button>
-                <button onClick={onUpdate} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar Cambios</button>
+                <button onClick={() => { setShowEdit(false); setEditing(null); }} className="px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">Cancel</button>
+                <button onClick={onUpdate} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Changes</button>
               </div>
             </div>
           </Modal>

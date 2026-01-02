@@ -48,26 +48,26 @@ export default function DashboardPage() {
       await signOut();
       navigate('/auth/login');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('Error signing out:', error);
     }
   };
 
   // Botones de acceso rápido con sus módulos correspondientes
   const allQuickAccessButtons = [
-    { name: 'Usuario', icon: 'ri-user-add-line', href: '/users', color: 'from-teal-500 to-teal-600', module: 'users' },
-    { name: 'Nuevo Cliente', icon: 'ri-user-smile-line', href: '/customers', color: 'from-blue-500 to-blue-600', module: 'customers' },
-    { name: 'Nuevo Proveedor', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-cyan-500 to-cyan-600', module: 'accounts-payable' },
-    { name: 'Nueva Factura', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-purple-500 to-purple-600', module: 'billing' },
+    { name: 'User', icon: 'ri-user-add-line', href: '/users', color: 'from-teal-500 to-teal-600', module: 'users' },
+    { name: 'New Customer', icon: 'ri-user-smile-line', href: '/customers', color: 'from-blue-500 to-blue-600', module: 'customers' },
+    { name: 'New Supplier', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-cyan-500 to-cyan-600', module: 'accounts-payable' },
+    { name: 'New Invoice', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-purple-500 to-purple-600', module: 'billing' },
     { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-orange-500 to-orange-600', module: 'pos' },
-    { name: 'Cierre de Caja', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-yellow-500 to-yellow-600', module: 'billing' },
-    { name: 'Ventas', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-pink-500 to-pink-600', module: 'billing' },
-    { name: 'Productos', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-red-500 to-red-600', module: 'products' },
-    { name: 'Inventario', icon: 'ri-archive-line', href: '/inventory', color: 'from-indigo-500 to-indigo-600', module: 'inventory' },
-    { name: 'Reportes Inventario', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-green-500 to-green-600', module: 'inventory' },
-    { name: 'Entradas', icon: 'ri-download-line', href: '/inventory', color: 'from-lime-500 to-lime-600', module: 'inventory' },
-    { name: 'Transferencias', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-emerald-500 to-emerald-600', module: 'inventory' },
-    { name: 'Almacén', icon: 'ri-building-line', href: '/inventory', color: 'from-sky-500 to-sky-600', module: 'inventory' },
-    { name: 'Nóminas', icon: 'ri-wallet-line', href: '/payroll', color: 'from-fuchsia-500 to-fuchsia-600', module: 'payroll' },
+    { name: 'Cash Closing', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-yellow-500 to-yellow-600', module: 'billing' },
+    { name: 'Sales', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-pink-500 to-pink-600', module: 'billing' },
+    { name: 'Products', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-red-500 to-red-600', module: 'products' },
+    { name: 'Inventory', icon: 'ri-archive-line', href: '/inventory', color: 'from-indigo-500 to-indigo-600', module: 'inventory' },
+    { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-green-500 to-green-600', module: 'inventory' },
+    { name: 'Entries', icon: 'ri-download-line', href: '/inventory', color: 'from-lime-500 to-lime-600', module: 'inventory' },
+    { name: 'Transfers', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-emerald-500 to-emerald-600', module: 'inventory' },
+    { name: 'Warehouse', icon: 'ri-building-line', href: '/inventory', color: 'from-sky-500 to-sky-600', module: 'inventory' },
+    { name: 'Payroll', icon: 'ri-wallet-line', href: '/payroll', color: 'from-fuchsia-500 to-fuchsia-600', module: 'payroll' },
   ];
 
   // Filtrar botones según permisos del usuario
@@ -98,8 +98,8 @@ export default function DashboardPage() {
     return days;
   };
 
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <DashboardLayout>
@@ -109,21 +109,21 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-              <p className="text-stone-200">Panel de acceso rápido a módulos principales</p>
+              <p className="text-stone-200">Quick access panel to main modules</p>
             </div>
             <button
               onClick={handleSignOut}
               className="flex items-center px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
             >
               <i className="ri-logout-box-line mr-2"></i>
-              Cerrar Sesión
+              Sign Out
             </button>
           </div>
         </div>
 
         {/* Botones de Acceso Rápido */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Acceso Rápido</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Access</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-4">
             {quickAccessButtons.map((button) => (
               <button
@@ -149,7 +149,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              Calendario - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              Calendar - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
             <i className="ri-calendar-line text-2xl text-[#4a5d23]"></i>
           </div>

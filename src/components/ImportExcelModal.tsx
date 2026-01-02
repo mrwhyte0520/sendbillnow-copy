@@ -19,7 +19,6 @@ export default function ImportExcelModal({
   moduleName,
   onDownloadTemplate
 }: ImportExcelModalProps) {
-  const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
@@ -29,29 +28,28 @@ export default function ImportExcelModal({
     if (!selectedFile) return;
 
     if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
-      toast.error('Por favor seleccione un archivo Excel (.xlsx o .xls)');
+      toast.error('Please select an Excel file (.xlsx or .xls)');
       return;
     }
 
-    setFile(selectedFile);
     
     try {
-      toast.loading('Procesando archivo...');
+      toast.loading('Processing file...');
       const data = await importFromExcel(selectedFile);
       
       if (!data || data.length === 0) {
         toast.dismiss();
-        toast.error('El archivo está vacío o no contiene datos válidos');
+        toast.error('The file is empty or does not contain valid data');
         return;
       }
 
       setPreviewData(data);
       setStep('preview');
       toast.dismiss();
-      toast.success(`${data.length} registros cargados para revisión`);
+      toast.success(`${data.length} records loaded for review`);
     } catch (error) {
       toast.dismiss();
-      toast.error('Error al leer el archivo Excel');
+      toast.error('Error reading Excel file');
       console.error(error);
     }
   };
@@ -62,10 +60,10 @@ export default function ImportExcelModal({
     setIsProcessing(true);
     try {
       await onImport(previewData);
-      toast.success(`${previewData.length} registros importados exitosamente`);
+      toast.success(`${previewData.length} records imported successfully`);
       handleClose();
     } catch (error: any) {
-      toast.error(error.message || 'Error al importar los datos');
+      toast.error(error.message || 'Error importing data');
       console.error(error);
     } finally {
       setIsProcessing(false);
@@ -73,7 +71,6 @@ export default function ImportExcelModal({
   };
 
   const handleClose = () => {
-    setFile(null);
     setPreviewData([]);
     setStep('upload');
     onClose();
@@ -86,7 +83,7 @@ export default function ImportExcelModal({
       <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-gray-900">
-            Importar {moduleName} desde Excel
+            Import {moduleName} from Excel
           </h3>
           <button
             onClick={handleClose}
@@ -102,13 +99,13 @@ export default function ImportExcelModal({
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h4 className="font-semibold text-blue-900 mb-2 flex items-center">
                 <i className="ri-information-line mr-2"></i>
-                Instrucciones
+                Instructions
               </h4>
               <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                <li>Descargue la plantilla de Excel haciendo clic en el botón de abajo</li>
-                <li>Complete los datos en la plantilla sin modificar los encabezados</li>
-                <li>Guarde el archivo y súbalo usando el botón "Seleccionar Archivo"</li>
-                <li>Revise los datos en la vista previa antes de importar</li>
+                <li>Download the Excel template by clicking the button below</li>
+                <li>Fill in the data in the template without modifying the headers</li>
+                <li>Save the file and upload it using the "Select Excel File" button</li>
+                <li>Review the data in the preview before importing</li>
               </ul>
             </div>
 
@@ -119,7 +116,7 @@ export default function ImportExcelModal({
                 className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <i className="ri-file-excel-line text-xl"></i>
-                <span>Descargar Plantilla de Excel</span>
+                <span>Download Excel Template</span>
               </button>
             )}
 
@@ -127,7 +124,7 @@ export default function ImportExcelModal({
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
               <i className="ri-upload-cloud-2-line text-6xl text-gray-400 mb-4"></i>
               <p className="text-gray-600 mb-4">
-                Arrastra un archivo Excel aquí o haz clic para seleccionar
+                Drag an Excel file here or click to select
               </p>
               <input
                 type="file"
@@ -140,14 +137,14 @@ export default function ImportExcelModal({
                 htmlFor="excel-upload"
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer inline-block"
               >
-                Seleccionar Archivo Excel
+                Select Excel File
               </label>
             </div>
 
             {/* Columnas esperadas */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3">
-                Columnas esperadas en la plantilla:
+                Expected columns in the template:
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {templateHeaders.map((header, idx) => (
@@ -168,10 +165,10 @@ export default function ImportExcelModal({
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <h4 className="font-semibold text-yellow-900 mb-2 flex items-center">
                 <i className="ri-eye-line mr-2"></i>
-                Vista Previa de Datos ({previewData.length} registros)
+                Data Preview ({previewData.length} records)
               </h4>
               <p className="text-sm text-yellow-800">
-                Revise los datos antes de importar. Los campos vacíos o inválidos pueden causar errores.
+                Review the data before importing. Empty or invalid fields may cause errors.
               </p>
             </div>
 
@@ -211,7 +208,7 @@ export default function ImportExcelModal({
               </div>
               {previewData.length > 10 && (
                 <div className="bg-gray-50 px-4 py-2 text-sm text-gray-500 text-center border-t">
-                  Mostrando 10 de {previewData.length} registros
+                  Showing 10 of {previewData.length} records
                 </div>
               )}
             </div>
@@ -224,7 +221,7 @@ export default function ImportExcelModal({
                 disabled={isProcessing}
               >
                 <i className="ri-arrow-left-line mr-2"></i>
-                Volver
+                Back
               </button>
               <button
                 onClick={handleImport}
@@ -234,12 +231,12 @@ export default function ImportExcelModal({
                 {isProcessing ? (
                   <>
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
-                    Importando...
+                    Importing...
                   </>
                 ) : (
                   <>
                     <i className="ri-check-line mr-2"></i>
-                    Importar {previewData.length} Registros
+                    Import {previewData.length} Records
                   </>
                 )}
               </button>

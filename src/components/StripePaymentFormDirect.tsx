@@ -12,8 +12,8 @@ interface StripePaymentFormProps {
   userEmail: string;
 }
 
-// El precio se recibe como prop directamente en USD
-// Se convierte a centavos para Stripe
+// Price is received as prop directly in USD
+// It's converted to cents for Stripe
 
 export default function StripePaymentFormDirect({
   planId,
@@ -48,7 +48,7 @@ export default function StripePaymentFormDirect({
     }
 
     if (!cardComplete) {
-      setError('Por favor completa la información de la tarjeta');
+      setError('Please complete the card information');
       return;
     }
 
@@ -58,14 +58,14 @@ export default function StripePaymentFormDirect({
     try {
       console.log('Starting payment process (DIRECT MODE)...', { planId, userId, userEmail });
       
-      // Obtener el CardElement
+      // Get the CardElement
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
-        throw new Error('No se pudo obtener el elemento de tarjeta');
+        throw new Error('Could not get card element');
       }
 
-      // MODO DIRECTO: Crear Payment Intent directamente con la API de Stripe
-      // NOTA: Esto es SOLO para testing. En producción DEBES usar Edge Function
+      // DIRECT MODE: Create Payment Intent directly with Stripe API
+      // NOTE: This is ONLY for testing. In production you MUST use Edge Function
       const stripeSecretKey = 'sk_test_51ShnlT40CPO0GsETq1rsp2QUIhmeJc6NzFFEjAERHvmbMWV3YabUdfJapGkm7NDvJx7M35p3bTyKvCf0vfFSfgaN00R7SKTzhH';
       
       console.log('Creating Payment Intent directly...');
@@ -83,21 +83,21 @@ export default function StripePaymentFormDirect({
           'metadata[planId]': planId,
           'metadata[userId]': userId,
           'metadata[userEmail]': userEmail,
-          description: `Suscripción ${planName} - ${userEmail}`,
+          description: `Subscription ${planName} - ${userEmail}`,
         }),
       });
 
       if (!paymentIntentResponse.ok) {
         const errorData = await paymentIntentResponse.json();
         console.error('Stripe API error:', errorData);
-        throw new Error(errorData.error?.message || 'Error al crear el Payment Intent');
+        throw new Error(errorData.error?.message || 'Error creating Payment Intent');
       }
 
       const paymentIntentData = await paymentIntentResponse.json();
       console.log('Payment Intent created:', paymentIntentData);
       const clientSecret = paymentIntentData.client_secret;
 
-      // Confirmar el pago
+      // Confirm payment
       console.log('Confirming payment...');
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
@@ -119,7 +119,7 @@ export default function StripePaymentFormDirect({
         console.log('Payment succeeded!');
         onSuccess();
       } else {
-        throw new Error(`El pago no se completó correctamente. Estado: ${paymentIntent?.status || 'desconocido'}`);
+        throw new Error(`Payment was not completed correctly. Status: ${paymentIntent?.status || 'unknown'}`);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
@@ -128,7 +128,7 @@ export default function StripePaymentFormDirect({
         stack: err.stack,
         name: err.name
       });
-      setError(err.message || 'Error al procesar el pago');
+      setError(err.message || 'Error processing payment');
     } finally {
       setIsProcessing(false);
     }
@@ -140,9 +140,9 @@ export default function StripePaymentFormDirect({
         <div className="flex items-start">
           <i className="ri-alert-line text-yellow-600 text-xl mr-2 mt-0.5"></i>
           <div className="text-sm text-yellow-800">
-            <p className="font-medium mb-1">Modo de Testing Directo</p>
+            <p className="font-medium mb-1">Direct Testing Mode</p>
             <p className="text-yellow-700">
-              Usando conexión directa a Stripe API (solo para pruebas).
+              Using direct connection to Stripe API (testing only).
             </p>
           </div>
         </div>
@@ -150,18 +150,18 @@ export default function StripePaymentFormDirect({
 
       <div className="bg-gray-50 rounded-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-700 font-medium">Plan seleccionado:</span>
+          <span className="text-gray-700 font-medium">Selected plan:</span>
           <span className="text-gray-900 font-bold">{planName}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-700 font-medium">Monto a pagar:</span>
+          <span className="text-gray-700 font-medium">Amount to pay:</span>
           <span className="text-2xl font-bold text-blue-600">USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Información de la tarjeta
+          Card information
         </label>
         <div className="border border-gray-300 rounded-lg p-3 bg-white">
           <CardElement
@@ -197,9 +197,9 @@ export default function StripePaymentFormDirect({
         <div className="flex items-start">
           <i className="ri-shield-check-line text-blue-600 text-xl mr-2 mt-0.5"></i>
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Pago seguro con Stripe</p>
+            <p className="font-medium mb-1">Secure payment with Stripe</p>
             <p className="text-blue-700">
-              Tu información está protegida con encriptación de nivel bancario.
+              Your information is protected with bank-level encryption.
             </p>
           </div>
         </div>
@@ -212,7 +212,7 @@ export default function StripePaymentFormDirect({
           disabled={isProcessing}
           className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
-          Cancelar
+          Cancel
         </button>
         <button
           type="submit"
@@ -222,19 +222,19 @@ export default function StripePaymentFormDirect({
           {isProcessing ? (
             <>
               <i className="ri-loader-4-line animate-spin mr-2"></i>
-              Procesando...
+              Processing...
             </>
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pagar USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              Pay USD ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </>
           )}
         </button>
       </div>
 
       <p className="text-xs text-gray-500 text-center mt-4">
-        Al confirmar el pago, aceptas nuestros términos y condiciones de servicio.
+        By confirming the payment, you accept our terms and conditions of service.
       </p>
     </form>
   );

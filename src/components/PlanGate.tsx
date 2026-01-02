@@ -22,7 +22,7 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
     hasActivePlan
   } = usePlanPermissions();
 
-  // Verificar acceso
+  // Check access
   let hasAccess = true;
   let requiredPlan = '';
   let blockedModuleName = '';
@@ -37,32 +37,32 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
     blockedModuleName = route;
   }
 
-  // Si tiene acceso, mostrar el contenido
+  // If has access, show content
   if (hasAccess) {
     return <>{children}</>;
   }
 
-  // Si hay fallback personalizado, usarlo
+  // If there's a custom fallback, use it
   if (fallback) {
     return <>{fallback}</>;
   }
 
-  // Mostrar mensaje de bloqueo por defecto
+  // Show default block message
   return (
     <div className="min-h-[60vh] flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header con candado */}
+        {/* Header with lock */}
         <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-8 text-center">
           <div className="w-20 h-20 mx-auto bg-white/10 rounded-full flex items-center justify-center mb-4">
             <i className="ri-lock-2-line text-4xl text-white"></i>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Módulo Bloqueado</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">Module Blocked</h2>
           <p className="text-gray-300 text-sm">
             {blockedModuleName}
           </p>
         </div>
 
-        {/* Contenido */}
+        {/* Content */}
         <div className="p-6 space-y-4">
           {isTrialExpired && !hasActivePlan ? (
             <>
@@ -70,9 +70,9 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
                 <div className="flex items-start">
                   <i className="ri-error-warning-line text-red-500 text-xl mr-3 mt-0.5"></i>
                   <div>
-                    <h3 className="font-semibold text-red-800">Período de prueba expirado</h3>
+                    <h3 className="font-semibold text-red-800">Trial period expired</h3>
                     <p className="text-sm text-red-600 mt-1">
-                      Tu período de prueba ha terminado. Suscríbete a un plan para continuar usando Sendbillnow.
+                      Your trial period has ended. Subscribe to a plan to continue using Sendbillnow.
                     </p>
                   </div>
                 </div>
@@ -84,9 +84,9 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
                 <div className="flex items-start">
                   <i className="ri-information-line text-blue-500 text-xl mr-3 mt-0.5"></i>
                   <div>
-                    <h3 className="font-semibold text-blue-800">Actualiza tu plan</h3>
+                    <h3 className="font-semibold text-blue-800">Upgrade your plan</h3>
                     <p className="text-sm text-blue-600 mt-1">
-                      Este módulo no está incluido en tu plan actual ({currentPlanName}).
+                      This module is not included in your current plan ({currentPlanName}).
                     </p>
                   </div>
                 </div>
@@ -94,7 +94,7 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
 
               <div className="bg-gray-50 rounded-lg p-4">
                 <p className="text-sm text-gray-600 mb-2">
-                  Para acceder a <strong>{blockedModuleName}</strong> necesitas:
+                  To access <strong>{blockedModuleName}</strong> you need:
                 </p>
                 <div className="flex items-center bg-white rounded-lg p-3 border border-gray-200">
                   <i className="ri-vip-crown-line text-amber-500 text-xl mr-3"></i>
@@ -110,13 +110,13 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
               className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all flex items-center justify-center"
             >
               <i className="ri-arrow-up-circle-line mr-2"></i>
-              Ver Planes Disponibles
+              View Available Plans
             </button>
             <button
               onClick={() => navigate(-1)}
               className="w-full py-3 px-4 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
-              Volver Atrás
+              Go Back
             </button>
           </div>
         </div>
@@ -125,7 +125,7 @@ export function PlanGate({ children, module, route, fallback }: PlanGateProps) {
   );
 }
 
-// Componente para usar en el sidebar/menú para mostrar candado
+// Component to use in sidebar/menu to show lock
 interface MenuItemLockProps {
   module: string;
   children: ReactNode;
@@ -153,11 +153,11 @@ export function MenuItemWithLock({ module, children, onClick, className = '' }: 
       onClick={() => {
         const moduleName = getModuleName(module);
         const requiredPlan = getRequiredPlanForModule(module);
-        if (confirm(`El módulo "${moduleName}" requiere el plan "${requiredPlan}". ¿Deseas ver los planes disponibles?`)) {
+        if (confirm(`The module "${moduleName}" requires the "${requiredPlan}" plan. Would you like to view available plans?`)) {
           navigate('/plans');
         }
       }}
-      title={`Requiere ${getRequiredPlanForModule(module)}`}
+      title={`Requires ${getRequiredPlanForModule(module)}`}
     >
       {children}
       <div className="absolute top-0 right-0 -mt-1 -mr-1">

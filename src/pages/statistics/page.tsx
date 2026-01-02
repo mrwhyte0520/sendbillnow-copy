@@ -19,9 +19,9 @@ export default function StatisticsPage() {
             <div>
               <h1 className="text-3xl font-bold mb-2">
                 <i className="ri-bar-chart-2-line mr-3"></i>
-                Estadísticas
+                Statistics
               </h1>
-              <p className="text-stone-200">Métricas y análisis de tu empresa</p>
+              <p className="text-stone-200">Metrics and analysis for your business</p>
             </div>
             
             <div className="flex items-center space-x-4">
@@ -36,7 +36,7 @@ export default function StatisticsPage() {
                   }`}
                 >
                   <i className="ri-dashboard-3-line mr-2"></i>
-                  KPI Avanzado
+                  Advanced KPI
                 </button>
                 <button
                   onClick={() => setActiveView('basic')}
@@ -47,7 +47,7 @@ export default function StatisticsPage() {
                   }`}
                 >
                   <i className="ri-dashboard-line mr-2"></i>
-                  Básico
+                  Basic
                 </button>
               </div>
             </div>

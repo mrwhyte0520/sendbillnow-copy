@@ -10,55 +10,55 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
   const plans = [
     {
       id: 'facturacion-simple',
-      name: 'Facturación Simple',
-      description: 'Ideal para negocios que inician con facturación básica',
+      name: 'Simple Billing',
+      description: 'Ideal for businesses starting with basic billing',
       icon: 'ri-file-text-line',
       color: 'from-blue-500 to-blue-600',
       features: [
-        '1 Usuario',
-        '100 Facturas al mes',
-        'Cotizaciones',
-        'Reportes básicos'
+        '1 User',
+        '100 invoices per month',
+        'Quotes',
+        'Basic reports'
       ]
     },
     {
       id: 'facturacion-premium',
-      name: 'Facturación Premium',
-      description: 'Para empresas que necesitan más capacidad',
+      name: 'Premium Billing',
+      description: 'For companies that need more capacity',
       icon: 'ri-file-list-3-line',
       color: 'from-indigo-500 to-indigo-600',
       features: [
-        '8 Usuarios',
-        '500 Facturas al mes',
-        '1 Almacén de inventario',
-        'Reportes completos'
+        '8 Users',
+        '500 invoices per month',
+        '1 inventory warehouse',
+        'Full reports'
       ]
     },
     {
       id: 'pos-premium',
       name: 'POS Premium',
-      description: 'Solución completa para puntos de venta',
+      description: 'Complete solution for point of sale',
       icon: 'ri-store-2-line',
       color: 'from-purple-500 to-purple-600',
       features: [
-        '30 Usuarios',
-        'Sistema POS completo',
-        '2 Almacenes',
-        'Productos ilimitados'
+        '30 Users',
+        'Full POS system',
+        '2 warehouses',
+        'Unlimited products'
       ],
       popular: true
     },
     {
       id: 'pos-super-plus',
       name: 'POS Super Plus',
-      description: 'La solución más completa para grandes empresas',
+      description: 'The most complete solution for large companies',
       icon: 'ri-vip-crown-line',
       color: 'from-amber-500 to-orange-600',
       features: [
-        '300 Usuarios',
-        'Todo ilimitado',
-        '5 Almacenes',
-        'Máxima capacidad'
+        '300 Users',
+        'Everything unlimited',
+        '5 warehouses',
+        'Maximum capacity'
       ]
     }
   ];
@@ -77,11 +77,11 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
           <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
             <i className="ri-gift-line text-4xl text-white"></i>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">¡Bienvenido a Sendbillnow!</h2>
-          <p className="text-blue-100 text-lg">Selecciona tu plan y comienza tu prueba gratuita de 7 días</p>
+          <h2 className="text-3xl font-bold text-white mb-2">Welcome to Sendbillnow!</h2>
+          <p className="text-blue-100 text-lg">Select your plan and start your 7-day free trial</p>
           <div className="mt-4 inline-flex items-center bg-white/20 rounded-full px-4 py-2">
             <i className="ri-timer-line text-white mr-2"></i>
-            <span className="text-white font-semibold">7 días gratis • Sin tarjeta de crédito</span>
+            <span className="text-white font-semibold">7 days free • No credit card</span>
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
               >
                 {plan.popular && (
                   <div className="absolute -top-3 right-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    MÁS POPULAR
+                    MOST POPULAR
                   </div>
                 )}
                 
@@ -134,15 +134,15 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
             <div className="flex items-start">
               <i className="ri-information-line text-amber-600 text-xl mr-3 mt-0.5"></i>
               <div>
-                <h4 className="font-semibold text-amber-900 mb-1">Importante</h4>
+                <h4 className="font-semibold text-amber-900 mb-1">Important</h4>
                 <p className="text-sm text-amber-800">
-                  • Después de 7 días, necesitarás seleccionar un plan de pago para continuar usando el sistema.
+                  • After 7 days, you'll need to select a paid plan to continue using the system.
                 </p>
                 <p className="text-sm text-amber-800">
-                  • Solo puedes usar el período de prueba una vez por cuenta.
+                  • You can only use the trial period once per account.
                 </p>
                 <p className="text-sm text-amber-800">
-                  • Puedes cambiar de plan en cualquier momento desde la configuración.
+                  • You can change plans at any time from settings.
                 </p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             <i className="ri-rocket-line mr-2 text-2xl"></i>
-            {selectedPlan ? 'Comenzar mi prueba de 7 días' : 'Selecciona un plan para continuar'}
+            {selectedPlan ? 'Start my 7-day trial' : 'Select a plan to continue'}
           </button>
         </div>
       </div>

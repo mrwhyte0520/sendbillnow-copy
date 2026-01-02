@@ -336,7 +336,7 @@ export default function SuppliersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para gestionar proveedores');
+      alert('You must log in to manage suppliers');
       return;
     }
 
@@ -347,29 +347,29 @@ export default function SuppliersPage() {
     const taxIdDigits = onlyDigits(formData.rnc);
     if (supplierTypeKey === 'persona_juridica') {
       if (taxIdDigits.length !== 9) {
-        alert('Para Persona Jurídica el RNC debe tener 9 dígitos');
+        alert('For Legal Entity the RNC must have 9 digits');
         return;
       }
     } else if (supplierTypeKey === 'persona_fisica') {
       if (taxIdDigits.length !== 11) {
-        alert('Para Persona Física la Cédula debe tener 11 dígitos');
+        alert('For Individual the ID must have 11 digits');
         return;
       }
     } else if (supplierTypeKey === 'prestador_servicios') {
       if (!(taxIdDigits.length === 9 || taxIdDigits.length === 11)) {
-        alert('Para Prestador de Servicios el RNC debe tener 9 dígitos o la Cédula 11 dígitos');
+        alert('For Service Provider the RNC must have 9 digits or the ID 11 digits');
         return;
       }
     } else if (supplierTypeKey === 'proveedor_informal') {
       if (taxIdDigits.length > 0) {
-        alert('Para Proveedor informal no debe registrarse RNC/Cédula');
+        alert('For Informal Supplier no RNC/ID should be registered');
         return;
       }
     } else if (formData.documentType === 'RNC' && taxIdDigits.length !== 9) {
-      alert('El RNC debe tener 9 dígitos');
+      alert('RNC must have 9 digits');
       return;
     } else if (formData.documentType === 'Cédula' && taxIdDigits.length !== 11) {
-      alert('La Cédula debe tener 11 dígitos');
+      alert('ID must have 11 digits');
       return;
     }
 
@@ -437,11 +437,11 @@ export default function SuppliersPage() {
 
       await loadSuppliers();
       resetForm();
-      alert(editingSupplier ? 'Proveedor actualizado exitosamente' : 'Proveedor creado exitosamente');
+      alert(editingSupplier ? 'Supplier updated successfully' : 'Supplier created successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving supplier', error);
-      alert('Error al guardar el proveedor');
+      alert('Error saving supplier');
     }
   };
 
@@ -509,19 +509,19 @@ export default function SuppliersPage() {
 
   const handleDelete = async (id: string | number) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para eliminar proveedores');
+      alert('You must log in to delete suppliers');
       return;
     }
-    if (!confirm('¿Estás seguro de eliminar este proveedor?')) return;
+    if (!confirm('Are you sure you want to delete this supplier?')) return;
 
     try {
       await suppliersService.delete(String(id));
       await loadSuppliers();
-      alert('Proveedor eliminado exitosamente');
+      alert('Supplier deleted successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error deleting supplier', error);
-      alert('No se pudo eliminar el proveedor');
+      alert('Could not delete supplier');
     }
   };
 
@@ -694,8 +694,8 @@ export default function SuppliersPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Proveedores</h1>
-            <p className="text-gray-600">Base de datos de proveedores y vendedores</p>
+            <h1 className="text-2xl font-bold text-gray-900">Supplier Management</h1>
+            <p className="text-gray-600">Supplier and vendor database</p>
           </div>
           <div className="flex space-x-3">
             <button 
@@ -703,21 +703,21 @@ export default function SuppliersPage() {
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button 
               onClick={exportToExcel}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Proveedor
+              New Supplier
             </button>
           </div>
         </div>
@@ -730,7 +730,7 @@ export default function SuppliersPage() {
                 <i className="ri-truck-line text-xl text-blue-600"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Proveedores</p>
+                <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
                 <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
               </div>
             </div>
@@ -741,7 +741,7 @@ export default function SuppliersPage() {
                 <i className="ri-check-line text-xl text-green-600"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Activos</p>
+                <p className="text-sm font-medium text-gray-600">Active</p>
                 <p className="text-2xl font-bold text-gray-900">{suppliers.filter(s => s.status === 'Activo').length}</p>
               </div>
             </div>
@@ -752,7 +752,7 @@ export default function SuppliersPage() {
                 <i className="ri-money-dollar-circle-line text-xl text-orange-600"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Balance Total</p>
+                <p className="text-sm font-medium text-gray-600">Total Balance</p>
                 <p className="text-2xl font-bold text-gray-900">RD$ {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}</p>
               </div>
             </div>
@@ -763,7 +763,7 @@ export default function SuppliersPage() {
                 <i className="ri-credit-card-line text-xl text-purple-600"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Crédito Disponible</p>
+                <p className="text-sm font-medium text-gray-600">Available Credit</p>
                 <p className="text-2xl font-bold text-gray-900">RD$ {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}</p>
               </div>
             </div>
@@ -774,11 +774,11 @@ export default function SuppliersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
                   type="text"
-                  placeholder="Buscar por nombre, RNC o email..."
+                  placeholder="Search by name, Tax ID or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -787,7 +787,7 @@ export default function SuppliersPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
               <input
                 type="text"
                 list="supplier-category-options"
@@ -802,31 +802,31 @@ export default function SuppliersPage() {
               </datalist>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select 
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="all">Todos los Estados</option>
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
+                <option value="all">All Statuses</option>
+                <option value="Activo">Active</option>
+                <option value="Inactivo">Inactive</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Términos de Pago</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Terms</label>
               <select 
                 value={filterPaymentTerms}
                 onChange={(e) => setFilterPaymentTerms(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="all">Todos</option>
-                <option value="Sin especificar">Sin especificar</option>
-                <option value="Contado">Contado</option>
-                <option value="15 días">15 días</option>
-                <option value="30 días">30 días</option>
-                <option value="45 días">45 días</option>
-                <option value="60 días">60 días</option>
+                <option value="all">All</option>
+                <option value="Sin especificar">Unspecified</option>
+                <option value="Contado">Cash</option>
+                <option value="15 días">15 days</option>
+                <option value="30 días">30 days</option>
+                <option value="45 días">45 days</option>
+                <option value="60 días">60 days</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -834,7 +834,7 @@ export default function SuppliersPage() {
                 onClick={() => {setSearchTerm(''); setFilterStatus('all'); setFilterCategory('all'); setFilterPaymentTerms('all');}}
                 className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
@@ -843,19 +843,19 @@ export default function SuppliersPage() {
         {/* Suppliers Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Proveedores</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Supplier List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RNC</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Límite Crédito</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Credit Limit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -921,7 +921,7 @@ export default function SuppliersPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Detalles del Proveedor</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Supplier Details</h3>
                   <button 
                     onClick={() => setShowDetailsModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -933,7 +933,7 @@ export default function SuppliersPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Nombre</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Name</h4>
                     <p className="text-gray-900">{selectedSupplier.name}</p>
                   </div>
                   <div>
@@ -945,21 +945,21 @@ export default function SuppliersPage() {
                     <p className="text-gray-900">{selectedSupplier.email}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Teléfono</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Phone</h4>
                     <p className="text-gray-900">{selectedSupplier.phone}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Dirección</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Address</h4>
                     <p className="text-gray-900">{selectedSupplier.address}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Categoría</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Category</h4>
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                       {selectedSupplier.category}
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Estado</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status</h4>
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       selectedSupplier.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
@@ -967,31 +967,31 @@ export default function SuppliersPage() {
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Límite de Crédito</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Credit Limit</h4>
                     <p className="text-gray-900">RD$ {selectedSupplier.creditLimit.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Balance Actual</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Current Balance</h4>
                     <p className="text-gray-900">RD$ {selectedSupplier.balance.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Términos de Pago</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Payment Terms</h4>
                     <p className="text-gray-900">{selectedSupplier.paymentTerms}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contacto</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact</h4>
                     <p className="text-gray-900">{selectedSupplier.contact}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Persona de Contacto</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Person</h4>
                     <p className="text-gray-900">{selectedSupplier.contactName || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Teléfono Contacto</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Phone</h4>
                     <p className="text-gray-900">{selectedSupplier.contactPhone || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Email Contacto</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Email</h4>
                     <p className="text-gray-900">{selectedSupplier.contactEmail || '-'}</p>
                   </div>
                   <div>
@@ -1011,13 +1011,13 @@ export default function SuppliersPage() {
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
                   >
-                    Editar
+                    Edit
                   </button>
                   <button 
                     onClick={() => setShowDetailsModal(false)}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    Cerrar
+                    Close
                   </button>
                 </div>
               </div>
@@ -1031,13 +1031,13 @@ export default function SuppliersPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                  {editingSupplier ? 'Edit Supplier' : 'New Supplier'}
                 </h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                     <input 
                       type="text"
                       required
@@ -1047,7 +1047,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de documento <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Type <span className="text-red-500">*</span></label>
                     <select
                       value={formData.documentType}
                       onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
@@ -1059,7 +1059,7 @@ export default function SuppliersPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Número documento (RNC/Cédula) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Number (Tax ID) *</label>
                     <input 
                       type="text"
                       required
@@ -1078,7 +1078,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Razón Social</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Legal Name</label>
                     <input
                       type="text"
                       value={formData.legalName}
@@ -1096,7 +1096,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                     <input 
                       type="text"
                       value={formData.phone}
@@ -1105,7 +1105,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nombre Persona de Contacto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person Name</label>
                     <input
                       type="text"
                       value={formData.contactName}
@@ -1114,7 +1114,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Teléfono Persona de Contacto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person Phone</label>
                     <input
                       type="text"
                       value={formData.contactPhone}
@@ -1123,7 +1123,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Persona de Contacto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person Email</label>
                     <input
                       type="email"
                       value={formData.contactEmail}
@@ -1150,7 +1150,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Dirección</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
                     <textarea 
                       value={formData.address}
                       onChange={(e) => setFormData({...formData, address: e.target.value})}
@@ -1159,7 +1159,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Límite de Crédito</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Limit</label>
                     <input 
                       type="number" min="0"
                       value={formData.creditLimit}
@@ -1168,7 +1168,7 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Términos de Pago</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Terms</label>
                     <select 
                       value={formData.paymentTermsId}
                       onChange={(e) => {
@@ -1181,66 +1181,66 @@ export default function SuppliersPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Unspecified</option>
                       {paymentTermsList.map((term: any) => (
                         <option key={term.id} value={term.id}>{term.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de gasto 606</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expense Type 606</label>
                     <select
                       value={formData.expenseType606}
                       onChange={(e) => setFormData({ ...formData, expenseType606: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Unspecified</option>
                       {expenseTypes606.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Régimen Tributario</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tax Regime</label>
                     <select
                       value={formData.taxRegime}
                       onChange={(e) => setFormData({ ...formData, taxRegime: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Unspecified</option>
                       {taxRegimes.map((reg) => (
                         <option key={reg} value={reg}>{reg}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Factura Habitual</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Default Invoice Type</label>
                     <select
                       value={formData.defaultInvoiceType}
                       onChange={(e) => setFormData({ ...formData, defaultInvoiceType: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Unspecified</option>
                       {invoiceTypes.map((it) => (
                         <option key={it} value={it}>{it}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Suplidor</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier Type</label>
                     <select
                       value={formData.supplierTypeId}
                       onChange={(e) => setFormData({ ...formData, supplierTypeId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Unspecified</option>
                       {supplierTypes.map((st: any) => (
                         <option key={st.id} value={st.id}>{st.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <input
                       type="text"
                       list="supplier-category-options"
@@ -1255,28 +1255,28 @@ export default function SuppliersPage() {
                     </datalist>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                     <select 
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
+                      <option value="Activo">Active</option>
+                      <option value="Inactivo">Inactive</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta por Pagar (opcional)
+                    Accounts Payable (optional)
                   </label>
                   <select
                     value={formData.apAccountId}
                     onChange={(e) => setFormData({ ...formData, apAccountId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                   >
-                    <option value="">Usar cuenta por defecto</option>
+                    <option value="">Use default account</option>
                     {payableAccounts.map((acc: any) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -1284,19 +1284,19 @@ export default function SuppliersPage() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Si no seleccionas una cuenta, se usará la cuenta por pagar configurada por defecto.
+                    If you don't select an account, the default accounts payable account will be used.
                   </p>
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta Bancaria Predeterminada (opcional)
+                    Default Bank Account (optional)
                   </label>
                   <select
                     value={formData.defaultBankAccountId}
                     onChange={(e) => setFormData({ ...formData, defaultBankAccountId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                   >
-                    <option value="">Sin cuenta predeterminada</option>
+                    <option value="">No default account</option>
                     {bankAccounts.map((ba: any) => (
                       <option key={ba.id} value={ba.id}>
                         {ba.bank_name} - {ba.account_number}
@@ -1310,13 +1310,13 @@ export default function SuppliersPage() {
                     onClick={resetForm}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button 
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
                   >
-                    {editingSupplier ? 'Actualizar' : 'Crear'} Proveedor
+                    {editingSupplier ? 'Update' : 'Create'} Supplier
                   </button>
                 </div>
               </form>

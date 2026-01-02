@@ -18,13 +18,13 @@ export default function Login() {
 
     // Validaciones
     if (!email || !password) {
-      setError('Por favor completa todos los campos');
+      setError('Please fill in all fields');
       setLoading(false);
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Por favor ingresa un email válido');
+      setError('Please enter a valid email');
       setLoading(false);
       return;
     }
@@ -34,9 +34,9 @@ export default function Login() {
 
       if (signInError) {
         if (signInError.includes('Invalid login credentials')) {
-          setError('Email o contraseña incorrectos');
+          setError('Incorrect email or password');
         } else if (signInError.includes('Email not confirmed')) {
-          setError('Por favor confirma tu email antes de iniciar sesión');
+          setError('Please confirm your email before signing in');
         } else {
           setError(signInError);
         }
@@ -49,7 +49,7 @@ export default function Login() {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError('Error al iniciar sesión. Por favor intenta de nuevo.');
+      setError('Login error. Please try again.');
       setLoading(false);
     }
   };
@@ -63,8 +63,8 @@ export default function Login() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] rounded-2xl mb-4">
               <i className="ri-shield-user-line text-3xl text-white"></i>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido</h1>
-            <p className="text-gray-600">Inicia sesión en tu cuenta</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome</h1>
+            <p className="text-gray-600">Sign in to your account</p>
           </div>
 
           {/* Mensaje de error */}
@@ -79,7 +79,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Correo Electrónico
+                Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -99,7 +99,7 @@ export default function Login() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Contraseña
+                Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -133,14 +133,14 @@ export default function Login() {
                   className="h-4 w-4 text-[#4a5d23] focus:ring-[#4a5d23] border-stone-300 rounded cursor-pointer"
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                  Recordarme
+                  Remember me
                 </label>
               </div>
               <Link
                 to="/auth/reset-password"
                 className="text-sm font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
-                ¿Olvidaste tu contraseña?
+                Forgot your password?
               </Link>
             </div>
 
@@ -152,12 +152,12 @@ export default function Login() {
               {loading ? (
                 <>
                   <i className="ri-loader-4-line animate-spin mr-2"></i>
-                  Iniciando sesión...
+                  Signing in...
                 </>
               ) : (
                 <>
                   <i className="ri-login-box-line mr-2"></i>
-                  Iniciar Sesión
+                  Sign In
                 </>
               )}
             </button>
@@ -166,12 +166,12 @@ export default function Login() {
           {/* Registro */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              ¿No tienes una cuenta?{' '}
+              Don't have an account?{' '}
               <Link
                 to="/auth/register"
                 className="font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
-                Regístrate aquí
+                Sign up here
               </Link>
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function Login() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            © 2024 Sistema Contable. Todos los derechos reservados.
+            © 2024 Sendbillnow. All rights reserved.
           </p>
         </div>
       </div>

@@ -45,7 +45,7 @@ export default function StripePaymentForm({
     }
 
     if (!cardComplete) {
-      setError('Por favor completa la información de la tarjeta');
+      setError('Please complete the card information');
       return;
     }
 
@@ -55,15 +55,15 @@ export default function StripePaymentForm({
     try {
       console.log('Starting payment process...', { planId, userId, userEmail });
       
-      // Obtener el CardElement
+      // Get the CardElement
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) {
-        throw new Error('No se pudo obtener el elemento de tarjeta');
+        throw new Error('Could not get card element');
       }
 
       console.log('Calling Edge Function...');
 
-      // Crear Payment Intent desde el backend
+      // Create Payment Intent from backend
       const response = await fetch(`${import.meta.env.VITE_PUBLIC_SUPABASE_URL}/functions/v1/create-payment-intent`, {
         method: 'POST',
         headers: {
@@ -78,7 +78,7 @@ export default function StripePaymentForm({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('Edge Function error:', errorData);
         throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
       }
@@ -87,7 +87,7 @@ export default function StripePaymentForm({
       console.log('Payment Intent created:', data);
       const { clientSecret } = data;
 
-      // Confirmar el pago
+      // Confirm payment
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
@@ -108,7 +108,7 @@ export default function StripePaymentForm({
         console.log('Payment succeeded!');
         onSuccess();
       } else {
-        throw new Error(`El pago no se completó correctamente. Estado: ${paymentIntent?.status || 'desconocido'}`);
+        throw new Error(`Payment was not completed correctly. Status: ${paymentIntent?.status || 'unknown'}`);
       }
     } catch (err: any) {
       console.error('Payment error:', err);
@@ -117,7 +117,7 @@ export default function StripePaymentForm({
         stack: err.stack,
         name: err.name
       });
-      setError(err.message || 'Error al procesar el pago');
+      setError(err.message || 'Error processing payment');
     } finally {
       setIsProcessing(false);
     }
@@ -127,18 +127,18 @@ export default function StripePaymentForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="bg-gray-50 rounded-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-gray-700 font-medium">Plan seleccionado:</span>
+          <span className="text-gray-700 font-medium">Selected plan:</span>
           <span className="text-gray-900 font-bold">{planName}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-700 font-medium">Monto a pagar:</span>
+          <span className="text-gray-700 font-medium">Amount to pay:</span>
           <span className="text-2xl font-bold text-blue-600">${amount.toFixed(2)} USD</span>
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Información de la tarjeta
+          Card information
         </label>
         <div className="border border-gray-300 rounded-lg p-3 bg-white">
           <CardElement
@@ -174,9 +174,9 @@ export default function StripePaymentForm({
         <div className="flex items-start">
           <i className="ri-shield-check-line text-blue-600 text-xl mr-2 mt-0.5"></i>
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Pago seguro con Stripe</p>
+            <p className="font-medium mb-1">Secure payment with Stripe</p>
             <p className="text-blue-700">
-              Tu información está protegida con encriptación de nivel bancario.
+              Your information is protected with bank-level encryption.
             </p>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function StripePaymentForm({
           disabled={isProcessing}
           className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
         >
-          Cancelar
+          Cancel
         </button>
         <button
           type="submit"
@@ -199,19 +199,19 @@ export default function StripePaymentForm({
           {isProcessing ? (
             <>
               <i className="ri-loader-4-line animate-spin mr-2"></i>
-              Procesando...
+              Processing...
             </>
           ) : (
             <>
               <i className="ri-secure-payment-line mr-2"></i>
-              Pagar ${amount.toFixed(2)}
+              Pay ${amount.toFixed(2)}
             </>
           )}
         </button>
       </div>
 
       <p className="text-xs text-gray-500 text-center mt-4">
-        Al confirmar el pago, aceptas nuestros términos y condiciones de servicio.
+        By confirming the payment, you accept our terms and conditions of service.
       </p>
     </form>
   );

@@ -19,107 +19,107 @@ export default function HomePage() {
   const features = [
     {
       icon: 'ri-file-list-3-line',
-      title: 'Reportes DGII',
-      description: 'Genera automáticamente reportes 606, 607, 608, 609 y formularios fiscales requeridos.'
+      title: 'Tax Reports',
+      description: 'Automatically generate 606, 607, 608, 609 reports and required tax forms.'
     },
     {
       icon: 'ri-calculator-line', 
-      title: 'Contabilidad Completa',
-      description: 'Diario general, mayor general, estados financieros y conciliación bancaria integrada.'
+      title: 'Complete Accounting',
+      description: 'General journal, general ledger, financial statements and integrated bank reconciliation.'
     },
     {
       icon: 'ri-receipt-line',
-      title: 'Facturación Completa',
-      description: 'Genera facturas con NCF, gestión de comprobantes fiscales y control de secuencias.'
+      title: 'Complete Invoicing',
+      description: 'Generate invoices with tax credentials, fiscal voucher management and sequence control.'
     },
     {
       icon: 'ri-group-line',
-      title: 'Nómina Automatizada', 
-      description: 'Cálculo automático de nómina, prestaciones laborales y reportes al TSS.'
+      title: 'Automated Payroll', 
+      description: 'Automatic payroll calculation, employee benefits and social security reports.'
     },
     {
       icon: 'ri-pie-chart-line',
-      title: 'Análisis Financiero',
-      description: 'Dashboard con KPIs, análisis de rentabilidad y proyecciones financieras.'
+      title: 'Financial Analysis',
+      description: 'Dashboard with KPIs, profitability analysis and financial projections.'
     },
     {
       icon: 'ri-bank-line',
-      title: 'Gestión Bancaria',
-      description: 'Conciliación bancaria automática y gestión completa de cuentas bancarias.'
+      title: 'Banking Management',
+      description: 'Automatic bank reconciliation and complete bank account management.'
     },
     {
       icon: 'ri-shield-check-line',
-      title: 'Seguridad Total',
-      description: 'Backup automático en la nube, control de usuarios y auditoría completa.'
+      title: 'Total Security',
+      description: 'Automatic cloud backup, user control and complete audit trail.'
     },
     {
       icon: 'ri-smartphone-line',
-      title: 'Acceso Móvil',
-      description: 'Consulta información desde cualquier dispositivo con acceso web responsivo.'
+      title: 'Mobile Access',
+      description: 'Access information from any device with responsive web access.'
     }
   ];
 
   const plans = [
     {
-      name: 'PYME',
+      name: 'SMB',
       price: 'USD $39.99',
-      period: '/mes',
+      period: '/month',
       features: [
-        'Una empresa',
-        'Facturación básica',
-        'Dashboard básico',
-        'Inventario limitado (500)',
-        'Soporte por email',
-        'Prueba gratis 15 días'
+        'One company',
+        'Basic invoicing',
+        'Basic dashboard',
+        'Limited inventory (500)',
+        'Email support',
+        '15-day free trial'
       ],
       popular: false
     },
     {
       name: 'PRO',
       price: 'USD $99.99',
-      period: '/mes',
+      period: '/month',
       features: [
-        'Hasta 3 empresas',
-        'Contabilidad completa',
-        'Dashboard básico',
-        'Inventario limitado (2,000)',
-        'Gestión bancaria básica',
-        'Nómina básica (10 empleados)',
-        'Soporte prioritario',
-        'Prueba gratis 15 días'
+        'Up to 3 companies',
+        'Complete accounting',
+        'Basic dashboard',
+        'Limited inventory (2,000)',
+        'Basic banking management',
+        'Basic payroll (10 employees)',
+        'Priority support',
+        '15-day free trial'
       ],
       popular: true
     },
     {
       name: 'PLUS',
       price: 'USD $199.99',
-      period: '/mes',
+      period: '/month',
       features: [
-        'Empresas ilimitadas',
-        'Todas las funciones',
-        'Dashboard KPI avanzado',
-        'Inventario ilimitado',
-        'Nómina completa',
-        'Análisis financiero avanzado',
-        'Reportes personalizados',
-        'Soporte técnico especializado',
-        'Soporte 24/7',
-        'Prueba gratis 15 días'
+        'Unlimited companies',
+        'All features',
+        'Advanced KPI dashboard',
+        'Unlimited inventory',
+        'Complete payroll',
+        'Advanced financial analysis',
+        'Custom reports',
+        'Specialized technical support',
+        '24/7 support',
+        '15-day free trial'
       ],
       popular: false
     },
     {
-      name: 'ESTUDIANTIL',
+      name: 'STUDENT',
       price: 'USD $99.99',
-      period: '/mes',
+      period: '/month',
       features: [
-        'Empresas ilimitadas',
-        'Todas las funciones',
-        'Dashboard KPI avanzado',
-        'Inventario ilimitado',
-        'Análisis financiero avanzado',
-        'Descuento estudiantil',
-        'Prueba gratis 15 días'
+        'Unlimited companies',
+        'All features',
+        'Advanced KPI dashboard',
+        'Unlimited inventory',
+        'Advanced financial analysis',
+        'Student discount',
+        '15-day free trial'
       ],
       popular: false
     }
@@ -148,20 +148,20 @@ export default function HomePage() {
                 onClick={() => handleSmoothScroll('features')} 
                 className="text-gray-600 hover:text-gray-900 cursor-pointer"
               >
-                Características
+                Features
               </button>
               <button 
                 onClick={() => handleSmoothScroll('pricing')} 
                 className="text-gray-600 hover:text-gray-900 cursor-pointer"
               >
-                Precios
+                Pricing
               </button>
-              <Link to="/auth/login" className="text-[#4a5d23] hover:text-[#3d4d1c] cursor-pointer">Iniciar Sesión</Link>
+              <Link to="/auth/login" className="text-[#4a5d23] hover:text-[#3d4d1c] cursor-pointer">Sign In</Link>
               <Link 
                 to="/auth/register" 
                 className="bg-[#4a5d23] text-white px-4 py-2 rounded-lg hover:bg-[#3d4d1c] whitespace-nowrap cursor-pointer"
               >
-                Prueba Gratis
+                Free Trial
               </Link>
             </div>
             <div className="md:hidden">
@@ -179,18 +179,17 @@ export default function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-                Contabilidad <span className="text-[#4a5d23]">Inteligente</span> para República Dominicana
+                Smart <span className="text-[#4a5d23]">Accounting</span> for Your Business
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-                El sistema de contabilidad más completo para empresas dominicanas. Cumple con DGII y 
-                automatiza todos tus procesos contables.
+                The most complete accounting system for businesses. Automate all your accounting processes.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
                   to="/auth/register"
                   className="bg-[#4a5d23] text-white px-8 py-4 rounded-lg hover:bg-[#3d4d1c] text-center font-semibold whitespace-nowrap cursor-pointer"
                 >
-                  Comenzar Prueba Gratis
+                  Start Free Trial
                 </Link>
               </div>
             </div>
@@ -210,11 +209,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Todo lo que necesitas para tu contabilidad
+              Everything you need for your accounting
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Diseñado específicamente para empresas dominicanas con todas las funciones 
-              que necesitas para cumplir con las regulaciones locales.
+              Designed specifically for businesses with all the features 
+              you need to comply with local regulations.
             </p>
           </div>
           
@@ -237,10 +236,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Planes que se adaptan a tu empresa
+              Plans that fit your business
             </h2>
             <p className="text-xl text-gray-600">
-              Comienza gratis y escala según crezca tu negocio
+              Start free and scale as your business grows
             </p>
           </div>
 
@@ -252,7 +251,7 @@ export default function HomePage() {
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-[#4a5d23] text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Más Popular
+                      Most Popular
                     </span>
                   </div>
                 )}
@@ -282,7 +281,7 @@ export default function HomePage() {
                       : 'bg-stone-100 text-stone-900 hover:bg-stone-200'
                   }`}
                 >
-                  Comenzar Ahora
+                  Get Started
                 </Link>
               </div>
             ))}
@@ -294,17 +293,17 @@ export default function HomePage() {
       <section className="py-20 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-            ¿Listo para modernizar tu contabilidad?
+            Ready to modernize your accounting?
           </h2>
           <p className="text-xl text-stone-200 mb-8 max-w-2xl mx-auto">
-            Únete a cientos de empresas dominicanas que ya confían en Sendbillnow 
-            para su gestión contable y fiscal.
+            Join hundreds of businesses that already trust Sendbillnow 
+            for their accounting and tax management.
           </p>
           <Link 
             to="/auth/register"
             className="bg-white text-[#4a5d23] px-8 py-4 rounded-lg hover:bg-stone-100 font-semibold text-lg whitespace-nowrap cursor-pointer"
           >
-            Comenzar Prueba Gratis de 15 Días
+            Start 15-Day Free Trial
           </Link>
         </div>
       </section>
@@ -318,19 +317,19 @@ export default function HomePage() {
                 Sendbillnow
               </h3>
               <p className="text-gray-400">
-                El sistema de contabilidad más completo para empresas dominicanas.
+                The most complete accounting system for businesses.
               </p>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Producto</h4>
+              <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
                   <button 
                     onClick={() => handleSmoothScroll('features')} 
                     className="hover:text-white cursor-pointer"
                   >
-                    Características
+                    Features
                   </button>
                 </li>
                 <li>
@@ -338,28 +337,28 @@ export default function HomePage() {
                     onClick={() => handleSmoothScroll('pricing')} 
                     className="hover:text-white cursor-pointer"
                   >
-                    Precios
+                    Pricing
                   </button>
                 </li>
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Integraciones
+                    Integrations
                   </Link>
                 </li>
               </ul>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Soporte</h4>
+              <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Centro de Ayuda
+                    Help Center
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Estado del Sistema
+                    System Status
                   </Link>
                 </li>
               </ul>
@@ -370,17 +369,17 @@ export default function HomePage() {
               <ul className="space-y-2 text-gray-400">
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Privacidad
+                    Privacy
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Términos
+                    Terms
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="hover:text-white cursor-pointer">
-                    Seguridad
+                    Security
                   </Link>
                 </li>
               </ul>
@@ -388,7 +387,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Sendbillnow. Todos los derechos reservados.</p>
+            <p>&copy; 2024 Sendbillnow. All rights reserved.</p>
           </div>
         </div>
       </footer>

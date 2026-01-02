@@ -50,78 +50,78 @@ export default function TaxesPage() {
 
   const modules = [
     {
-      title: 'Configuración de Impuestos',
-      description: 'Configurar tasas y parámetros fiscales',
+      title: 'Tax Configuration',
+      description: 'Configure tax rates and fiscal parameters',
       icon: 'ri-settings-line',
       href: '/taxes/configuration',
       color: 'blue'
     },
     {
-      title: 'Gestión NCF/E-CF',
-      description: 'Mantenimiento de secuencias fiscales',
+      title: 'NCF/E-CF Management',
+      description: 'Fiscal sequence maintenance',
       icon: 'ri-file-shield-line',
       href: '/taxes/ncf',
       color: 'green'
     },
     {
-      title: 'Series Fiscales',
-      description: 'Gestionar series de documentos fiscales',
+      title: 'Fiscal Series',
+      description: 'Manage fiscal document series',
       icon: 'ri-list-ordered-line',
       href: '/taxes/fiscal-series',
       color: 'purple'
     },
     {
-      title: 'Reporte 606',
-      description: 'Reporte de compras y servicios',
+      title: 'Report 606',
+      description: 'Purchases and services report',
       icon: 'ri-file-chart-line',
       href: '/taxes/report-606',
       color: 'orange'
     },
     {
-      title: 'Reporte 607',
-      description: 'Reporte de ventas y servicios',
+      title: 'Report 607',
+      description: 'Sales and services report',
       icon: 'ri-file-chart-2-line',
       href: '/taxes/report-607',
       color: 'red'
     },
     {
-      title: 'Reporte 608',
-      description: 'Reporte de documentos cancelados',
+      title: 'Report 608',
+      description: 'Cancelled documents report',
       icon: 'ri-file-damage-line',
       href: '/taxes/report-608',
       color: 'indigo'
     },
     {
-      title: 'Reporte 623',
-      description: 'Reporte de pagos al exterior',
+      title: 'Report 623',
+      description: 'Foreign payments report',
       icon: 'ri-global-line',
       href: '/taxes/report-623',
       color: 'pink'
     },
     {
-      title: 'Reporte IT-1',
-      description: 'Declaración mensual del ITBIS',
+      title: 'Report IT-1',
+      description: 'Monthly ITBIS declaration',
       icon: 'ri-calendar-check-line',
       href: '/taxes/report-it1',
       color: 'teal'
     },
     {
-      title: 'Reporte IR-17',
-      description: 'Reporte de retenciones de ISR',
+      title: 'Report IR-17',
+      description: 'ISR withholding report',
       icon: 'ri-percent-line',
       href: '/taxes/report-ir17',
       color: 'cyan'
     },
     {
-      title: 'Formulario 607',
-      description: 'Registro de ventas con comprobantes fiscales NCF según DGII',
+      title: 'Form 607',
+      description: 'Sales register with NCF fiscal receipts per DGII',
       icon: 'ri-file-list-3-line',
       href: '/taxes/formulario-607',
       color: 'purple'
     },
     {
-      title: 'Proporcionalidad ITBIS',
-      description: 'Cálculo mensual de proporcionalidad del ITBIS deducible',
+      title: 'ITBIS Proportionality',
+      description: 'Monthly calculation of deductible ITBIS proportionality',
       icon: 'ri-calculator-line',
       href: '/taxes/itbis-proportionality',
       color: 'emerald'
@@ -130,28 +130,28 @@ export default function TaxesPage() {
 
   const taxStatsDisplay = [
     {
-      title: 'ITBIS Cobrado',
+      title: 'ITBIS Collected',
       value: formatMoney(taxStats.itbis_cobrado, 'RD$'),
       change: '+12%',
       icon: 'ri-money-dollar-circle-line',
       color: 'green'
     },
     {
-      title: 'ITBIS Pagado',
+      title: 'ITBIS Paid',
       value: formatMoney(taxStats.itbis_pagado, 'RD$'),
       change: '+8%',
       icon: 'ri-bank-card-line',
       color: 'blue'
     },
     {
-      title: 'ITBIS Neto a Pagar',
+      title: 'Net ITBIS Due',
       value: formatMoney(taxStats.itbis_neto, 'RD$'),
       change: '+15%',
       icon: 'ri-calculator-line',
       color: 'orange'
     },
     {
-      title: 'Retenciones',
+      title: 'Withholdings',
       value: formatMoney(taxStats.retenciones, 'RD$'),
       change: '+5%',
       icon: 'ri-percent-line',
@@ -160,11 +160,11 @@ export default function TaxesPage() {
   ];
 
   const documentTypes = [
-    { value: 'B01', label: 'B01 - Crédito Fiscal' },
-    { value: 'B02', label: 'B02 - Consumidor Final' },
-    { value: 'B14', label: 'B14 - Régimen Especial' },
-    { value: 'B15', label: 'B15 - Gubernamental' },
-    { value: 'B16', label: 'B16 - Exportaciones' }
+    { value: 'B01', label: 'B01 - Tax Credit' },
+    { value: 'B02', label: 'B02 - Final Consumer' },
+    { value: 'B14', label: 'B14 - Special Regime' },
+    { value: 'B15', label: 'B15 - Government' },
+    { value: 'B16', label: 'B16 - Exports' }
   ];
 
   const fiscalDocuments = ncfSeries.map(series => ({
@@ -172,7 +172,7 @@ export default function TaxesPage() {
     series: series.series_prefix,
     current: series.current_number.toString().padStart(8, '0'),
     remaining: series.end_number - series.current_number + 1,
-    status: series.status === 'active' ? 'Activo' : 'Inactivo'
+    status: series.status === 'active' ? 'Active' : 'Inactive'
   }));
 
   // Calculate upcoming deadlines from database or use defaults
@@ -244,8 +244,8 @@ export default function TaxesPage() {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Módulo de Gestión Fiscal</h1>
-          <p className="text-gray-600">Sistema completo de cumplimiento fiscal para República Dominicana</p>
+          <h1 className="text-2xl font-bold text-gray-900">Tax Management Module</h1>
+          <p className="text-gray-600">Complete tax compliance system for Dominican Republic</p>
         </div>
 
         {/* Tax Stats */}
@@ -263,7 +263,7 @@ export default function TaxesPage() {
               </div>
               <div className="mt-4">
                 <span className="text-sm font-medium text-green-600">{stat.change}</span>
-                <span className="text-sm text-gray-500 ml-1">vs mes anterior</span>
+                <span className="text-sm text-gray-500 ml-1">vs previous month</span>
               </div>
             </div>
           ))}
@@ -284,7 +284,7 @@ export default function TaxesPage() {
                 onClick={() => handleAccessModule(module.href)}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
-                Acceder
+                Access
               </button>
             </div>
           ))}
@@ -294,7 +294,7 @@ export default function TaxesPage() {
           {/* Fiscal Documents Status */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Estado de Series Fiscales</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Fiscal Series Status</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
@@ -302,14 +302,14 @@ export default function TaxesPage() {
                   <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{doc.type}</p>
-                      <p className="text-sm text-gray-600">Serie: {doc.series}</p>
-                      <p className="text-xs text-gray-500">Actual: {doc.current}</p>
+                      <p className="text-sm text-gray-600">Series: {doc.series}</p>
+                      <p className="text-xs text-gray-500">Current: {doc.current}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">{doc.remaining}</p>
-                      <p className="text-xs text-gray-500">disponibles</p>
+                      <p className="text-xs text-gray-500">available</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        doc.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        doc.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
                         {doc.status}
                       </span>
@@ -319,7 +319,7 @@ export default function TaxesPage() {
                 {fiscalDocuments.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     <i className="ri-file-shield-line text-4xl text-gray-300 mb-2"></i>
-                    <p>No hay series fiscales configuradas</p>
+                    <p>No fiscal series configured</p>
                   </div>
                 )}
               </div>
@@ -328,7 +328,7 @@ export default function TaxesPage() {
                   onClick={() => navigate('/taxes/ncf')}
                   className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
-                  Configurar Series NCF
+                  Configure NCF Series
                 </button>
               </div>
             </div>
@@ -337,7 +337,7 @@ export default function TaxesPage() {
           {/* Upcoming Deadlines */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Próximos Vencimientos Fiscales</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Upcoming Tax Deadlines</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
@@ -353,20 +353,20 @@ export default function TaxesPage() {
                         deadline.priority === 'High' ? 'bg-orange-100 text-orange-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {deadline.priority === 'Urgent' ? 'Urgente' :
-                         deadline.priority === 'High' ? 'Alto' : 'Medio'}
+                        {deadline.priority === 'Urgent' ? 'Urgent' :
+                         deadline.priority === 'High' ? 'High' : 'Medium'}
                       </span>
                       <span className="text-sm font-medium text-gray-900">
-                        {deadline.daysLeft === 0 ? 'Vence Hoy' : `${deadline.daysLeft} días`}
+                        {deadline.daysLeft === 0 ? 'Due Today' : `${deadline.daysLeft} days`}
                       </span>
                     </div>
                     <p className="font-medium text-gray-900">{deadline.report}</p>
-                    <p className="text-sm text-gray-600">Vence: {deadline.dueDate}</p>
+                    <p className="text-sm text-gray-600">Due: {deadline.dueDate}</p>
                     <button 
                       onClick={() => handleGenerateReport(deadline.report)}
                       className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
                     >
-                      Generar Reporte
+                      Generate Report
                     </button>
                   </div>
                 ))}

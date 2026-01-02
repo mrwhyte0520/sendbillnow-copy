@@ -70,7 +70,7 @@ export default function AdvancedKPIDashboard() {
         const todayDate = new Date(year, month, today);
         return [
           {
-            label: 'Hoy',
+            label: 'Today',
             from: todayDate.toISOString().slice(0, 10),
             to: todayDate.toISOString().slice(0, 10),
           },
@@ -84,7 +84,7 @@ export default function AdvancedKPIDashboard() {
           const start = new Date(end);
           start.setDate(end.getDate() - 6);
           ranges.push({
-            label: `Sem ${4 - i}`,
+            label: `Week ${4 - i}`,
             from: start.toISOString().slice(0, 10),
             to: end.toISOString().slice(0, 10),
           });
@@ -96,7 +96,7 @@ export default function AdvancedKPIDashboard() {
         const end = new Date(year, month + 1, 0);
         return [
           {
-            label: now.toLocaleString('es-DO', { month: 'short' }),
+            label: now.toLocaleString('en-US', { month: 'short' }),
             from: start.toISOString().slice(0, 10),
             to: end.toISOString().slice(0, 10),
           },
@@ -149,7 +149,7 @@ export default function AdvancedKPIDashboard() {
   const fetchData = async () => {
     if (!user?.id) {
       setLoading(false);
-      setError('No se encontró usuario autenticado');
+      setError('No authenticated user found');
       return;
     }
     setLoading(true);
@@ -167,7 +167,7 @@ export default function AdvancedKPIDashboard() {
 
       const incomeStmt = await chartAccountsService.generateIncomeStatement(uid, fromDate, toDate);
 
-      // Los ingresos vienen negativos por la lógica de cuentas de efecto contrario, hay que invertirlos
+      // Income comes negative due to contra account logic, need to invert
       const revenue = Math.abs(incomeStmt.totalIncome || 0);
       const costs = Math.abs(incomeStmt.totalCosts || 0);
       const expenses = Math.abs(incomeStmt.totalExpenses || 0);
@@ -177,7 +177,7 @@ export default function AdvancedKPIDashboard() {
       let apTotal = 0;
       const bankList: BankAccountInfo[] = [];
 
-      // Cargar saldos bancarios reales desde la tabla bank_accounts
+      // Load real bank balances from bank_accounts table
       try {
         const bankAccountsData = await bankAccountsService.getBalancesAsOf(uid, toDate);
         
@@ -187,7 +187,7 @@ export default function AdvancedKPIDashboard() {
             bankTotal += bal;
             bankList.push({
               id: account.id,
-              name: account.bank_name, // El nombre del banco está en bank_name
+              name: account.bank_name, // Bank name is in bank_name
               balance: bal,
               bank_name: account.bank_name,
               account_number: account.account_number,
@@ -196,10 +196,10 @@ export default function AdvancedKPIDashboard() {
           });
         }
       } catch (err) {
-        console.error('Error cargando bank_accounts:', err);
+        console.error('Error loading bank_accounts:', err);
       }
 
-      // Cargar cuentas por cobrar desde facturas (invoices) filtradas por período
+      // Load accounts receivable from invoices filtered by period
       try {
         const invoices = await invoicesService.getAll(uid);
         if (invoices && invoices.length > 0) {
@@ -207,16 +207,16 @@ export default function AdvancedKPIDashboard() {
             const invoiceDate = invoice.issue_date || invoice.created_at;
             
             if (invoiceDate) {
-              // Normalizar la fecha de la factura a formato YYYY-MM-DD
+              // Normalize invoice date to YYYY-MM-DD format
               const invoiceDateStr = invoiceDate.split('T')[0];
               
-              // Filtrar por rango de fechas del período seleccionado
+              // Filter by date range of selected period
               if (invoiceDateStr >= fromDate && invoiceDateStr <= toDate) {
                 const total = Number(invoice.total_amount || 0);
                 const paid = Number(invoice.paid_amount || 0);
                 const pending = total - paid;
                 
-                // Sumar cuentas por cobrar (facturas pendientes)
+                // Sum accounts receivable (pending invoices)
                 if (invoice.status !== 'cancelled' && pending > 0) {
                   arTotal += pending;
                 }
@@ -225,10 +225,10 @@ export default function AdvancedKPIDashboard() {
           });
         }
       } catch (err) {
-        console.error('Error cargando cuentas por cobrar:', err);
+        console.error('Error loading accounts receivable:', err);
       }
 
-      // Cargar cuentas por pagar desde facturas de proveedores (AP invoices) filtradas por período
+      // Load accounts payable from supplier invoices (AP invoices) filtered by period
       try {
         const apInvoices = await apInvoicesService.getAll(uid);
         if (apInvoices && apInvoices.length > 0) {
@@ -236,15 +236,15 @@ export default function AdvancedKPIDashboard() {
             const invoiceDate = invoice.invoice_date || invoice.created_at;
             
             if (invoiceDate) {
-              // Normalizar la fecha de la factura a formato YYYY-MM-DD
+              // Normalize invoice date to YYYY-MM-DD format
               const invoiceDateStr = invoiceDate.split('T')[0];
               
-              // Filtrar por rango de fechas del período seleccionado
+              // Filter by date range of selected period
               if (invoiceDateStr >= fromDate && invoiceDateStr <= toDate) {
-                // Usar balance_amount si existe, sino total_to_pay, sino total_gross
+                // Use balance_amount if exists, otherwise total_to_pay, otherwise total_gross
                 const balance = Number(invoice.balance_amount ?? invoice.total_to_pay ?? invoice.total_gross ?? 0);
                 
-                // Solo sumar facturas pendientes con balance positivo
+                // Only sum pending invoices with positive balance
                 if (invoice.status !== 'cancelled' && balance > 0) {
                   apTotal += balance;
                 }
@@ -253,10 +253,10 @@ export default function AdvancedKPIDashboard() {
           });
         }
       } catch (err) {
-        console.error('Error cargando cuentas por pagar:', err);
+        console.error('Error loading accounts payable:', err);
       }
 
-      // Recalcular utilidad
+      // Recalculate profit
       const finalProfit = revenue - costs - expenses;
 
       setKpi({
@@ -290,7 +290,7 @@ export default function AdvancedKPIDashboard() {
       setChartData(chartPoints);
     } catch (err: any) {
       console.error('Error loading dashboard data:', err);
-      setError(err?.message || 'Error al cargar los datos del dashboard');
+      setError(err?.message || 'Error loading dashboard data');
       setKpi({
         bankBalance: 0,
         receivables: 0,
@@ -335,13 +335,13 @@ export default function AdvancedKPIDashboard() {
           <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
             <i className="ri-error-warning-line text-3xl text-red-600"></i>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar estadísticas</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error loading statistics</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => fetchData()}
             className="px-4 py-2 bg-[#4a5d23] text-white rounded-lg hover:bg-[#3d4d1c]"
           >
-            Reintentar
+            Retry
           </button>
         </div>
       </div>
@@ -360,15 +360,15 @@ export default function AdvancedKPIDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Selector de período */}
+      {/* Period selector */}
       <div className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-2">
         {([
-          { key: 'daily', label: 'Hoy' },
-          { key: 'weekly', label: 'Semanal' },
-          { key: 'monthly', label: 'Mensual' },
-          { key: 'quarterly', label: 'Trimestral' },
-          { key: 'semiannual', label: 'Semestral' },
-          { key: 'annual', label: 'Anual' },
+          { key: 'daily', label: 'Today' },
+          { key: 'weekly', label: 'Weekly' },
+          { key: 'monthly', label: 'Monthly' },
+          { key: 'quarterly', label: 'Quarterly' },
+          { key: 'semiannual', label: 'Semi-annual' },
+          { key: 'annual', label: 'Annual' },
         ] as { key: PeriodType; label: string }[]).map((opt) => (
           <button
             key={opt.key}
@@ -384,52 +384,52 @@ export default function AdvancedKPIDashboard() {
         ))}
       </div>
 
-      {/* Primera línea: Bancos, CxC, CxP */}
+      {/* First row: Banks, AR, AP */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div
           className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition-shadow"
           onClick={() => setShowBankModal(true)}
         >
-          <p className="text-sm text-gray-600">Disponibilidades en Bancos</p>
+          <p className="text-sm text-gray-600">Bank Availability</p>
           <p className="text-2xl font-bold text-[#4a5d23]">{formatCurrency(Math.abs(kpi.bankBalance))}</p>
-          <p className="text-xs text-gray-400 mt-1">Click para ver detalle</p>
+          <p className="text-xs text-gray-400 mt-1">Click to view details</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Cuentas por Cobrar</p>
+          <p className="text-sm text-gray-600">Accounts Receivable</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(kpi.receivables)}</p>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Cuentas por Pagar</p>
+          <p className="text-sm text-gray-600">Accounts Payable</p>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(kpi.payables)}</p>
         </div>
       </div>
 
-      {/* Segunda línea: Ingresos, Gastos y Utilidad */}
+      {/* Second row: Revenue, Expenses and Profit */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Ingresos, Costos, Gastos y Utilidad</h3>
+        <h3 className="text-lg font-semibold mb-4">Revenue, Costs, Expenses and Profit</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-[#4a5d23]/10 p-4 rounded">
-            <p className="text-sm text-stone-600">Ingresos</p>
+            <p className="text-sm text-stone-600">Revenue</p>
             <p className="text-xl font-bold text-[#4a5d23]">{formatCurrency(Math.abs(kpi.revenue))}</p>
           </div>
           <div className="bg-amber-50 p-4 rounded">
-            <p className="text-sm text-stone-600">Costos</p>
+            <p className="text-sm text-stone-600">Costs</p>
             <p className="text-xl font-bold text-amber-700">{formatCurrency(kpi.costs)}</p>
           </div>
           <div className="bg-rose-50 p-4 rounded">
-            <p className="text-sm text-stone-600">Gastos</p>
+            <p className="text-sm text-stone-600">Expenses</p>
             <p className="text-xl font-bold text-rose-600">{formatCurrency(kpi.expenses)}</p>
           </div>
           <div className="bg-stone-100 p-4 rounded">
-            <p className="text-sm text-stone-600">Utilidad</p>
+            <p className="text-sm text-stone-600">Profit</p>
             <p className="text-xl font-bold text-stone-800">{formatCurrency(kpi.profit)}</p>
           </div>
         </div>
       </div>
 
-      {/* Gráfico de barras porcentual */}
+      {/* Percentage bar chart */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Comportamiento financiero por período</h3>
+        <h3 className="text-lg font-semibold mb-4">Financial behavior by period</h3>
         {chartData.length > 0 ? (
           <>
             <div className="h-64 flex items-end justify-around space-x-2">
@@ -439,22 +439,22 @@ export default function AdvancedKPIDashboard() {
                     <div
                       className="bg-[#4a5d23] rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.revenue) / maxValue) * 100, 2)}%` }}
-                      title={`Ingresos: ${formatCurrency(d.revenue)}`}
+                      title={`Revenue: ${formatCurrency(d.revenue)}`}
                     />
                     <div
                       className="bg-amber-500 rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.costs) / maxValue) * 100, 2)}%` }}
-                      title={`Costos: ${formatCurrency(d.costs)}`}
+                      title={`Costs: ${formatCurrency(d.costs)}`}
                     />
                     <div
                       className="bg-rose-500 rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.expenses) / maxValue) * 100, 2)}%` }}
-                      title={`Gastos: ${formatCurrency(d.expenses)}`}
+                      title={`Expenses: ${formatCurrency(d.expenses)}`}
                     />
                     <div
                       className="bg-stone-600 rounded-t flex-1"
                       style={{ height: `${Math.max((Math.abs(d.profit) / maxValue) * 100, 2)}%` }}
-                      title={`Utilidad: ${formatCurrency(d.profit)}`}
+                      title={`Profit: ${formatCurrency(d.profit)}`}
                     />
                   </div>
                   <span className="text-xs text-gray-600 text-center">{d.label}</span>
@@ -462,25 +462,25 @@ export default function AdvancedKPIDashboard() {
               ))}
             </div>
 
-            {/* Porcentajes */}
+            {/* Percentages */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {chartData.map((d) => (
                 <div key={d.label} className="bg-gray-50 rounded-lg p-4 text-xs space-y-1">
                   <p className="font-semibold text-gray-700 text-center mb-1">{d.label}</p>
                   <div className="flex justify-between">
-                    <span className="text-[#4a5d23] font-medium">Ingresos</span>
+                    <span className="text-[#4a5d23] font-medium">Revenue</span>
                     <span className="font-semibold">100%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-amber-700 font-medium">Costos</span>
+                    <span className="text-amber-700 font-medium">Costs</span>
                     <span className="font-semibold">{formatPercentage(d.costs, d.revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-rose-600 font-medium">Gastos</span>
+                    <span className="text-rose-600 font-medium">Expenses</span>
                     <span className="font-semibold">{formatPercentage(d.expenses, d.revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-stone-700 font-medium">Utilidad</span>
+                    <span className="text-stone-700 font-medium">Profit</span>
                     <span className="font-semibold">{formatPercentage(d.profit, d.revenue)}</span>
                   </div>
                 </div>
@@ -488,16 +488,16 @@ export default function AdvancedKPIDashboard() {
             </div>
           </>
         ) : (
-          <div className="text-gray-500 text-sm">No hay datos para el período seleccionado.</div>
+          <div className="text-gray-500 text-sm">No data for the selected period.</div>
         )}
       </div>
 
-      {/* Modal de bancos */}
+      {/* Bank modal */}
       {showBankModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-auto">
             <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Cuentas bancarias</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Bank Accounts</h2>
               <button
                 onClick={() => setShowBankModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -526,7 +526,7 @@ export default function AdvancedKPIDashboard() {
                           )}
                           {b.account_number && (
                             <p className="text-xs text-gray-400 mt-1">
-                              Cuenta: #{b.account_number}
+                              Account: #{b.account_number}
                             </p>
                           )}
                         </div>
@@ -543,15 +543,15 @@ export default function AdvancedKPIDashboard() {
                     </div>
                   ))}
                   <div className="border-t-2 border-stone-300 pt-4 mt-4 flex items-center justify-between bg-[#4a5d23]/10 rounded-lg px-4 py-3">
-                    <p className="font-bold text-stone-900 text-lg">Total en Bancos</p>
+                    <p className="font-bold text-stone-900 text-lg">Total in Banks</p>
                     <p className="text-[#4a5d23] font-bold text-xl">{formatCurrency(kpi.bankBalance)}</p>
                   </div>
                 </>
               ) : (
                 <div className="text-center py-8">
                   <i className="ri-bank-line text-5xl text-gray-300 mb-3"></i>
-                  <p className="text-gray-500 text-sm">No hay cuentas bancarias registradas</p>
-                  <p className="text-gray-400 text-xs mt-2">Agrega cuentas bancarias en el módulo de Bancos</p>
+                  <p className="text-gray-500 text-sm">No bank accounts registered</p>
+                  <p className="text-gray-400 text-xs mt-2">Add bank accounts in the Banks module</p>
                 </div>
               )}
             </div>

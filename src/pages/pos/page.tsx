@@ -460,7 +460,7 @@ export default function POSPage() {
   const addToCart = (product: Product) => {
     // Validar que haya stock disponible
     if (product.stock <= 0) {
-      toast.error(`No hay stock disponible de "${product.name}"`);
+      toast.error(`No stock available for "${product.name}"`);
       return;
     }
 
@@ -475,10 +475,10 @@ export default function POSPage() {
             : item
         ));
       } else {
-        toast.warning(`Stock máximo alcanzado para "${product.name}" (${product.stock} disponibles)`);
+        toast.warning(`Maximum stock reached for "${product.name}" (${product.stock} available)`);
       }
     } else {
-      // Agregar nuevo producto al carrito
+      // Add new product to cart
       setCart([...cart, { ...product, quantity: 1, total: product.price }]);
     }
   };
@@ -494,7 +494,7 @@ export default function POSPage() {
 
     // Validar que no se exceda el stock disponible
     if (quantity > product.stock) {
-      toast.error(`Stock insuficiente. Solo hay ${product.stock} unidades disponibles de "${product.name}"`);
+      toast.error(`Insufficient stock. Only ${product.stock} units available of "${product.name}"`);
       return;
     }
 
@@ -510,7 +510,7 @@ export default function POSPage() {
   };
 
   const deleteProduct = (productId: string) => {
-    if (!confirm('¿Eliminar este producto del Punto de Venta? Esta acción sólo afecta los productos guardados en este dispositivo.')) {
+    if (!confirm('Delete this product from Point of Sale? This action only affects products saved on this device.')) {
       return;
     }
     try {
@@ -519,10 +519,10 @@ export default function POSPage() {
       localStorage.setItem('contabi_products', JSON.stringify(next));
       setProducts(prev => prev.filter(p => p.id !== productId));
       window.dispatchEvent(new CustomEvent('productsUpdated'));
-      alert('Producto eliminado del Punto de Venta.');
+      alert('Product deleted from Point of Sale.');
     } catch (error) {
       console.error('Error deleting POS product:', error);
-      alert('No se pudo eliminar el producto.');
+      alert('Could not delete the product.');
     }
   };
 
@@ -549,12 +549,12 @@ export default function POSPage() {
 
   const processPayment = async () => {
     if (!selectedCustomer) {
-      alert('Debes seleccionar un cliente antes de procesar la venta');
+      alert('You must select a customer before processing the sale');
       return;
     }
 
     if (!paymentMethod) {
-      alert('Debes seleccionar la forma de pago');
+      alert('You must select the payment method');
       return;
     }
 
@@ -618,7 +618,7 @@ export default function POSPage() {
             total_amount: newSale.total,
             paid_amount: isImmediatePayment ? newSale.total : 0,
             status: isImmediatePayment ? 'paid' : 'pending',
-            notes: `Venta POS ${newSale.id}`,
+            notes: `POS Sale ${newSale.id}`,
           };
 
           // Enlazar líneas de factura con ítems de inventario cuando el id sea un UUID válido.
@@ -646,13 +646,13 @@ export default function POSPage() {
             amount: newSale.total,
             payment_method: newSale.paymentMethod,
             reference: newSale.id,
-            concept: `Cobro venta POS ${created.invoice.invoice_number}`,
+            concept: `POS sale payment ${created.invoice.invoice_number}`,
             status: 'active',
           });
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('[POS] Error creando factura/recibo en CxC', error);
-          alert('La venta se guardó en el POS, pero hubo un problema al registrar la factura/recibo en Cuentas por Cobrar. Revisa la consola.');
+          alert('The sale was saved in POS, but there was a problem registering the invoice/receipt in Accounts Receivable. Check the console.');
         }
       }
 
@@ -701,7 +701,7 @@ export default function POSPage() {
               movement_date: newSale.date,
               reference: newSale.id,
               total_cost: (cartItem.quantity || 0) * (cartItem.cost ?? 0),
-              notes: `Salida por venta POS ${newSale.id}`,
+              notes: `Exit from POS sale ${newSale.id}`,
               source_type: 'pos_sale',
               source_id: null,
               source_number: newSale.id,
@@ -710,11 +710,11 @@ export default function POSPage() {
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('[POS] Error syncing inventory from POS sale', error);
-          alert('La venta se registró, pero hubo un problema al actualizar el inventario en la base de datos. Revisa el módulo de Inventario.');
+          alert('The sale was registered, but there was a problem updating inventory in the database. Check the Inventory module.');
         }
       }
       
-      alert(`Venta procesada exitosamente. ${paymentMethod === 'cash' ? `Cambio: RD$${formatAmount(received - total)}` : ''}`);
+      alert(`Sale processed successfully. ${paymentMethod === 'cash' ? `Change: RD$${formatAmount(received - total)}` : ''}`);
       setCart([]);
       setSelectedCustomer(null);
       setAmountReceived('');
@@ -722,13 +722,13 @@ export default function POSPage() {
       setShowPaymentModal(false);
       loadProducts();
     } else {
-      alert('Monto insuficiente');
+      alert('Insufficient amount');
     }
   };
 
   const addNewCustomer = async () => {
     if (!newCustomer.name || !newCustomer.document) {
-      alert('Nombre y documento son requeridos');
+      alert('Name and document are required');
       return;
     }
 
@@ -736,11 +736,11 @@ export default function POSPage() {
     const docOk = /^\d{3}-\d{7}-\d$/.test(newCustomer.document);
     const phoneOk = !newCustomer.phone || /^\d{3}-\d{3}-\d{4}$/.test(newCustomer.phone);
     if (!docOk) {
-      alert('Documento inválido. Formato esperado: 000-0000000-0');
+      alert('Invalid document. Expected format: 000-0000000-0');
       return;
     }
     if (!phoneOk) {
-      alert('Teléfono inválido. Formato esperado: 000-000-0000');
+      alert('Invalid phone. Expected format: 000-000-0000');
       return;
     }
 
@@ -779,14 +779,14 @@ export default function POSPage() {
       type: 'regular'
     });
     setShowNewCustomerModal(false);
-    alert('Cliente agregado exitosamente');
+    alert('Customer added successfully');
   };
 
 
   const saveEditedCustomer = async () => {
     if (!editCustomer) return;
     if (!editCustomer.name || !editCustomer.document) {
-      alert('Nombre y documento son requeridos');
+      alert('Name and document are required');
       return;
     }
     try {
@@ -809,7 +809,7 @@ export default function POSPage() {
       }
       if (selectedCustomer?.id === editCustomer.id) setSelectedCustomer(editCustomer);
       setShowEditCustomerModal(false);
-      alert('Cliente actualizado');
+      alert('Customer updated');
     } catch (error) {
       console.error('Error updating POS customer:', error);
       // Fallback local even if logged in
@@ -820,9 +820,9 @@ export default function POSPage() {
         setCustomers(next);
         if (selectedCustomer?.id === (editCustomer as Customer).id) setSelectedCustomer(editCustomer as Customer);
         setShowEditCustomerModal(false);
-        alert('Cliente actualizado (modo local)');
+        alert('Customer updated (local mode)');
       } catch (e2) {
-        alert('No se pudo actualizar el cliente.');
+        alert('Could not update customer.');
       }
     }
   };
@@ -883,23 +883,23 @@ export default function POSPage() {
       await exportToExcelStyled(
         rows,
         [
-          { key: 'id', title: 'ID Venta', width: 20 },
-          { key: 'date', title: 'Fecha', width: 12 },
-          { key: 'time', title: 'Hora', width: 10 },
-          { key: 'customer', title: 'Cliente', width: 28 },
+          { key: 'id', title: 'Sale ID', width: 20 },
+          { key: 'date', title: 'Date', width: 12 },
+          { key: 'time', title: 'Time', width: 10 },
+          { key: 'customer', title: 'Customer', width: 28 },
           { key: 'subtotal', title: 'Subtotal', width: 14, numFmt: '#,##0.00' },
-          { key: 'tax', title: 'Impuesto', width: 14, numFmt: '#,##0.00' },
+          { key: 'tax', title: 'Tax', width: 14, numFmt: '#,##0.00' },
           { key: 'total', title: 'Total', width: 14, numFmt: '#,##0.00' },
-          { key: 'paymentMethod', title: 'Método Pago', width: 16 },
-          { key: 'status', title: 'Estado', width: 12 },
-          { key: 'cashier', title: 'Cajero', width: 14 },
+          { key: 'paymentMethod', title: 'Payment Method', width: 16 },
+          { key: 'status', title: 'Status', width: 12 },
+          { key: 'cashier', title: 'Cashier', width: 14 },
         ],
-        `reporte_ventas_${today}`,
-        'Ventas'
+        `sales_report_${today}`,
+        'Sales'
       );
     } catch (error) {
       console.error('Error exporting POS sales report:', error);
-      alert('Error al exportar el reporte a Excel');
+      alert('Error exporting report to Excel');
     }
   };
 
@@ -917,7 +917,7 @@ export default function POSPage() {
                 <i className="ri-shopping-cart-line text-blue-600 text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Ventas Hoy</p>
+                <p className="text-sm font-medium text-gray-600">Sales Today</p>
                 <p className="text-2xl font-bold text-gray-900">{todayStats.totalSales}</p>
               </div>
             </div>
@@ -929,7 +929,7 @@ export default function POSPage() {
                 <i className="ri-money-dollar-circle-line text-green-600 text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Ingresos Hoy</p>
+                <p className="text-sm font-medium text-gray-600">Revenue Today</p>
                 <p className="text-2xl font-bold text-gray-900">RD${formatAmount(todayStats.totalAmount)}</p>
               </div>
             </div>
@@ -941,7 +941,7 @@ export default function POSPage() {
                 <i className="ri-user-line text-purple-600 text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Clientes</p>
+                <p className="text-sm font-medium text-gray-600">Customers</p>
                 <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
               </div>
             </div>
@@ -953,7 +953,7 @@ export default function POSPage() {
                 <i className="ri-shopping-bag-3-line text-orange-600 text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Productos</p>
+                <p className="text-sm font-medium text-gray-600">Products</p>
                 <p className="text-2xl font-bold text-gray-900">{products.length}</p>
               </div>
             </div>
@@ -964,35 +964,35 @@ export default function POSPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Payment Methods */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago Hoy</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Methods Today</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Efectivo</span>
+                  <span className="text-sm text-gray-600">Cash</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.cashSales} ventas</span>
+                <span className="text-sm font-medium">{todayStats.cashSales} sales</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Tarjeta</span>
+                  <span className="text-sm text-gray-600">Card</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.cardSales} ventas</span>
+                <span className="text-sm font-medium">{todayStats.cardSales} sales</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Transferencia</span>
+                  <span className="text-sm text-gray-600">Transfer</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.transferSales} ventas</span>
+                <span className="text-sm font-medium">{todayStats.transferSales} sales</span>
               </div>
             </div>
           </div>
 
           {/* Top Products */}
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Productos Más Vendidos</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Best Selling Products</h3>
             <div className="space-y-3">
               {topProducts.map((product, index) => (
                 <div key={index} className="flex items-center justify-between">
@@ -1003,7 +1003,7 @@ export default function POSPage() {
                     <span className="text-sm text-gray-900 truncate">{product.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">{product.quantity} unidades</div>
+                    <div className="text-sm font-medium">{product.quantity} units</div>
                     <div className="text-xs text-gray-500">RD${formatAmount(product.revenue)}</div>
                   </div>
                 </div>
@@ -1015,17 +1015,17 @@ export default function POSPage() {
         {/* Recent Sales */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Recent Sales</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1033,7 +1033,7 @@ export default function POSPage() {
                   <tr key={sale.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sale.customer?.name || 'Cliente General'}
+                      {sale.customer?.name || 'General Customer'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD${formatAmount(sale.total)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{sale.paymentMethod}</td>
@@ -1043,8 +1043,8 @@ export default function POSPage() {
                         sale.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {sale.status === 'completed' ? 'Completada' : 
-                         sale.status === 'cancelled' ? 'Cancelada' : 'Reembolsada'}
+                        {sale.status === 'completed' ? 'Completed' : 
+                         sale.status === 'cancelled' ? 'Cancelled' : 'Refunded'}
                       </span>
                     </td>
                   </tr>
@@ -1062,7 +1062,7 @@ export default function POSPage() {
       {/* Products Section */}
       <div className="flex-1 p-6">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Productos</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Products</h2>
           
           {/* Search and Filters */}
           <div className="flex space-x-4 mb-4">
@@ -1075,7 +1075,7 @@ export default function POSPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar productos..."
+                placeholder="Search products..."
               />
             </div>
             <select
@@ -1085,7 +1085,7 @@ export default function POSPage() {
             >
               {categories.map(category => (
                 <option key={category} value={category}>
-                  {category === 'all' ? 'Todas las categorías' : category}
+                  {category === 'all' ? 'All categories' : category}
                 </option>
               ))}
             </select>
@@ -1107,7 +1107,7 @@ export default function POSPage() {
               {/* Badge "Sin Stock" */}
               {product.stock <= 0 && (
                 <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md z-10">
-                  SIN STOCK
+                  OUT OF STOCK
                 </div>
               )}
 
@@ -1188,7 +1188,7 @@ export default function POSPage() {
                 }`}
               >
                 <i className="ri-arrow-left-s-line text-base"></i>
-                <span className="hidden sm:inline">Anterior</span>
+                <span className="hidden sm:inline">Previous</span>
               </button>
 
               <div className="flex items-center space-x-1">
@@ -1271,7 +1271,7 @@ export default function POSPage() {
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
-                <span className="hidden sm:inline">Siguiente</span>
+                <span className="hidden sm:inline">Next</span>
                 <i className="ri-arrow-right-s-line text-base"></i>
               </button>
               </div>
@@ -1283,7 +1283,7 @@ export default function POSPage() {
       {/* Cart Section */}
       <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Carrito de Compras</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Shopping Cart</h2>
           
           <div className="mt-4">
             <button
@@ -1293,7 +1293,7 @@ export default function POSPage() {
               <div className="flex items-center">
                 <i className="ri-user-line text-gray-400 mr-2"></i>
                 <span className="text-sm text-gray-600">
-                  {selectedCustomer ? selectedCustomer.name : 'Seleccionar Cliente'}
+                  {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
                 </span>
               </div>
               <i className="ri-arrow-down-s-line text-gray-400"></i>
@@ -1305,7 +1305,7 @@ export default function POSPage() {
           {cart.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
               <i className="ri-shopping-cart-line text-4xl mb-2"></i>
-              <p>Carrito vacío</p>
+              <p>Empty cart</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -1336,7 +1336,7 @@ export default function POSPage() {
                         ? 'text-amber-600'
                         : 'text-gray-400'
                     }`}>
-                      Stock disponible: {item.stock - item.quantity}
+                      Available stock: {item.stock - item.quantity}
                     </p>
                   </div>
 
@@ -1377,7 +1377,7 @@ export default function POSPage() {
           <Modal>
             <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Editar Cliente</h3>
+                <h3 className="text-lg font-semibold">Edit Customer</h3>
                 <button onClick={() => setShowEditCustomerModal(false)} className="text-gray-400 hover:text-gray-600">
                   <i className="ri-close-line"></i>
                 </button>
@@ -1385,7 +1385,7 @@ export default function POSPage() {
 
               <form onSubmit={(e) => { e.preventDefault(); saveEditedCustomer(); }} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                   <input
                     type="text"
                     value={editCustomer.name || ''}
@@ -1395,7 +1395,7 @@ export default function POSPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Documento *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Document *</label>
                   <input
                     type="text"
                     value={editCustomer.document || ''}
@@ -1405,7 +1405,7 @@ export default function POSPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
                   <input
                     type="tel"
                     value={editCustomer.phone || ''}
@@ -1423,7 +1423,7 @@ export default function POSPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                   <textarea
                     value={editCustomer.address || ''}
                     onChange={(e) => setEditCustomer(prev => ({ ...(prev as Customer), address: e.target.value }))}
@@ -1432,7 +1432,7 @@ export default function POSPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cliente</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
                   <select
                     value={editCustomer.type || 'regular'}
                     onChange={(e) => setEditCustomer(prev => ({ ...(prev as Customer), type: e.target.value as 'regular' | 'vip' }))}
@@ -1444,8 +1444,8 @@ export default function POSPage() {
                 </div>
 
                 <div className="flex space-x-3 pt-4">
-                  <button type="button" onClick={() => setShowEditCustomerModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Guardar Cambios</button>
+                  <button type="button" onClick={() => setShowEditCustomerModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Save Changes</button>
                 </div>
               </form>
             </div>
@@ -1479,7 +1479,7 @@ export default function POSPage() {
               }}
               className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
-              Procesar Pago
+              Process Payment
             </button>
           </div>
         )}
@@ -1491,9 +1491,9 @@ export default function POSPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Inventario (vista rápida)</h2>
+          <h2 className="text-xl font-bold text-gray-900">Inventory (quick view)</h2>
           <p className="text-gray-600 text-sm">
-            Consulta básica de productos y existencias disponibles para el Punto de Ventas.
+            Basic product and stock query available for Point of Sale.
           </p>
         </div>
       </div>
@@ -1509,7 +1509,7 @@ export default function POSPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              placeholder="Buscar por nombre, SKU o código de barras..."
+              placeholder="Search by name, SKU or barcode..."
             />
           </div>
           <div className="w-full md:w-60">
@@ -1520,7 +1520,7 @@ export default function POSPage() {
             >
               {categories.map((category) => (
                 <option key={category} value={category}>
-                  {category === 'all' ? 'Todas las categorías' : category}
+                  {category === 'all' ? 'All categories' : category}
                 </option>
               ))}
             </select>
@@ -1535,19 +1535,19 @@ export default function POSPage() {
                   SKU
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Producto
+                  Product
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Categoría
+                  Category
                 </th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Stock
                 </th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Precio Venta
+                  Sale Price
                 </th>
                 <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
+                  Status
                 </th>
               </tr>
             </thead>
@@ -1575,7 +1575,7 @@ export default function POSPage() {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {product.status === 'active' ? 'Activo' : 'Inactivo'}
+                      {product.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                 </tr>
@@ -1586,7 +1586,7 @@ export default function POSPage() {
                     colSpan={6}
                     className="px-4 py-6 text-center text-sm text-gray-500"
                   >
-                    No se encontraron productos para los filtros seleccionados.
+                    No products found for the selected filters.
                   </td>
                 </tr>
               )}
@@ -1624,11 +1624,11 @@ export default function POSPage() {
 
     const handleSaveCashClosing = async () => {
       if (!user?.id) {
-        toast.error('Debes iniciar sesión para guardar el arqueo de caja');
+        toast.error('You must log in to save the cash count');
         return;
       }
       if (todaySales.length === 0) {
-        toast.error('No hay ventas completadas para el día de hoy');
+        toast.error('There are no completed sales for today');
         return;
       }
 
@@ -1636,8 +1636,8 @@ export default function POSPage() {
         setSavingCashClosing(true);
         await cashClosingService.create(user.id, {
           closing_date: today,
-          cashier_name: (user as any)?.user_metadata?.full_name || user.email || 'Punto de Venta',
-          shift_name: 'Turno POS',
+          cashier_name: (user as any)?.user_metadata?.full_name || user.email || 'Point of Sale',
+          shift_name: 'POS Shift',
           opening_balance: 0,
           total_sales: totalSalesAmount,
           cash_sales: totalCash,
@@ -1652,11 +1652,11 @@ export default function POSPage() {
           notes: cashClosingNotes || null,
         });
 
-        toast.success('Arqueo de caja guardado correctamente');
+        toast.success('Cash count saved successfully');
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('[POS] Error saving cash closing from POS', error);
-        toast.error('Error al guardar el arqueo de caja');
+        toast.error('Error saving cash count');
       } finally {
         setSavingCashClosing(false);
       }
@@ -1668,7 +1668,7 @@ export default function POSPage() {
           id: sale.id,
           date: sale.date,
           time: sale.time,
-          customer: sale.customer?.name || 'Cliente General',
+          customer: sale.customer?.name || 'General Customer',
           total: sale.total || 0,
           paymentMethod: sale.paymentMethod,
           status: sale.status,
@@ -1677,21 +1677,21 @@ export default function POSPage() {
         await exportToExcelStyled(
           rows,
           [
-            { key: 'id', title: 'ID Venta', width: 20 },
-            { key: 'date', title: 'Fecha', width: 12 },
-            { key: 'time', title: 'Hora', width: 10 },
-            { key: 'customer', title: 'Cliente', width: 28 },
+            { key: 'id', title: 'Sale ID', width: 20 },
+            { key: 'date', title: 'Date', width: 12 },
+            { key: 'time', title: 'Time', width: 10 },
+            { key: 'customer', title: 'Customer', width: 28 },
             { key: 'total', title: 'Total', width: 14, numFmt: '#,##0.00' },
-            { key: 'paymentMethod', title: 'Método', width: 16 },
-            { key: 'status', title: 'Estado', width: 12 },
+            { key: 'paymentMethod', title: 'Method', width: 16 },
+            { key: 'status', title: 'Status', width: 12 },
           ],
-          `arqueo_caja_pos_${today}`,
+          `cash_count_pos_${today}`,
           'ArqueoCajaPOS'
         );
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('[POS] Error exporting cash count to Excel', error);
-        alert('Error al exportar el arqueo a Excel');
+        alert('Error exporting cash count to Excel');
       }
     };
 
@@ -1699,9 +1699,9 @@ export default function POSPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Registro de Sobrantes y Faltantes</h2>
+            <h2 className="text-xl font-bold text-gray-900">Surplus and Shortage Record</h2>
             <p className="text-gray-600 text-sm">
-              Basado en el arqueo de caja del Punto de Venta: compara efectivo esperado vs contado y registra diferencias.
+              Based on Point of Sale cash count: compares expected vs counted cash and records differences.
             </p>
           </div>
           <div className="flex space-x-3">
@@ -1711,56 +1711,56 @@ export default function POSPage() {
               disabled={todaySales.length === 0}
             >
               <i className="ri-file-excel-2-line mr-2" />
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleSaveCashClosing}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={savingCashClosing || !user?.id || todaySales.length === 0}
             >
-              {savingCashClosing ? 'Guardando...' : 'Guardar Arqueo'}
+              {savingCashClosing ? 'Saving...' : 'Save Cash Count'}
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen de ventas del día</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily sales summary</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Ventas completadas:</span>
+                <span className="text-gray-600">Completed sales:</span>
                 <span className="font-medium">{todaySales.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Total en ventas:</span>
+                <span className="text-gray-600">Total in sales:</span>
                 <span className="font-medium">RD${formatAmount(totalSalesAmount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Efectivo esperado en caja:</span>
+                <span className="text-gray-600">Expected cash in drawer:</span>
                 <span className="font-medium">RD${formatAmount(totalCash)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Tarjetas:</span>
+                <span className="text-gray-600">Cards:</span>
                 <span className="font-medium">RD${formatAmount(totalCard)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Transferencias:</span>
+                <span className="text-gray-600">Transfers:</span>
                 <span className="font-medium">RD${formatAmount(totalTransfer)}</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Conteo de efectivo en caja</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash count in drawer</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">
-                      Denominación
+                      Denomination
                     </th>
                     <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">
-                      Cantidad
+                      Quantity
                     </th>
                     <th className="px-4 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">
                       Total
@@ -1795,7 +1795,7 @@ export default function POSPage() {
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td className="px-4 py-2 text-right font-semibold text-gray-700" colSpan={2}>
-                      Total contado en efectivo
+                      Total counted cash
                     </td>
                     <td className="px-4 py-2 text-right font-semibold text-gray-900">
                       RD${formatAmount(countedCash)}
@@ -1803,7 +1803,7 @@ export default function POSPage() {
                   </tr>
                   <tr>
                     <td className="px-4 py-2 text-right font-semibold text-gray-700" colSpan={2}>
-                      Diferencia vs efectivo esperado
+                      Difference vs expected cash
                     </td>
                     <td
                       className={`px-4 py-2 text-right font-semibold ${
@@ -1824,30 +1824,30 @@ export default function POSPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Observaciones del arqueo</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cash count observations</h3>
           <textarea
             rows={3}
             value={cashClosingNotes}
             onChange={(e) => setCashClosingNotes(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-            placeholder="Notas u observaciones sobre el arqueo de caja..."
+            placeholder="Notes or observations about the cash count..."
           ></textarea>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Ventas del día usadas en el arqueo</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Today's sales used in cash count</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Venta</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1856,18 +1856,18 @@ export default function POSPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.time}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {sale.customer?.name || 'Cliente General'}
+                      {sale.customer?.name || 'General Customer'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                       RD${formatAmount(sale.total)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
                       {sale.paymentMethod === 'cash'
-                        ? 'Efectivo'
+                        ? 'Cash'
                         : sale.paymentMethod === 'card'
-                        ? 'Tarjeta'
+                        ? 'Card'
                         : sale.paymentMethod === 'transfer'
-                        ? 'Transferencia'
+                        ? 'Transfer'
                         : sale.paymentMethod}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -1881,10 +1881,10 @@ export default function POSPage() {
                         }`}
                       >
                         {sale.status === 'completed'
-                          ? 'Completada'
+                          ? 'Completed'
                           : sale.status === 'cancelled'
-                          ? 'Cancelada'
-                          : 'Reembolsada'}
+                          ? 'Cancelled'
+                          : 'Refunded'}
                       </span>
                     </td>
                   </tr>
@@ -1895,7 +1895,7 @@ export default function POSPage() {
                       colSpan={6}
                       className="px-6 py-6 text-center text-sm text-gray-500"
                     >
-                      No hay ventas completadas para el día de hoy.
+                      There are no completed sales for today.
                     </td>
                   </tr>
                 )}
@@ -1910,13 +1910,13 @@ export default function POSPage() {
   const renderSales = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-900">Historial de Ventas</h2>
+        <h2 className="text-xl font-bold text-gray-900">Sales History</h2>
         <button
           onClick={exportSalesReport}
           className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
         >
           <i className="ri-download-line mr-2"></i>
-          Exportar Reporte
+          Export Report
         </button>
       </div>
 
@@ -1925,13 +1925,13 @@ export default function POSPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Venta</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1942,17 +1942,17 @@ export default function POSPage() {
                     {sale.date} {sale.time}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {sale.customer?.name || 'Cliente General'}
+                    {sale.customer?.name || 'General Customer'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {sale.items.length} productos
+                    {sale.items.length} products
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     RD${formatAmount(sale.total)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                    {sale.paymentMethod === 'cash' ? 'Efectivo' : 
-                     sale.paymentMethod === 'card' ? 'Tarjeta' : 'Transferencia'}
+                    {sale.paymentMethod === 'cash' ? 'Cash' : 
+                     sale.paymentMethod === 'card' ? 'Card' : 'Transfer'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -1960,8 +1960,8 @@ export default function POSPage() {
                       sale.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                       'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {sale.status === 'completed' ? 'Completada' : 
-                       sale.status === 'cancelled' ? 'Cancelada' : 'Reembolsada'}
+                      {sale.status === 'completed' ? 'Completed' : 
+                       sale.status === 'cancelled' ? 'Cancelled' : 'Refunded'}
                     </span>
                   </td>
                 </tr>
@@ -1980,23 +1980,23 @@ export default function POSPage() {
     
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-bold text-gray-900">Reportes y Análisis</h2>
+        <h2 className="text-xl font-bold text-gray-900">Reports and Analysis</h2>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Día</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Day Summary</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Ventas:</span>
+                <span className="text-gray-600">Total Sales:</span>
                 <span className="font-medium">{todayStats.totalSales}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Ingresos:</span>
+                <span className="text-gray-600">Revenue:</span>
                 <span className="font-medium">RD${formatAmount(todayStats.totalAmount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Promedio por Venta:</span>
+                <span className="text-gray-600">Average per Sale:</span>
                 <span className="font-medium">
                   RD${formatAmount(todayStats.totalSales > 0 ? (todayStats.totalAmount / todayStats.totalSales) : 0)}
                 </span>
@@ -2005,36 +2005,36 @@ export default function POSPage() {
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Methods</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Efectivo:</span>
-                <span className="font-medium">{todayStats.cashSales} ventas</span>
+                <span className="text-gray-600">Cash:</span>
+                <span className="font-medium">{todayStats.cashSales} sales</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Tarjeta:</span>
-                <span className="font-medium">{todayStats.cardSales} ventas</span>
+                <span className="text-gray-600">Card:</span>
+                <span className="font-medium">{todayStats.cardSales} sales</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Transferencia:</span>
-                <span className="font-medium">{todayStats.transferSales} ventas</span>
+                <span className="text-gray-600">Transfer:</span>
+                <span className="font-medium">{todayStats.transferSales} sales</span>
               </div>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Estadísticas Generales</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">General Statistics</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Clientes:</span>
+                <span className="text-gray-600">Total Customers:</span>
                 <span className="font-medium">{customers.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Clientes VIP:</span>
+                <span className="text-gray-600">VIP Customers:</span>
                 <span className="font-medium">{customers.filter(c => c.type === 'vip').length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Productos Activos:</span>
+                <span className="text-gray-600">Active Products:</span>
                 <span className="font-medium">{products.length}</span>
               </div>
             </div>
@@ -2044,16 +2044,16 @@ export default function POSPage() {
         {/* Top Products Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Productos Más Vendidos</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Best Selling Products</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posición</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad Vendida</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ingresos</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity Sold</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -2065,7 +2065,7 @@ export default function POSPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity} unidades</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity} units</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       RD${formatAmount(product.revenue)}
                     </td>
@@ -2085,15 +2085,15 @@ export default function POSPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Punto de Ventas</h1>
-            <p className="text-gray-600">Sistema completo de ventas y gestión</p>
+            <h1 className="text-2xl font-bold text-gray-900">Point of Sale</h1>
+            <p className="text-gray-600">Complete sales and management system</p>
           </div>
           <button
             onClick={() => window.location.href = '/dashboard'}
             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
           >
             <i className="ri-arrow-left-line mr-2"></i>
-            Volver al Inicio
+            Back to Home
           </button>
         </div>
 
@@ -2102,13 +2102,13 @@ export default function POSPage() {
           <nav className="-mb-px flex flex-wrap gap-x-4 gap-y-2">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: 'ri-dashboard-line' },
-              { id: 'pos', name: 'Punto de Venta', icon: 'ri-shopping-cart-line' },
-              { id: 'inventory', name: 'Inventario', icon: 'ri-archive-line' },
-              { id: 'cash-diff', name: 'Sobrantes / Faltantes', icon: 'ri-scales-3-line' },
-              { id: 'cash-closing', name: 'Cierre de Caja', icon: 'ri-safe-line' },
-              { id: 'sales', name: 'Ventas', icon: 'ri-file-list-line' },
-              { id: 'invoicing', name: 'Facturación', icon: 'ri-file-text-line' },
-              { id: 'reports', name: 'Reportes', icon: 'ri-bar-chart-line' }
+              { id: 'pos', name: 'Point of Sale', icon: 'ri-shopping-cart-line' },
+              { id: 'inventory', name: 'Inventory', icon: 'ri-archive-line' },
+              { id: 'cash-diff', name: 'Surplus / Shortage', icon: 'ri-scales-3-line' },
+              { id: 'cash-closing', name: 'Cash Closing', icon: 'ri-safe-line' },
+              { id: 'sales', name: 'Sales', icon: 'ri-file-list-line' },
+              { id: 'invoicing', name: 'Invoicing', icon: 'ri-file-text-line' },
+              { id: 'reports', name: 'Reports', icon: 'ri-bar-chart-line' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2147,7 +2147,7 @@ export default function POSPage() {
           <Modal>
             <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Seleccionar Cliente</h3>
+                <h3 className="text-lg font-semibold">Select Customer</h3>
                 <button
                   onClick={() => setShowCustomerModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -2164,8 +2164,8 @@ export default function POSPage() {
                   }}
                   className="w-full text-left p-3 hover:bg-gray-50 rounded-lg border"
                 >
-                  <div className="font-medium">Cliente General</div>
-                  <div className="text-sm text-gray-500">Sin información específica</div>
+                  <div className="font-medium">General Customer</div>
+                  <div className="text-sm text-gray-500">No specific information</div>
                 </button>
                 
                 {customers.map((customer) => (
@@ -2200,7 +2200,7 @@ export default function POSPage() {
           <Modal>
             <div className="bg-white rounded-lg p-6 w-96">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Procesar Pago</h3>
+                <h3 className="text-lg font-semibold">Process Payment</h3>
                 <button
                   onClick={() => {
                     setShowPaymentModal(false);
@@ -2220,24 +2220,24 @@ export default function POSPage() {
                 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Método de Pago
+                    Payment Method
                   </label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                   >
-                    <option value="">Seleccionar...</option>
-                    <option value="cash">Efectivo</option>
-                    <option value="card">Tarjeta</option>
-                    <option value="transfer">Transferencia</option>
+                    <option value="">Select...</option>
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="transfer">Transfer</option>
                   </select>
                 </div>
                 
                 {paymentMethod === 'cash' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto Recibido
+                      Amount Received
                     </label>
                     <input
                       type="text"
@@ -2249,7 +2249,7 @@ export default function POSPage() {
                     />
                     {amountReceived && (
                       <div className="mt-2 text-sm">
-                        Cambio: RD${formatAmount(Math.max(0, parseAmountInput(amountReceived) - getTotal()))}
+                        Change: RD${formatAmount(Math.max(0, parseAmountInput(amountReceived) - getTotal()))}
                       </div>
                     )}
                   </div>
@@ -2260,7 +2260,7 @@ export default function POSPage() {
                 onClick={processPayment}
                 className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
               >
-                Confirmar Pago
+                Confirm Payment
               </button>
             </div>
           </Modal>
@@ -2271,7 +2271,7 @@ export default function POSPage() {
           <Modal>
             <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Nuevo Cliente</h3>
+                <h3 className="text-lg font-semibold">New Customer</h3>
                 <button
                   onClick={() => setShowNewCustomerModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -2283,7 +2283,7 @@ export default function POSPage() {
               <form onSubmit={(e) => { e.preventDefault(); addNewCustomer(); }} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre *
+                    Name *
                   </label>
                   <input
                     type="text"
@@ -2296,7 +2296,7 @@ export default function POSPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Documento *
+                    Document *
                   </label>
                   <input
                     type="text"
@@ -2310,7 +2310,7 @@ export default function POSPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Teléfono
+                    Phone
                   </label>
                   <input
                     type="tel"
@@ -2336,20 +2336,20 @@ export default function POSPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Dirección
+                    Address
                   </label>
                   <textarea
                     value={newCustomer.address}
                     onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows={2}
-                    placeholder="Dirección completa"
+                    placeholder="Full address"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Cliente
+                    Customer Type
                   </label>
                   <select
                     value={newCustomer.type}
@@ -2367,13 +2367,13 @@ export default function POSPage() {
                     onClick={() => setShowNewCustomerModal(false)}
                     className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
-                    Guardar Cliente
+                    Save Customer
                   </button>
                 </div>
               </form>

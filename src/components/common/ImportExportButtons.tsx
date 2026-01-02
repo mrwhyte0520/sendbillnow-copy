@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '../ui/button';
 import { Download, Upload } from 'lucide-react';
-import { exportToExcel, exportToPdf, importFromExcel } from '@/utils/exportImportUtils';
+import { exportToExcel, exportToPdf, importFromExcel } from '../../utils/exportImportUtils';
 import { toast } from 'sonner';
 
 interface ImportExportButtonsProps<T> {
@@ -26,9 +26,9 @@ export function ImportExportButtons<T>({
   const handleExportExcel = () => {
     try {
       exportToExcel(data, fileName);
-      toast.success('Exportación a Excel completada');
+      toast.success('Excel export completed');
     } catch (error) {
-      toast.error('Error al exportar a Excel');
+      toast.error('Error exporting to Excel');
       console.error(error);
     }
   };
@@ -36,9 +36,9 @@ export function ImportExportButtons<T>({
   const handleExportPdf = async () => {
     try {
       await exportToPdf(data, columns, fileName, companyName);
-      toast.success('Exportación a PDF completada');
+      toast.success('PDF export completed');
     } catch (error) {
-      toast.error('Error al exportar a PDF');
+      toast.error('Error exporting to PDF');
       console.error(error);
     }
   };
@@ -56,9 +56,9 @@ export function ImportExportButtons<T>({
       if (onImport) {
         onImport(importedData as T[]);
       }
-      toast.success('Importación completada correctamente');
+      toast.success('Import completed successfully');
     } catch (error) {
-      toast.error('Error al importar el archivo');
+      toast.error('Error importing file');
       console.error(error);
     } finally {
       // Reset the input value to allow selecting the same file again
@@ -108,7 +108,7 @@ export function ImportExportButtons<T>({
         className="gap-2"
       >
         <Upload className="h-4 w-4" />
-        Importar
+        Import
       </Button>
     </div>
   );

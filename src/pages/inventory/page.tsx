@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
 
-// Eliminados datos de ejemplo: la vista se alimenta solo de la base de datos
+// Removed sample data: the view only feeds from the database
 
 export default function InventoryPage() {
   const navigate = useNavigate();
@@ -31,7 +31,7 @@ export default function InventoryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transferNumberRequestRef = useRef(0);
 
-  // Filtros y búsqueda
+  // Filters and search
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -57,7 +57,7 @@ export default function InventoryPage() {
       loadAccounts();
       loadAccountingSettings();
     } else {
-      // Sin usuario: limpiar datos (no usar datos de ejemplo)
+      // No user: clear data (do not use sample data)
       setItems([]);
       setMovements([]);
       setWarehouseEntries([]);
@@ -78,7 +78,7 @@ export default function InventoryPage() {
           return;
         }
 
-        // Ventas reales = sumatoria de líneas de factura asociadas a ítems de inventario (no servicios)
+        // Real sales = sum of invoice lines associated with inventory items (not services)
         const { data, error } = await supabase
           .from('invoice_lines')
           .select(`
@@ -208,11 +208,11 @@ export default function InventoryPage() {
     const productCount = productsInWarehouse.length;
 
     if (productCount === 0) {
-      alert('Este almacén no tiene productos asignados.');
+      alert('This warehouse has no assigned products.');
       return;
     }
 
-    if (!confirm(`¿Eliminar definitivamente los ${productCount} productos de este almacén? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`Permanently delete the ${productCount} products from this warehouse? This action cannot be undone.`)) {
       return;
     }
 
@@ -225,10 +225,10 @@ export default function InventoryPage() {
         await loadData();
       }
       await loadWarehouses();
-      alert('Productos eliminados del almacén correctamente');
+      alert('Products deleted from warehouse successfully');
     } catch (error) {
       console.error('Error deleting warehouse products:', error);
-      alert('No se pudieron eliminar todos los productos del almacén');
+      alert('Could not delete all products from warehouse');
     }
   };
 
@@ -266,18 +266,18 @@ export default function InventoryPage() {
   const handleDeleteWarehouse = async (warehouse: any) => {
     const productCount = items.filter((item) => item.warehouse_id === warehouse.id).length;
     if (productCount > 0) {
-      alert('No puedes eliminar este almacén porque tiene productos asignados. Mueve o elimina los productos primero.');
+      alert('You cannot delete this warehouse because it has assigned products. Move or delete the products first.');
       return;
     }
 
-    if (!confirm('¿Eliminar este almacén? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Delete this warehouse? This action cannot be undone.')) return;
 
     try {
       await settingsService.deleteWarehouse(warehouse.id);
       await loadWarehouses();
     } catch (error) {
       console.error('Error deleting warehouse:', error);
-      alert('No se pudo eliminar el almacén');
+      alert('Could not delete warehouse');
     }
   };
 
@@ -310,7 +310,7 @@ export default function InventoryPage() {
       const file = event.target.files?.[0];
       if (!file) return;
       if (!user?.id) {
-        alert('Debes iniciar sesión para subir imágenes de productos');
+        alert('You must be logged in to upload product images');
         return;
       }
 
@@ -326,7 +326,7 @@ export default function InventoryPage() {
 
       if (uploadError) {
         console.error('Error uploading product image to Supabase Storage:', uploadError);
-        alert('No se pudo subir la imagen del producto');
+        alert('Could not upload product image');
         return;
       }
 
@@ -336,14 +336,14 @@ export default function InventoryPage() {
 
       const publicUrl = publicData?.publicUrl;
       if (!publicUrl) {
-        alert('No se pudo obtener la URL pública de la imagen');
+        alert('Could not get public URL for image');
         return;
       }
 
       setFormData((prev: any) => ({ ...prev, image_url: publicUrl }));
     } catch (error) {
       console.error('handleImageUpload error', error);
-      alert('Ocurrió un error al procesar la imagen');
+      alert('An error occurred while processing the image');
     }
   };
 
@@ -394,14 +394,14 @@ export default function InventoryPage() {
     setFormData(baseForm);
 
     if (!item && type === 'item') {
-      // Auto-generar SKU usando secuencia configurable del usuario
+      // Auto-generate SKU using user's configurable sequence
       if (user?.id) {
         accountingSettingsService.generateNextSku(user.id)
           .then((sku) => {
             setFormData((prev: any) => ({ ...prev, sku }));
           })
           .catch(() => {
-            // Fallback si hay error
+            // Fallback if error
             const timestamp = Date.now().toString().slice(-6);
             const random = Math.random().toString(36).substring(2, 5).toUpperCase();
             setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
@@ -415,7 +415,7 @@ export default function InventoryPage() {
 
     setShowModal(true);
 
-    // Prellenar número de documento para transferencias internas (editable)
+    // Pre-fill document number for internal transfers (editable)
     if (!item && type === 'warehouse_transfer' && user?.id) {
       const requestId = Date.now();
       transferNumberRequestRef.current = requestId;
@@ -446,7 +446,7 @@ export default function InventoryPage() {
             });
           }
         } catch (err) {
-          // Si la RPC no existe aún o falla, se deja editable en blanco
+          // If RPC doesn't exist yet or fails, leave editable blank
           console.warn('Could not prefill warehouse transfer document number:', err);
         }
       })();
@@ -467,7 +467,7 @@ export default function InventoryPage() {
 
       if (modalType === 'item') {
         if (user) {
-          // Validaciones numéricas básicas
+          // Basic numeric validations
           const errors: string[] = [];
 
           const numCurrent = Number(formData.current_stock);
@@ -476,18 +476,18 @@ export default function InventoryPage() {
           const numCost = Number(formData.cost_price);
           const numSelling = Number(formData.selling_price);
 
-          if (numCurrent < 0) errors.push('El stock actual no puede ser negativo.');
-          if (numMin < 0) errors.push('El stock mínimo no puede ser negativo.');
-          if (numMax < 0) errors.push('El stock máximo no puede ser negativo.');
-          if (numCost < 0) errors.push('El precio de compra no puede ser negativo.');
-          if (numSelling < 0) errors.push('El precio de venta no puede ser negativo.');
+          if (numCurrent < 0) errors.push('Current stock cannot be negative.');
+          if (numMin < 0) errors.push('Minimum stock cannot be negative.');
+          if (numMax < 0) errors.push('Maximum stock cannot be negative.');
+          if (numCost < 0) errors.push('Purchase price cannot be negative.');
+          if (numSelling < 0) errors.push('Selling price cannot be negative.');
 
           if (errors.length > 0) {
             alert(errors.join('\n'));
             return;
           }
 
-          // Validación: stock máximo no puede ser menor que stock actual para productos inventariables
+          // Validation: maximum stock cannot be less than current stock for inventory products
           const rawCurrentStock = numCurrent;
           const rawMaximumStock = numMax;
           const currentStock = Number.isFinite(rawCurrentStock) ? Math.round(rawCurrentStock) : 0;
@@ -499,11 +499,11 @@ export default function InventoryPage() {
             Number.isFinite(rawMaximumStock) &&
             maximumStock < currentStock
           ) {
-            alert('El stock máximo no puede ser menor que el stock actual.');
+            alert('Maximum stock cannot be less than current stock.');
             return;
           }
 
-          // Normalizar campos numéricos antes de guardar
+          // Normalize numeric fields before saving
           const normalizedItem = {
             ...formData,
             current_stock: Number.isFinite(Number(formData.current_stock))
@@ -526,7 +526,7 @@ export default function InventoryPage() {
             cogs_account_id: formData.cogs_account_id || null,
           };
 
-          // Si hay usuario, intentar guardar en la base de datos
+          // If there's a user, try to save to database
           if (selectedItem) {
             const result = await inventoryService.updateItem(user!.id, selectedItem.id, normalizedItem);
 
@@ -555,7 +555,7 @@ export default function InventoryPage() {
             }
           }
 
-          // Evitar recarga inmediata: puede traer datos stale y sobrescribir el estado local
+          // Avoid immediate reload: may bring stale data and overwrite local state
           skipReloadAfterSave = true;
         }
       } else if (modalType === 'movement') {
@@ -566,7 +566,7 @@ export default function InventoryPage() {
           const unitCost = Number(formData.unit_cost) || 0;
           const totalCost = quantity * unitCost;
 
-          // No enviar account_id a la tabla inventory_movements (solo se usa para el asiento)
+          // Don't send account_id to inventory_movements table (only used for journal entry)
           const { account_id, warehouse_id: _ignoredWarehouse, ...movementRest } = formData;
 
           const createdMovement = await inventoryService.createMovement(user!.id, {
@@ -576,7 +576,7 @@ export default function InventoryPage() {
             total_cost: totalCost,
           });
 
-          // Actualizar stock actual del producto afectado de forma coherente con el movimiento
+          // Update current stock of affected product consistent with the movement
           try {
             const item = items.find((it) => String(it.id) === String(formData.item_id));
             if (item && formData.movement_type) {
@@ -588,8 +588,8 @@ export default function InventoryPage() {
               } else if (formData.movement_type === 'exit') {
                 newStock = currentStock - quantity;
               } else if (formData.movement_type === 'adjustment') {
-                // Los ajustes pueden ser positivos (aumento) o negativos (disminución)
-                // El usuario indica si es positivo o negativo con adjustment_direction
+                // Adjustments can be positive (increase) or negative (decrease)
+                // User indicates if positive or negative with adjustment_direction
                 const isPositive = formData.adjustment_direction !== 'negative';
                 newStock = isPositive ? currentStock + quantity : currentStock - quantity;
               }
@@ -604,7 +604,7 @@ export default function InventoryPage() {
             console.error('Error updating current stock for manual inventory movement', stockError);
           }
 
-          // Best-effort: registrar asiento contable del movimiento de inventario
+          // Best-effort: register journal entry for inventory movement
           try {
             const item = items.find((it) => String(it.id) === String(formData.item_id));
             const inventoryAccountId = item?.inventory_account_id as string | undefined;
@@ -617,13 +617,13 @@ export default function InventoryPage() {
                 lines.push(
                   {
                     account_id: inventoryAccountId,
-                    description: 'Entrada manual de inventario',
+                    description: 'Inventory entry',
                     debit_amount: totalCost,
                     credit_amount: 0,
                   },
                   {
                     account_id: counterAccountId,
-                    description: 'Contrapartida entrada inventario',
+                    description: 'Inventory entry counterpart',
                     debit_amount: 0,
                     credit_amount: totalCost,
                   },
@@ -632,48 +632,48 @@ export default function InventoryPage() {
                 lines.push(
                   {
                     account_id: counterAccountId,
-                    description: 'Gasto por salida de inventario',
+                    description: 'Inventory exit expense',
                     debit_amount: totalCost,
                     credit_amount: 0,
                   },
                   {
                     account_id: inventoryAccountId,
-                    description: 'Salida manual de inventario',
+                    description: 'Inventory exit',
                     debit_amount: 0,
                     credit_amount: totalCost,
                   },
                 );
               } else if (formData.movement_type === 'adjustment') {
-                // Los ajustes pueden ser positivos (aumento) o negativos (disminución)
+                // Adjustments can be positive (increase) or negative (decrease)
                 const isPositive = formData.adjustment_direction !== 'negative';
                 if (isPositive) {
-                  // Ajuste positivo: débito inventario, crédito contrapartida
+                  // Positive adjustment: debit inventory, credit counterpart
                   lines.push(
                     {
                       account_id: inventoryAccountId,
-                      description: 'Ajuste de inventario (aumento)',
+                      description: 'Inventory adjustment (increase)',
                       debit_amount: totalCost,
                       credit_amount: 0,
                     },
                     {
                       account_id: counterAccountId,
-                      description: 'Contrapartida ajuste inventario',
+                      description: 'Inventory adjustment counterpart',
                       debit_amount: 0,
                       credit_amount: totalCost,
                     },
                   );
                 } else {
-                  // Ajuste negativo: crédito inventario, débito contrapartida (gasto/pérdida)
+                  // Negative adjustment: credit inventory, debit counterpart (expense/loss)
                   lines.push(
                     {
                       account_id: counterAccountId,
-                      description: 'Pérdida/Merma de inventario',
+                      description: 'Inventory loss/shrinkage',
                       debit_amount: totalCost,
                       credit_amount: 0,
                     },
                     {
                       account_id: inventoryAccountId,
-                      description: 'Ajuste de inventario (disminución)',
+                      description: 'Inventory adjustment (decrease)',
                       debit_amount: 0,
                       credit_amount: totalCost,
                     },
@@ -685,7 +685,7 @@ export default function InventoryPage() {
                 const entryPayload = {
                   entry_number: `INV-MOV-${createdMovement.id}`,
                   entry_date: movementDate,
-                  description: `Movimiento de inventario ${formData.movement_type}`,
+                  description: `Inventory movement ${formData.movement_type}`,
                   reference: createdMovement.id ? String(createdMovement.id) : null,
                   status: 'posted' as const,
                 };
@@ -716,7 +716,7 @@ export default function InventoryPage() {
         await loadWarehouses();
       } else if (modalType === 'warehouse_entry') {
         if (!user) {
-          alert('Debes iniciar sesión para registrar entradas de almacén');
+          alert('You must be logged in to register warehouse entries');
           return;
         }
 
@@ -729,16 +729,16 @@ export default function InventoryPage() {
           .filter((l) => l.inventory_item_id && l.quantity > 0);
 
         if (validLines.length === 0) {
-          alert('Debes agregar al menos una línea con cantidad válida e ítem seleccionado');
+          alert('You must add at least one line with valid quantity and selected item');
           return;
         }
 
         const extraRefs: string[] = [];
         if (formData.related_invoice_id) {
-          extraRefs.push(`Factura afectada: ${formData.related_invoice_id}`);
+          extraRefs.push(`Related invoice: ${formData.related_invoice_id}`);
         }
         if (formData.related_delivery_note_id) {
-          extraRefs.push(`Conduce afectado: ${formData.related_delivery_note_id}`);
+          extraRefs.push(`Related delivery note: ${formData.related_delivery_note_id}`);
         }
         const fullDescription = [formData.description, extraRefs.length ? extraRefs.join(' | ') : null]
           .filter(Boolean)
@@ -768,24 +768,24 @@ export default function InventoryPage() {
           await warehouseEntriesService.post(user.id, created.entry.id);
           const data = await warehouseEntriesService.getAll(user.id);
           setWarehouseEntries(data || []);
-          alert('Entrada de almacén registrada correctamente');
+          alert('Warehouse entry registered successfully');
         } catch (err: any) {
           console.error('Error creating warehouse entry:', err);
-          alert(`Error al registrar la entrada de almacén: ${err?.message || 'revisa la consola para más detalles'}`);
+          alert(`Error registering warehouse entry: ${err?.message || 'check console for more details'}`);
           return;
         }
       } else if (modalType === 'warehouse_transfer') {
         if (!user) {
-          alert('Debes iniciar sesión para registrar transferencias de almacén');
+          alert('You must be logged in to register warehouse transfers');
           return;
         }
 
         if (!formData.from_warehouse_id || !formData.to_warehouse_id) {
-          alert('Debes seleccionar almacén origen y destino');
+          alert('You must select source and destination warehouses');
           return;
         }
         if (formData.from_warehouse_id === formData.to_warehouse_id) {
-          alert('El almacén origen y destino no pueden ser el mismo');
+          alert('Source and destination warehouses cannot be the same');
           return;
         }
 
@@ -797,7 +797,7 @@ export default function InventoryPage() {
           .filter((l) => l.inventory_item_id && l.quantity > 0);
 
         if (validLines.length === 0) {
-          alert('Debes agregar al menos una línea con cantidad válida e ítem seleccionado');
+          alert('You must add at least one line with valid quantity and selected item');
           return;
         }
 
@@ -830,14 +830,14 @@ export default function InventoryPage() {
         Object.values(aggregatedByItem).forEach((entry: any) => {
           if (entry.requested > entry.available) {
             overRequested.push(
-              `${entry.name || 'Producto'}: solicitado ${entry.requested}, disponible ${entry.available}`,
+              `${entry.name || 'Product'}: requested ${entry.requested}, available ${entry.available}`,
             );
           }
         });
 
         if (overRequested.length > 0) {
           alert(
-            'No puedes transferir más cantidad de la disponible en el almacén origen para:\n' +
+            'Cannot transfer more than available quantity in source warehouse for:\n' +
               overRequested.join('\n'),
           );
           return;
@@ -863,10 +863,10 @@ export default function InventoryPage() {
           await warehouseTransfersService.post(user.id, created.transfer.id);
           const data = await warehouseTransfersService.getAll(user.id);
           setWarehouseTransfers(data || []);
-          alert('Transferencia de almacén registrada correctamente');
+          alert('Warehouse transfer registered successfully');
         } catch (err: any) {
           console.error('Error creating warehouse transfer:', err);
-          alert(`Error al registrar la transferencia de almacén: ${err?.message || 'revisa la consola para más detalles'}`);
+          alert(`Error registering warehouse transfer: ${err?.message || 'check console for more details'}`);
           return;
         }
       }
@@ -883,13 +883,13 @@ export default function InventoryPage() {
         error?.details ? `details: ${String(error.details)}` : null,
         error?.hint ? `hint: ${String(error.hint)}` : null,
       ].filter(Boolean);
-      const msg = parts.length > 0 ? parts.join('\n') : 'Revisa la consola para más detalles.';
-      alert(`Error al guardar los datos:\n${msg}`);
+      const msg = parts.length > 0 ? parts.join('\n') : 'Check console for more details.';
+      alert(`Error saving data:\n${msg}`);
     }
   };
 
   const handleDelete = async (id: any) => {
-    if (!confirm('¿Está seguro de que desea eliminar este elemento?')) return;
+    if (!confirm('Are you sure you want to delete this item?')) return;
     
     try {
       if (user) {
@@ -898,7 +898,7 @@ export default function InventoryPage() {
       }
     } catch (error) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar el elemento. Por favor, inténtelo de nuevo.');
+      alert('Error deleting item. Please try again.');
     }
   };
 
@@ -920,13 +920,13 @@ export default function InventoryPage() {
     return fallbackSku;
   };
 
-  // Funciones de exportación
+  // Export functions
   const exportToExcel = async () => {
     const isItemsTab = activeTab === 'items';
     const dataToExport = isItemsTab ? filteredItems : filteredMovements;
 
     if (!dataToExport || dataToExport.length === 0) {
-      alert('No hay datos para exportar.');
+      alert('No data to export.');
       return;
     }
 
@@ -940,11 +940,10 @@ export default function InventoryPage() {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de inventario:', error);
+      console.error('Error getting company info for inventory Excel:', error);
     }
 
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     if (isItemsTab) {
       const rows = dataToExport.map((item: any) => ({
@@ -955,24 +954,24 @@ export default function InventoryPage() {
         minimum_stock: item.minimum_stock || 0,
         cost_price: item.cost_price || 0,
         selling_price: item.selling_price || 0,
-        status: item.is_active ? 'Activo' : 'Inactivo',
+        status: item.is_active ? 'Active' : 'Inactive',
       }));
 
       const headers = [
         { key: 'sku', title: 'SKU' },
-        { key: 'name', title: 'Nombre' },
-        { key: 'category', title: 'Categoría' },
-        { key: 'current_stock', title: 'Stock Actual' },
-        { key: 'minimum_stock', title: 'Stock Mínimo' },
-        { key: 'cost_price', title: 'Precio Costo' },
-        { key: 'selling_price', title: 'Precio Venta' },
-        { key: 'status', title: 'Estado' },
+        { key: 'name', title: 'Name' },
+        { key: 'category', title: 'Category' },
+        { key: 'current_stock', title: 'Current Stock' },
+        { key: 'minimum_stock', title: 'Minimum Stock' },
+        { key: 'cost_price', title: 'Cost Price' },
+        { key: 'selling_price', title: 'Selling Price' },
+        { key: 'status', title: 'Status' },
       ];
 
-      const fileBase = `inventario_productos_${new Date().toISOString().split('T')[0]}`;
-      const title = 'Productos en Inventario';
+      const fileBase = `inventory_products_${new Date().toISOString().split('T')[0]}`;
+      const title = 'Inventory Products';
 
-      exportToExcelWithHeaders(rows, headers, fileBase, 'Productos', [16, 30, 22, 16, 16, 16, 16, 14], {
+      exportToExcelWithHeaders(rows, headers, fileBase, 'Products', [16, 30, 22, 16, 16, 16, 16, 14], {
         title,
         companyName,
         headerStyle: 'dgii_606',
@@ -984,12 +983,12 @@ export default function InventoryPage() {
         product_name: movement.inventory_items?.name || 'N/A',
         type:
           movement.movement_type === 'entry'
-            ? 'Entrada'
+            ? 'Entry'
             : movement.movement_type === 'exit'
-            ? 'Salida'
+            ? 'Exit'
             : movement.movement_type === 'transfer'
-            ? 'Transferencia'
-            : 'Ajuste',
+            ? 'Transfer'
+            : 'Adjustment',
         quantity: movement.quantity,
         unit_cost: movement.unit_cost || 0,
         total_cost: movement.total_cost || 0,
@@ -997,37 +996,30 @@ export default function InventoryPage() {
       }));
 
       const headers = [
-        { key: 'movement_date', title: 'Fecha' },
-        { key: 'product_name', title: 'Producto' },
-        { key: 'type', title: 'Tipo' },
-        { key: 'quantity', title: 'Cantidad' },
-        { key: 'unit_cost', title: 'Costo Unitario' },
-        { key: 'total_cost', title: 'Costo Total' },
-        { key: 'reference', title: 'Referencia' },
+        { key: 'movement_date', title: 'Date' },
+        { key: 'product_name', title: 'Product' },
+        { key: 'type', title: 'Type' },
+        { key: 'quantity', title: 'Quantity' },
+        { key: 'unit_cost', title: 'Unit Cost' },
+        { key: 'total_cost', title: 'Total Cost' },
+        { key: 'reference', title: 'Reference' },
       ];
 
-      const fileBase = `inventario_movimientos_${new Date().toISOString().split('T')[0]}`;
-      const title = 'Movimientos de Inventario';
+      const fileBase = `inventory_movements_${new Date().toISOString().split('T')[0]}`;
+      const title = 'Inventory Movements';
 
-      exportToExcelWithHeaders(
-        rows,
-        headers,
-        fileBase,
-        'Movimientos',
-        [16, 30, 18, 14, 18, 18, 26],
-        {
-          title,
-          companyName,
-          headerStyle: 'dgii_606',
-          periodText,
-        },
-      );
+      exportToExcelWithHeaders(rows, headers, fileBase, 'Movements', [16, 30, 18, 14, 18, 18, 26], {
+        title,
+        companyName,
+        headerStyle: 'dgii_606',
+        periodText,
+      });
     }
   };
 
   const exportValuationToExcel = async () => {
     if (!items || items.length === 0) {
-      alert('No hay datos para generar el reporte de valorización.');
+      alert('No data to generate valuation report.');
       return;
     }
 
@@ -1035,20 +1027,16 @@ export default function InventoryPage() {
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
-        const resolvedName =
-          (info as any).name ||
-          (info as any).company_name ||
-          (info as any).legal_name;
+        const resolvedName = (info as any).name || (info as any).company_name || (info as any).legal_name;
         if (resolvedName) {
           companyName = String(resolvedName);
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de valorización:', error);
+      console.error('Error getting company info for valuation Excel:', error);
     }
 
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     const rows = items.map((item: any) => {
       const stock = Number(item.current_stock || 0) || 0;
@@ -1066,33 +1054,26 @@ export default function InventoryPage() {
     });
 
     const headers = [
-      { key: 'product', title: 'Producto' },
+      { key: 'product', title: 'Product' },
       { key: 'stock', title: 'Stock' },
-      { key: 'cost_price', title: 'Precio Costo' },
-      { key: 'selling_price', title: 'Precio Venta' },
-      { key: 'value_cost', title: 'Valor Costo' },
-      { key: 'value_sale', title: 'Valor Venta' },
+      { key: 'cost_price', title: 'Cost Price' },
+      { key: 'selling_price', title: 'Selling Price' },
+      { key: 'value_cost', title: 'Cost Value' },
+      { key: 'value_sale', title: 'Sale Value' },
     ];
 
-    const fileBase = `valorizacion_inventario_${new Date().toISOString().split('T')[0]}`;
-    const title = 'Valorización de Inventario (Costo y Venta)';
+    const fileBase = `inventory_valuation_${new Date().toISOString().split('T')[0]}`;
+    const title = 'Inventory Valuation (Cost and Sale)';
 
-    exportToExcelWithHeaders(
-      rows,
-      headers,
-      fileBase,
-      'Valorización',
-      [32, 12, 16, 16, 18, 18],
-      {
-        title,
-        companyName,
-        headerStyle: 'dgii_606',
-        periodText,
-      },
-    );
+    exportToExcelWithHeaders(rows, headers, fileBase, 'Valuation', [32, 12, 16, 16, 18, 18], {
+      title,
+      companyName,
+      headerStyle: 'dgii_606',
+      periodText,
+    });
   };
 
-  // Filtros aplicados
+  // Applied filters
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1150,7 +1131,7 @@ export default function InventoryPage() {
     warehouseBalances[wid][iid] = prev + delta;
   };
 
-  // Base: cada producto aporta su current_stock completo a su almacén asignado
+  // Base: each product contributes its full current_stock to its assigned warehouse
   items.forEach((it: any) => {
     if (!it || !it.id || !it.warehouse_id) return;
     const baseQty = Number(it.current_stock ?? 0) || 0;
@@ -1158,7 +1139,7 @@ export default function InventoryPage() {
     adjustWarehouseBalance(it.warehouse_id, it.id, baseQty);
   });
 
-  // Ajustes: solo las transferencias mueven stock entre almacenes
+  // Adjustments: only transfers move stock between warehouses
   movements.forEach((movement: any) => {
     const qty = Number(movement.quantity) || 0;
     if (!qty) return;
@@ -1213,7 +1194,7 @@ export default function InventoryPage() {
 
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Estadísticas principales */}
+      {/* Main statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
@@ -1223,7 +1204,7 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Productos</p>
+              <p className="text-sm font-medium text-gray-500">Total Products</p>
               <p className="text-2xl font-semibold text-gray-900">{items.length}</p>
             </div>
           </div>
@@ -1237,7 +1218,7 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Productos Activos</p>
+              <p className="text-sm font-medium text-gray-500">Active Products</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {items.filter(item => item.is_active).length}
               </p>
@@ -1253,7 +1234,7 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Stock Bajo</p>
+              <p className="text-sm font-medium text-gray-500">Low Stock</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length}
               </p>
@@ -1269,7 +1250,7 @@ export default function InventoryPage() {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Movimientos Hoy</p>
+              <p className="text-sm font-medium text-gray-500">Movements Today</p>
               <p className="text-2xl font-semibold text-gray-900">
                 {movements.filter(m => 
                   new Date(m.movement_date).toDateString() === new Date().toDateString()
@@ -1280,12 +1261,12 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Valor total del inventario */}
+      {/* Total inventory value */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen Financiero</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Valor Total Costo (Promedio)</p>
+            <p className="text-sm font-medium text-gray-500">Total Cost Value (Average)</p>
             <p className="text-2xl font-bold text-blue-600">
               ${items
                 .filter(item => item.item_type !== 'service')
@@ -1297,13 +1278,13 @@ export default function InventoryPage() {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Valor Total Venta</p>
+            <p className="text-sm font-medium text-gray-500">Total Sale Value</p>
             <p className="text-2xl font-bold text-green-600">
               ${realSalesTotal.toLocaleString('es-DO')}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Ganancia Potencial</p>
+            <p className="text-sm font-medium text-gray-500">Potential Profit</p>
             <p className="text-2xl font-bold text-purple-600">
               ${items
                 .filter(item => item.item_type !== 'service')
@@ -1317,14 +1298,14 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Productos con stock bajo */}
+      {/* Low stock products */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Productos con Stock Bajo</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Low Stock Products</h3>
         </div>
         <div className="p-6">
           {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No hay productos con stock bajo</p>
+            <p className="text-gray-500 text-center py-4">No low stock products</p>
           ) : (
             <div className="space-y-3">
               {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).slice(0, 5).map(item => (
@@ -1338,7 +1319,7 @@ export default function InventoryPage() {
                       Stock: {item.current_stock} {item.unit_of_measure}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Mínimo: {item.minimum_stock}
+                      Minimum: {item.minimum_stock}
                     </p>
                   </div>
                 </div>
@@ -1348,14 +1329,14 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Movimientos recientes */}
+      {/* Recent movements */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Movimientos Recientes</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Movements</h3>
         </div>
         <div className="p-6">
           {movements.slice(0, 5).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No hay movimientos recientes</p>
+            <p className="text-gray-500 text-center py-4">No recent movements</p>
           ) : (
             <div className="space-y-3">
               {movements.slice(0, 5).map(movement => (
@@ -1372,12 +1353,12 @@ export default function InventoryPage() {
                       movement.movement_type === 'exit' ? 'bg-red-100 text-red-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {movement.movement_type === 'entry' ? 'Entrada' :
-                       movement.movement_type === 'exit' ? 'Salida' :
-                       movement.movement_type === 'transfer' ? 'Transferencia' : 'Ajuste'}
+                      {movement.movement_type === 'entry' ? 'Entry' :
+                       movement.movement_type === 'exit' ? 'Exit' :
+                       movement.movement_type === 'transfer' ? 'Transfer' : 'Adjustment'}
                     </span>
                     <p className="text-sm text-gray-500 mt-1">
-                      Cantidad: {movement.quantity}
+                      Quantity: {movement.quantity}
                     </p>
                   </div>
                 </div>
@@ -1392,50 +1373,50 @@ export default function InventoryPage() {
   const renderItems = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Productos en Inventario</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Inventory Products</h3>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-file-excel-line mr-2"></i>
-            Exportar Excel
+            Export Excel
           </button>
           <button
             onClick={() => handleOpenModal('item')}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-add-line mr-2"></i>
-            Agregar Producto
+            Add Product
           </button>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar
+              Search
             </label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por nombre o SKU..."
+              placeholder="Search by name or SKU..."
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoría
+              Category
             </label>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todas las categorías</option>
+              <option value="">All categories</option>
               {categories.map(category => (
                 <option key={category} value={category}>{category}</option>
               ))}
@@ -1443,17 +1424,17 @@ export default function InventoryPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado
+              Status
             </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todos los estados</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-              <option value="low_stock">Stock Bajo</option>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="low_stock">Low Stock</option>
             </select>
           </div>
           <div className="flex items-end">
@@ -1466,7 +1447,7 @@ export default function InventoryPage() {
               className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
             >
               <i className="ri-refresh-line mr-2"></i>
-              Limpiar Filtros
+              Clear Filters
             </button>
           </div>
         </div>
@@ -1478,13 +1459,13 @@ export default function InventoryPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Costo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio Venta</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1505,7 +1486,7 @@ export default function InventoryPage() {
                     </span>
                     {item.minimum_stock && (
                       <div className="text-xs text-gray-500">
-                        Mín: {item.minimum_stock}
+                        Min: {item.minimum_stock}
                       </div>
                     )}
                   </td>
@@ -1516,7 +1497,7 @@ export default function InventoryPage() {
                     })()}
                     {item.last_purchase_price != null && (
                       <div className="text-xs text-gray-500">
-                        Última compra: ${item.last_purchase_price.toLocaleString('es-DO')}
+                        Last purchase: ${item.last_purchase_price.toLocaleString('es-DO')}
                       </div>
                     )}
                   </td>
@@ -1529,28 +1510,28 @@ export default function InventoryPage() {
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {item.is_active ? 'Activo' : 'Inactivo'}
+                      {item.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => handleOpenModal('item', item)}
                       className="text-blue-600 hover:text-blue-900"
-                      title="Editar"
+                      title="Edit"
                     >
                       <i className="ri-edit-line"></i>
                     </button>
                     <button
                       onClick={() => handleOpenModal('movement', { item_id: item.id, item_name: item.name })}
                       className="text-green-600 hover:text-green-900"
-                      title="Nuevo Movimiento"
+                      title="New Movement"
                     >
                       <i className="ri-arrow-up-down-line"></i>
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
                       className="text-red-600 hover:text-red-900"
-                      title="Eliminar"
+                      title="Delete"
                     >
                       <i className="ri-delete-bin-line"></i>
                     </button>
@@ -1561,7 +1542,7 @@ export default function InventoryPage() {
           </table>
           {filteredItems.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No se encontraron productos</p>
+              <p className="text-gray-500">No products found</p>
             </div>
           )}
         </div>
@@ -1572,75 +1553,75 @@ export default function InventoryPage() {
   const renderMovements = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Movimientos de Inventario</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Movements</h3>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={exportToExcel}
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-file-excel-line mr-2"></i>
-            Exportar Excel
+            Export Excel
           </button>
           <button
             onClick={() => handleOpenModal('movement')}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-add-line mr-2"></i>
-            Nuevo Movimiento
+            New Movement
           </button>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar
+              Search
             </label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por producto o referencia..."
+              placeholder="Search by product or reference..."
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Movimiento
+              Movement Type
             </label>
             <select
               value={movementTypeFilter}
               onChange={(e) => setMovementTypeFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todos los tipos</option>
-              <option value="entry">Entrada</option>
-              <option value="exit">Salida</option>
-              <option value="transfer">Transferencia</option>
-              <option value="adjustment">Ajuste</option>
+              <option value="">All types</option>
+              <option value="entry">Entry</option>
+              <option value="exit">Exit</option>
+              <option value="transfer">Transfer</option>
+              <option value="adjustment">Adjustment</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de documento
+              Document Type
             </label>
             <select
               value={movementSourceFilter}
               onChange={(e) => setMovementSourceFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todos los documentos</option>
+              <option value="">All documents</option>
               <option value="manual">Manual</option>
-              <option value="purchase_order">Orden de compra</option>
-              <option value="delivery_note">Conduce</option>
-              <option value="pos_sale">Venta POS</option>
+              <option value="purchase_order">Purchase Order</option>
+              <option value="delivery_note">Delivery Note</option>
+              <option value="pos_sale">POS Sale</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rango de fechas
+              Date Range
             </label>
             <div className="grid grid-cols-2 gap-2">
               <input
@@ -1659,14 +1640,14 @@ export default function InventoryPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tienda / Almacén
+              Store / Warehouse
             </label>
             <select
               value={movementStoreFilter}
               onChange={(e) => setMovementStoreFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todas las tiendas</option>
+              <option value="">All stores</option>
               {stores.map((st) => (
                 <option key={st.id} value={st.id}>
                   {st.name}
@@ -1678,7 +1659,7 @@ export default function InventoryPage() {
               onChange={(e) => setMovementWarehouseFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">Todos los almacenes</option>
+              <option value="">All warehouses</option>
               {warehouses.map((wh) => (
                 <option key={wh.id} value={wh.id}>
                   {wh.name}
@@ -1698,74 +1679,72 @@ export default function InventoryPage() {
               className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
             >
               <i className="ri-refresh-line mr-2"></i>
-              Limpiar Filtros
+              Clear Filters
             </button>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costo Unitario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costo Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notas</th>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Cost</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Cost</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredMovements.map((movement) => (
+              <tr key={movement.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {new Date(movement.movement_date).toLocaleDateString('es-DO')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {movement.inventory_items?.name || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    movement.movement_type === 'entry' ? 'bg-green-100 text-green-800' :
+                    movement.movement_type === 'exit' ? 'bg-red-100 text-red-800' :
+                    movement.movement_type === 'transfer' ? 'bg-blue-100 text-blue-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {movement.movement_type === 'entry' ? 'Entry' :
+                     movement.movement_type === 'exit' ? 'Exit' :
+                     movement.movement_type === 'transfer' ? 'Transfer' :
+                     'Adjustment'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {movement.quantity}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${movement.unit_cost?.toLocaleString('es-DO') || '0'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${movement.total_cost?.toLocaleString('es-DO') || '0'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {movement.reference || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {movement.notes || 'N/A'}
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMovements.map((movement) => (
-                <tr key={movement.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(movement.movement_date).toLocaleDateString('es-DO')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {movement.inventory_items?.name || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      movement.movement_type === 'entry' ? 'bg-green-100 text-green-800' :
-                      movement.movement_type === 'exit' ? 'bg-red-100 text-red-800' :
-                      movement.movement_type === 'transfer' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {movement.movement_type === 'entry' ? 'Entrada' :
-                       movement.movement_type === 'exit' ? 'Salida' :
-                       movement.movement_type === 'transfer' ? 'Transferencia' :
-                       'Ajuste'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {movement.quantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${movement.unit_cost?.toLocaleString('es-DO') || '0'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${movement.total_cost?.toLocaleString('es-DO') || '0'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {movement.reference || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {movement.notes || 'N/A'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filteredMovements.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No se encontraron movimientos</p>
-            </div>
-          )}
-        </div>
+            ))}
+          </tbody>
+        </table>
+        {filteredMovements.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No movements found</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1773,13 +1752,13 @@ export default function InventoryPage() {
   const renderWarehouseEntriesTab = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Entradas de Almacén</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Warehouse Entries</h3>
         <button
           onClick={() => handleOpenModal('warehouse_entry')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
-          Nueva Entrada
+          New Entry
         </button>
       </div>
 
@@ -1788,13 +1767,13 @@ export default function InventoryPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha doc.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Núm. doc.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Almacén</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Origen</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emisor</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. No.</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1804,7 +1783,7 @@ export default function InventoryPage() {
                     {(() => {
                       const raw = entry.document_date ? String(entry.document_date) : '';
                       if (!raw) return 'N/A';
-                      // Evitar corrimiento por timezone: tratar YYYY-MM-DD como fecha local
+                      // Avoid timezone shift: treat YYYY-MM-DD as local date
                       const parts = raw.split('T')[0].split('-');
                       if (parts.length === 3) {
                         const [y, m, d] = parts;
@@ -1821,12 +1800,12 @@ export default function InventoryPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.source_type === 'conduce_suplidor'
-                      ? 'Conduce suplidor'
+                      ? 'Supplier delivery note'
                       : entry.source_type === 'devolucion_cliente'
-                        ? 'Devolución cliente'
+                        ? 'Customer return'
                         : entry.source_type === 'ap_invoice'
-                          ? 'Factura suplidor'
-                        : entry.source_type || 'Otros'}
+                          ? 'Supplier invoice'
+                        : entry.source_type || 'Other'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {entry.issuer_name || 'N/A'}
@@ -1843,10 +1822,10 @@ export default function InventoryPage() {
                           : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {entry.status === 'posted'
-                        ? 'Posteada'
+                        ? 'Posted'
                         : entry.status === 'cancelled'
-                          ? 'Cancelada'
-                          : 'Borrador'}
+                          ? 'Cancelled'
+                          : 'Draft'}
                     </span>
                   </td>
                 </tr>
@@ -1855,7 +1834,7 @@ export default function InventoryPage() {
           </table>
           {warehouseEntries.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No se encontraron entradas de almacén</p>
+              <p className="text-gray-500">No warehouse entries found</p>
             </div>
           )}
         </div>
@@ -1866,13 +1845,13 @@ export default function InventoryPage() {
   const renderWarehouseTransfersTab = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Transferencias entre Almacenes</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Warehouse Transfers</h3>
         <button
           onClick={() => handleOpenModal('warehouse_transfer')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
-          Nueva Transferencia
+          New Transfer
         </button>
       </div>
 
@@ -1881,13 +1860,13 @@ export default function InventoryPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Núm. doc.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Almacén origen</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Almacén destino</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ítems</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Concepto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. No.</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source Warehouse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dest. Warehouse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -1926,10 +1905,10 @@ export default function InventoryPage() {
                       }`}
                     >
                       {transfer.status === 'posted'
-                        ? 'Posteada'
+                        ? 'Posted'
                         : transfer.status === 'cancelled'
-                          ? 'Cancelada'
-                          : 'Borrador'}
+                          ? 'Cancelled'
+                          : 'Draft'}
                     </span>
                   </td>
                 </tr>
@@ -1938,7 +1917,7 @@ export default function InventoryPage() {
           </table>
           {warehouseTransfers.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No se encontraron transferencias de almacén</p>
+              <p className="text-gray-500">No warehouse transfers found</p>
             </div>
           )}
         </div>
@@ -1949,13 +1928,13 @@ export default function InventoryPage() {
   const renderWarehouses = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Gestión de Almacenes</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Warehouse Management</h3>
         <button
           onClick={() => handleOpenModal('warehouse')}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
-          Nuevo Almacén
+          New Warehouse
         </button>
       </div>
 
@@ -1974,19 +1953,19 @@ export default function InventoryPage() {
               <p className="text-xs text-gray-400 mb-4">{warehouse.description}</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Productos:</span>
+                  <span className="text-gray-500">Products:</span>
                   <span className="font-medium">
                     {stats.products}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Stock Total:</span>
+                  <span className="text-gray-500">Total Stock:</span>
                   <span className="font-medium">
                     {stats.stockTotal}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Valor Total:</span>
+                  <span className="text-gray-500">Total Value:</span>
                   <span className="font-medium text-green-600">
                     ${stats.valueTotal.toLocaleString('es-DO')}
                   </span>
@@ -2002,80 +1981,80 @@ export default function InventoryPage() {
   const renderReports = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Reportes de Inventario</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Inventory Reports</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Reporte de Stock */}
+        {/* Stock Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
               <i className="ri-file-list-3-line text-blue-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Reporte de Stock</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Stock Report</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Reporte detallado de todos los productos con sus niveles de stock actuales.
+            Detailed report of all products with their current stock levels.
           </p>
           <button
             onClick={() => navigate('/inventory/reports')}
             className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
-            Generar Reporte
+            Generate Report
           </button>
         </div>
 
-        {/* Toma de Inventario Físico */}
+        {/* Physical Inventory Count */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
               <i className="ri-clipboard-line text-indigo-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Toma de Inventario Físico</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Physical Inventory Count</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Listado para conteo físico con espacios para cantidades contadas y observaciones.
+            List for physical count with spaces for counted quantities and observations.
           </p>
           <button
             onClick={() => navigate('/inventory/physical-count')}
             className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
-            Generar Formato
+            Generate Format
           </button>
         </div>
 
-        {/* Reporte de Inventario Físico */}
+        {/* Physical Inventory Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
               <i className="ri-clipboard-check-line text-amber-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Reporte de Inventario Físico</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Physical Inventory Report</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Resultado de la toma física con diferencias de cantidad y valorización por producto.
+            Physical count results with quantity differences and valuation by product.
           </p>
           <button
             onClick={() => navigate('/inventory/physical-result')}
             className="w-full bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-bar-chart-2-line mr-2"></i>
-            Ver Reporte
+            View Report
           </button>
         </div>
 
-        {/* Reporte de Movimientos */}
+        {/* Movements Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
               <i className="ri-arrow-up-down-line text-green-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Reporte de Movimientos</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Movements Report</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Historial completo de todos los movimientos de inventario realizados.
+            Complete history of all inventory movements made.
           </p>
           <button
             onClick={() => {
@@ -2085,66 +2064,66 @@ export default function InventoryPage() {
             className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
-            Generar Reporte
+            Generate Report
           </button>
         </div>
 
-        {/* Reporte de Valorización */}
+        {/* Valuation Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <i className="ri-money-dollar-circle-line text-purple-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Valorización</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Valuation Report</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Reporte del valor total del inventario a precios de costo y venta.
+            Report of total inventory value at cost and sale prices.
           </p>
           <button
             onClick={exportValuationToExcel}
             className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
-            Generar Reporte
+            Generate Report
           </button>
         </div>
 
-        {/* Revalorización de Costos de Inventario */}
+        {/* Cost Revaluation */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
               <i className="ri-slideshow-line text-orange-600"></i>
             </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Revalorización de Costos</h4>
+            <h4 className="text-lg font-semibold text-gray-900 ml-3">Cost Revaluation</h4>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Módulo para ajustar costos promedio ponderados de inventario.
+            Module to adjust weighted average inventory costs.
           </p>
           <button
             onClick={() => navigate('/inventory/cost-revaluation')}
             className="w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap"
           >
             <i className="ri-bar-chart-box-line mr-2"></i>
-            Abrir módulo
+            Open Module
           </button>
         </div>
 
       </div>
 
-      {/* Estadísticas de reportes */}
+      {/* General Statistics */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">Estadísticas Generales</h4>
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">General Statistics</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Productos Totales</p>
+            <p className="text-sm font-medium text-gray-500">Total Products</p>
             <p className="text-2xl font-bold text-blue-600">{items.length}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Categorías</p>
+            <p className="text-sm font-medium text-gray-500">Categories</p>
             <p className="text-2xl font-bold text-green-600">{categories.length}</p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Movimientos del Mes</p>
+            <p className="text-sm font-medium text-gray-500">Monthly Movements</p>
             <p className="text-2xl font-bold text-purple-600">
               {movements.filter(m => {
                 const movementDate = new Date(m.movement_date);
@@ -2157,7 +2136,7 @@ export default function InventoryPage() {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Almacenes</p>
+            <p className="text-sm font-medium text-gray-500">Warehouses</p>
             <p className="text-2xl font-bold text-indigo-600">{warehouses.length}</p>
           </div>
         </div>
@@ -2174,16 +2153,16 @@ export default function InventoryPage() {
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
               {modalType === 'item'
-                ? (selectedItem ? 'Editar producto' : 'Nuevo producto')
+                ? (selectedItem ? 'Edit Product' : 'New Product')
                 : modalType === 'movement'
-                  ? 'Movimiento de inventario'
+                  ? 'Inventory Movement'
                   : modalType === 'warehouse'
-                    ? (selectedItem ? 'Editar almacén' : 'Nuevo almacén')
+                    ? (selectedItem ? 'Edit Warehouse' : 'New Warehouse')
                     : modalType === 'warehouse_entry'
-                      ? 'Entrada de almacén'
+                      ? 'Warehouse Entry'
                       : modalType === 'warehouse_transfer'
-                        ? 'Transferencia de almacén'
-                        : 'Gestión de inventario'}
+                        ? 'Warehouse Transfer'
+                        : 'Inventory Management'}
             </h3>
             <button
               type="button"
@@ -2200,7 +2179,7 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre *
+                      Name *
                     </label>
                     <input
                       type="text"
@@ -2227,13 +2206,13 @@ export default function InventoryPage() {
                         onClick={generateSKU}
                         className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
                       >
-                        Generar
+                        Generate
                       </button>
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría
+                      Category
                     </label>
                     <input
                       type="text"
@@ -2241,7 +2220,7 @@ export default function InventoryPage() {
                       value={formData.category || ''}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Escribe o selecciona una categoría"
+                      placeholder="Type or select a category"
                     />
                     <datalist id="inventory-categories">
                       {categories
@@ -2253,7 +2232,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Unidad de medida
+                      Unit of Measure
                     </label>
                     <input
                       type="text"
@@ -2261,37 +2240,37 @@ export default function InventoryPage() {
                       value={formData.unit_of_measure || ''}
                       onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Seleccionar o escribir unidad"
+                      placeholder="Select or type unit"
                     />
                     <datalist id="unit-of-measure-options">
-                      <option value="Unidad" />
-                      <option value="Pieza" />
-                      <option value="Caja" />
-                      <option value="Paquete" />
-                      <option value="Docena" />
-                      <option value="Par" />
+                      <option value="Unit" />
+                      <option value="Piece" />
+                      <option value="Box" />
+                      <option value="Pack" />
+                      <option value="Dozen" />
+                      <option value="Pair" />
                       <option value="Kg" />
-                      <option value="Gramo" />
-                      <option value="Libra" />
-                      <option value="Onza" />
-                      <option value="Litro" />
-                      <option value="Galón" />
-                      <option value="Metro" />
-                      <option value="Pie" />
-                      <option value="Pulgada" />
-                      <option value="Metro cuadrado" />
-                      <option value="Pie cuadrado" />
-                      <option value="Rollo" />
-                      <option value="Bolsa" />
-                      <option value="Botella" />
-                      <option value="Lata" />
-                      <option value="Barril" />
-                      <option value="Saco" />
-                      <option value="Servicio" />
-                      <option value="Hora" />
-                      {/* Agregar unidades personalizadas existentes */}
+                      <option value="Gram" />
+                      <option value="Pound" />
+                      <option value="Ounce" />
+                      <option value="Liter" />
+                      <option value="Gallon" />
+                      <option value="Meter" />
+                      <option value="Foot" />
+                      <option value="Inch" />
+                      <option value="Square meter" />
+                      <option value="Square foot" />
+                      <option value="Roll" />
+                      <option value="Bag" />
+                      <option value="Bottle" />
+                      <option value="Can" />
+                      <option value="Barrel" />
+                      <option value="Sack" />
+                      <option value="Service" />
+                      <option value="Hour" />
+                      {/* Add existing custom units */}
                       {Array.from(new Set(items.map((it: any) => it.unit_of_measure).filter((u: any) => u && String(u).trim() !== '')))
-                        .filter((u: any) => !['Unidad', 'Pieza', 'Caja', 'Paquete', 'Docena', 'Par', 'Kg', 'Gramo', 'Libra', 'Onza', 'Litro', 'Galón', 'Metro', 'Pie', 'Pulgada', 'Metro cuadrado', 'Pie cuadrado', 'Rollo', 'Bolsa', 'Botella', 'Lata', 'Barril', 'Saco', 'Servicio', 'Hora'].includes(u))
+                        .filter((u: any) => !['Unit', 'Piece', 'Box', 'Pack', 'Dozen', 'Pair', 'Kg', 'Gram', 'Pound', 'Ounce', 'Liter', 'Gallon', 'Meter', 'Foot', 'Inch', 'Square meter', 'Square foot', 'Roll', 'Bag', 'Bottle', 'Can', 'Barrel', 'Sack', 'Service', 'Hour'].includes(u))
                         .map((unit: any) => (
                           <option key={String(unit)} value={String(unit)} />
                         ))}
@@ -2299,7 +2278,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Stock actual
+                      Current Stock
                     </label>
                     <input
                       type="number" min="0"
@@ -2310,7 +2289,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Almacén
+                      Warehouse
                     </label>
                     <select
                       value={formData.warehouse_id || (warehouses[0]?.id ?? '')}
@@ -2320,7 +2299,7 @@ export default function InventoryPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                     >
                       {warehouses.length === 0 && (
-                        <option value="">Sin almacenes configurados</option>
+                        <option value="">No warehouses configured</option>
                       )}
                       {warehouses.map((wh) => (
                         <option key={wh.id} value={wh.id}>
@@ -2331,7 +2310,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Stock mínimo
+                      Minimum Stock
                     </label>
                     <input
                       type="number" min="0"
@@ -2342,7 +2321,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Stock máximo
+                      Maximum Stock
                     </label>
                     <input
                       type="number" min="0"
@@ -2353,7 +2332,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Precio de compra (sin impuestos)
+                      Purchase Price (before tax)
                     </label>
                     <input
                       type="number" min="0"
@@ -2365,7 +2344,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Precio venta
+                      Sale Price
                     </label>
                     <input
                       type="number" min="0"
@@ -2380,7 +2359,7 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Imagen del producto
+                      Product Image
                     </label>
                     <div className="flex items-center gap-4">
                       {formData.image_url && (
@@ -2388,7 +2367,7 @@ export default function InventoryPage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={formData.image_url}
-                            alt={formData.name || 'Producto'}
+                            alt={formData.name || 'Product'}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -2408,7 +2387,7 @@ export default function InventoryPage() {
                         >
                           <i className="ri-upload-cloud-line text-2xl text-gray-400 mb-2 block" />
                           <span className="text-sm text-gray-600">
-                            {formData.image_url ? 'Cambiar imagen' : 'Subir imagen'}
+                            {formData.image_url ? 'Change image' : 'Upload image'}
                           </span>
                         </button>
                       </div>
@@ -2417,16 +2396,16 @@ export default function InventoryPage() {
                   <div className="space-y-3">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de ítem
+                        Item Type
                       </label>
                       <select
                         value={formData.item_type || 'inventory'}
                         onChange={(e) => setFormData({ ...formData, item_type: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       >
-                        <option value="inventory">Producto inventariable</option>
-                        <option value="service">Servicio</option>
-                        <option value="fixed_asset">Activo fijo</option>
+                        <option value="inventory">Inventory product</option>
+                        <option value="service">Service</option>
+                        <option value="fixed_asset">Fixed asset</option>
                       </select>
                     </div>
                     <div>
@@ -2437,7 +2416,7 @@ export default function InventoryPage() {
                           onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        Activo
+                        Active
                       </label>
                     </div>
                     <div>
@@ -2453,7 +2432,7 @@ export default function InventoryPage() {
                           }
                           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
-                        No es comisionable
+                        Not commissionable
                       </label>
                     </div>
                   </div>
@@ -2462,14 +2441,14 @@ export default function InventoryPage() {
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     <i className="ri-file-list-3-line text-blue-600"></i>
-                    Cuentas Contables
+                    Accounting Accounts
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {formData.item_type === 'inventory' || !formData.item_type ? (
                       <>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cuenta de inventario
+                            Inventory Account
                           </label>
                           <select
                             value={formData.inventory_account_id || ''}
@@ -2478,11 +2457,11 @@ export default function InventoryPage() {
                             }
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                           >
-                            <option value="">Seleccionar cuenta</option>
+                            <option value="">Select account</option>
                             {accounts
                               .filter((acc) => {
                                 const code = String(acc.code || '').replace(/\./g, '');
-                                // Cuentas de activos: 1xxx (para inventario)
+                                // Asset accounts: 1xxx (for inventory)
                                 return code.startsWith('1');
                               })
                               .map((acc) => (
@@ -2494,7 +2473,7 @@ export default function InventoryPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cuenta de ingresos
+                            Income Account
                           </label>
                           <select
                             value={formData.income_account_id || ''}
@@ -2503,11 +2482,11 @@ export default function InventoryPage() {
                             }
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                           >
-                            <option value="">Seleccionar cuenta</option>
+                            <option value="">Select account</option>
                             {accounts
                               .filter((acc) => {
                                 const code = String(acc.code || '').replace(/\./g, '');
-                                // Cuentas de ingresos: 4xxx
+                                // Income accounts: 4xxx
                                 return code.startsWith('4');
                               })
                               .map((acc) => (
@@ -2519,7 +2498,7 @@ export default function InventoryPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cuenta de costos y Gastos
+                            Cost and Expense Account
                           </label>
                           <select
                             value={formData.cogs_account_id || ''}
@@ -2528,7 +2507,7 @@ export default function InventoryPage() {
                             }
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                           >
-                            <option value="">Seleccionar cuenta</option>
+                            <option value="">Select account</option>
                             {accounts
                               .filter((acc) => {
                                 const code = String(acc.code || '');
@@ -2547,7 +2526,7 @@ export default function InventoryPage() {
                     {formData.item_type === 'service' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Cuenta de ingresos por servicios
+                          Service Income Account
                         </label>
                         <select
                           value={formData.income_account_id || ''}
@@ -2556,7 +2535,7 @@ export default function InventoryPage() {
                           }
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         >
-                          <option value="">Seleccionar cuenta</option>
+                          <option value="">Select account</option>
                           {accounts
                             .filter((acc) => {
                               const t = (acc.type || '').toLowerCase();
@@ -2573,7 +2552,7 @@ export default function InventoryPage() {
                     {formData.item_type === 'fixed_asset' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Cuenta de activo fijo
+                          Fixed Asset Account
                         </label>
                         <select
                           value={formData.asset_account_id || ''}
@@ -2582,7 +2561,7 @@ export default function InventoryPage() {
                           }
                           className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         >
-                          <option value="">Seleccionar cuenta</option>
+                          <option value="">Select account</option>
                           {accounts
                             .filter((acc) => {
                               const t = (acc.type || '').toLowerCase();
@@ -2606,7 +2585,7 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Producto *
+                      Product *
                     </label>
                     <select
                       value={formData.item_id || ''}
@@ -2622,7 +2601,7 @@ export default function InventoryPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       required
                     >
-                      <option value="">Seleccionar producto</option>
+                      <option value="">Select product</option>
                       {items.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.name} ({item.sku})
@@ -2632,7 +2611,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de movimiento *
+                      Movement Type *
                     </label>
                     <select
                       value={formData.movement_type || ''}
@@ -2640,17 +2619,17 @@ export default function InventoryPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       required
                     >
-                      <option value="">Seleccionar tipo</option>
-                      <option value="entry">Entrada</option>
-                      <option value="exit">Salida</option>
-                      <option value="transfer">Transferencia</option>
-                      <option value="adjustment">Ajuste</option>
+                      <option value="">Select type</option>
+                      <option value="entry">Entry</option>
+                      <option value="exit">Exit</option>
+                      <option value="transfer">Transfer</option>
+                      <option value="adjustment">Adjustment</option>
                     </select>
                   </div>
                   {formData.movement_type === 'adjustment' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de ajuste *
+                        Adjustment Type *
                       </label>
                       <select
                         value={formData.adjustment_direction || 'positive'}
@@ -2658,14 +2637,14 @@ export default function InventoryPage() {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="positive">Ajuste positivo (aumento de stock)</option>
-                        <option value="negative">Ajuste negativo (disminución/merma)</option>
+                        <option value="positive">Positive adjustment (stock increase)</option>
+                        <option value="negative">Negative adjustment (decrease/shrinkage)</option>
                       </select>
                     </div>
                   )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cuenta contable (contrapartida)
+                      Accounting Account (offset)
                     </label>
                     <select
                       value={formData.account_id || ''}
@@ -2673,7 +2652,7 @@ export default function InventoryPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       required
                     >
-                      <option value="">Seleccionar cuenta</option>
+                      <option value="">Select account</option>
                       {accounts
                         .filter((acc) => {
                           const t = (acc.type || '').toLowerCase();
@@ -2688,7 +2667,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Cantidad *
+                      Quantity *
                     </label>
                     <input
                       type="number" min="0"
@@ -2703,7 +2682,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Costo unitario
+                      Unit Cost
                     </label>
                     <input
                       type="number" min="0"
@@ -2715,7 +2694,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha del movimiento *
+                      Movement Date *
                     </label>
                     <input
                       type="date"
@@ -2727,26 +2706,26 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Referencia
+                      Reference
                     </label>
                     <input
                       type="text"
                       value={formData.reference || ''}
                       onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ej: Factura #123, Orden #456"
+                      placeholder="E.g.: Invoice #123, Order #456"
                     />
                   </div>
                   <div className="md:col-span-2 lg:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notas
+                      Notes
                     </label>
                     <textarea
                       value={formData.notes || ''}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
-                      placeholder="Información adicional sobre el movimiento"
+                      placeholder="Additional information about the movement"
                     />
                   </div>
                 </div>
@@ -2758,27 +2737,27 @@ export default function InventoryPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Origen de la entrada</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Entry Source</label>
                       <select
                         value={formData.source_type || ''}
                         onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       >
-                        <option value="">Seleccione origen</option>
-                        <option value="conduce_suplidor">Conduce de suplidor / Orden de compra</option>
-                        <option value="devolucion_cliente">Devolución de cliente</option>
-                        <option value="otros">Otros</option>
+                        <option value="">Select source</option>
+                        <option value="conduce_suplidor">Supplier delivery note / Purchase order</option>
+                        <option value="devolucion_cliente">Customer return</option>
+                        <option value="otros">Other</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Almacén que recibe *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Receiving Warehouse *</label>
                       <select
                         value={formData.warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Seleccionar almacén</option>
+                        <option value="">Select warehouse</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -2790,7 +2769,7 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Factura afectada <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Related Invoice <span className="text-red-500">*</span></label>
                       <select
                         value={formData.related_invoice_id || ''}
                         onChange={(e) => {
@@ -2804,7 +2783,7 @@ export default function InventoryPage() {
                               issuerName = customerName;
                             }
                             const invNumber = String((inv as any)?.invoice_number || '');
-                            // Si la factura tiene un número (NCF o interno), usarlo como número de documento
+                            // If the invoice has a number (NCF or internal), use it as document number
                             if (invNumber) {
                               documentNumber = invNumber;
                             }
@@ -2818,7 +2797,7 @@ export default function InventoryPage() {
                         }}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       >
-                        <option value="">Sin factura</option>
+                        <option value="">No invoice</option>
                         {entryInvoices.map((inv) => (
                           <option key={inv.id} value={inv.id}>
                             {(inv.invoice_number || inv.id) + (inv.customers?.name ? ` - ${inv.customers.name}` : '')}
@@ -2827,7 +2806,7 @@ export default function InventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Conduce afectado</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Related Delivery Note</label>
                       <select
                         value={formData.related_delivery_note_id || ''}
                         onChange={(e) => {
@@ -2848,7 +2827,7 @@ export default function InventoryPage() {
                         }}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                       >
-                        <option value="">Sin conduce</option>
+                        <option value="">No delivery note</option>
                         {entryDeliveryNotes.map((dn) => (
                           <option key={dn.id} value={dn.id}>
                             {(dn.document_number || dn.id) + (dn.customers?.name ? ` - ${dn.customers.name}` : '')}
@@ -2857,7 +2836,7 @@ export default function InventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fecha del documento</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Document Date</label>
                       <input
                         type="date"
                         value={formData.document_date || new Date().toISOString().slice(0, 10)}
@@ -2869,45 +2848,45 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Número de documento</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Document Number</label>
                       <input
                         type="text"
                         value={formData.document_number || ''}
                         onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ej: NCF o número de conduce"
+                        placeholder="E.g.: NCF or delivery note number"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del emisor</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Issuer Name</label>
                       <input
                         type="text"
                         value={formData.issuer_name || ''}
                         onChange={(e) => setFormData({ ...formData, issuer_name: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nombre del suplidor o cliente"
+                        placeholder="Supplier or customer name"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Concepto de la transacción</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Description</label>
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={2}
-                      placeholder="Ej: Devolución de productos, recepción parcial, etc."
+                      placeholder="E.g.: Product return, partial receipt, etc."
                     />
                   </div>
 
                   <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-2">Líneas de productos</h4>
+                    <h4 className="text-md font-semibold text-gray-900 mb-2">Product Lines</h4>
                     <div className="space-y-3">
                       {warehouseEntryLines.map((line, idx) => (
                         <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
                           <div className="md:col-span-2">
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Ítem</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Item</label>
                             <select
                               value={line.inventory_item_id || ''}
                               onChange={(e) => {
@@ -2936,7 +2915,7 @@ export default function InventoryPage() {
                               }}
                               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                             >
-                              <option value="">Seleccionar producto</option>
+                              <option value="">Select product</option>
                               {items.map((item) => (
                                 <option key={item.id} value={item.id}>
                                   {item.name} ({item.sku})
@@ -2945,7 +2924,7 @@ export default function InventoryPage() {
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
                             <input
                               type="number"
                               step="1"
@@ -2961,7 +2940,7 @@ export default function InventoryPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Costo unitario</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Unit Cost</label>
                             <input
                               type="number"
                               step="0.01"
@@ -2972,7 +2951,7 @@ export default function InventoryPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
                             <input
                               type="text"
                               value={line.notes || ''}
@@ -3023,14 +3002,14 @@ export default function InventoryPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Almacén origen *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Source Warehouse *</label>
                       <select
                         value={formData.from_warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, from_warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Seleccionar almacén</option>
+                        <option value="">Select warehouse</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -3039,14 +3018,14 @@ export default function InventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Almacén destino *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Destination Warehouse *</label>
                       <select
                         value={formData.to_warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, to_warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Seleccionar almacén</option>
+                        <option value="">Select warehouse</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -3058,7 +3037,7 @@ export default function InventoryPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de transferencia <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Date *</label>
                       <input
                         type="date"
                         value={formData.transfer_date || new Date().toISOString().slice(0, 10)}
@@ -3067,30 +3046,30 @@ export default function InventoryPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Número de documento</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Document Number</label>
                       <input
                         type="text"
                         value={formData.document_number || ''}
                         onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ej: Referencia interna"
+                        placeholder="E.g.: Internal reference"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción / concepto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description / Concept</label>
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={2}
-                      placeholder="Ej: Transferencia entre almacenes"
+                      placeholder="E.g.: Transfer between warehouses"
                     />
                   </div>
 
                   <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-2">Líneas de productos</h4>
+                    <h4 className="text-md font-semibold text-gray-900 mb-2">Product Lines</h4>
                     <div className="space-y-3">
                       {transferLines.map((line, idx) => {
                         const originId = formData.from_warehouse_id;
@@ -3116,7 +3095,7 @@ export default function InventoryPage() {
                         return (
                           <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
                             <div className="md:col-span-2">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Ítem</label>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Item</label>
                               <select
                                 value={line.inventory_item_id || ''}
                                 onChange={(e) => {
@@ -3127,7 +3106,7 @@ export default function InventoryPage() {
                                 }}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                               >
-                                <option value="">Seleccionar producto</option>
+                                <option value="">Select product</option>
                                 {availableItems.map((item) => (
                                   <option key={item.id} value={item.id}>
                                     {item.name} ({item.sku})
@@ -3136,7 +3115,7 @@ export default function InventoryPage() {
                               </select>
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Cantidad</label>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
                               <input
                                 type="number"
                                 step="1"
@@ -3152,12 +3131,12 @@ export default function InventoryPage() {
                               />
                               {selectedItem && (
                                 <p className="mt-1 text-xs text-gray-500">
-                                  Disponible en este almacén: {availableQty}
+                                  Available in this warehouse: {availableQty}
                                 </p>
                               )}
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Notas</label>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
                               <input
                                 type="text"
                                 value={line.notes || ''}
@@ -3208,7 +3187,7 @@ export default function InventoryPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del almacén *
+                    Warehouse Name *
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -3222,37 +3201,37 @@ export default function InventoryPage() {
                       type="button"
                       onClick={() => {
                         const index = (warehouses?.length || 0) + 1;
-                        const suggested = `Almacén ${index}`;
+                        const suggested = `Warehouse ${index}`;
                         setFormData({ ...formData, name: suggested });
                       }}
                       className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
                     >
-                      Generar
+                      Generate
                     </button>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ubicación
+                    Location
                   </label>
                   <input
                     type="text"
                     value={formData.location || ''}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Dirección o zona del almacén"
+                    placeholder="Address or warehouse zone"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Descripción
+                    Description
                   </label>
                   <textarea
                     value={formData.description || ''}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    placeholder="Descripción del almacén"
+                    placeholder="Warehouse description"
                   />
                 </div>
               </div>
@@ -3264,13 +3243,13 @@ export default function InventoryPage() {
                 onClick={handleCloseModal}
                 className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="submit"
                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
-                {selectedItem ? 'Actualizar' : 'Crear'}
+                {selectedItem ? 'Update' : 'Create'}
               </button>
             </div>
           </form>
@@ -3283,14 +3262,14 @@ export default function InventoryPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="ml-4 text-gray-600">Cargando módulo de inventario...</p>
+        <p className="ml-4 text-gray-600">Loading inventory module...</p>
       </div>
     );
   }
 
   return (
     <div className="p-6">
-      {/* Header con botón de regreso */}
+      {/* Header with back button */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
@@ -3298,18 +3277,18 @@ export default function InventoryPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
           >
             <i className="ri-arrow-left-line text-lg"></i>
-            <span>Volver al Inicio</span>
+            <span>Back to Home</span>
           </button>
 
           <div className="h-6 w-px bg-gray-300"></div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Inventario</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
         </div>
         <button
           onClick={() => navigate('/inventory/delivery-notes')}
           className="flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
         >
           <i className="ri-truck-line text-lg"></i>
-          <span>Conduces</span>
+          <span>Delivery Notes</span>
         </button>
       </div>
 
@@ -3318,12 +3297,12 @@ export default function InventoryPage() {
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: 'ri-dashboard-line' },
-            { id: 'products', label: 'Productos', icon: 'ri-box-3-line' },
-            { id: 'movements', label: 'Movimientos', icon: 'ri-exchange-line' },
-            { id: 'entries', label: 'Entradas', icon: 'ri-download-line' },
-            { id: 'transfers', label: 'Transferencias', icon: 'ri-swap-line' },
-            { id: 'warehouses', label: 'Almacenes', icon: 'ri-building-line' },
-            { id: 'reports', label: 'Reportes', icon: 'ri-file-chart-line' }
+            { id: 'products', label: 'Products', icon: 'ri-box-3-line' },
+            { id: 'movements', label: 'Movements', icon: 'ri-exchange-line' },
+            { id: 'entries', label: 'Entries', icon: 'ri-download-line' },
+            { id: 'transfers', label: 'Transfers', icon: 'ri-swap-line' },
+            { id: 'warehouses', label: 'Warehouses', icon: 'ri-building-line' },
+            { id: 'reports', label: 'Reports', icon: 'ri-file-chart-line' }
           ].map((tab) => (
             <button
               key={tab.id}

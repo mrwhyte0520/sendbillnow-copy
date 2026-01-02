@@ -31,25 +31,25 @@ export default function Register() {
 
     // Validaciones
     if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-      setError('Por favor completa todos los campos');
+      setError('Please fill in all fields');
       setLoading(false);
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError('Por favor ingresa un email válido');
+      setError('Please enter a valid email');
       setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+      setError('Password must be at least 6 characters');
       setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setError('Passwords do not match');
       setLoading(false);
       return;
     }
@@ -63,9 +63,9 @@ export default function Register() {
 
       if (signUpError) {
         if (signUpError.includes('already registered')) {
-          setError('Este correo electrónico ya está registrado');
+          setError('This email is already registered');
         } else if (signUpError.includes('User already registered')) {
-          setError('Este correo electrónico ya está registrado');
+          setError('This email is already registered');
         } else {
           setError(signUpError);
         }
@@ -81,7 +81,7 @@ export default function Register() {
         }, 3000);
       }
     } catch (err: any) {
-      setError('Error al crear la cuenta. Por favor intenta de nuevo.');
+      setError('Error creating account. Please try again.');
       setLoading(false);
     }
   };
@@ -94,25 +94,25 @@ export default function Register() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
               <i className="ri-mail-check-line text-4xl text-green-600"></i>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Registro Exitoso!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Registration Successful!</h2>
             <p className="text-gray-600 mb-6">
-              Hemos enviado un correo de confirmación a <strong>{formData.email}</strong>
+              We have sent a confirmation email to <strong>{formData.email}</strong>
             </p>
             <div className="bg-[#4a5d23]/10 border border-[#4a5d23]/30 rounded-lg p-4 mb-6">
               <p className="text-sm text-[#4a5d23]">
                 <i className="ri-information-line mr-2"></i>
-                Por favor revisa tu bandeja de entrada y haz clic en el enlace de confirmación para activar tu cuenta.
+                Please check your inbox and click the confirmation link to activate your account.
               </p>
             </div>
             <p className="text-sm text-gray-500 mb-6">
-              Serás redirigido al inicio de sesión en unos segundos...
+              You will be redirected to login in a few seconds...
             </p>
             <Link
               to="/auth/login"
               className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] transition-all whitespace-nowrap"
             >
               <i className="ri-login-box-line mr-2"></i>
-              Ir a Iniciar Sesión
+              Go to Sign In
             </Link>
           </div>
         </div>
@@ -129,8 +129,8 @@ export default function Register() {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] rounded-2xl mb-4">
               <i className="ri-user-add-line text-3xl text-white"></i>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Crear Cuenta</h1>
-            <p className="text-gray-600">Regístrate para comenzar</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+            <p className="text-gray-600">Sign up to get started</p>
           </div>
 
           {/* Mensaje de error */}
@@ -145,7 +145,7 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre Completo
+                Full Name
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -158,7 +158,7 @@ export default function Register() {
                   value={formData.fullName}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
-                  placeholder="Juan Pérez"
+                  placeholder="John Doe"
                   disabled={loading}
                 />
               </div>
@@ -166,7 +166,7 @@ export default function Register() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Correo Electrónico
+                Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -200,7 +200,7 @@ export default function Register() {
                   value={formData.password}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Minimum 6 characters"
                   disabled={loading}
                 />
                 <button
@@ -216,7 +216,7 @@ export default function Register() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                Confirmar Contraseña
+                Confirm Password
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -229,7 +229,7 @@ export default function Register() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
-                  placeholder="Repite tu contraseña"
+                  placeholder="Repeat your password"
                   disabled={loading}
                 />
                 <button
@@ -252,13 +252,13 @@ export default function Register() {
                 disabled={loading}
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700 cursor-pointer">
-                Acepto los{' '}
+                I accept the{' '}
                 <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
-                  términos y condiciones
+                  terms and conditions
                 </a>{' '}
-                y la{' '}
+                and the{' '}
                 <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
-                  política de privacidad
+                  privacy policy
                 </a>
               </label>
             </div>
@@ -271,12 +271,12 @@ export default function Register() {
               {loading ? (
                 <>
                   <i className="ri-loader-4-line animate-spin mr-2"></i>
-                  Creando cuenta...
+                  Creating account...
                 </>
               ) : (
                 <>
                   <i className="ri-user-add-line mr-2"></i>
-                  Crear Cuenta
+                  Create Account
                 </>
               )}
             </button>
@@ -285,12 +285,12 @@ export default function Register() {
           {/* Login */}
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              ¿Ya tienes una cuenta?{' '}
+              Already have an account?{' '}
               <Link
                 to="/auth/login"
                 className="font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
               >
-                Inicia sesión aquí
+                Sign in here
               </Link>
             </p>
           </div>
@@ -299,7 +299,7 @@ export default function Register() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            © 2024 Sistema Contable. Todos los derechos reservados.
+            © 2024 Sendbillnow. All rights reserved.
           </p>
         </div>
       </div>

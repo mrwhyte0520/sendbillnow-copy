@@ -121,7 +121,7 @@ export default function InvoicingPage() {
   const [newInvoiceDiscountPercent, setNewInvoiceDiscountPercent] = useState(0);
   const [newInvoiceNoTax, setNewInvoiceNoTax] = useState(false);
   const [newInvoiceNotes, setNewInvoiceNotes] = useState('');
-  const [newInvoiceStoreName, setNewInvoiceStoreName] = useState('Tienda principal');
+  const [newInvoiceStoreName, setNewInvoiceStoreName] = useState('Main Store');
   const [newInvoiceSaleType, setNewInvoiceSaleType] = useState<'credit' | 'cash'>('credit');
   const [newInvoiceDocumentType, setNewInvoiceDocumentType] = useState<string>('');
   const [ncfSeries, setNcfSeries] = useState<any[]>([]);
@@ -173,7 +173,7 @@ export default function InvoicingPage() {
         setTaxConfig({ itbis_rate: 18 });
       }
     } catch (error) {
-      console.error('Error cargando configuración de impuestos para facturación:', error);
+      console.error('Error loading tax configuration for invoicing:', error);
       setTaxConfig({ itbis_rate: 18 });
     }
   };
@@ -214,7 +214,7 @@ export default function InvoicingPage() {
           const lineTotal = Number(line.line_total) || qty * unitPrice;
           return {
             itemId: line.item_id ? String(line.item_id) : undefined,
-            description: line.description || line.inventory_items?.name || 'Ítem',
+            description: line.description || line.inventory_items?.name || 'Item',
             quantity: qty,
             price: unitPrice,
             total: lineTotal,
@@ -223,7 +223,7 @@ export default function InvoicingPage() {
 
         if (items.length === 0) {
           items.push({
-            description: inv.description || 'Servicio/Producto',
+            description: inv.description || 'Service/Product',
             quantity: 1,
             price: total,
             total,
@@ -253,7 +253,7 @@ export default function InvoicingPage() {
               baseTotal = null;
             }
           } catch (fxError) {
-            console.error('Error calculando equivalente en moneda base para factura', fxError);
+            console.error('Error calculating base currency equivalent for invoice', fxError);
             baseTotal = null;
           }
         }
@@ -262,7 +262,7 @@ export default function InvoicingPage() {
           id: (inv.invoice_number as string) || String(inv.id),
           internalId: String(inv.id),
           customerId: String((inv as any).customer_id || customerData.id || ''),
-          customer: customerData.name || 'Cliente',
+          customer: customerData.name || 'Customer',
           customerEmail: customerData.email || '',
           customerDocument: customerData.document || customerData.tax_id || '',
           customerPhone: customerData.phone || customerData.contact_phone || '',
@@ -288,7 +288,7 @@ export default function InvoicingPage() {
 
       setInvoices(mapped);
     } catch (error) {
-      console.error('Error cargando facturas para Facturación:', error);
+      console.error('Error loading invoices for Invoicing:', error);
     } finally {
       setLoading(false);
     }
@@ -321,7 +321,7 @@ export default function InvoicingPage() {
         setSalesReps((reps || []).filter((r: any) => r.is_active));
         setStores((storesData || []).filter((s: any) => s.is_active !== false));
       } catch (error) {
-        console.error('Error cargando términos de pago para facturación:', error);
+        console.error('Error loading payment terms for invoicing:', error);
       }
     };
     loadPaymentTerms();
@@ -356,7 +356,7 @@ export default function InvoicingPage() {
         }));
         setBankAccounts(mapped);
       } catch (error) {
-        console.error('Error cargando cuentas bancarias para facturación:', error);
+        console.error('Error loading bank accounts for invoicing:', error);
         setBankAccounts([]);
       }
     };
@@ -380,7 +380,7 @@ export default function InvoicingPage() {
 
         const mappedCustomers = (rows || []).map((c: any) => ({
           id: c.id as string,
-          name: c.name || c.customer_name || 'Cliente',
+          name: c.name || c.customer_name || 'Customer',
           email: c.email || c.contact_email || '',
           document: c.document || c.tax_id || '',
           phone: c.phone || c.contact_phone || '',
@@ -395,7 +395,7 @@ export default function InvoicingPage() {
         setCustomerTypes(types || []);
         setInventoryItems(items || []);
       } catch (error) {
-        console.error('Error cargando clientes para facturación:', error);
+        console.error('Error loading customers for invoicing:', error);
       }
     };
     loadCustomersAndTypes();
@@ -424,11 +424,11 @@ export default function InvoicingPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'paid': return 'Pagada';
-      case 'pending': return 'Pendiente';
-      case 'overdue': return 'Vencida';
-      case 'draft': return 'Borrador';
-      case 'cancelled': return 'Anulada';
+      case 'paid': return 'Paid';
+      case 'pending': return 'Pending';
+      case 'overdue': return 'Overdue';
+      case 'draft': return 'Draft';
+      case 'cancelled': return 'Cancelled';
       default: return status;
     }
   };
@@ -470,7 +470,7 @@ export default function InvoicingPage() {
     setNewInvoiceDocumentType(activeSeries?.document_type || 'B02');
 
     const defaultStore = stores.find((s) => s.is_active !== false) || stores[0];
-    setNewInvoiceStoreName(defaultStore?.name || 'Tienda principal');
+    setNewInvoiceStoreName(defaultStore?.name || 'Main Store');
 
     setShowNewInvoiceModal(true);
   };
@@ -527,7 +527,7 @@ export default function InvoicingPage() {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) return;
     if (invoice.status !== 'pending') {
-      alert('Solo se pueden editar facturas en estado Pendiente.');
+      alert('Only pending invoices can be edited.');
       return;
     }
     setSelectedInvoice(invoiceId);
@@ -537,7 +537,7 @@ export default function InvoicingPage() {
 
   const handleCancelInvoice = async (invoiceId: string) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para anular facturas');
+      alert('You must be logged in to cancel invoices');
       return;
     }
 
@@ -545,16 +545,16 @@ export default function InvoicingPage() {
     if (!invoice) return;
 
     if (invoice.status === 'paid') {
-      alert('No se puede anular una factura pagada. Primero elimina/revierte el pago.');
+      alert('Cannot cancel a paid invoice. First delete/reverse the payment.');
       return;
     }
 
     if (invoice.status === 'cancelled') {
-      alert('La factura ya está anulada.');
+      alert('The invoice is already cancelled.');
       return;
     }
 
-    if (!confirm(`¿Seguro que deseas anular la factura ${invoiceId}?`)) return;
+    if (!confirm(`Are you sure you want to cancel invoice ${invoiceId}?`)) return;
 
     try {
       await invoicesService.cancel(user.id as string, invoice.internalId);
@@ -563,10 +563,10 @@ export default function InvoicingPage() {
         setSelectedInvoice(null);
         setShowInvoiceDetailModal(false);
       }
-      alert(`Factura ${invoiceId} anulada correctamente`);
+      alert(`Invoice ${invoiceId} cancelled successfully`);
     } catch (error: any) {
-      console.error('Error anulando factura:', error);
-      alert(error?.message || 'Error al anular la factura');
+      console.error('Error cancelling invoice:', error);
+      alert(error?.message || 'Error cancelling the invoice');
     }
   };
 
@@ -611,7 +611,7 @@ export default function InvoicingPage() {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Factura ${invoice.id}</title>
+          <title>Invoice ${invoice.id}</title>
           <style>
             :root {
               --primary: #0b2a6f;
@@ -673,18 +673,18 @@ export default function InvoicingPage() {
                 ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
                 ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
                 ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
-                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
+                ${companyAddress ? `<div class="company-meta">Address: ${companyAddress}</div>` : ''}
               </div>
               <div class="doc">
-                <div class="doc-title">FACTURA ${invoice.saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
+                <div class="doc-title">INVOICE ${invoice.saleType === 'cash' ? 'CASH' : 'CREDIT'}</div>
                 <div class="doc-number">NCF: ${invoice.id}</div>
                 <div class="doc-kv">
-                  ${invoice.ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${new Date(invoice.ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
-                  ${invoice.sequentialNumber ? `<div><strong>Número Factura:</strong> ${invoice.sequentialNumber}</div>` : ''}
-                  ${invoice.salesRepName ? `<div><strong>Vendedor:</strong> ${invoice.salesRepName}</div>` : ''}
-                  <div><strong>Moneda:</strong> ${invoice.currency === 'DOP' ? 'Peso Dominicano' : invoice.currency}</div>
-                  ${invoice.storeName ? `<div><strong>Tienda:</strong> ${invoice.storeName}</div>` : ''}
-                  <div><strong>Fecha Límite de Pago:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
+                  ${invoice.ncfExpiryDate ? `<div><strong>Valid until:</strong> ${new Date(invoice.ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
+                  ${invoice.sequentialNumber ? `<div><strong>Invoice Number:</strong> ${invoice.sequentialNumber}</div>` : ''}
+                  ${invoice.salesRepName ? `<div><strong>Sales Rep:</strong> ${invoice.salesRepName}</div>` : ''}
+                  <div><strong>Currency:</strong> ${invoice.currency === 'DOP' ? 'Dominican Peso' : invoice.currency}</div>
+                  ${invoice.storeName ? `<div><strong>Store:</strong> ${invoice.storeName}</div>` : ''}
+                  <div><strong>Payment Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
                 </div>
                 ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
               </div>
@@ -693,22 +693,22 @@ export default function InvoicingPage() {
             <div class="section-grid">
               <div class="card">
                 <div class="card-head">
-                  <div class="card-head-title">Cliente</div>
+                  <div class="card-head-title">Customer</div>
                 </div>
                 <div class="card-body">
                   <div class="kv">
-                    <div class="k">Nombre</div>
+                    <div class="k">Name</div>
                     <div class="v">${invoice.customer}</div>
-                    ${printCustomerDocument ? `<div class="k">Documento</div><div class="v">${printCustomerDocument}</div>` : ''}
-                    ${printCustomerPhone ? `<div class="k">Teléfono</div><div class="v">${printCustomerPhone}</div>` : ''}
+                    ${printCustomerDocument ? `<div class="k">Document</div><div class="v">${printCustomerDocument}</div>` : ''}
+                    ${printCustomerPhone ? `<div class="k">Phone</div><div class="v">${printCustomerPhone}</div>` : ''}
                     ${printCustomerEmail ? `<div class="k">Email</div><div class="v">${printCustomerEmail}</div>` : ''}
-                    ${printCustomerAddress ? `<div class="k">Dirección</div><div class="v">${printCustomerAddress}</div>` : ''}
+                    ${printCustomerAddress ? `<div class="k">Address</div><div class="v">${printCustomerAddress}</div>` : ''}
                   </div>
                 </div>
               </div>
 
               <div class="totals">
-                <div class="totals-head">Resumen</div>
+                <div class="totals-head">Summary</div>
                 <div class="totals-body">
                   <div class="totals-row"><div class="label">Subtotal</div><div class="value">RD$ ${formatAmount(invoice.amount)}</div></div>
                   <div class="totals-row"><div class="label">ITBIS (${itbisLabel}%)</div><div class="value">RD$ ${formatAmount(invoice.tax)}</div></div>
@@ -722,10 +722,10 @@ export default function InvoicingPage() {
                 <thead>
                   <tr>
                     <th style="width: 54px;">No.</th>
-                    <th>Descripción</th>
-                    <th class="num" style="width: 110px;">Precio</th>
-                    <th class="num" style="width: 80px;">Cant.</th>
-                    <th class="num" style="width: 120px;">Importe</th>
+                    <th>Description</th>
+                    <th class="num" style="width: 110px;">Price</th>
+                    <th class="num" style="width: 80px;">Qty.</th>
+                    <th class="num" style="width: 120px;">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -747,8 +747,8 @@ export default function InvoicingPage() {
 
             <div class="footer-grid">
               <div class="notes">
-                <div class="notes-head">Notas</div>
-                <div class="notes-body">Gracias por su compra.</div>
+                <div class="notes-head">Notes</div>
+                <div class="notes-body">Thank you for your purchase.</div>
               </div>
               <div></div>
             </div>
@@ -757,7 +757,7 @@ export default function InvoicingPage() {
       </html>
     `;
 
-    openHtmlPreview(html, `Factura #${invoice.id}`, `factura-${invoice.id}.html`);
+    openHtmlPreview(html, `Invoice #${invoice.id}`, `invoice-${invoice.id}.html`);
   };
 
   const handleExportInvoiceExcel = async (invoiceId: string) => {
@@ -780,7 +780,7 @@ export default function InvoicingPage() {
       '';
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Factura');
+    const worksheet = workbook.addWorksheet('Invoice');
 
     worksheet.mergeCells('A1:D1');
     worksheet.getCell('A1').value = companyName;
@@ -801,7 +801,7 @@ export default function InvoicingPage() {
 
     const headerStartRow = companyRnc ? 3 : 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
-    worksheet.getCell(`A${headerStartRow}`).value = `Factura #${invoice.id}`;
+    worksheet.getCell(`A${headerStartRow}`).value = `Invoice #${invoice.id}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
 
     const ncfRow = headerStartRow + 1;
@@ -824,7 +824,7 @@ export default function InvoicingPage() {
     if (String(invoice.id || '').toUpperCase().startsWith('B')) {
       const fiscalRow = ncfRow + 1;
       worksheet.mergeCells(`A${fiscalRow}:D${fiscalRow}`);
-      worksheet.getCell(`A${fiscalRow}`).value = '✓ FACTURA VÁLIDA PARA CRÉDITO FISCAL';
+      worksheet.getCell(`A${fiscalRow}`).value = '✓ VALID INVOICE FOR TAX CREDIT';
       worksheet.getCell(`A${fiscalRow}`).font = { bold: true, size: 11, color: { argb: 'FF92400e' } };
       worksheet.getCell(`A${fiscalRow}`).fill = {
         type: 'pattern',
@@ -847,22 +847,22 @@ export default function InvoicingPage() {
     const customerEmail = fullCustomer?.email || invoice.customerEmail || '';
     const customerPhone = fullCustomer?.phone || invoice.customerPhone || '';
 
-    worksheet.addRow(['Cliente', customerName]);
-    if (customerDoc) worksheet.addRow(['Documento', customerDoc]);
-    if (customerEmail) worksheet.addRow(['Correo', customerEmail]);
-    if (customerPhone) worksheet.addRow(['Teléfono', customerPhone]);
+    worksheet.addRow(['Customer', customerName]);
+    if (customerDoc) worksheet.addRow(['Document', customerDoc]);
+    if (customerEmail) worksheet.addRow(['Email', customerEmail]);
+    if (customerPhone) worksheet.addRow(['Phone', customerPhone]);
     worksheet.addRow([
-      'Fecha',
+      'Date',
       new Date(invoice.date).toLocaleDateString('es-DO'),
     ]);
     worksheet.addRow([
-      'Vencimiento',
+      'Due Date',
       new Date(invoice.dueDate).toLocaleDateString('es-DO'),
     ]);
 
     worksheet.addRow([]);
 
-    const itemsHeader = worksheet.addRow(['Descripción', 'Cantidad', 'Precio', 'Total']);
+    const itemsHeader = worksheet.addRow(['Description', 'Quantity', 'Price', 'Total']);
     itemsHeader.font = { bold: true };
 
     invoice.items.forEach((item) => {
@@ -879,7 +879,7 @@ export default function InvoicingPage() {
     worksheet.addRow([
       '',
       '',
-      `ITBIS (${(taxConfig?.itbis_rate ?? 18).toFixed(2)}%)`,
+      `Tax (${(taxConfig?.itbis_rate ?? 18).toFixed(2)}%)`,
       invoice.tax,
     ]);
     worksheet.addRow(['', '', 'Total', invoice.total]);
@@ -899,7 +899,7 @@ export default function InvoicingPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    saveAs(blob, `factura_${invoice.id}.xlsx`);
+    saveAs(blob, `invoice_${invoice.id}.xlsx`);
   };
 
   const handleDuplicateInvoice = (invoiceId: string) => {
@@ -919,12 +919,12 @@ export default function InvoicingPage() {
     };
 
     setInvoices((prev) => [duplicated, ...prev]);
-    alert(`Factura duplicada (solo frontend). Nueva factura: ${newId}`);
+    alert(`Invoice duplicated (frontend only). New invoice: ${newId}`);
   };
 
   const handleSaveInvoiceChanges = async () => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para editar facturas');
+      alert('You must be logged in to edit invoices');
       return;
     }
     if (!selectedInvoice) return;
@@ -961,10 +961,10 @@ export default function InvoicingPage() {
       setShowInvoiceDetailModal(false);
       setSelectedInvoice(null);
       setIsEditingInvoice(false);
-      alert('Factura actualizada correctamente');
+      alert('Invoice updated successfully');
     } catch (error) {
-      console.error('Error actualizando factura:', error);
-      alert('Error al actualizar la factura');
+      console.error('Error updating invoice:', error);
+      alert('Error updating the invoice');
     }
   };
 
@@ -976,14 +976,14 @@ export default function InvoicingPage() {
         await exportToPdf();
       }
     } catch (error) {
-      console.error('Error al exportar:', error);
-      alert('Error al exportar los datos. Por favor, intente nuevamente.');
+      console.error('Error exporting:', error);
+      alert('Error exporting data. Please try again.');
     }
   };
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Facturas');
+    const worksheet = workbook.addWorksheet('Invoices');
 
     const headerCompanyName =
       (companyInfo as any)?.name ||
@@ -992,20 +992,20 @@ export default function InvoicingPage() {
 
     worksheet.addRow([headerCompanyName]);
     worksheet.getRow(1).font = { bold: true, size: 14 };
-    worksheet.addRow(['REPORTE DE FACTURAS']);
+    worksheet.addRow(['INVOICES REPORT']);
     worksheet.getRow(2).font = { bold: true, size: 12 };
-    worksheet.addRow([`Generado el: ${new Date().toLocaleDateString('es-DO')}`]);
+    worksheet.addRow([`Generated on: ${new Date().toLocaleDateString('es-DO')}`]);
     worksheet.addRow([]);
 
     const headerRow = worksheet.addRow([
-      'N° Factura',
-      'Cliente',
-      'Fecha',
-      'Vencimiento',
-      'Monto',
-      'Impuesto',
+      'Invoice #',
+      'Customer',
+      'Date',
+      'Due Date',
+      'Amount',
+      'Tax',
       'Total',
-      'Estado'
+      'Status'
     ]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
@@ -1048,7 +1048,7 @@ export default function InvoicingPage() {
     const blob = new Blob([buffer], { 
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
     });
-    saveAs(blob, `facturas_${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, `invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const exportToPdf = () => {
@@ -1058,8 +1058,8 @@ export default function InvoicingPage() {
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
       'ContaBi';
-    const title = 'REPORTE DE FACTURAS';
-    const date = `Generado el: ${new Date().toLocaleDateString('es-DO')}`;
+    const title = 'INVOICES REPORT';
+    const date = `Generated on: ${new Date().toLocaleDateString('es-DO')}`;
 
     doc.setFontSize(18);
     doc.setTextColor(40, 40, 40);
@@ -1073,14 +1073,14 @@ export default function InvoicingPage() {
     doc.text(date, 14, 34);
 
     const headers = [
-      'N° Factura',
-      'Cliente',
-      'Fecha',
-      'Vencimiento',
-      'Monto',
-      'Impuesto',
+      'Invoice #',
+      'Customer',
+      'Date',
+      'Due Date',
+      'Amount',
+      'Tax',
       'Total',
-      'Estado'
+      'Status'
     ];
     
     const data = filteredInvoices.map(invoice => [
@@ -1119,28 +1119,28 @@ export default function InvoicingPage() {
       }
     });
     
-    doc.save(`facturas_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`invoices_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleSaveNewInvoice = async (mode: 'draft' | 'final') => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para crear facturas');
+      alert('You must be logged in to create invoices');
       return;
     }
     if (!newInvoiceCustomerId) {
-      alert('Selecciona un cliente');
+      alert('Select a customer');
       return;
     }
 
     const isCashSale = mode === 'final' && newInvoiceSaleType === 'cash';
     if (isCashSale && !newInvoicePaymentMethod) {
-      alert('Debes seleccionar la forma de pago para ventas de contado');
+      alert('You must select a payment method for cash sales');
       return;
     }
 
     const validItems = newInvoiceItems.filter(i => i.description && i.quantity > 0 && i.price > 0);
     if (validItems.length === 0) {
-      alert('Agrega al menos una línea con cantidad y precio mayor que 0');
+      alert('Add at least one line with quantity and price greater than 0');
       return;
     }
 
@@ -1162,7 +1162,7 @@ export default function InvoicingPage() {
       );
 
       if (!availableDocTypes.includes(selectedDocType)) {
-        alert('No hay serie NCF activa disponible para el tipo seleccionado.');
+        alert('No active NCF series available for the selected type.');
         return;
       }
 
@@ -1256,19 +1256,19 @@ export default function InvoicingPage() {
             }
 
             if (!debitAccountId) {
-              alert('No se pudo registrar el cobro automático: configure la cuenta de Caja/Banco para el asiento.');
+              alert('Could not register automatic payment: configure the Cash/Bank account for the entry.');
               return null;
             }
 
             if (!arAccountId) {
-              alert('No se pudo registrar el cobro automático: configure la cuenta de Cuentas por Cobrar (cliente o ajustes).');
+              alert('Could not register automatic payment: configure the Accounts Receivable account (customer or settings).');
               return null;
             }
 
             return { debitAccountId, arAccountId };
           } catch (err) {
-            console.error('Error resolviendo cuentas para venta de contado:', err);
-            alert('No se pudo registrar el cobro automático: error resolviendo cuentas contables.');
+            console.error('Error resolving accounts for cash sale:', err);
+            alert('Could not register automatic payment: error resolving accounting accounts.');
             return null;
           }
         };
@@ -1291,20 +1291,20 @@ export default function InvoicingPage() {
           try {
             const postingAccounts = await resolvePostingAccounts();
             if (!postingAccounts) {
-              throw new Error('No se pudieron resolver cuentas contables para el cobro automático');
+              throw new Error('Could not resolve accounting accounts for automatic payment');
             }
 
             const lines: any[] = [
               {
                 account_id: postingAccounts.debitAccountId,
-                description: 'Cobro de cliente - Caja/Banco',
+                description: 'Customer payment - Cash/Bank',
                 debit_amount: amountToPay,
                 credit_amount: 0,
                 line_number: 1,
               },
               {
                 account_id: postingAccounts.arAccountId,
-                description: 'Cobro de cliente - Cuentas por Cobrar',
+                description: 'Customer payment - Accounts Receivable',
                 debit_amount: 0,
                 credit_amount: amountToPay,
                 line_number: 2,
@@ -1312,14 +1312,14 @@ export default function InvoicingPage() {
             ];
 
             const description = customer?.name
-              ? `Pago factura ${invoiceNumber} - ${customer.name}`
-              : `Pago factura ${invoiceNumber}`;
+              ? `Invoice payment ${invoiceNumber} - ${customer.name}`
+              : `Invoice payment ${invoiceNumber}`;
 
             const refText = newInvoicePaymentReference ? newInvoicePaymentReference.trim() : '';
             const entryReference = createdPayment?.id
               ? refText
-                ? `Pago:${createdPayment.id} Ref:${refText}`
-                : `Pago:${createdPayment.id}`
+                ? `Payment:${createdPayment.id} Ref:${refText}`
+                : `Payment:${createdPayment.id}`
               : refText || undefined;
 
             const entryPayload = {
@@ -1332,7 +1332,7 @@ export default function InvoicingPage() {
 
             await journalEntriesService.createWithLines(user.id, entryPayload, lines);
           } catch (jeError) {
-            console.error('Error creando asiento contable para venta de contado:', jeError);
+            console.error('Error creating journal entry for cash sale:', jeError);
           }
 
           try {
@@ -1344,7 +1344,7 @@ export default function InvoicingPage() {
               amount: amountToPay,
               payment_method: newInvoicePaymentMethod,
               reference: newInvoicePaymentReference ? newInvoicePaymentReference.trim() : null,
-              concept: `Pago factura ${invoiceNumber}`,
+              concept: `Invoice payment ${invoiceNumber}`,
               status: 'active' as const,
             };
 
@@ -1358,24 +1358,24 @@ export default function InvoicingPage() {
               notes: null,
             });
           } catch (receiptError) {
-            console.error('Error creando recibo automático para venta de contado:', receiptError);
+            console.error('Error creating automatic receipt for cash sale:', receiptError);
           }
         } catch (cashSaleError) {
-          console.error('Error aplicando cobro automático a venta de contado:', cashSaleError);
-          alert('Factura creada, pero ocurrió un error registrando el cobro/recibo.');
+          console.error('Error applying automatic payment to cash sale:', cashSaleError);
+          alert('Invoice created, but an error occurred registering the payment/receipt.');
         }
       }
 
       await loadInvoices();
       setShowNewInvoiceModal(false);
-      alert(mode === 'draft' ? 'Factura guardada como borrador' : 'Factura creada correctamente');
+      alert(mode === 'draft' ? 'Invoice saved as draft' : 'Invoice created successfully');
     } catch (error: any) {
-      console.error('Error creando factura:', error);
+      console.error('Error creating invoice:', error);
       const msg =
         (error?.message as string) ||
         (error?.details as string) ||
         (error?.hint as string) ||
-        'Error al crear la factura';
+        'Error creating the invoice';
       alert(msg);
     }
   };
@@ -1432,8 +1432,8 @@ export default function InvoicingPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Facturación</h1>
-            <p className="text-gray-600">Gestión completa de facturas y documentos fiscales</p>
+            <h1 className="text-2xl font-bold text-gray-900">Invoicing</h1>
+            <p className="text-gray-600">Complete invoice and fiscal document management</p>
           </div>
           <div className="flex space-x-3">
             <button
@@ -1441,21 +1441,21 @@ export default function InvoicingPage() {
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button
               onClick={() => handleExportInvoices('excel')}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleCreateInvoice}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Factura
+              New Invoice
             </button>
           </div>
         </div>
@@ -1465,7 +1465,7 @@ export default function InvoicingPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Facturas</p>
+                <p className="text-sm font-medium text-gray-600">Total Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{invoices.length}</p>
               </div>
               <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
@@ -1477,7 +1477,7 @@ export default function InvoicingPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Facturas Pagadas</p>
+                <p className="text-sm font-medium text-gray-600">Paid Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {invoices.filter(inv => inv.status === 'paid').length}
                 </p>
@@ -1491,7 +1491,7 @@ export default function InvoicingPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Facturas Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {invoices.filter(inv => inv.status === 'pending').length}
                 </p>
@@ -1505,7 +1505,7 @@ export default function InvoicingPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Facturas Vencidas</p>
+                <p className="text-sm font-medium text-gray-600">Overdue Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {invoices.filter(inv => inv.status === 'overdue').length}
                 </p>
@@ -1521,11 +1521,11 @@ export default function InvoicingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por cliente o número de factura..."
+                  placeholder="Search by customer or invoice number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -1534,18 +1534,18 @@ export default function InvoicingPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
               >
-                <option value="all">Todos los estados</option>
-                <option value="paid">Pagadas</option>
-                <option value="pending">Pendientes</option>
-                <option value="overdue">Vencidas</option>
-                <option value="draft">Borradores</option>
-                <option value="cancelled">Anuladas</option>
+                <option value="all">All statuses</option>
+                <option value="paid">Paid</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+                <option value="draft">Drafts</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -1557,7 +1557,7 @@ export default function InvoicingPage() {
                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
               >
                 <i className="ri-refresh-line mr-2"></i>
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
@@ -1567,21 +1567,21 @@ export default function InvoicingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              Facturas ({filteredInvoices.length})
+              Invoices ({filteredInvoices.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sales Rep</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1627,7 +1627,7 @@ export default function InvoicingPage() {
                           <button
                             onClick={() => handleViewInvoice(invoice.id)}
                             className="text-blue-600 hover:text-blue-900 p-1"
-                            title="Ver factura"
+                            title="View invoice"
                           >
                             <i className="ri-eye-line"></i>
                           </button>
@@ -1635,7 +1635,7 @@ export default function InvoicingPage() {
                             <button
                               onClick={() => handleEditInvoice(invoice.id)}
                               className="text-green-600 hover:text-green-900 p-1"
-                              title="Editar factura"
+                              title="Edit invoice"
                             >
                               <i className="ri-edit-line"></i>
                             </button>
@@ -1644,7 +1644,7 @@ export default function InvoicingPage() {
                             <button
                               onClick={() => handleCancelInvoice(invoice.id)}
                               className="text-red-600 hover:text-red-900 p-1"
-                              title="Anular factura"
+                              title="Cancel invoice"
                             >
                               <i className="ri-close-circle-line"></i>
                             </button>
@@ -1652,21 +1652,21 @@ export default function InvoicingPage() {
                           <button
                             onClick={() => handlePrintInvoice(invoice.id)}
                             className="text-gray-600 hover:text-gray-900 p-1"
-                            title="Imprimir factura"
+                            title="Print invoice"
                           >
                             <i className="ri-printer-line"></i>
                           </button>
                           <button
                             onClick={() => handleExportInvoiceExcel(invoice.id)}
                             className="text-green-600 hover:text-green-900 p-1"
-                            title="Exportar factura a Excel"
+                            title="Export invoice to Excel"
                           >
                             <i className="ri-file-excel-2-line"></i>
                           </button>
                           <button
                             onClick={() => handleDuplicateInvoice(invoice.id)}
                             className="text-orange-600 hover:text-orange-900 p-1"
-                            title="Duplicar factura"
+                            title="Duplicate invoice"
                           >
                             <i className="ri-file-copy-line"></i>
                           </button>
@@ -1687,12 +1687,12 @@ export default function InvoicingPage() {
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {isEditingInvoice ? 'Editar factura' : 'Detalle de factura'}
+                    {isEditingInvoice ? 'Edit Invoice' : 'Invoice Details'}
                   </h3>
                   <p className="text-sm text-gray-500">
                     {isEditingInvoice
-                      ? 'Modifique los datos de la factura y guarde los cambios (solo frontend).'
-                      : 'Visualización de la plantilla de la factura.'}
+                      ? 'Modify the invoice data and save changes (frontend only).'
+                      : 'Invoice template preview.'}
                   </p>
                 </div>
                 <button
@@ -1777,11 +1777,11 @@ export default function InvoicingPage() {
                     <div className="space-y-6">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                          <div className="text-xs text-gray-500">N° FACTURA</div>
+                          <div className="text-xs text-gray-500">INVOICE #</div>
                           <div className="text-lg font-semibold text-gray-900">{invoice.id}</div>
                         </div>
                         <div className="text-right space-y-1">
-                          <div className="text-xs text-gray-500">Estado</div>
+                          <div className="text-xs text-gray-500">Status</div>
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(invoice.status)}`}>
                             {getStatusText(invoice.status)}
                           </span>
@@ -1790,7 +1790,7 @@ export default function InvoicingPage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <div className="text-xs font-medium text-gray-500">Cliente</div>
+                          <div className="text-xs font-medium text-gray-500">Customer</div>
                           {isEditingInvoice ? (
                             <input
                               type="text"
@@ -1801,7 +1801,7 @@ export default function InvoicingPage() {
                           ) : (
                             <div className="text-sm font-medium text-gray-900">{invoice.customer}</div>
                           )}
-                          <div className="text-xs text-gray-500 mt-1">Correo electrónico</div>
+                          <div className="text-xs text-gray-500 mt-1">Email</div>
                           {isEditingInvoice ? (
                             <input
                               type="email"
@@ -1815,7 +1815,7 @@ export default function InvoicingPage() {
                         </div>
                         <div className="space-y-3">
                           <div>
-                            <div className="text-xs font-medium text-gray-500">Fecha</div>
+                            <div className="text-xs font-medium text-gray-500">Date</div>
                             {isEditingInvoice ? (
                               <input
                                 type="date"
@@ -1830,7 +1830,7 @@ export default function InvoicingPage() {
                             )}
                           </div>
                           <div>
-                            <div className="text-xs font-medium text-gray-500">Fecha de vencimiento</div>
+                            <div className="text-xs font-medium text-gray-500">Due Date</div>
                             {isEditingInvoice ? (
                               <input
                                 type="date"
@@ -1851,9 +1851,9 @@ export default function InvoicingPage() {
                         <table className="w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Precio</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
                               <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                             </tr>
                           </thead>
@@ -1940,14 +1940,14 @@ export default function InvoicingPage() {
                   }}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                 >
-                  Cerrar
+                  Close
                 </button>
                 {isEditingInvoice && (
                   <button
                     onClick={handleSaveInvoiceChanges}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
-                    Guardar cambios
+                    Save Changes
                   </button>
                 )}
               </div>
@@ -1961,7 +1961,7 @@ export default function InvoicingPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Nueva Factura</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">New Invoice</h3>
                   <button
                     onClick={() => setShowNewInvoiceModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -1973,14 +1973,14 @@ export default function InvoicingPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
                     <div className="space-y-2">
                       <select
                         value={newInvoiceCustomerId}
                         onChange={handleNewInvoiceCustomerChange}
                         className="mb-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8 text-sm"
                       >
-                        <option value="">Seleccionar cliente...</option>
+                        <option value="">Select customer...</option>
                         {customers
                           .filter((c: { name: string; document: string | null }) => {
                             if (!newInvoiceCustomerSearch) return true;
@@ -2000,7 +2000,7 @@ export default function InvoicingPage() {
                         type="text"
                         value={newInvoiceCustomerSearch}
                         onChange={(e) => setNewInvoiceCustomerSearch(e.target.value)}
-                        placeholder="Buscar por nombre o RNC..."
+                        placeholder="Search by name or RNC..."
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                       />
                     </div>
@@ -2008,35 +2008,35 @@ export default function InvoicingPage() {
                       <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs md:text-sm text-gray-700">
                         <p className="font-medium">{selectedNewInvoiceCustomer.name}</p>
                         {selectedNewInvoiceCustomer.document && (
-                          <p>Documento: {selectedNewInvoiceCustomer.document}</p>
+                          <p>Document: {selectedNewInvoiceCustomer.document}</p>
                         )}
                         {selectedNewInvoiceCustomer.email && (
                           <p>Email: {selectedNewInvoiceCustomer.email}</p>
                         )}
                         {selectedNewInvoiceCustomer.phone && (
-                          <p>Teléfono: {selectedNewInvoiceCustomer.phone}</p>
+                          <p>Phone: {selectedNewInvoiceCustomer.phone}</p>
                         )}
                         {selectedNewInvoiceCustomer.address && (
-                          <p>Dirección: {selectedNewInvoiceCustomer.address}</p>
+                          <p>Address: {selectedNewInvoiceCustomer.address}</p>
                         )}
                       </div>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sales Rep (optional)</label>
                     <select
                       value={newInvoiceSalesRepId || ''}
                       onChange={(e) => setNewInvoiceSalesRepId(e.target.value || null)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Sin vendedor asignado</option>
+                      <option value="">No sales rep assigned</option>
                       {salesReps.map((rep) => (
                         <option key={rep.id} value={rep.id}>{rep.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de venta</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sale Type</label>
                     <select
                       value={newInvoiceSaleType}
                       onChange={(e) => {
@@ -2049,18 +2049,18 @@ export default function InvoicingPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="credit">Crédito</option>
-                      <option value="cash">Contado</option>
+                      <option value="credit">Credit</option>
+                      <option value="cash">Cash</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de documento (NCF)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Type (NCF)</label>
                     <select
                       value={newInvoiceDocumentType}
                       onChange={(e) => setNewInvoiceDocumentType(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Sin seleccionar...</option>
+                      <option value="">Not selected...</option>
                       {Array.from(
                         new Set(
                           (ncfSeries || [])
@@ -2075,7 +2075,7 @@ export default function InvoicingPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Condición de pago</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Terms</label>
                     <select
                       value={newInvoicePaymentTermId ?? ''}
                       onChange={(e) => {
@@ -2092,59 +2092,59 @@ export default function InvoicingPage() {
                       disabled={newInvoiceSaleType === 'cash'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Sin condición específica</option>
+                      <option value="">No specific terms</option>
                       {paymentTerms.map((term) => (
                         <option key={term.id} value={term.id}>
-                          {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                          {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
                         </option>
                       ))}
                     </select>
                     {newInvoiceSaleType === 'cash' ? (
-                      <p className="mt-1 text-xs text-gray-500">Venta de contado: el sistema registrará el cobro automáticamente.</p>
+                      <p className="mt-1 text-xs text-gray-500">Cash sale: the system will automatically register the payment.</p>
                     ) : null}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Forma de pago</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                     <select
                       value={newInvoicePaymentMethod}
                       onChange={(e) => setNewInvoicePaymentMethod(e.target.value)}
                       disabled={newInvoiceSaleType !== 'cash'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Seleccionar...</option>
-                      <option value="cash">Efectivo</option>
-                      <option value="transfer">Transferencia</option>
-                      <option value="card">Tarjeta</option>
-                      <option value="check">Cheque</option>
+                      <option value="">Select...</option>
+                      <option value="cash">Cash</option>
+                      <option value="transfer">Transfer</option>
+                      <option value="card">Card</option>
+                      <option value="check">Check</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuenta de Banco (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account (optional)</label>
                     <select
                       value={newInvoiceBankAccountId}
                       onChange={(e) => setNewInvoiceBankAccountId(e.target.value)}
                       disabled={newInvoiceSaleType !== 'cash'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Seleccionar cuenta</option>
+                      <option value="">Select account</option>
                       {bankAccounts.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Referencia (opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reference (optional)</label>
                     <input
                       type="text"
                       value={newInvoicePaymentReference}
                       onChange={(e) => setNewInvoicePaymentReference(e.target.value)}
                       disabled={newInvoiceSaleType !== 'cash'}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: #autorización, #transferencia, etc."
+                      placeholder="E.g.: #authorization, #transfer, etc."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Vencimiento</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
                     <input
                       type="date"
                       value={newInvoiceDueDate}
@@ -2154,14 +2154,14 @@ export default function InvoicingPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tienda / Sucursal</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Store / Branch</label>
                     {stores.length > 0 ? (
                       <select
                         value={newInvoiceStoreName}
                         onChange={(e) => setNewInvoiceStoreName(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
                       >
-                        <option value="">Seleccionar tienda...</option>
+                        <option value="">Select store...</option>
                         {stores.map((s) => (
                           <option key={s.id} value={s.name}>{s.name}</option>
                         ))}
@@ -2172,23 +2172,23 @@ export default function InvoicingPage() {
                         value={newInvoiceStoreName}
                         onChange={(e) => setNewInvoiceStoreName(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                        placeholder="Ej: Tienda principal"
+                        placeholder="E.g.: Main store"
                       />
                     )}
                   </div>
                 </div>
 
                 <div className="mt-6">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Productos/Servicios</h4>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Products/Services</h4>
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2226,7 +2226,7 @@ export default function InvoicingPage() {
                                   }}
                                   className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                                 >
-                                  <option value="">-- Seleccionar ítem de inventario (opcional) --</option>
+                                  <option value="">-- Select inventory item (optional) --</option>
                                   {inventoryItems.map((it: any) => (
                                     <option key={it.id} value={String(it.id)}>
                                       {it.name}
@@ -2246,7 +2246,7 @@ export default function InvoicingPage() {
                                       return next;
                                     });
                                   }}
-                                  placeholder="Descripción del producto/servicio"
+                                  placeholder="Product/service description"
                                   className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                                 />
                               </div>
@@ -2315,19 +2315,19 @@ export default function InvoicingPage() {
                     onClick={() => setNewInvoiceItems((prev) => [...prev, { itemId: undefined, description: '', quantity: 1, price: 0, total: 0 }])}
                   >
                     <i className="ri-add-line mr-2"></i>
-                    Agregar Producto
+                    Add Product
                   </button>
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Notas</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
                     <textarea
                       rows={4}
                       value={newInvoiceNotes}
                       onChange={(e) => setNewInvoiceNotes(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Notas adicionales..."
+                      placeholder="Additional notes..."
                     ></textarea>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -2337,7 +2337,7 @@ export default function InvoicingPage() {
                         <span className="text-sm font-medium">{formatMoney(newInvoiceSubtotal)}</span>
                       </div>
                       <div className="flex justify-between items-center space-x-2">
-                        <span className="text-sm text-gray-600">Descuento global:</span>
+                        <span className="text-sm text-gray-600">Global Discount:</span>
                         <div className="flex items-center space-x-2">
                           <select
                             value={newInvoiceDiscountType}
@@ -2348,8 +2348,8 @@ export default function InvoicingPage() {
                             }}
                             className="px-2 py-1 border border-gray-300 rounded text-sm"
                           >
-                            <option value="percentage">% Porcentaje</option>
-                            <option value="fixed">Monto</option>
+                            <option value="percentage">% Percentage</option>
+                            <option value="fixed">Amount</option>
                           </select>
                           <input
                             type="number"
@@ -2383,19 +2383,19 @@ export default function InvoicingPage() {
                   onClick={() => setShowNewInvoiceModal(false)}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={() => handleSaveNewInvoice('draft')}
                   className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors whitespace-nowrap"
                 >
-                  Guardar Borrador
+                  Save Draft
                 </button>
                 <button
                   onClick={() => handleSaveNewInvoice('final')}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
-                  Crear Factura
+                  Create Invoice
                 </button>
               </div>
             </div>
@@ -2418,21 +2418,21 @@ export default function InvoicingPage() {
                     className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                     type="button"
                   >
-                    Descargar
+                    Download
                   </button>
                   <button
                     onClick={handlePrintDocumentPreview}
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                     type="button"
                   >
-                    Imprimir
+                    Print
                   </button>
                   <button
                     onClick={handleCloseDocumentPreview}
                     className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors whitespace-nowrap"
                     type="button"
                   >
-                    Cerrar
+                    Close
                   </button>
                 </div>
               </div>
@@ -2445,7 +2445,7 @@ export default function InvoicingPage() {
                     className="w-full h-[80vh] bg-white"
                   />
                 ) : (
-                  <div className="p-6 text-sm text-gray-600">No hay documento para previsualizar.</div>
+                  <div className="p-6 text-sm text-gray-600">No document to preview.</div>
                 )}
               </div>
             </div>

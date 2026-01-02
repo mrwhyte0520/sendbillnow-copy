@@ -86,7 +86,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             }
           }
         } catch (e) {
-          console.error('Error obteniendo información de la empresa para Mi Perfil:', e);
+          console.error('Error getting company information for My Profile:', e);
         }
 
         setUserProfile(prev => ({
@@ -101,7 +101,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           country: data.country || prev.country || 'República Dominicana',
         }));
       } catch (error) {
-        console.error('Error al cargar perfil en DashboardLayout:', error);
+        console.error('Error loading profile in DashboardLayout:', error);
       }
     };
 
@@ -226,233 +226,233 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     {
-      name: 'Panel de Control',
+      name: 'Dashboard',
       href: '/dashboard',
       icon: 'ri-dashboard-line',
       current: location.pathname === '/dashboard'
     },
     {
-      name: 'Estadísticas',
+      name: 'Statistics',
       href: '/statistics',
       icon: 'ri-bar-chart-2-line',
       current: location.pathname === '/statistics'
     },
-    // 1. Contabilidad
+    // 1. Accounting
     {
-      name: 'Contabilidad',
+      name: 'Accounting',
       href: '/accounting',
       icon: 'ri-calculator-line',
       current: location.pathname.startsWith('/accounting'),
       submenu: [
-        { name: 'Catálogo de Cuentas', href: '/accounting/chart-accounts' },
-        { name: 'Caja Chica', href: '/accounting/petty-cash' },
-        { name: 'Estados Financieros', href: '/accounting/financial-statements' },
-        { name: 'Diario General', href: '/accounting/general-journal' },
-        { name: 'Mayor General', href: '/accounting/general-ledger' },
-        { name: 'Balanza de Comprobación', href: '/accounting/trial-balance' },
-        { name: 'Períodos Contables', href: '/accounting/periods' }
+        { name: 'Chart of Accounts', href: '/accounting/chart-accounts' },
+        { name: 'Petty Cash', href: '/accounting/petty-cash' },
+        { name: 'Financial Statements', href: '/accounting/financial-statements' },
+        { name: 'General Journal', href: '/accounting/general-journal' },
+        { name: 'General Ledger', href: '/accounting/general-ledger' },
+        { name: 'Trial Balance', href: '/accounting/trial-balance' },
+        { name: 'Accounting Periods', href: '/accounting/periods' }
       ]
     },
-    // 2. Bancos (módulo independiente)
+    // 2. Banks
     {
-      name: 'Bancos',
+      name: 'Banks',
       href: '/banks-module',
       icon: 'ri-bank-line',
       current: location.pathname.startsWith('/banks-module'),
       submenu: [
-        { name: 'Depósitos Bancarios', href: '/banks-module/deposits' },
-        { name: 'Solicitudes de Pago', href: '/banks-module/payment-requests' },
-        { name: 'Cheques', href: '/banks-module/checks' },
-        { name: 'Transferencias Bancarias', href: '/banks-module/transfers' },
-        { name: 'Créditos Bancarios', href: '/banks-module/credits' },
-        { name: 'Cargos Bancarios', href: '/banks-module/charges' },
-        { name: 'Crear Moneda', href: '/banks-module/currencies' },
-        { name: 'Tasas Cambiarias', href: '/banks-module/exchange-rates' },
-        { name: 'Reporte Bancario', href: '/banks-module/reports' },
-        { name: 'Conciliación Bancaria', href: '/banks-module/reconciliation' },
-        { name: 'Historial de Conciliaciones', href: '/banks-module/reconciliations-history' },
+        { name: 'Bank Deposits', href: '/banks-module/deposits' },
+        { name: 'Payment Requests', href: '/banks-module/payment-requests' },
+        { name: 'Checks', href: '/banks-module/checks' },
+        { name: 'Bank Transfers', href: '/banks-module/transfers' },
+        { name: 'Bank Credits', href: '/banks-module/credits' },
+        { name: 'Bank Charges', href: '/banks-module/charges' },
+        { name: 'Create Currency', href: '/banks-module/currencies' },
+        { name: 'Exchange Rates', href: '/banks-module/exchange-rates' },
+        { name: 'Bank Report', href: '/banks-module/reports' },
+        { name: 'Bank Reconciliation', href: '/banks-module/reconciliation' },
+        { name: 'Reconciliation History', href: '/banks-module/reconciliations-history' },
       ]
     },
-    // 3. Cuentas por cobrar
+    // 3. Accounts Receivable
     {
-      name: 'Cuentas por Cobrar',
+      name: 'Accounts Receivable',
       href: '/accounts-receivable',
       icon: 'ri-money-dollar-circle-line',
       current: location.pathname.startsWith('/accounts-receivable'),
       submenu: [
-        { name: 'Facturas por Cobrar', href: '/accounts-receivable/invoices' },
-        { name: 'Clientes', href: '/accounts-receivable/customers' },
-        { name: 'Tipos de Clientes', href: '/accounts-receivable/customer-types' },
-        { name: 'Condiciones de Pago', href: '/accounts-receivable/payment-terms' },
-        { name: 'Pagos Recibidos', href: '/accounts-receivable/payments' },
-        { name: 'Recibos de Cobro', href: '/accounts-receivable/receipts' },
-        { name: 'Anticipos de Clientes', href: '/accounts-receivable/advances' },
-        { name: 'Descuentos en Ventas', href: '/accounts-receivable/discounts' },
-        { name: 'Notas de Crédito', href: '/accounts-receivable/credit-notes' },
-        { name: 'Notas de Débito', href: '/accounts-receivable/debit-notes' },
-        { name: 'Reportes CxC', href: '/accounts-receivable/reports' },
+        { name: 'Receivable Invoices', href: '/accounts-receivable/invoices' },
+        { name: 'Customers', href: '/accounts-receivable/customers' },
+        { name: 'Customer Types', href: '/accounts-receivable/customer-types' },
+        { name: 'Payment Terms', href: '/accounts-receivable/payment-terms' },
+        { name: 'Payments Received', href: '/accounts-receivable/payments' },
+        { name: 'Collection Receipts', href: '/accounts-receivable/receipts' },
+        { name: 'Customer Advances', href: '/accounts-receivable/advances' },
+        { name: 'Sales Discounts', href: '/accounts-receivable/discounts' },
+        { name: 'Credit Notes', href: '/accounts-receivable/credit-notes' },
+        { name: 'Debit Notes', href: '/accounts-receivable/debit-notes' },
+        { name: 'AR Reports', href: '/accounts-receivable/reports' },
       ]
     },
-    // 4. Cuentas por pagar
+    // 4. Accounts Payable
     {
-      name: 'Cuentas por Pagar',
+      name: 'Accounts Payable',
       href: '/accounts-payable',
       icon: 'ri-file-list-3-line',
       current: location.pathname.startsWith('/accounts-payable'),
       submenu: [
-        { name: 'Facturas de Suplidor', href: '/accounts-payable/invoices' },
-        { name: 'Reportes CxP', href: '/accounts-payable/reports' },
-        { name: 'Suplidores', href: '/accounts-payable/suppliers' },
-        { name: 'Emisión de Pagos', href: '/accounts-payable/payments' },
-        { name: 'Órdenes de Compra', href: '/accounts-payable/purchase-orders' },
-        { name: 'Cotizaciones', href: '/accounts-payable/quotes' },
-        { name: 'Tipos de Suplidor', href: '/accounts-payable/supplier-types' },
-        { name: 'Términos de Pago', href: '/accounts-payable/payment-terms' },
-        { name: 'Anticipos a Proveedores', href: '/accounts-payable/advances' },
-        { name: 'Notas Débito/Crédito', href: '/accounts-payable/debit-credit-notes' },
+        { name: 'Supplier Invoices', href: '/accounts-payable/invoices' },
+        { name: 'AP Reports', href: '/accounts-payable/reports' },
+        { name: 'Suppliers', href: '/accounts-payable/suppliers' },
+        { name: 'Payment Issuance', href: '/accounts-payable/payments' },
+        { name: 'Purchase Orders', href: '/accounts-payable/purchase-orders' },
+        { name: 'Quotes', href: '/accounts-payable/quotes' },
+        { name: 'Supplier Types', href: '/accounts-payable/supplier-types' },
+        { name: 'Payment Terms', href: '/accounts-payable/payment-terms' },
+        { name: 'Supplier Advances', href: '/accounts-payable/advances' },
+        { name: 'Debit/Credit Notes', href: '/accounts-payable/debit-credit-notes' },
       ]
     },
-    // 5. Facturación
+    // 5. Billing
     {
-      name: 'Facturación',
+      name: 'Billing',
       href: '/billing',
       icon: 'ri-file-text-line',
       current: location.pathname.startsWith('/billing'),
       submenu: [
-        { name: 'Reporte de Ventas', href: '/billing/sales-reports' },
-        { name: 'Reporte de Comisión', href: '/billing/commission-report' },
-        { name: 'Vendedores', href: '/billing/sales-reps' },
-        { name: 'Tipos de Vendedor', href: '/billing/sales-rep-types' },
-        { name: 'Tiendas / Sucursales', href: '/billing/stores' },
-        { name: 'Facturación', href: '/billing/invoicing' },
-        { name: 'Pre-facturación', href: '/billing/pre-invoicing' },
-        { name: 'Facturación Recurrente', href: '/billing/recurring' },
-        { name: 'Cierre de Caja', href: '/billing/cash-closing' },
-        { name: 'Cotizaciones', href: '/billing/quotes' },
+        { name: 'Sales Report', href: '/billing/sales-reports' },
+        { name: 'Commission Report', href: '/billing/commission-report' },
+        { name: 'Sales Reps', href: '/billing/sales-reps' },
+        { name: 'Sales Rep Types', href: '/billing/sales-rep-types' },
+        { name: 'Stores / Branches', href: '/billing/stores' },
+        { name: 'Invoicing', href: '/billing/invoicing' },
+        { name: 'Pre-invoicing', href: '/billing/pre-invoicing' },
+        { name: 'Recurring Billing', href: '/billing/recurring' },
+        { name: 'Cash Closing', href: '/billing/cash-closing' },
+        { name: 'Quotes', href: '/billing/quotes' },
       ]
     },
-    // 6. Punto de ventas
+    // 6. Point of Sale
     {
-      name: 'Punto de Ventas',
+      name: 'Point of Sale',
       href: '/pos',
       icon: 'ri-shopping-cart-line',
       current: location.pathname.startsWith('/pos'),
       submenu: [
-        { name: 'Inicio', href: '/pos' },
+        { name: 'Home', href: '/pos' },
       ]
     },
-    // 7. Inventario
+    // 7. Inventory
     {
-      name: 'Inventario',
+      name: 'Inventory',
       href: '/inventory',
       icon: 'ri-archive-line',
       current: location.pathname.startsWith('/inventory'),
       submenu: [
-        { name: 'Inicio', href: '/inventory' },
+        { name: 'Home', href: '/inventory' },
       ]
     },
-    // 8. Activos fijos
+    // 8. Fixed Assets
     {
-      name: 'Activos Fijos',
+      name: 'Fixed Assets',
       href: '/fixed-assets',
       icon: 'ri-building-line',
       current: location.pathname.startsWith('/fixed-assets'),
       submenu: [
-        { name: 'Registro de Activos', href: '/fixed-assets/register' },
-        { name: 'Tipos de Activos', href: '/fixed-assets/types' },
-        { name: 'Depreciación', href: '/fixed-assets/depreciation' },
-        { name: 'Tipos de Depreciación', href: '/fixed-assets/depreciation-types' },
-        { name: 'Reporte de Activos Fijos', href: '/fixed-assets/report' },
-        { name: 'Revalorización', href: '/fixed-assets/revaluation' },
-        { name: 'Retiro de Activos', href: '/fixed-assets/disposal' }
+        { name: 'Asset Register', href: '/fixed-assets/register' },
+        { name: 'Asset Types', href: '/fixed-assets/types' },
+        { name: 'Depreciation', href: '/fixed-assets/depreciation' },
+        { name: 'Depreciation Types', href: '/fixed-assets/depreciation-types' },
+        { name: 'Fixed Assets Report', href: '/fixed-assets/report' },
+        { name: 'Revaluation', href: '/fixed-assets/revaluation' },
+        { name: 'Asset Disposal', href: '/fixed-assets/disposal' }
       ]
     },
-    // 9. Nóminas
+    // 9. Payroll
     {
-      name: 'Nóminas',
+      name: 'Payroll',
       href: '/payroll',
       icon: 'ri-team-line',
       current: location.pathname.startsWith('/payroll'),
       submenu: [
-        { name: 'Configuración de Nóminas', href: '/payroll/configuration' },
-        { name: 'Empleados', href: '/payroll/employees' },
-        { name: 'Tipos de Empleados', href: '/payroll/employee-types' },
-        { name: 'Departamentos', href: '/payroll/departments' },
-        { name: 'Cargos / Posiciones', href: '/payroll/positions' },
-        { name: 'Tipos de Salarios', href: '/payroll/salary-types' },
-        { name: 'Tipos de Comisiones', href: '/payroll/commission-types' },
-        { name: 'Vacaciones', href: '/payroll/vacations' },
-        { name: 'Horas Extras', href: '/payroll/overtime' },
-        { name: 'Días Feriados', href: '/payroll/holidays' },
-        { name: 'Regalía Pascual', href: '/payroll/royalties' },
-        { name: 'Bonificaciones', href: '/payroll/bonuses' },
-        { name: 'Deducciones Periódicas', href: '/payroll/deductions' },
-        { name: 'Otras Deducciones', href: '/payroll/other-deductions' },
-        { name: 'Registro de Ausencias', href: '/payroll/absences' },
-        { name: 'Proceso de Pago Nómina', href: '/payroll/payroll-process' },
-        { name: 'Entrada al Diario Nómina', href: '/payroll/journal-entry' }
+        { name: 'Payroll Configuration', href: '/payroll/configuration' },
+        { name: 'Employees', href: '/payroll/employees' },
+        { name: 'Employee Types', href: '/payroll/employee-types' },
+        { name: 'Departments', href: '/payroll/departments' },
+        { name: 'Positions', href: '/payroll/positions' },
+        { name: 'Salary Types', href: '/payroll/salary-types' },
+        { name: 'Commission Types', href: '/payroll/commission-types' },
+        { name: 'Vacations', href: '/payroll/vacations' },
+        { name: 'Overtime', href: '/payroll/overtime' },
+        { name: 'Holidays', href: '/payroll/holidays' },
+        { name: 'Christmas Bonus', href: '/payroll/royalties' },
+        { name: 'Bonuses', href: '/payroll/bonuses' },
+        { name: 'Periodic Deductions', href: '/payroll/deductions' },
+        { name: 'Other Deductions', href: '/payroll/other-deductions' },
+        { name: 'Absence Records', href: '/payroll/absences' },
+        { name: 'Payroll Process', href: '/payroll/payroll-process' },
+        { name: 'Payroll Journal Entry', href: '/payroll/journal-entry' }
       ]
     },
-    // 10. Impuestos
+    // 10. Taxes
     {
-      name: 'Impuestos',
+      name: 'Taxes',
       href: '/taxes',
       icon: 'ri-government-line',
       current: location.pathname.startsWith('/taxes'),
       submenu: [
-        { name: 'Configuración', href: '/taxes/configuration' },
+        { name: 'Configuration', href: '/taxes/configuration' },
         { name: 'NCF/E-CF', href: '/taxes/ncf' },
-        { name: 'Series Fiscales', href: '/taxes/fiscal-series' },
-        { name: 'Reporte 606', href: '/taxes/report-606' },
-        { name: 'Reporte 607', href: '/taxes/report-607' },
-        { name: 'Reporte 608', href: '/taxes/report-608' },
-        { name: 'Reporte IT-1', href: '/taxes/report-it1' },
-        { name: 'Reporte IR-17', href: '/taxes/report-ir17' },
-        { name: 'Proporcionalidad ITBIS', href: '/taxes/itbis-proportionality' }
+        { name: 'Fiscal Series', href: '/taxes/fiscal-series' },
+        { name: 'Report 606', href: '/taxes/report-606' },
+        { name: 'Report 607', href: '/taxes/report-607' },
+        { name: 'Report 608', href: '/taxes/report-608' },
+        { name: 'Report IT-1', href: '/taxes/report-it1' },
+        { name: 'Report IR-17', href: '/taxes/report-ir17' },
+        { name: 'ITBIS Proportionality', href: '/taxes/itbis-proportionality' }
       ]
     },
-    // 11. Planes
+    // 11. Plans
     {
-      name: 'Planes',
+      name: 'Plans',
       href: '/plans',
       icon: 'ri-vip-crown-line',
       current: location.pathname.startsWith('/plans'),
       submenu: [
-        { name: 'Inicio', href: '/plans' },
+        { name: 'Home', href: '/plans' },
       ]
     },
-    // 12. Referidos
+    // 12. Referrals
     {
-      name: 'Referidos',
+      name: 'Referrals',
       href: '/referrals',
       icon: 'ri-share-forward-line',
       current: location.pathname.startsWith('/referrals'),
       submenu: [
-        { name: 'Inicio', href: '/referrals' },
+        { name: 'Home', href: '/referrals' },
       ]
     },
-    // 13. Usuarios (solo para owners)
+    // 13. Users (owners only)
     ...(isOwner ? [{
-      name: 'Usuarios',
+      name: 'Users',
       href: '/users',
       icon: 'ri-shield-user-line',
       current: location.pathname.startsWith('/users'),
       submenu: [
-        { name: 'Inicio', href: '/users' },
+        { name: 'Home', href: '/users' },
       ]
     }] : []),
-    // 14. Configuración (solo para owners)
+    // 14. Settings (owners only)
     ...(isOwner ? [{
-      name: 'Configuración',
+      name: 'Settings',
       href: '/settings',
       icon: 'ri-settings-line',
       current: location.pathname.startsWith('/settings'),
       submenu: [
-        { name: 'Empresa', href: '/settings/company' },
-        { name: 'Balances Iniciales', href: '/settings/opening-balances' },
-        { name: 'Contabilidad', href: '/settings/accounting' },
-        { name: 'Inventario', href: '/settings/inventory' },
-        { name: 'Respaldos', href: '/settings/backup' }
+        { name: 'Company', href: '/settings/company' },
+        { name: 'Opening Balances', href: '/settings/opening-balances' },
+        { name: 'Accounting', href: '/settings/accounting' },
+        { name: 'Inventory', href: '/settings/inventory' },
+        { name: 'Backups', href: '/settings/backup' }
       ]
     }] : [])
   ];
@@ -589,7 +589,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       await signOut();
       navigate('/auth/login');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('Error signing out:', error);
     }
   };
 
@@ -609,13 +609,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       // Recargar la página para aplicar el nuevo plan
       window.location.reload();
     } else {
-      console.error('Error al iniciar trial:', result.error);
+      console.error('Error starting trial:', result.error);
     }
   };
 
   const handleSaveProfile = async () => {
     if (!user?.id) {
-      setSaveMessage('Usuario no autenticado');
+      setSaveMessage('User not authenticated');
       return;
     }
 
@@ -636,25 +636,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       if (error) throw error;
 
-      setSaveMessage('Perfil actualizado correctamente');
+      setSaveMessage('Profile updated successfully');
       setTimeout(() => {
         setSaveMessage('');
         setEditProfileOpen(false);
       }, 2000);
     } catch (error: any) {
-      console.error('Error al guardar perfil:', error);
-      const message = error?.message || (error?.error_description) || 'Error al actualizar el perfil';
+      console.error('Error saving profile:', error);
+      const message = error?.message || (error?.error_description) || 'Error updating profile';
       setSaveMessage(message);
     }
   };
 
   const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setSaveMessage('Las contraseñas no coinciden');
+      setSaveMessage('Passwords do not match');
       return;
     }
     if (passwordData.newPassword.length < 6) {
-      setSaveMessage('La contraseña debe tener al menos 6 caracteres');
+      setSaveMessage('Password must be at least 6 characters');
       return;
     }
     
@@ -663,12 +663,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         password: passwordData.newPassword,
       });
       if (error) throw error;
-      setSaveMessage('Contraseña actualizada correctamente');
+      setSaveMessage('Password updated successfully');
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setTimeout(() => setSaveMessage(''), 2000);
     } catch (error) {
-      console.error('Error al cambiar contraseña:', error);
-      setSaveMessage('Error al cambiar la contraseña');
+      console.error('Error changing password:', error);
+      setSaveMessage('Error changing password');
     }
   };
 
@@ -686,7 +686,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center">
               <div>
                 <h1 className="brand-serif text-xl font-bold text-white">Sendbillnow</h1>
-                <p className="text-xs text-stone-200">Sistema de Finanzas</p>
+                <p className="text-xs text-stone-200">Finance System</p>
               </div>
             </div>
           </div>
@@ -703,7 +703,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-stone-700 hover:bg-stone-200 hover:text-stone-900"
                 >
                   <i className="ri-user-line mr-3 text-lg flex-shrink-0"></i>
-                  <span className="truncate">Mi Perfil</span>
+                  <span className="truncate">My Profile</span>
                 </button>
               </div>
             </div>
@@ -719,17 +719,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <div className="ml-3 flex-1 min-w-0">
                 <p className="text-sm font-medium text-stone-800 truncate">
-                  {user?.email || 'Usuario'}
+                  {user?.email || 'User'}
                 </p>
                 <p className="text-xs text-stone-500 truncate">
-                  {currentPlan?.name || (trialStatus === 'expired' ? 'Sin plan activo' : 'Plan de Prueba')}
-                  {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d restantes)`}
+                  {currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')}
+                  {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d left)`}
                 </p>
               </div>
               <button
                 onClick={handleSignOut}
                 className="ml-2 p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
-                title="Cerrar Sesión"
+                title="Sign Out"
               >
                 <i className="ri-logout-box-line text-lg"></i>
               </button>
@@ -746,7 +746,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Mi Perfil</h2>
+                <h2 className="text-xl font-semibold text-gray-900">My Profile</h2>
                 <button
                   onClick={() => setProfilePanelOpen(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -773,21 +773,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {/* Account Status */}
                     <div className="bg-gray-50 rounded-lg p-4 mb-6">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Estado de la cuenta</span>
-                        <span className="text-sm text-green-600 font-medium">Activo</span>
+                        <span className="text-sm font-medium text-gray-700">Account Status</span>
+                        <span className="text-sm text-green-600 font-medium">Active</span>
                       </div>
                       <div className="grid grid-cols-3 gap-4 mt-4">
                         <div className="text-center">
                           <div className="text-lg font-bold text-gray-900">{kpiCounts.invoices}</div>
-                          <div className="text-xs text-gray-600">Facturas</div>
+                          <div className="text-xs text-gray-600">Invoices</div>
                         </div>
                         <div className="text-center">
                           <div className="text-lg font-bold text-gray-900">{kpiCounts.customers}</div>
-                          <div className="text-xs text-gray-600">Clientes</div>
+                          <div className="text-xs text-gray-600">Customers</div>
                         </div>
                         <div className="text-center">
                           <div className="text-lg font-bold text-gray-900">{kpiCounts.products}</div>
-                          <div className="text-xs text-gray-600">Productos</div>
+                          <div className="text-xs text-gray-600">Products</div>
                         </div>
                       </div>
                     </div>
@@ -799,7 +799,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                       >
                         <i className="ri-edit-line mr-3 text-blue-600"></i>
-                        Editar Perfil
+                        Edit Profile
                       </button>
                       <button 
                         onClick={() => {
@@ -808,7 +808,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                       >
                         <i className="ri-settings-line mr-3 text-gray-600"></i>
-                        Configuración
+                        Settings
                       </button>
                       <button 
                         onClick={() => {
@@ -817,7 +817,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                       >
                         <i className="ri-vip-crown-line mr-3 text-yellow-600"></i>
-                        Mejorar Plan
+                        Upgrade Plan
                       </button>
                     </div>
                   </>
@@ -825,7 +825,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   /* Edit Profile Form */
                   <div className="space-y-6">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">Editar Perfil</h3>
+                      <h3 className="text-lg font-semibold text-gray-900">Edit Profile</h3>
                       <button
                         onClick={() => setEditProfileOpen(false)}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -846,11 +846,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
                     {/* Personal Information */}
                     <div>
-                      <h4 className="text-md font-medium text-gray-900 mb-4">Información Personal</h4>
+                      <h4 className="text-md font-medium text-gray-900 mb-4">Personal Information</h4>
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nombre Completo
+                            Full Name
                           </label>
                           <input
                             type="text"
@@ -872,7 +872,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Teléfono
+                            Phone
                           </label>
                           <input
                             type="tel"
@@ -883,7 +883,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Empresa
+                            Company
                           </label>
                           <input
                             type="text"
@@ -894,7 +894,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Cargo
+                            Position
                           </label>
                           <input
                             type="text"
@@ -905,7 +905,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Dirección
+                            Address
                           </label>
                           <input
                             type="text"
@@ -917,7 +917,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Ciudad
+                              City
                             </label>
                             <input
                               type="text"
@@ -928,7 +928,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              País
+                              Country
                             </label>
                             <input
                               type="text"
@@ -943,11 +943,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
                     {/* Change Password */}
                     <div>
-                      <h4 className="text-md font-medium text-gray-900 mb-4">Cambiar Contraseña</h4>
+                      <h4 className="text-md font-medium text-gray-900 mb-4">Change Password</h4>
                       <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Contraseña Actual
+                            Current Password
                           </label>
                           <input
                             type="password"
@@ -958,7 +958,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Nueva Contraseña
+                            New Password
                           </label>
                           <input
                             type="password"
@@ -969,7 +969,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Confirmar Nueva Contraseña
+                            Confirm New Password
                           </label>
                           <input
                             type="password"
@@ -982,7 +982,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                           onClick={handleChangePassword}
                           className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                         >
-                          Cambiar Contraseña
+                          Change Password
                         </button>
                       </div>
                     </div>
@@ -993,7 +993,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         onClick={handleSaveProfile}
                         className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                       >
-                        Guardar Cambios
+                        Save Changes
                       </button>
                     </div>
                   </div>
@@ -1008,7 +1008,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     className="w-full flex items-center justify-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                   >
                     <i className="ri-logout-box-line mr-2"></i>
-                    Cerrar Sesión
+                    Sign Out
                   </button>
                 </div>
               )}
@@ -1026,7 +1026,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             className="-m-2.5 p-2.5 text-gray-700 lg:hidden hover:bg-gray-100 rounded-lg transition-colors duration-200"
             onClick={() => setSidebarOpen(true)}
           >
-            <span className="sr-only">Abrir sidebar</span>
+            <span className="sr-only">Open sidebar</span>
             <i className="ri-menu-line text-xl"></i>
           </button>
 
@@ -1043,7 +1043,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500 relative hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 onClick={handleNotificationClick}
               >
-                <span className="sr-only">Ver notificaciones</span>
+                <span className="sr-only">View notifications</span>
                 <i className="ri-notification-3-line text-xl"></i>
                 {notifications.length > 0 && (
                   <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
@@ -1056,9 +1056,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {notificationsOpen && (
                 <div className="absolute right-0 top-16 mt-2 w-80 bg-white rounded-xl shadow-xl ring-1 ring-black/5 z-50 border border-gray-100">
                   <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Notificaciones</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
                     {notifications.length === 0 ? (
-                      <div className="text-sm text-gray-500">No hay notificaciones</div>
+                      <div className="text-sm text-gray-500">No notifications</div>
                     ) : (
                       <div className="space-y-3">
                         {notifications.map((n, idx) => (
@@ -1123,21 +1123,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
                 <i className="ri-lock-2-line text-4xl text-white"></i>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-1">Módulo Premium</h3>
-              <p className="text-amber-100 text-sm">Acceso restringido</p>
+              <h3 className="text-2xl font-bold text-white mb-1">Premium Module</h3>
+              <p className="text-amber-100 text-sm">Restricted access</p>
             </div>
 
             {/* Contenido */}
             <div className="p-6">
               <div className="text-center mb-6">
                 <p className="text-gray-600 mb-4">
-                  El módulo <span className="font-semibold text-gray-900">"{restrictedModal.moduleName}"</span> no está disponible en tu plan actual.
+                  The module <span className="font-semibold text-gray-900">"{restrictedModal.moduleName}"</span> is not available in your current plan.
                 </p>
                 
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
                   <div className="flex items-center justify-center mb-2">
                     <i className="ri-vip-crown-2-fill text-amber-500 text-2xl mr-2"></i>
-                    <span className="text-sm text-gray-600">Plan requerido:</span>
+                    <span className="text-sm text-gray-600">Required plan:</span>
                   </div>
                   <p className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                     {restrictedModal.requiredPlan}
@@ -1147,19 +1147,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Beneficios */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Al actualizar obtienes:</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">By upgrading you get:</p>
                 <ul className="space-y-2">
                   <li className="flex items-center text-sm text-gray-700">
                     <i className="ri-check-line text-green-500 mr-2"></i>
-                    Acceso completo a {restrictedModal.moduleName}
+                    Full access to {restrictedModal.moduleName}
                   </li>
                   <li className="flex items-center text-sm text-gray-700">
                     <i className="ri-check-line text-green-500 mr-2"></i>
-                    Todas las funcionalidades premium
+                    All premium features
                   </li>
                   <li className="flex items-center text-sm text-gray-700">
                     <i className="ri-check-line text-green-500 mr-2"></i>
-                    Soporte prioritario
+                    Priority support
                   </li>
                 </ul>
               </div>
@@ -1170,7 +1170,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => setRestrictedModal({ show: false, moduleName: '', requiredPlan: '' })}
                   className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={() => {
@@ -1180,7 +1180,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
                 >
                   <i className="ri-arrow-up-circle-line mr-2"></i>
-                  Ver Planes
+                  View Plans
                 </button>
               </div>
             </div>
@@ -1197,27 +1197,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm">
                 <i className="ri-settings-3-line text-3xl text-white"></i>
               </div>
-              <h3 className="text-xl font-bold text-white">Configuración Requerida</h3>
-              <p className="text-blue-100 text-sm mt-1">Tu plan incluye funciones contables avanzadas</p>
+              <h3 className="text-xl font-bold text-white">Setup Required</h3>
+              <p className="text-blue-100 text-sm mt-1">Your plan includes advanced accounting features</p>
             </div>
             <div className="p-5">
               <div className="text-center mb-5">
                 <p className="text-gray-600 text-sm mb-4">
-                  Para aprovechar todas las funcionalidades de tu plan, necesitas configurar:
+                  To take advantage of all your plan features, you need to set up:
                 </p>
                 <div className="space-y-3">
                   <div className="flex items-center bg-amber-50 rounded-lg p-3 border border-amber-200">
                     <i className="ri-calendar-check-line text-amber-600 text-xl mr-3"></i>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 text-sm">Períodos Contables</p>
-                      <p className="text-xs text-gray-500">Define tu año fiscal y períodos mensuales</p>
+                      <p className="font-medium text-gray-900 text-sm">Accounting Periods</p>
+                      <p className="text-xs text-gray-500">Define your fiscal year and monthly periods</p>
                     </div>
                   </div>
                   <div className="flex items-center bg-blue-50 rounded-lg p-3 border border-blue-200">
                     <i className="ri-file-list-3-line text-blue-600 text-xl mr-3"></i>
                     <div className="text-left">
-                      <p className="font-medium text-gray-900 text-sm">Secuencias NCF</p>
-                      <p className="text-xs text-gray-500">Configura tus comprobantes fiscales</p>
+                      <p className="font-medium text-gray-900 text-sm">NCF Sequences</p>
+                      <p className="text-xs text-gray-500">Configure your fiscal vouchers</p>
                     </div>
                   </div>
                 </div>
@@ -1227,7 +1227,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => setShowAccountingSetupModal(false)}
                   className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
                 >
-                  Más tarde
+                  Later
                 </button>
                 <button
                   onClick={() => {
@@ -1237,7 +1237,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center"
                 >
                   <i className="ri-settings-3-line mr-2"></i>
-                  Configurar Ahora
+                  Set Up Now
                 </button>
               </div>
             </div>
@@ -1258,27 +1258,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="w-20 h-20 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
                 <i className="ri-time-line text-4xl text-white"></i>
               </div>
-              <h2 className="text-3xl font-bold text-white mb-2">Período de Prueba Finalizado</h2>
-              <p className="text-red-100 text-lg">Tu acceso al sistema ha expirado</p>
+              <h2 className="text-3xl font-bold text-white mb-2">Trial Period Ended</h2>
+              <p className="text-red-100 text-lg">Your system access has expired</p>
             </div>
             <div className="p-8">
               <div className="text-center mb-6">
                 <p className="text-gray-700 mb-4">
-                  Tu período de prueba gratuito de <span className="font-bold">7 días</span> ha finalizado.
+                  Your free trial period of <span className="font-bold">7 days</span> has ended.
                 </p>
                 <p className="text-gray-600 mb-6">
-                  Para continuar usando Sendbillnow, necesitas seleccionar un plan de pago.
+                  To continue using Sendbillnow, you need to select a payment plan.
                 </p>
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
                   <div className="flex items-start">
                     <i className="ri-information-line text-blue-600 text-xl mr-3 mt-0.5"></i>
                     <div>
-                      <h4 className="font-semibold text-blue-900 mb-1">Beneficios al actualizar</h4>
+                      <h4 className="font-semibold text-blue-900 mb-1">Upgrade Benefits</h4>
                       <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Acceso ilimitado a todas las funciones</li>
-                        <li>• Sin interrupciones en tu negocio</li>
-                        <li>• Soporte técnico prioritario</li>
-                        <li>• Backups automáticos de tu información</li>
+                        <li>• Unlimited access to all features</li>
+                        <li>• No business interruptions</li>
+                        <li>• Priority technical support</li>
+                        <li>• Automatic backups of your data</li>
                       </ul>
                     </div>
                   </div>
@@ -1292,10 +1292,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
               >
                 <i className="ri-vip-crown-line mr-2 text-2xl"></i>
-                Ver Planes y Precios
+                View Plans and Pricing
               </button>
               <p className="text-center text-sm text-gray-500 mt-4">
-                Solo puedes usar el período de prueba una vez por cuenta
+                You can only use the trial period once per account
               </p>
             </div>
           </div>

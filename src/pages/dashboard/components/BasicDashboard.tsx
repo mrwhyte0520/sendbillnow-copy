@@ -56,12 +56,12 @@ export default function BasicDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Métricas Principales */}
+      {/* Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Ingresos del Mes</p>
+              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
               <p className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -73,7 +73,7 @@ export default function BasicDashboard() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Gastos del Mes</p>
+              <p className="text-sm font-medium text-gray-600">Monthly Expenses</p>
               <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -85,7 +85,7 @@ export default function BasicDashboard() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Utilidad Neta</p>
+              <p className="text-sm font-medium text-gray-600">Net Profit</p>
               <p className="text-2xl font-bold text-blue-600">{formatCurrency(netProfit)}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -97,7 +97,7 @@ export default function BasicDashboard() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Facturas Pendientes</p>
+              <p className="text-sm font-medium text-gray-600">Pending Invoices</p>
               <p className="text-2xl font-bold text-orange-600">{pendingInvoices}</p>
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
@@ -106,7 +106,7 @@ export default function BasicDashboard() {
           </div>
           <div className="mt-4 flex items-center text-sm">
             <span className="text-orange-600 font-medium">{formatCurrency(pendingAmount)}</span>
-            <span className="text-gray-500 ml-2">por cobrar</span>
+            <span className="text-gray-500 ml-2">to collect</span>
           </div>
         </div>
       </div>
