@@ -135,19 +135,23 @@ export default function CustomersPage() {
 
   const getCustomerStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-gray-100 text-gray-800';
-      case 'blocked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':
+        return 'bg-[#e3edd3] text-[#2f3e1e]';
+      case 'inactive':
+        return 'bg-[#f3ecda] text-[#6b5c3b]';
+      case 'blocked':
+        return 'bg-[#f6d6ce] text-[#7a2e1b]';
+      default:
+        return 'bg-[#f3ecda] text-[#6b5c3b]';
     }
   };
 
   const getCustomerStatusName = (status: string) => {
     switch (status) {
-      case 'active': return 'Activo';
-      case 'inactive': return 'Inactivo';
-      case 'blocked': return 'Bloqueado';
-      default: return 'Desconocido';
+      case 'active': return 'Active';
+      case 'inactive': return 'Inactive';
+      case 'blocked': return 'Blocked';
+      default: return 'Unknown';
     }
   };
 
@@ -181,24 +185,24 @@ export default function CustomersPage() {
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
 
     doc.setFontSize(20);
-    doc.text('Reporte de Clientes', 20, 30);
+    doc.text('Customer Report', 20, 30);
     
     doc.setFontSize(12);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 20, 45);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 45);
     
     const activeCustomers = customers.filter(c => c.status === 'active').length;
     const totalCreditLimit = customers.reduce((sum, c) => sum + c.creditLimit, 0);
     const totalBalance = customers.reduce((sum, c) => sum + c.currentBalance, 0);
     
     doc.setFontSize(14);
-    doc.text('Estadísticas de Clientes', 20, 60);
+    doc.text('Customer Stats', 20, 60);
     
     const statsData = [
-      ['Concepto', 'Valor'],
-      ['Total de Clientes', customers.length.toString()],
-      ['Clientes Activos', activeCustomers.toString()],
-      ['Límite de Crédito Total', `RD$ ${totalCreditLimit.toLocaleString()}`],
-      ['Saldo Total Pendiente', `RD$ ${totalBalance.toLocaleString()}`]
+      ['Metric', 'Value'],
+      ['Total Customers', customers.length.toString()],
+      ['Active Customers', activeCustomers.toString()],
+      ['Total Credit Limit', `RD$ ${totalCreditLimit.toLocaleString()}`],
+      ['Outstanding Balance', `RD$ ${totalBalance.toLocaleString()}`]
     ];
     
     (doc as any).autoTable({
@@ -210,7 +214,7 @@ export default function CustomersPage() {
     });
     
     doc.setFontSize(14);
-    doc.text('Detalle de Clientes', 20, (((doc as any).lastAutoTable?.finalY) ?? 70) + 20);
+    doc.text('Customer Detail', 20, (((doc as any).lastAutoTable?.finalY) ?? 70) + 20);
     
     const customerData = filteredCustomers.map(customer => [
       customer.name,
@@ -224,14 +228,14 @@ export default function CustomersPage() {
     
     (doc as any).autoTable({
       startY: ((((doc as any).lastAutoTable?.finalY) ?? 70) + 30),
-      head: [['Cliente', 'Documento', 'Teléfono', 'Email', 'Límite Crédito', 'Saldo Actual', 'Estado']],
+      head: [['Customer', 'Document', 'Phone', 'Email', 'Credit Limit', 'Current Balance', 'Status']],
       body: customerData,
       theme: 'striped',
       headStyles: { fillColor: [168, 85, 247] },
       styles: { fontSize: 8 }
     });
     
-    doc.save(`clientes-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`customers-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
@@ -252,14 +256,14 @@ export default function CustomersPage() {
     const todayLocal = new Date().toLocaleDateString();
 
     const headers = [
-      { key: 'name', title: 'Cliente' },
-      { key: 'document', title: 'Documento' },
-      { key: 'phone', title: 'Teléfono' },
+      { key: 'name', title: 'Customer' },
+      { key: 'document', title: 'Document' },
+      { key: 'phone', title: 'Phone' },
       { key: 'email', title: 'Email' },
-      { key: 'address', title: 'Dirección' },
-      { key: 'creditLimit', title: 'Límite Crédito' },
-      { key: 'currentBalance', title: 'Saldo Actual' },
-      { key: 'status', title: 'Estado' },
+      { key: 'address', title: 'Address' },
+      { key: 'creditLimit', title: 'Credit Limit' },
+      { key: 'currentBalance', title: 'Current Balance' },
+      { key: 'status', title: 'Status' },
     ];
 
     const rows = filteredCustomers.map((customer) => ({
@@ -274,18 +278,18 @@ export default function CustomersPage() {
     }));
 
     if (!rows.length) {
-      alert('No hay clientes para exportar con los filtros actuales.');
+      alert('There are no customers to export with the current filters.');
       return;
     }
 
     exportToExcelWithHeaders(
       rows,
       headers,
-      `clientes-${todayIso}`,
-      'Clientes',
+      `customers-${todayIso}`,
+      'Customers',
       [28, 18, 16, 28, 40, 18, 18, 14],
       {
-        title: `Reporte de Clientes - ${todayLocal}`,
+        title: `Customer Report - ${todayLocal}`,
         companyName,
       },
     );
@@ -315,7 +319,7 @@ export default function CustomersPage() {
   };
 
   const handleCustomerStatement = (customer: Customer) => {
-    alert(`Estado de cuenta para ${customer.name}:\n\nSaldo actual: RD$ ${customer.currentBalance.toLocaleString()}\nLímite de crédito: RD$ ${customer.creditLimit.toLocaleString()}`);
+    alert(`Statement for ${customer.name}:\n\nCurrent balance: RD$ ${customer.currentBalance.toLocaleString()}\nCredit limit: RD$ ${customer.creditLimit.toLocaleString()}`);
   };
 
   const handleCustomerTypeSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -343,7 +347,7 @@ export default function CustomersPage() {
   const handleSaveCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para guardar clientes');
+      alert('You must sign in to save customers.');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -379,30 +383,34 @@ export default function CustomersPage() {
         await customersService.create(user.id, payload);
       }
       await loadCustomers();
-      alert(selectedCustomer ? 'Cliente actualizado exitosamente' : 'Cliente creado exitosamente');
+      alert(selectedCustomer ? 'Customer updated successfully' : 'Customer created successfully');
       setShowCustomerModal(false);
       setSelectedCustomer(null);
-    } catch {
-      alert('Error al guardar el cliente');
+    } catch (error) {
+      alert('Error saving the customer');
+      console.error('Error saving the customer:', error);
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Clientes</h1>
+      <div className="p-6 space-y-6 bg-[#f6f2e8] min-h-screen">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1e2814]">Customer Management</h1>
+            <p className="text-sm text-[#4c5535]">Control balances, credit limits, and receivables from a unified workspace.</p>
+          </div>
           <button 
             onClick={handleNewCustomer}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
           >
             <i className="ri-user-add-line mr-2"></i>
-            Nuevo Cliente
+            New Customer
           </button>
         </div>
 
         {/* Filters and Export */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -412,8 +420,8 @@ export default function CustomersPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por nombre o documento..."
+                className="block w-full pl-10 pr-3 py-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] text-sm text-gray-800 placeholder:text-gray-500"
+                placeholder="Search by name or document..."
               />
             </div>
           </div>
@@ -421,62 +429,64 @@ export default function CustomersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+              className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] text-sm pr-8 text-gray-800"
             >
-              <option value="all">Todos los Estados</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-              <option value="blocked">Bloqueados</option>
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="blocked">Blocked</option>
             </select>
           </div>
           <div className="flex space-x-2">
-            <button
+            <button 
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg border border-[#d6cfbf] bg-[#f7f0df] text-[#2f3e1e] hover:bg-[#ede3cb] transition-colors whitespace-nowrap"
             >
-              <i className="ri-file-pdf-line mr-2"></i>PDF
+              <i className="ri-file-pdf-line mr-2"></i>
+              PDF
             </button>
-            <button
+            <button 
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg bg-[#3f5d2a] text-white hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm"
             >
-              <i className="ri-file-excel-line mr-2"></i>Excel
+              <i className="ri-file-excel-line mr-2"></i>
+              Excel
             </button>
           </div>
         </div>
 
-        {/* Customers Table */}
         {loading && (
-          <div className="mb-2 text-sm text-gray-500">Cargando clientes...</div>
+          <div className="mb-2 text-sm text-gray-500">Loading customers...</div>
         )}
+
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#ede7d7]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documento
+                    Document
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contacto
+                    Contact
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vendedor
+                    Sales Rep
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Límite Crédito
+                    Credit Limit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo Actual
+                    Current Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -484,65 +494,66 @@ export default function CustomersPage() {
                 {filteredCustomers.map((customer) => {
                   const rep = salesReps.find((r) => r.id === customer.salesRepId);
                   return (
-                  <tr key={customer.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                        <div className="text-sm text-gray-500">{customer.address}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {customer.document}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {customer.contactName || customer.phone}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {customer.contactPhone || ''}{customer.contactPhone && customer.contactEmail ? ' / ' : ''}{customer.contactEmail || customer.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {rep ? rep.name : '—'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${customer.creditLimit.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD${customer.currentBalance.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(customer.status)}`}>
-                        {getCustomerStatusName(customer.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleEditCustomer(customer)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar cliente"
-                        >
-                          <i className="ri-edit-line"></i>
-                        </button>
-                        <button 
-                          onClick={() => handleViewCustomer(customer)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Ver detalles"
-                        >
-                          <i className="ri-eye-line"></i>
-                        </button>
-                        <button 
-                          onClick={() => handleCustomerStatement(customer)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Estado de cuenta"
-                        >
-                          <i className="ri-file-list-line"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )})}
+                    <tr key={customer.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                          <div className="text-sm text-gray-500">{customer.address}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {customer.document}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {customer.contactName || customer.phone}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {customer.contactPhone || ''}{customer.contactPhone && customer.contactEmail ? ' / ' : ''}{customer.contactEmail || customer.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {rep ? rep.name : '—'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        RD${customer.creditLimit.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        RD${customer.currentBalance.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(customer.status)}`}>
+                          {getCustomerStatusName(customer.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => handleEditCustomer(customer)}
+                            className="text-[#2f3e1e] hover:text-[#1b250f]"
+                            title="Edit customer"
+                          >
+                            <i className="ri-edit-line"></i>
+                          </button>
+                          <button 
+                            onClick={() => handleViewCustomer(customer)}
+                            className="text-[#4c5535] hover:text-[#2f3e1e]"
+                            title="View details"
+                          >
+                            <i className="ri-eye-line"></i>
+                          </button>
+                          <button 
+                            onClick={() => handleCustomerStatement(customer)}
+                            className="text-[#6b4a2b] hover:text-[#4c2f17]"
+                            title="Account statement"
+                          >
+                            <i className="ri-file-list-line"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -554,7 +565,7 @@ export default function CustomersPage() {
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">
-                  {selectedCustomer ? 'Editar Cliente' : 'Nuevo Cliente'}
+                  {selectedCustomer ? 'Edit Customer' : 'New Customer'}
                 </h3>
                 <button
                   onClick={() => {
@@ -566,26 +577,25 @@ export default function CustomersPage() {
                   <i className="ri-close-line"></i>
                 </button>
               </div>
-              
+
               <form onSubmit={handleSaveCustomer} ref={formRef} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre/Razón Social
+                      Name / Business Name
                     </label>
                     <input
                       type="text"
                       required
                       name="name"
                       defaultValue={selectedCustomer?.name || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nombre del cliente"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                      placeholder="Customer name"
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Documento
+                      Document
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       <select
@@ -595,13 +605,13 @@ export default function CustomersPage() {
                           setSelectedDocType(e.target.value);
                           setDocumentValue(formatDocument(documentValue.replace(/\D/g, ''), e.target.value));
                         }}
-                        className="col-span-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                        className="col-span-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                       >
-                        <option value="">Tipo</option>
+                        <option value="">Type</option>
                         <option value="rnc">RNC</option>
-                        <option value="cedula">Cédula</option>
-                        <option value="passport">Pasaporte</option>
-                        <option value="other">Otro</option>
+                        <option value="cedula">ID</option>
+                        <option value="passport">Passport</option>
+                        <option value="other">Other</option>
                       </select>
                       <div className="col-span-2">
                         <input
@@ -610,18 +620,24 @@ export default function CustomersPage() {
                           name="document"
                           value={documentValue}
                           onChange={(e) => setDocumentValue(formatDocument(e.target.value, selectedDocType))}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder={selectedDocType === 'rnc' ? '1-01-12345-6' : selectedDocType === 'cedula' ? '000-0000000-0' : 'Documento'}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                          placeholder={
+                            selectedDocType === 'rnc'
+                              ? '1-01-12345-6'
+                              : selectedDocType === 'cedula'
+                                ? '000-0000000-0'
+                                : 'Document number'
+                          }
                         />
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono
+                      Phone
                     </label>
                     <input
                       type="tel"
@@ -629,11 +645,11 @@ export default function CustomersPage() {
                       name="phone"
                       value={phoneValue}
                       onChange={(e) => setPhoneValue(formatPhone(e.target.value))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                       placeholder="809-000-0000"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
@@ -643,92 +659,93 @@ export default function CustomersPage() {
                       required
                       name="email"
                       defaultValue={selectedCustomer?.email || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="cliente@email.com"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                      placeholder="client@email.com"
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Dirección
+                    Address
                   </label>
                   <textarea
                     rows={2}
                     name="address"
                     defaultValue={selectedCustomer?.address || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Dirección completa del cliente"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                    placeholder="Full customer address"
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Persona de contacto
+                      Contact person
                     </label>
                     <input
                       type="text"
                       name="contactName"
                       defaultValue={(selectedCustomer as any)?.contactName || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nombre de la persona de contacto"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                      placeholder="Contact name"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Teléfono contacto
+                      Contact phone
                     </label>
                     <input
                       type="tel"
                       name="contactPhone"
                       value={contactPhoneValue}
                       onChange={(e) => setContactPhoneValue(formatPhone(e.target.value))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                       placeholder="809-000-0000"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email contacto
+                      Contact email
                     </label>
                     <input
                       type="email"
                       name="contactEmail"
                       defaultValue={(selectedCustomer as any)?.contactEmail || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="correo@empresa.com"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                      placeholder="contact@company.com"
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Límite de Crédito
+                      Credit limit
                     </label>
                     <input
-                      type="number" min="0"
+                      type="number"
+                      min="0"
                       step="0.01"
                       name="creditLimit"
                       defaultValue={selectedCustomer?.creditLimit || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                       placeholder="0.00"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
+                      Status
                     </label>
-                    <select 
+                    <select
                       name="status"
                       defaultValue={selectedCustomer?.status || 'active'}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
-                      <option value="blocked">Bloqueado</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="blocked">Blocked</option>
                     </select>
                   </div>
                 </div>
@@ -736,15 +753,15 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Cliente
+                      Customer type
                     </label>
                     <select
                       name="customerType"
                       defaultValue={(selectedCustomer as any)?.customerType || ''}
                       onChange={handleCustomerTypeSelectChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">No especificado</option>
+                      <option value="">Not specified</option>
                       {customerTypes.map((t: any) => (
                         <option key={t.id} value={t.id}>
                           {t.name}
@@ -754,17 +771,18 @@ export default function CustomersPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Condición de Pago
+                      Payment terms
                     </label>
                     <select
                       name="paymentTermId"
                       defaultValue={(selectedCustomer as any)?.paymentTermId || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">No especificada</option>
+                      <option value="">Not specified</option>
                       {paymentTerms.map((term) => (
                         <option key={term.id} value={term.id}>
-                          {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                          {term.name}
+                          {typeof term.days === 'number' ? ` (${term.days} days)` : ''}
                         </option>
                       ))}
                     </select>
@@ -774,76 +792,78 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Factura
+                      Invoice type
                     </label>
                     <select
                       name="invoiceType"
                       defaultValue={(selectedCustomer as any)?.invoiceType || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">No especificado</option>
-                      <option value="credit">Crédito</option>
-                      <option value="cash">Contado</option>
+                      <option value="">Not specified</option>
+                      <option value="credit">Credit</option>
+                      <option value="cash">Cash</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de NCF por defecto
+                      Default NCF type
                     </label>
                     <select
                       name="ncfType"
                       defaultValue={(selectedCustomer as any)?.ncfType || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">No especificado</option>
-                      <option value="consumo">Consumidor final</option>
-                      <option value="credito_fiscal">Crédito fiscal</option>
-                      <option value="gubernamental">Gubernamental</option>
-                      <option value="especial">Régimen especial</option>
-                      <option value="exportacion">Exportación</option>
+                      <option value="">Not specified</option>
+                      <option value="consumo">Final consumer</option>
+                      <option value="credito_fiscal">Tax credit</option>
+                      <option value="gubernamental">Government</option>
+                      <option value="especial">Special regime</option>
+                      <option value="exportacion">Export</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Vendedor asignado (opcional)
+                    Assigned sales rep (optional)
                   </label>
                   <select
                     name="salesRepId"
                     defaultValue={(selectedCustomer as any)?.salesRepId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                   >
-                    <option value="">Sin vendedor asignado</option>
+                    <option value="">No sales rep assigned</option>
                     {salesReps.map((rep) => (
-                      <option key={rep.id} value={rep.id}>{rep.name}</option>
+                      <option key={rep.id} value={rep.id}>
+                        {rep.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre del vendedor (texto opcional)
+                    Salesperson note (optional)
                   </label>
                   <input
                     type="text"
                     name="salesperson"
                     defaultValue={(selectedCustomer as any)?.salesperson || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Por ejemplo, para comentarios internos"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                    placeholder="Internal note for the sales team"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta por Cobrar (opcional)
+                    Accounts receivable account (optional)
                   </label>
                   <select
                     name="arAccountId"
                     defaultValue={(selectedCustomer as any)?.arAccountId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                   >
-                    <option value="">Usar cuenta por defecto</option>
+                    <option value="">Use default account</option>
                     {receivableAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -851,20 +871,20 @@ export default function CustomersPage() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Si no seleccionas una cuenta, se usará la cuenta por cobrar configurada por defecto.
+                    If you do not select an account, the default A/R account will be used.
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Anticipos de Cliente (opcional)
+                    Customer advance account (optional)
                   </label>
                   <select
                     name="advanceAccountId"
                     defaultValue={selectedCustomer?.advanceAccountId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                   >
-                    <option value="">Sin cuenta de anticipos específica</option>
+                    <option value="">No specific advance account</option>
                     {advanceAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -872,26 +892,26 @@ export default function CustomersPage() {
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Si no seleccionas una cuenta, los anticipos del cliente usarán solo la configuración global o generarán alertas al registrar el anticipo.
+                    If you do not select one, advances will follow the global configuration.
                   </p>
                 </div>
                 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0 pt-4">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCustomerModal(false);
                       setSelectedCustomer(null);
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 border border-[#d6cfbf] text-[#2f3e1e] py-2 rounded-lg hover:bg-[#f7f0df] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#243015] transition-colors whitespace-nowrap"
                   >
-                    {selectedCustomer ? 'Actualizar' : 'Crear'} Cliente
+                    {selectedCustomer ? 'Update' : 'Create'} Customer
                   </button>
                 </div>
               </form>
@@ -899,12 +919,11 @@ export default function CustomersPage() {
           </div>
         )}
 
-        {/* Customer Details Modal */}
         {showCustomerDetails && selectedCustomer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#e6dec8]">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold">Detalles del Cliente</h3>
+                <h3 className="text-lg font-semibold text-[#1e2814]">Customer Details</h3>
                 <button
                   onClick={() => {
                     setShowCustomerDetails(false);
@@ -915,77 +934,86 @@ export default function CustomersPage() {
                   <i className="ri-close-line"></i>
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Nombre/Razón Social</label>
+                    <label className="block text-sm font-medium text-gray-500">Name / Business Name</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedCustomer.name}</p>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">RNC/Cédula</label>
+                    <label className="block text-sm font-medium text-gray-500">Document (RNC / ID)</label>
                     <p className="text-gray-900">{selectedCustomer.document}</p>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Teléfono</label>
+                    <label className="block text-sm font-medium text-gray-500">Phone</label>
                     <p className="text-gray-900">{selectedCustomer.phone}</p>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Email</label>
                     <p className="text-gray-900">{selectedCustomer.email}</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Dirección</label>
+                    <label className="block text-sm font-medium text-gray-500">Address</label>
                     <p className="text-gray-900">{selectedCustomer.address}</p>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Límite de Crédito</label>
-                    <p className="text-lg font-semibold text-blue-600">RD${selectedCustomer.creditLimit.toLocaleString()}</p>
+                    <label className="block text-sm font-medium text-gray-500">Credit limit</label>
+                    <p className="text-lg font-semibold text-[#2f3e1e]">
+                      RD${selectedCustomer.creditLimit.toLocaleString()}
+                    </p>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Saldo Actual</label>
-                    <p className="text-lg font-semibold text-red-600">RD${selectedCustomer.currentBalance.toLocaleString()}</p>
+                    <label className="block text-sm font-medium text-gray-500">Current balance</label>
+                    <p className="text-lg font-semibold text-[#6b4a2b]">
+                      RD${selectedCustomer.currentBalance.toLocaleString()}
+                    </p>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Estado</label>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(selectedCustomer.status)}`}>
+                    <label className="block text-sm font-medium text-gray-500">Status</label>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(
+                        selectedCustomer.status,
+                      )}`}
+                    >
                       {getCustomerStatusName(selectedCustomer.status)}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <div className="flex space-x-3 mt-6">
+
+              <div className="flex flex-col md:flex-row gap-3 mt-8">
                 <button
                   onClick={() => {
                     setShowCustomerDetails(false);
                     setShowCustomerModal(true);
                   }}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#2f3e1e] text-white hover:bg-[#243015] transition-colors"
                 >
                   <i className="ri-edit-line mr-2"></i>
-                  Editar Cliente
+                  Edit Customer
                 </button>
                 <button
                   onClick={() => handleCustomerStatement(selectedCustomer)}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg border border-[#d6cfbf] bg-[#f7f0df] text-[#2f3e1e] hover:bg-[#ede3cb] transition-colors"
                 >
                   <i className="ri-file-list-line mr-2"></i>
-                  Estado de Cuenta
+                  Account Statement
                 </button>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

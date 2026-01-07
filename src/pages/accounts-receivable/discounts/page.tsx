@@ -40,8 +40,19 @@ export default function DiscountsPage() {
   const [notePercent, setNotePercent] = useState<number>(0);
   const [noteOriginAccountId, setNoteOriginAccountId] = useState<string>('');
   const [noteDiscountsAccountId, setNoteDiscountsAccountId] = useState<string>('');
+  const [noteConcept, setNoteConcept] = useState<string>('');
 
   const incomeAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'income');
+
+  const resetDiscountForm = () => {
+    setNoteCustomerId('');
+    setNoteInvoiceId('');
+    setNoteAmount(0);
+    setNotePercent(0);
+    setNoteOriginAccountId('');
+    setNoteDiscountsAccountId('');
+    setNoteConcept('');
+  };
 
   const loadData = async () => {
     if (!user?.id) return;
@@ -344,6 +355,7 @@ export default function DiscountsPage() {
       await loadData();
       alert('Descuento registrado exitosamente');
       setShowModal(false);
+      resetDiscountForm();
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('[Discounts] Error al registrar descuento', error);
@@ -355,49 +367,49 @@ export default function DiscountsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="min-h-screen p-6 bg-[#f7f3e8]">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Descuentos en Ventas (CxC)</h1>
-            <nav className="flex space-x-2 text-sm text-gray-600 mt-2">
-              <Link to="/accounts-receivable" className="hover:text-blue-600">Cuentas por Cobrar</Link>
+            <h1 className="text-2xl font-bold text-[#2f3e1e]">Sales Discounts (A/R)</h1>
+            <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
+              <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
-              <span>Descuentos</span>
+              <span>Discounts</span>
             </nav>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Nuevo Descuento
+            New Discount
           </button>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Descuentos</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  RD${totalAmount.toLocaleString()}
+                <p className="text-sm font-medium text-[#6b5c3b]">Total Discounts</p>
+                <p className="text-2xl font-semibold text-[#2f3e1e]">
+                  {`RD$${totalAmount.toLocaleString()}`}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-percent-line text-2xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
+                <i className="ri-percent-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <p className="text-sm font-medium text-gray-600">Cantidad de Descuentos</p>
-            <p className="text-2xl font-bold text-gray-900">{filteredDiscounts.length}</p>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+            <p className="text-sm font-medium text-[#6b5c3b]">Discount Count</p>
+            <p className="text-2xl font-semibold text-[#2f3e1e]">{filteredDiscounts.length}</p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <p className="text-sm font-medium text-gray-600">Clientes impactados</p>
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+            <p className="text-sm font-medium text-[#6b5c3b]">Customers impacted</p>
+            <p className="text-2xl font-semibold text-[#2f3e1e]">
               {new Set(filteredDiscounts.map((d) => d.customerName).filter(Boolean)).size}
             </p>
           </div>
@@ -408,14 +420,14 @@ export default function DiscountsPage() {
           <div className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i className="ri-search-line text-gray-400"></i>
+                <i className="ri-search-line text-[#9b8a64]"></i>
               </div>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por cliente, número de documento, factura o concepto..."
+                className="block w-full pl-10 pr-3 py-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] text-sm placeholder:text-[#9b8a64]"
+                placeholder="Search by customer, document number, invoice, or concept..."
               />
             </div>
           </div>
@@ -424,29 +436,29 @@ export default function DiscountsPage() {
         {/* Discounts Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {loading && (
-            <div className="px-6 pt-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Documento
+                    Document
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Factura
+                    Invoice
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Concepto
+                    Concept
                   </th>
                 </tr>
               </thead>
@@ -476,7 +488,7 @@ export default function DiscountsPage() {
                 {filteredDiscounts.length === 0 && !loading && (
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-sm text-gray-500 text-center">
-                      No hay descuentos registrados.
+                      No discounts have been registered yet.
                     </td>
                   </tr>
                 )}
@@ -490,7 +502,7 @@ export default function DiscountsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Nuevo Descuento en Ventas</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">New Sales Discount</h3>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -502,8 +514,8 @@ export default function DiscountsPage() {
               <form onSubmit={handleSaveDiscount} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cliente
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Customer
                     </label>
                     <select
                       required
@@ -515,10 +527,11 @@ export default function DiscountsPage() {
                         setNoteInvoiceId('');
                         setNoteAmount(0);
                         setNotePercent(0);
+                        setNoteConcept('');
                       }}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="">Seleccionar cliente</option>
+                      <option value="">Select a customer</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -526,8 +539,8 @@ export default function DiscountsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Date
                     </label>
                     <input
                       type="date"
@@ -540,8 +553,8 @@ export default function DiscountsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      % de descuento (sobre saldo pendiente)
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Discount % (over pending balance)
                     </label>
                     <input
                       type="number"
@@ -550,11 +563,11 @@ export default function DiscountsPage() {
                       step="0.01"
                       value={notePercent || ''}
                       onChange={handlePercentChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                       placeholder="0.00"
                     />
-                    <label className="block text-sm font-medium text-gray-700 mb-2 mt-3">
-                      Monto
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2 mt-3">
+                      Amount
                     </label>
                     <input
                       type="number"
@@ -564,30 +577,28 @@ export default function DiscountsPage() {
                       required
                       value={noteAmount || ''}
                       onChange={(e) => setNoteAmount(Number(e.target.value || 0))}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                       placeholder="0.00"
                     />
                     {selectedInvoiceForDiscount && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Saldo pendiente: RD${selectedInvoicePending.toLocaleString()} · Nuevo total factura:
-                        {' '}
-                        RD${previewNewInvoiceTotal.toLocaleString()}
+                      <p className="mt-1 text-xs text-[#6b5c3b]">
+                        Pending balance: RD${selectedInvoicePending.toLocaleString()} · New invoice total: RD${previewNewInvoiceTotal.toLocaleString()}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Related invoice
                     </label>
                     <select
                       name="invoice_id"
                       required
                       value={noteInvoiceId}
                       onChange={handleInvoiceChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="">Seleccionar factura</option>
+                      <option value="">Select an invoice</option>
                       {invoices
                         .filter((inv) => (!noteCustomerId || inv.customerId === noteCustomerId) && (Number(inv.pendingAmount) || 0) > 0)
                         .map((inv) => (
@@ -595,83 +606,81 @@ export default function DiscountsPage() {
                         ))}
                     </select>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de ingresos original
-                  </label>
-                  <select
-                    name="origin_account_id"
-                    required
-                    value={noteOriginAccountId}
-                    onChange={(e) => setNoteOriginAccountId(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                  >
-                    <option value="">Seleccionar cuenta de ingresos original</option>
-                    {incomeAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Original income account
+                    </label>
+                    <select
+                      name="origin_account_id"
+                      required
+                      value={noteOriginAccountId}
+                      onChange={(e) => setNoteOriginAccountId(e.target.value)}
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
+                    >
+                      <option value="">Select an original income account</option>
+                      {incomeAccounts.map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.code ? `${acc.code} · ${acc.name}` : acc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta "Descuentos en ventas"
-                  </label>
-                  <select
-                    name="discounts_account_id"
-                    required
-                    value={noteDiscountsAccountId}
-                    onChange={(e) => setNoteDiscountsAccountId(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                  >
-                    <option value="">Seleccionar cuenta de ingresos para descuentos</option>
-                    {incomeAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      “Sales discounts” account
+                    </label>
+                    <select
+                      name="discounts_account_id"
+                      required
+                      value={noteDiscountsAccountId}
+                      onChange={(e) => setNoteDiscountsAccountId(e.target.value)}
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
+                    >
+                      <option value="">Select the discounts account</option>
+                      {accounts
+                        .filter((acc) => acc.allowPosting)
+                        .map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.code ? `${acc.code} · ${acc.name}` : acc.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Concepto
-                  </label>
-                  <textarea
-                    name="concept"
-                    rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción detallada del descuento..."
-                    required
-                  />
-                </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Concept
+                    </label>
+                    <textarea
+                      name="concept"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                      rows={3}
+                      placeholder="Describe the discount details..."
+                      value={noteConcept}
+                      onChange={(e) => setNoteConcept(e.target.value)}
+                    />
+                  </div>
 
-                <div className="flex space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowModal(false);
-                      setNoteOriginAccountId('');
-                      setNoteDiscountsAccountId('');
-                      setNoteInvoiceId('');
-                      setNoteCustomerId('');
-                      setNoteAmount(0);
-                      setNotePercent(0);
-                    }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                  >
-                    Registrar Descuento
-                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        resetDiscountForm();
+                      }}
+                      className="flex-1 bg-[#f3ecda] text-[#6b5c3b] py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors whitespace-nowrap"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap"
+                    >
+                      Save Discount
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

@@ -9,6 +9,16 @@ import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 // Estilos CSS para mejorar la impresiÃ³n
 const printStyles = `
   @media print {
@@ -515,7 +525,7 @@ const GeneralJournalPage = () => {
           cuenta: `${line.chart_accounts.code} - ${line.chart_accounts.name}`,
           debito: line.debit_amount || 0,
           credito: line.credit_amount || 0,
-          estado: entry.status === 'posted' ? 'Publicado' : entry.status === 'draft' ? 'Borrador' : 'Anulado',
+          estado: entry.status === 'posted' ? 'Posted' : entry.status === 'draft' ? 'Draft' : 'Reversed',
         }));
       });
 
@@ -530,16 +540,16 @@ const GeneralJournalPage = () => {
         'ContaBi';
 
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Diario General');
+      const ws = wb.addWorksheet('General Journal');
 
       const headers = [
-        { title: 'Fecha', width: 12 },
-        { title: 'Número Asiento', width: 16 },
-        { title: 'Descripción', width: 40 },
-        { title: 'Cuenta', width: 45 },
-        { title: 'Débito', width: 14 },
-        { title: 'Crédito', width: 14 },
-        { title: 'Estado', width: 14 },
+        { title: 'Date', width: 12 },
+        { title: 'Entry Number', width: 16 },
+        { title: 'Description', width: 40 },
+        { title: 'Account', width: 45 },
+        { title: 'Debit', width: 14 },
+        { title: 'Credit', width: 14 },
+        { title: 'Status', width: 14 },
       ];
 
       let currentRow = 1;
@@ -554,14 +564,14 @@ const GeneralJournalPage = () => {
 
       ws.mergeCells(currentRow, 1, currentRow, totalColumns);
       const titleCell = ws.getCell(currentRow, 1);
-      titleCell.value = 'Diario General';
+      titleCell.value = 'General Journal';
       titleCell.font = { bold: true, size: 16 };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       currentRow++;
 
       ws.mergeCells(currentRow, 1, currentRow, totalColumns);
       const dateCell = ws.getCell(currentRow, 1);
-      dateCell.value = `Generado: ${formatDate(new Date())}`;
+      dateCell.value = `Generated: ${formatDate(new Date())}`;
       dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
       currentRow++;
       currentRow++;
@@ -594,10 +604,10 @@ const GeneralJournalPage = () => {
 
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `diario_general_${new Date().toISOString().split('T')[0]}.xlsx`);
+      saveAs(blob, `general_journal_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
-      console.error('Error al exportar a Excel:', error);
-      alert('Error al generar el archivo Excel. Por favor, intente nuevamente.');
+      console.error('Error exporting to Excel:', error);
+      alert('Error generating Excel file. Please try again.');
     }
   };
 
@@ -610,37 +620,55 @@ const GeneralJournalPage = () => {
     if (!popup) return;
 
     const rowsHtml = sortedEntries
-      .map(
-        (entry) => {
-          const statusLabel = entry.status === 'posted' ? 'Contabilizado' : 
-                              entry.status === 'draft' ? 'Borrador' : 
-                              entry.status === 'reversed' ? 'Anulado' : entry.status;
-          const statusColor = entry.status === 'posted' ? '#166534' : 
-                              entry.status === 'draft' ? '#854d0e' : 
-                              entry.status === 'reversed' ? '#dc2626' : '#374151';
-          const statusBg = entry.status === 'posted' ? '#dcfce7' : 
-                           entry.status === 'draft' ? '#fef9c3' : 
-                           entry.status === 'reversed' ? '#fee2e2' : '#f3f4f6';
-          return `
-        <tr>
-          <td>${entry.entry_number}</td>
-          <td>${formatDate(entry.entry_date)}</td>
-          <td>${getEntryDocumentType(entry)}</td>
-          <td>${entry.supplier_name || entry.vendor_name || entry.payee_name || entry.counterparty || ''}</td>
-          <td>${entry.description || ''}</td>
-          <td style="text-align:right;">${formatAmount(entry.total_debit)}</td>
-          <td style="text-align:right;">${formatAmount(entry.total_credit)}</td>
-          <td style="text-align:center;"><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:10px;font-size:11px;">${statusLabel}</span></td>
-        </tr>
-      `;
-        },
-      )
+      .map((entry) => {
+        const statusLabel =
+          entry.status === 'posted'
+            ? 'Posted'
+            : entry.status === 'draft'
+            ? 'Draft'
+            : entry.status === 'reversed'
+            ? 'Reversed'
+            : entry.status;
+        const statusColor =
+          entry.status === 'posted'
+            ? '#166534'
+            : entry.status === 'draft'
+            ? '#854d0e'
+            : entry.status === 'reversed'
+            ? '#dc2626'
+            : '#374151';
+        const statusBg =
+          entry.status === 'posted'
+            ? '#dcfce7'
+            : entry.status === 'draft'
+            ? '#fef9c3'
+            : entry.status === 'reversed'
+            ? '#fee2e2'
+            : '#f3f4f6';
+
+        return `
+          <tr>
+            <td>${entry.entry_number}</td>
+            <td>${formatDate(entry.entry_date)}</td>
+            <td>${getEntryDocumentType(entry)}</td>
+            <td>${entry.supplier_name || entry.vendor_name || entry.payee_name || entry.counterparty || ''}</td>
+            <td>${entry.description || ''}</td>
+            <td style="text-align:right;">${formatAmount(entry.total_debit)}</td>
+            <td style="text-align:right;">${formatAmount(entry.total_credit)}</td>
+            <td style="text-align:center;">
+              <span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:10px;font-size:11px;">
+                ${statusLabel}
+              </span>
+            </td>
+          </tr>
+        `;
+      })
       .join('');
 
     const html = `
       <html>
         <head>
-          <title>Diario General - Vista previa</title>
+          <title>General Journal - Preview</title>
           <style>
             body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 16px; }
             h1 { margin-bottom: 4px; }
@@ -652,19 +680,19 @@ const GeneralJournalPage = () => {
           </style>
         </head>
         <body>
-          <h1>Diario General</h1>
-          <h2>Totales: Débito RD$${formatAmount(totalDebitsFiltered)} | Crédito RD$${formatAmount(totalCreditsFiltered)}</h2>
+          <h1>General Journal</h1>
+          <h2>Totals: Debit RD$${formatAmount(totalDebitsFiltered)} | Credit RD$${formatAmount(totalCreditsFiltered)}</h2>
           <table>
             <thead>
               <tr>
-                <th>Número</th>
-                <th>Fecha</th>
-                <th>Documento</th>
-                <th>Proveedor</th>
-                <th>Descripción</th>
-                <th>Débito</th>
-                <th>Crédito</th>
-                <th>Estado</th>
+                <th>Number</th>
+                <th>Date</th>
+                <th>Document</th>
+                <th>Vendor</th>
+                <th>Description</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
@@ -672,7 +700,7 @@ const GeneralJournalPage = () => {
             </tbody>
             <tfoot>
               <tr>
-                <td colspan="5" style="text-align:right;">Totales:</td>
+                <td colspan="5" style="text-align:right;">Totals:</td>
                 <td style="text-align:right;">${formatAmount(totalDebitsFiltered)}</td>
                 <td style="text-align:right;">${formatAmount(totalCreditsFiltered)}</td>
                 <td></td>
@@ -717,7 +745,9 @@ const GeneralJournalPage = () => {
 
   const fiscalYears = Array.from(new Set(periods.map((p) => p.fiscal_year))).sort((a, b) => Number(b) - Number(a));
 
-  const visiblePeriods = periods.filter((p) => !selectedFiscalYear || p.fiscal_year === selectedFiscalYear);
+  const visiblePeriods = periods.filter((p) =>
+    !selectedFiscalYear || p.fiscal_year === selectedFiscalYear
+  );
 
   const documentTypes = Array.from(
     new Set(entries.map((entry) => getEntryDocumentType(entry))),
@@ -781,7 +811,7 @@ const GeneralJournalPage = () => {
     if (!printWindow) return;
 
     const doc = printWindow.document;
-    const companyName = companyInfo?.name || 'Diario General';
+    const companyName = companyInfo?.name || 'General Journal';
     const entryDate = formatDate(entry.entry_date);
 
     const linesHtml = (entry.journal_entry_lines || [])
@@ -823,12 +853,12 @@ const GeneralJournalPage = () => {
         <body>
           <div style="text-align:center; margin-bottom:16px;">
             <div style="font-size:16px; font-weight:bold;">${companyName}</div>
-            <div style="font-size:14px; font-weight:600; margin-top:4px;">Diario General - Asiento</div>
+            <div style="font-size:14px; font-weight:600; margin-top:4px;">General Journal - Entry</div>
           </div>
 
           <div class="header-row">
             <div>
-              <div class="label">Número de asiento</div>
+              <div class="label">Entry Number</div>
               <div class="value">${entry.entry_number}</div>
             </div>
             <div>
@@ -836,24 +866,24 @@ const GeneralJournalPage = () => {
               <div class="value">${entryDate}</div>
             </div>
             <div>
-              <div class="label">Estado</div>
-              <div class="value">${entry.status === 'posted' ? 'Contabilizado' : entry.status === 'draft' ? 'Borrador' : 'Anulado'}</div>
+              <div class="label">Status</div>
+              <div class="value">${entry.status === 'posted' ? 'Posted' : entry.status === 'draft' ? 'Draft' : 'Reversed'}</div>
             </div>
           </div>
 
           <div style="margin-top:8px;">
-            <div class="label">Descripción</div>
+            <div class="label">Description</div>
             <div class="value">${entry.description || ''}</div>
           </div>
 
-          <h2>Detalle de líneas</h2>
+          <h2>Line Details</h2>
           <table>
             <thead>
               <tr>
-                <th>Cuenta</th>
-                <th style="text-align:right;">Débito</th>
-                <th style="text-align:right;">Crédito</th>
-                <th>Descripción</th>
+                <th>Account</th>
+                <th style="text-align:right;">Debit</th>
+                <th style="text-align:right;">Credit</th>
+                <th>Description</th>
               </tr>
             </thead>
           <tbody>
@@ -862,8 +892,8 @@ const GeneralJournalPage = () => {
           </table>
 
           <div style="margin-top:12px; text-align:right; font-weight:600;">
-            <div>Total Débito: RD$ ${formatAmount(entry.total_debit)}</div>
-            <div>Total Crédito: RD$ ${formatAmount(entry.total_credit)}</div>
+            <div>Total Debit: RD$ ${formatAmount(entry.total_debit)}</div>
+            <div>Total Credit: RD$ ${formatAmount(entry.total_credit)}</div>
           </div>
         </body>
       </html>
@@ -876,7 +906,10 @@ const GeneralJournalPage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div
+          className="animate-spin rounded-full h-32 w-32 border-b-2"
+          style={{ borderColor: theme.primary }}
+        ></div>
       </div>
     );
   }
@@ -897,9 +930,9 @@ const GeneralJournalPage = () => {
       {companyNameForPrint && (
         <div className="hidden print:block print-title">{companyNameForPrint}</div>
       )}
-      <div className="hidden print:block print-title">DIARIO GENERAL</div>
+      <div className="hidden print:block print-title">GENERAL JOURNAL</div>
       <div className="hidden print:block print-date">
-        Generado el {formatDate(new Date())} {(dateFrom || dateTo) && ` - Período: ${dateFrom ? formatDate(dateFrom) : 'Inicio'} a ${dateTo ? formatDate(dateTo) : 'Fin'}`}
+        Generated on {formatDate(new Date())} {(dateFrom || dateTo) && ` - Period: ${dateFrom ? formatDate(dateFrom) : 'Start'} to ${dateTo ? formatDate(dateTo) : 'End'}`}
       </div>
 
       {/* Header con botón de regreso */}
@@ -910,27 +943,33 @@ const GeneralJournalPage = () => {
             className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <i className="ri-arrow-left-line"></i>
-            Volver a Contabilidad
+            Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Diario General</h1>
-            <p className="text-gray-600">Gestión de asientos contables</p>
+            <h1 className="text-2xl font-bold text-gray-900">General Journal</h1>
+            <p className="text-gray-600">Manage journal entries</p>
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleOpenPreview}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
-                title="Vista previa / Exportar"
+                className="px-4 py-2 text-white rounded-lg flex items-center shadow-sm"
+                style={{ backgroundColor: theme.accent }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.accent; }}
+                title="Preview / Export"
               >
                 <i className="ri-eye-line mr-2"></i>
-                Vista previa
+                Preview
               </button>
 
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+                className="px-4 py-2 text-white rounded-lg flex items-center shadow-sm"
+                style={{ backgroundColor: theme.primary }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
               >
                 <i className="ri-save-line mr-2"></i>
-                Crear Asiento
+                Create Entry
               </button>
             </div>
           </div>
@@ -941,11 +980,11 @@ const GeneralJournalPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 print:hidden">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <i className="ri-file-list-3-line text-2xl text-blue-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-file-list-3-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Asientos</p>
+              <p className="text-sm font-medium text-gray-600">Total Entries</p>
               <p className="text-2xl font-bold text-gray-900">{nonReversedEntries.length}</p>
             </div>
           </div>
@@ -953,11 +992,11 @@ const GeneralJournalPage = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <i className="ri-arrow-up-line text-2xl text-green-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-arrow-up-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Débitos</p>
+              <p className="text-sm font-medium text-gray-600">Total Debits</p>
               <p className="text-2xl font-bold text-gray-900">
                 RD${formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_debit, 0))}
               </p>
@@ -967,11 +1006,11 @@ const GeneralJournalPage = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <i className="ri-arrow-down-line text-2xl text-red-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-arrow-down-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Créditos</p>
+              <p className="text-sm font-medium text-gray-600">Total Credits</p>
               <p className="text-2xl font-bold text-gray-900">
                 RD${formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_credit, 0))}
               </p>
@@ -981,11 +1020,11 @@ const GeneralJournalPage = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <i className="ri-calendar-line text-2xl text-purple-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-calendar-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Este Mes</p>
+              <p className="text-sm font-medium text-gray-600">This Month</p>
               <p className="text-2xl font-bold text-gray-900">
                 {nonReversedEntries.filter(entry => 
                   entry.entry_date.startsWith(new Date().toISOString().slice(0, 7))
@@ -1004,10 +1043,11 @@ const GeneralJournalPage = () => {
               <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               <input
                 type="text"
-                placeholder="Buscar asientos..."
+                placeholder="Search entries..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent"
+                style={{ borderColor: theme.softBorder }}
               />
             </div>
             <select
@@ -1016,10 +1056,11 @@ const GeneralJournalPage = () => {
                 setSelectedFiscalYear(e.target.value);
                 setSelectedPeriodId('');
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
-              title="Año fiscal (todos)"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent pr-8"
+              style={{ borderColor: theme.softBorder }}
+              title="Fiscal year (all)"
             >
-              <option value="">Año fiscal (todos)</option>
+              <option value="">Fiscal year (all)</option>
               {fiscalYears.map((year) => (
                 <option key={year} value={year}>
                   {year}
@@ -1029,10 +1070,11 @@ const GeneralJournalPage = () => {
             <select
               value={selectedPeriodId}
               onChange={(e) => handlePeriodChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
-              title="Período contable (todos)"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent pr-8"
+              style={{ borderColor: theme.softBorder }}
+              title="Accounting period (all)"
             >
-              <option value="">Período contable (todos)</option>
+              <option value="">Accounting period (all)</option>
               {visiblePeriods.map((period) => (
                 <option key={period.id} value={period.id}>
                   {period.name} ({formatDate(period.start_date)} - {formatDate(period.end_date)})
@@ -1042,22 +1084,25 @@ const GeneralJournalPage = () => {
             <DateInput
               value={dateFrom}
               onValueChange={(v) => setDateFrom(v)}
-              placeholder="Fecha desde"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Date from"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent"
+              style={{ borderColor: theme.softBorder }}
             />
             <DateInput
               value={dateTo}
               onValueChange={(v) => setDateTo(v)}
-              placeholder="Fecha hasta"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Date to"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent"
+              style={{ borderColor: theme.softBorder }}
             />
 
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent pr-8"
+              style={{ borderColor: theme.softBorder }}
             >
-              <option value="">Todas las cuentas</option>
+              <option value="">All accounts</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.code} - {account.name}
@@ -1067,9 +1112,10 @@ const GeneralJournalPage = () => {
             <select
               value={documentTypeFilter}
               onChange={(e) => setDocumentTypeFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent pr-8"
+              style={{ borderColor: theme.softBorder }}
             >
-              <option value="all">Todos los documentos</option>
+              <option value="all">All documents</option>
               {documentTypes.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -1079,12 +1125,13 @@ const GeneralJournalPage = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent pr-8"
+              style={{ borderColor: theme.softBorder }}
             >
-              <option value="all">Todos los estados</option>
-              <option value="draft">Borrador</option>
-              <option value="posted">Contabilizado</option>
-              <option value="reversed">Anulado</option>
+              <option value="all">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="posted">Posted</option>
+              <option value="reversed">Reversed</option>
             </select>
           </div>
 
@@ -1093,30 +1140,30 @@ const GeneralJournalPage = () => {
         {/* Journal Entries Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50" style={{ backgroundColor: theme.muted }}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Número
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Fecha
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Proveedor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Descripción
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Débito
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Crédito
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider print:hidden">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider print:hidden" style={{ color: theme.softText }}>
                   Acciones
                 </th>
               </tr>
@@ -1145,11 +1192,15 @@ const GeneralJournalPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       entry.status === 'posted'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'text-green-800'
                         : entry.status === 'draft'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                    }`}>
+                          ? 'text-yellow-800'
+                          : 'text-red-800'
+                    }`} style={entry.status === 'posted'
+                      ? { backgroundColor: theme.badgeBg }
+                      : entry.status === 'draft'
+                        ? { backgroundColor: theme.muted }
+                        : { backgroundColor: '#fee2e2' }}>
                       {entry.status === 'posted' ? 'Contabilizado' : 
                        entry.status === 'draft' ? 'Borrador' : 'Anulado'}
                     </span>
@@ -1157,7 +1208,8 @@ const GeneralJournalPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium print:hidden">
                     <button
                       onClick={() => setSelectedEntry(entry)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="mr-3"
+                      style={{ color: theme.primary }}
                       title="Ver detalles"
                     >
                       <i className="ri-eye-line"></i>

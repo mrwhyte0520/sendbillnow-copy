@@ -86,21 +86,21 @@ export default function PaymentsPage() {
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
-      case 'cash': return 'Efectivo';
-      case 'check': return 'Cheque';
-      case 'transfer': return 'Transferencia';
-      case 'card': return 'Tarjeta';
+      case 'cash': return 'Cash';
+      case 'check': return 'Check';
+      case 'transfer': return 'Transfer';
+      case 'card': return 'Card';
       default: return method;
     }
   };
 
   const getPaymentMethodColor = (method: string) => {
     switch (method) {
-      case 'cash': return 'bg-green-100 text-green-800';
-      case 'check': return 'bg-blue-100 text-blue-800';
-      case 'transfer': return 'bg-purple-100 text-purple-800';
-      case 'card': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'cash': return 'bg-[#e3edd3] text-[#2f3e1e]';
+      case 'check': return 'bg-[#f3ecda] text-[#6b5c3b]';
+      case 'transfer': return 'bg-[#e0f0e8] text-[#2f3e1e]';
+      case 'card': return 'bg-[#f6d6ce] text-[#7a2e1b]';
+      default: return 'bg-[#ede7d7] text-[#4c5535]';
     }
   };
 
@@ -339,10 +339,10 @@ export default function PaymentsPage() {
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
 
     doc.setFontSize(20);
-    doc.text('Reporte de Pagos Recibidos', 20, 30);
+    doc.text('Received Payments Report', 20, 30);
     
     doc.setFontSize(12);
-    doc.text(`Fecha de generación: ${formatDate(new Date())}`, 20, 45);
+    doc.text(`Generated on: ${formatDate(new Date())}`, 20, 45);
 
     const totalPayments = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
     const paymentsByMethod = filteredPayments.reduce((acc, payment) => {
@@ -351,16 +351,16 @@ export default function PaymentsPage() {
     }, {} as Record<string, number>);
 
     doc.setFontSize(14);
-    doc.text('Resumen de Pagos', 20, 60);
+    doc.text('Payment Summary', 20, 60);
 
     const summaryData = [
-      ['Concepto', 'Monto'],
-      ['Total Recibido', formatMoney(totalPayments)],
-      ['Número de Pagos', filteredPayments.length.toString()],
-      ['Efectivo', formatMoney(paymentsByMethod.cash || 0)],
-      ['Transferencias', formatMoney(paymentsByMethod.transfer || 0)],
-      ['Cheques', formatMoney(paymentsByMethod.check || 0)],
-      ['Tarjetas', formatMoney(paymentsByMethod.card || 0)]
+      ['Metric', 'Amount'],
+      ['Total Received', formatMoney(totalPayments)],
+      ['Payments Count', filteredPayments.length.toString()],
+      ['Cash', formatMoney(paymentsByMethod.cash || 0)],
+      ['Transfers', formatMoney(paymentsByMethod.transfer || 0)],
+      ['Checks', formatMoney(paymentsByMethod.check || 0)],
+      ['Cards', formatMoney(paymentsByMethod.card || 0)]
     ];
 
     (doc as any).autoTable({
@@ -372,7 +372,7 @@ export default function PaymentsPage() {
     });
 
     doc.setFontSize(14);
-    doc.text('Detalle de Pagos', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Payment Detail', 20, (doc as any).lastAutoTable.finalY + 20);
 
     const paymentData = filteredPayments.map(payment => [
       formatDate(payment.date),
@@ -387,15 +387,15 @@ export default function PaymentsPage() {
 
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Fecha', 'Cliente', 'Factura', 'Monto', 'Método', 'Referencia', 'ITBIS Retenido', 'ISR Retenido']],
+      head: [['Date', 'Customer', 'Invoice', 'Amount', 'Method', 'Reference', 'VAT Withheld', 'ISR Withheld']],
       body: paymentData,
       theme: 'striped',
       headStyles: { fillColor: [16, 185, 129] },
       styles: { fontSize: 9 }
     });
 
-    const filename = `pagos-recibidos-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Reporte de Pagos Recibidos', filename);
+    const filename = `received-payments-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Received Payments Report', filename);
   };
 
   const exportToExcel = async () => {
@@ -411,7 +411,7 @@ export default function PaymentsPage() {
     }));
 
     if (!rows.length) {
-      alert('No hay pagos para exportar con los filtros actuales.');
+      alert('There are no payments to export with the current filters.');
       return;
     }
 
@@ -430,16 +430,16 @@ export default function PaymentsPage() {
     ];
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Pagos', { views: [{ state: 'frozen', ySplit: 1 }] });
+    const ws = wb.addWorksheet('Payments', { views: [{ state: 'frozen', ySplit: 1 }] });
     ws.columns = [
-      { key: 'date', header: 'Fecha', width: 14 },
-      { key: 'customer', header: 'Cliente', width: 28 },
-      { key: 'invoice', header: 'Factura', width: 24 },
-      { key: 'amount', header: 'Monto', width: 16 },
-      { key: 'method', header: 'Método', width: 18 },
-      { key: 'reference', header: 'Referencia', width: 24 },
-      { key: 'itbisWithheld', header: 'ITBIS Retenido', width: 16 },
-      { key: 'isrWithheld', header: 'ISR Retenido', width: 16 },
+      { key: 'date', header: 'Date', width: 14 },
+      { key: 'customer', header: 'Customer', width: 28 },
+      { key: 'invoice', header: 'Invoice', width: 24 },
+      { key: 'amount', header: 'Amount', width: 16 },
+      { key: 'method', header: 'Method', width: 18 },
+      { key: 'reference', header: 'Reference', width: 24 },
+      { key: 'itbisWithheld', header: 'VAT Withheld', width: 16 },
+      { key: 'isrWithheld', header: 'ISR Withheld', width: 16 },
     ];
 
     const headerRow = ws.getRow(1);
@@ -999,20 +999,23 @@ export default function PaymentsPage() {
           .no-print { display: none !important; }
         }
       `}</style>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Pagos Recibidos</h1>
+      <div className="p-6 bg-[#f6f2e8] min-h-screen space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1e2814]">Received Payments</h1>
+            <p className="text-sm text-[#4c5535]">Track customer collections, filters, and exports from a single console.</p>
+          </div>
           <button 
             onClick={handleNewPayment}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
           >
             <i className="ri-money-dollar-circle-line mr-2"></i>
-            Registrar Pago
+            Record Payment
           </button>
         </div>
 
         {/* Filters and Export */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1022,8 +1025,8 @@ export default function PaymentsPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por cliente, factura o referencia..."
+                className="block w-full pl-10 pr-3 py-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] text-sm text-gray-800 placeholder:text-gray-500"
+                placeholder="Search by customer, invoice, or reference..."
               />
             </div>
           </div>
@@ -1032,25 +1035,25 @@ export default function PaymentsPage() {
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+              className="w-full p-3 border border-[#d6cfbf] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 bg-white text-gray-800"
             >
-              <option value="all">Todos los Métodos</option>
-              <option value="cash">Efectivo</option>
-              <option value="check">Cheque</option>
-              <option value="transfer">Transferencia</option>
-              <option value="card">Tarjeta</option>
+              <option value="all">All methods</option>
+              <option value="cash">Cash</option>
+              <option value="check">Check</option>
+              <option value="transfer">Transfer</option>
+              <option value="card">Card</option>
             </select>
           </div>
           <div className="flex space-x-2">
             <button
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg border border-[#d6cfbf] bg-[#f7f0df] text-[#2f3e1e] hover:bg-[#ede3cb] transition-colors whitespace-nowrap"
             >
               <i className="ri-file-pdf-line mr-2"></i>PDF
             </button>
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg bg-[#3f5d2a] text-white hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-excel-line mr-2"></i>Excel
             </button>
@@ -1058,37 +1061,37 @@ export default function PaymentsPage() {
         </div>
 
         {/* Payments Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-[#e0d7c4]">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#ede7d7]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Customer
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Factura
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Invoice
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Amount
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Método
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Method
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Referencia
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Reference
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ITBIS Retenido
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    VAT withheld
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ISR Retenido
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    ISR withheld
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -1125,8 +1128,8 @@ export default function PaymentsPage() {
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => handleViewPayment(payment.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Ver detalles"
+                          className="text-[#2f3e1e] hover:text-[#1b250f]"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
@@ -1151,9 +1154,9 @@ export default function PaymentsPage() {
             >
               <div className="p-6 border-b border-gray-200 flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Detalle de Pago</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Payment Details</h3>
                   <p className="text-sm text-gray-500">
-                    {companyName}{companyRnc ? ` • RNC: ${companyRnc}` : ''}
+                    {companyName}{companyRnc ? ` • Tax ID: ${companyRnc}` : ''}
                   </p>
                 </div>
                 <button
@@ -1166,10 +1169,10 @@ export default function PaymentsPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-[#f0f7e6] to-[#e4efcf] border border-[#d3e0b2] rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
-                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Monto recibido</p>
+                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Amount received</p>
                       <p className="text-2xl font-bold text-gray-900">
                         {formatMoney(selectedPayment.amount)}
                       </p>
@@ -1186,34 +1189,34 @@ export default function PaymentsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">Cliente</p>
+                    <p className="text-xs text-gray-500">Customer</p>
                     <p className="text-sm font-semibold text-gray-900">{selectedPayment.customerName}</p>
                   </div>
 
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">Factura</p>
+                    <p className="text-xs text-gray-500">Invoice</p>
                     <p className="text-sm font-semibold text-gray-900">{selectedPayment.invoiceNumber}</p>
                   </div>
 
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">Fecha</p>
+                    <p className="text-xs text-gray-500">Date</p>
                     <p className="text-sm font-semibold text-gray-900">{formatLocalDate(selectedPayment.date)}</p>
                   </div>
 
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">Referencia</p>
+                    <p className="text-xs text-gray-500">Reference</p>
                     <p className="text-sm font-semibold text-gray-900 break-words">
                       {selectedPayment.reference || '—'}
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">ITBIS Retenido</p>
+                    <p className="text-xs text-gray-500">VAT withheld</p>
                     <p className="text-sm font-semibold text-gray-900">{formatMoney(selectedPayment.itbisWithheld)}</p>
                   </div>
 
                   <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">ISR Retenido</p>
+                    <p className="text-xs text-gray-500">ISR withheld</p>
                     <p className="text-sm font-semibold text-gray-900">{formatMoney(selectedPayment.isrWithheld)}</p>
                   </div>
                 </div>
@@ -1222,16 +1225,16 @@ export default function PaymentsPage() {
                   <button
                     type="button"
                     onClick={handleClosePaymentDetail}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                    className="px-4 py-2 border border-[#d6cfbf] text-[#2f3e1e] rounded-lg hover:bg-[#f7f0df] transition-colors text-sm"
                   >
-                    Cerrar
+                    Close
                   </button>
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#243015] transition-colors text-sm"
                   >
-                    Imprimir
+                    Print
                   </button>
                 </div>
               </div>
@@ -1352,9 +1355,9 @@ export default function PaymentsPage() {
         {/* Payment Modal */}
         {showPaymentModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border border-[#e6dec8] shadow-xl">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Registrar Pago</h3>
+                <h3 className="text-lg font-semibold text-[#1e2814]">Record Payment</h3>
                 <button
                   onClick={() => {
                     setPaymentCustomerId('');
@@ -1374,7 +1377,7 @@ export default function PaymentsPage() {
                 {/* Dropdown de Cliente */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cliente
+                    Customer
                   </label>
                   <select 
                     required
@@ -1389,9 +1392,9 @@ export default function PaymentsPage() {
                       setPaymentItbisWithheld(0);
                       setPaymentIsrWithheld(0);
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
                   >
-                    <option value="">Seleccionar cliente</option>
+                    <option value="">Select customer</option>
                     {customers.map((customer) => (
                       <option key={customer.id} value={customer.id}>
                         {customer.name}
@@ -1403,7 +1406,7 @@ export default function PaymentsPage() {
                 {/* Dropdown de Factura (filtrado por cliente) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Factura
+                    Invoice
                   </label>
                   <select 
                     required
@@ -1450,9 +1453,9 @@ export default function PaymentsPage() {
                         recomputeWithheldDefaults(next, paymentAmount);
                       }
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-800"
                   >
-                    <option value="">{paymentCustomerId ? 'Seleccionar factura' : 'Primero seleccione un cliente'}</option>
+                    <option value="">{paymentCustomerId ? 'Select invoice' : 'Select a customer first'}</option>
                     {invoices
                       .filter(inv => inv.balance > 0 && inv.status !== 'cancelled' && inv.status !== 'paid' && inv.customerId === paymentCustomerId)
                       .map((invoice) => (
@@ -1465,13 +1468,13 @@ export default function PaymentsPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Banco (opcional)
+                    Bank account (optional)
                   </label>
                   <select 
                     name="bankAccountId"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
                   >
-                    <option value="">Seleccionar cuenta</option>
+                    <option value="">Select account</option>
                     {bankAccounts
                       .map((ba) => {
                         const baseName = String(ba.name || '').trim();
@@ -1491,14 +1494,14 @@ export default function PaymentsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Cuentas por Cobrar (opcional)
+                    Accounts receivable account (optional)
                   </label>
                   <select
                     name="arAccountId"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
                     defaultValue=""
                   >
-                    <option value="">Usar cuenta por defecto</option>
+                    <option value="">Use default account</option>
                     {receivableAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -1509,7 +1512,7 @@ export default function PaymentsPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Monto a Pagar
+                    Amount to pay
                   </label>
                   <input
                     type="number" min="0"
@@ -1522,36 +1525,36 @@ export default function PaymentsPage() {
                       setPaymentAmount(next);
                       recomputeWithheldDefaults(paymentInvoiceId, next);
                     }}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                     placeholder="0.00"
                   />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Método de Pago
+                    Payment method
                   </label>
                   <select 
                     required
                     name="paymentMethod"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
                   >
-                    <option value="cash">Efectivo</option>
-                    <option value="check">Cheque</option>
-                    <option value="transfer">Transferencia</option>
-                    <option value="card">Tarjeta</option>
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="card">Card</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Referencia
+                    Reference
                   </label>
                   <input
                     type="text"
                     name="reference"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Número de referencia"
+                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                    placeholder="Reference number"
                   />
                 </div>
 
@@ -1563,7 +1566,7 @@ export default function PaymentsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ITBIS Retenido
+                          VAT withheld
                         </label>
                         <input
                           type="number"
@@ -1573,13 +1576,13 @@ export default function PaymentsPage() {
                           disabled={disabled}
                           value={Number.isFinite(paymentItbisWithheld) ? String(paymentItbisWithheld) : '0'}
                           onChange={(e) => setPaymentItbisWithheld(Number(e.target.value) || 0)}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] disabled:bg-gray-100"
                           placeholder="0.00"
                         />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ISR Retenido
+                          ISR withheld
                         </label>
                         <input
                           type="number"
@@ -1589,7 +1592,7 @@ export default function PaymentsPage() {
                           disabled={disabled}
                           value={Number.isFinite(paymentIsrWithheld) ? String(paymentIsrWithheld) : '0'}
                           onChange={(e) => setPaymentIsrWithheld(Number(e.target.value) || 0)}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                          className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] disabled:bg-gray-100"
                           placeholder="0.00"
                         />
                       </div>
@@ -1608,15 +1611,15 @@ export default function PaymentsPage() {
                       setPaymentIsrWithheld(0);
                       setShowPaymentModal(false);
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 border border-[#d6cfbf] text-[#2f3e1e] py-2 rounded-lg hover:bg-[#f7f0df] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#243015] transition-colors whitespace-nowrap"
                   >
-                    Registrar Pago
+                    Save Payment
                   </button>
                 </div>
               </form>

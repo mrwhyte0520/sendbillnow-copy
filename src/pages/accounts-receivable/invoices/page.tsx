@@ -25,6 +25,7 @@ import { supabase } from '../../../lib/supabase';
 import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
+import { accountsReceivableTheme as theme } from '../../../theme/accountsReceivable';
 
 interface Invoice {
   id: string;
@@ -308,10 +309,10 @@ export default function InvoicesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'pending': return 'bg-blue-100 text-blue-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
+      case 'paid': return 'bg-[#e4f1e4] text-[#315231]';
+      case 'partial': return 'bg-[#fff3d6] text-[#7a5510]';
+      case 'pending': return 'bg-[#e3e8dd] text-[#374537]';
+      case 'overdue': return 'bg-[#fde2de] text-[#8a2a1c]';
       case 'cancelled': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -319,14 +320,15 @@ export default function InvoicesPage() {
 
   const getStatusName = (status: string) => {
     switch (status) {
-      case 'paid': return 'Pagada';
-      case 'partial': return 'Parcial';
-      case 'pending': return 'Pendiente';
-      case 'overdue': return 'Vencida';
-      case 'cancelled': return 'Anulada';
-      default: return 'Desconocido';
+      case 'paid': return 'Paid';
+      case 'partial': return 'Partial';
+      case 'pending': return 'Pending';
+      case 'overdue': return 'Overdue';
     }
   };
+
+  const primaryButtonClasses =
+    'text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-2 hover:opacity-90';
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
 
@@ -376,9 +378,9 @@ export default function InvoicesPage() {
       (companyInfo as any)?.company_name ||
       'ContaBi';
 
-    const title = 'Reporte de Facturas por Cobrar';
+    const title = 'Accounts Receivable Report';
     const dateStr = formatDate(new Date());
-    const statusText = statusFilter === 'all' ? 'Todos' : getStatusName(statusFilter);
+    const statusText = statusFilter === 'all' ? 'All' : getStatusName(statusFilter);
 
     // Encabezado: nombre de empresa, título y filtros
     doc.setFontSize(18);
@@ -390,22 +392,22 @@ export default function InvoicesPage() {
 
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Fecha de generación: ${dateStr}`, 20, 36);
-    doc.text(`Estado: ${statusText}`, 20, 44);
+    doc.text(`Generated on: ${dateStr}`, 20, 36);
+    doc.text(`Status filter: ${statusText}`, 20, 44);
 
     const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
     const totalBalance = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
     const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
 
     doc.setFontSize(14);
-    doc.text('Resumen Financiero', 20, 60);
+    doc.text('Financial Summary', 20, 60);
 
     const summaryData = [
-      ['Concepto', 'Monto'],
-      ['Total Facturado', `RD$ ${formatAmount(totalAmount)}`],
-      ['Total Pagado', `RD$ ${formatAmount(totalPaid)}`],
-      ['Saldo Pendiente', `RD$ ${formatAmount(totalBalance)}`],
-      ['Número de Facturas', filteredInvoices.length.toString()]
+      ['Metric', 'Amount'],
+      ['Total Invoiced', `RD$ ${formatAmount(totalAmount)}`],
+      ['Total Paid', `RD$ ${formatAmount(totalPaid)}`],
+      ['Outstanding Balance', `RD$ ${formatAmount(totalBalance)}`],
+      ['Invoice Count', filteredInvoices.length.toString()]
     ];
 
     (doc as any).autoTable({
@@ -419,7 +421,7 @@ export default function InvoicesPage() {
     });
 
     doc.setFontSize(14);
-    doc.text('Detalle de Facturas', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Invoice Detail', 20, (doc as any).lastAutoTable.finalY + 20);
 
     const invoiceData = filteredInvoices.map(invoice => [
       invoice.invoiceNumber,
@@ -434,7 +436,8 @@ export default function InvoicesPage() {
     
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Factura', 'Cliente', 'Fecha', 'Vencimiento', 'Monto', 'Pagado', 'Saldo', 'Estado']],
+      head: [['Invoice', 'Customer', 'Issue Date', 'Due Date', 'Amount', 'Paid', 'Balance', 'Status']],
+
       body: invoiceData,
       theme: 'striped',
       headStyles: { fillColor: [34, 197, 94] },
@@ -445,11 +448,12 @@ export default function InvoicesPage() {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.text(`Página ${i} de ${pageCount}`, 20, doc.internal.pageSize.height - 10);
-      doc.text('Sistema de Gestión Empresarial', doc.internal.pageSize.width - 60, doc.internal.pageSize.height - 10);
+      doc.text(`Page ${i} of ${pageCount}`, 20, doc.internal.pageSize.height - 10);
+      doc.text('Sendbillnow Accounting Suite', doc.internal.pageSize.width - 65, doc.internal.pageSize.height - 10);
+
     }
     
-    doc.save(`facturas-por-cobrar-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`accounts-receivable-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
@@ -463,10 +467,10 @@ export default function InvoicesPage() {
       'ContaBi';
 
     const statusText =
-      statusFilter === 'all' ? 'Todos' : getStatusName(statusFilter as Invoice['status']);
+      statusFilter === 'all' ? 'All' : getStatusName(statusFilter as Invoice['status']);
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Facturas por Cobrar');
+    const worksheet = workbook.addWorksheet('Accounts Receivable');
 
     // Encabezado principal
     worksheet.mergeCells('A1:I1');
@@ -475,29 +479,35 @@ export default function InvoicesPage() {
     worksheet.getCell('A1').alignment = { horizontal: 'center' } as any;
 
     worksheet.mergeCells('A2:I2');
-    worksheet.getCell('A2').value = 'Reporte de Facturas por Cobrar';
+    worksheet.getCell('A2').value = 'Accounts Receivable Report';
+
     worksheet.getCell('A2').font = { bold: true, size: 12 };
     worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
 
-    worksheet.getCell('A3').value = `Fecha de generación: ${formatDate(new Date())}`;
-    worksheet.getCell('A4').value = `Estado: ${statusText}`;
+    worksheet.getCell('A3').value = `Generated on: ${formatDate(new Date())}`;
+    worksheet.getCell('A4').value = `Status filter: ${statusText}`;
 
     // Resumen financiero
     worksheet.addRow([]);
-    const resumenTitleRow = worksheet.addRow(['RESUMEN FINANCIERO']);
+    const resumenTitleRow = worksheet.addRow(['FINANCIAL SUMMARY']);
+
     resumenTitleRow.font = { bold: true };
 
     const resumenStartRow = resumenTitleRow.number + 1;
-    worksheet.getCell(`A${resumenStartRow}`).value = 'Total Facturado';
+    worksheet.getCell(`A${resumenStartRow}`).value = 'Total Invoiced';
+
     worksheet.getCell(`B${resumenStartRow}`).value = formatAmount(totalAmount);
 
-    worksheet.getCell(`A${resumenStartRow + 1}`).value = 'Total Pagado';
+    worksheet.getCell(`A${resumenStartRow + 1}`).value = 'Total Paid';
+
     worksheet.getCell(`B${resumenStartRow + 1}`).value = formatAmount(totalPaid);
 
-    worksheet.getCell(`A${resumenStartRow + 2}`).value = 'Saldo Pendiente';
+    worksheet.getCell(`A${resumenStartRow + 2}`).value = 'Outstanding Balance';
+
     worksheet.getCell(`B${resumenStartRow + 2}`).value = formatAmount(totalBalance);
 
-    worksheet.getCell(`A${resumenStartRow + 3}`).value = 'Número de Facturas';
+    worksheet.getCell(`A${resumenStartRow + 3}`).value = 'Invoice Count';
+
     worksheet.getCell(`B${resumenStartRow + 3}`).value = filteredInvoices.length;
 
     // Formato numérico RD$
@@ -509,18 +519,20 @@ export default function InvoicesPage() {
     worksheet.addRow([]);
 
     // Detalle de facturas
-    const detalleTitleRow = worksheet.addRow(['DETALLE DE FACTURAS']);
+    const detalleTitleRow = worksheet.addRow(['INVOICE DETAIL']);
+
     detalleTitleRow.font = { bold: true };
 
     const headerRow = worksheet.addRow([
-      'Factura',
-      'Cliente',
-      'Fecha',
-      'Vencimiento',
-      'Monto',
-      'Pagado',
-      'Saldo',
-      'Estado',
+      'Invoice',
+      'Customer',
+      'Issue Date',
+      'Due Date',
+      'Amount',
+      'Paid',
+      'Balance',
+      'Status',
+
     ]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
@@ -1206,108 +1218,35 @@ export default function InvoicesPage() {
           <head>
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>Factura ${invoice.invoiceNumber}</title>
+            <title>Invoice ${invoice.invoiceNumber}</title>
             <style>
-              :root { --primary:#0b2a6f; --accent:#19a34a; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; }
-              * { box-sizing: border-box; }
-              body { font-family: Arial, sans-serif; padding: 28px; color: var(--text); background: var(--bg); }
-              .top { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; }
-              .company-name { font-weight: 800; font-size: 18px; color: var(--primary); }
-              .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
-              .doc { text-align: right; }
-              .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
-              .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
-              .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
-              .qr { margin-top: 10px; width: 110px; height: 110px; }
-              .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
-              .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
-              .card-head { background: var(--primary); padding: 10px 12px; color: #fff; font-weight: 800; font-size: 13px; }
-              .card-body { padding: 12px; font-size: 12px; }
-              .kv { display:grid; grid-template-columns: 140px 1fr; gap: 6px 10px; }
-              .kv .k { color: var(--muted); }
-              .kv .v { color: var(--text); font-weight: 600; }
-              .table-wrap { margin-top: 18px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-              table { width: 100%; border-collapse: collapse; }
-              thead th { background: var(--primary); color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; padding: 10px; text-align: left; }
-              tbody td { border-bottom: 1px solid var(--border); padding: 10px; font-size: 12px; vertical-align: top; }
-              tbody tr:last-child td { border-bottom: none; }
-              .num { text-align: right; font-variant-numeric: tabular-nums; }
-              .totals { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-              .totals-head { background: var(--primary); color: #fff; padding: 10px 12px; font-weight: 800; font-size: 13px; }
-              .totals-body { padding: 12px; }
-              .totals-row { display:grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-              .totals-row:last-child { border-bottom: none; }
-              .totals-row .label { color: var(--muted); font-weight: 700; }
-              .totals-row .value { font-weight: 800; color: var(--text); }
-              .totals-row.total .value { color: var(--primary); }
-              @media print { body { padding: 0; } }
+              :root { --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --primary:#2563eb; --primaryDark:#1d4ed8; }
+              *{ box-sizing:border-box; }
+              body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+              .page{ padding:24px; }
+              .card{ max-width:860px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 10px 22px rgba(0,0,0,.08); }
+              .header{ padding:20px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
+              .brand h1{ margin:0; font-size:18px; font-weight:800; }
+              .brand p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
+              .title{ text-align:right; }
+              .title h2{ margin:0; font-size:16px; font-weight:800; color:var(--primary); }
+              .title p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
+              .content{ padding:18px 22px 22px; }
+              .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+              @media (min-width: 720px){ .grid{ grid-template-columns:1fr 1fr; } }
+              .field{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:#fafafa; }
+              .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+              .value{ margin-top:6px; font-size:14px; font-weight:700; word-break:break-word; }
+              .amount{ margin-top:14px; padding:14px; border-radius:12px; border:1px solid rgba(22,163,74,.25); background: rgba(22,163,74,.08); display:flex; justify-content:space-between; gap:12px; align-items:center; }
+              .amount .label{ color: rgba(22,163,74,.9); }
+              .amount .value{ font-size:18px; }
+              .actions{ margin-top:16px; display:flex; justify-content:flex-end; gap:10px; }
+              .btn{ appearance:none; border:0; border-radius:10px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer; }
+              .btnPrimary{ background:var(--primary); color:#fff; }
+              .btnPrimary:hover{ background:var(--primaryDark); }
+              .footer{ padding:14px 22px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
+              @media print{ body{ background:#fff; } .page{ padding:0; } .card{ box-shadow:none; border:0; border-radius:0; } .actions{ display:none !important; } }
             </style>
-          </head>
-          <body>
-            <div class="top">
-              <div>
-                <div class="company-name">${companyName}</div>
-                ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
-                ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
-                ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
-                ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
-              </div>
-              <div class="doc">
-                <div class="doc-title">FACTURA ${(invoice as any).saleType === 'cash' ? 'CONTADO' : 'CRÉDITO'}</div>
-                <div class="doc-number">NCF: ${invoice.invoiceNumber}</div>
-                <div class="doc-kv">
-                  ${(invoice as any).ncfExpiryDate ? `<div><strong>Válida hasta:</strong> ${formatDate((invoice as any).ncfExpiryDate)}</div>` : ''}
-                  ${(invoice as any).sequentialNumber ? `<div><strong>Número Factura:</strong> ${(invoice as any).sequentialNumber}</div>` : ''}
-                  ${(invoice as any).salesRepName ? `<div><strong>Vendedor:</strong> ${(invoice as any).salesRepName}</div>` : ''}
-                  <div><strong>Moneda:</strong> ${(invoice as any).currency === 'DOP' ? 'Peso Dominicano' : ((invoice as any).currency || 'DOP')}</div>
-                  ${(invoice as any).storeName ? `<div><strong>Tienda:</strong> ${(invoice as any).storeName}</div>` : ''}
-                  <div><strong>Fecha Límite de Pago:</strong> ${invoice.dueDate ? formatDate(invoice.dueDate) : ''}</div>
-                </div>
-                ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
-              </div>
-            </div>
-
-            <div class="grid">
-              <div class="card">
-                <div class="card-head">Cliente</div>
-                <div class="card-body">
-                  <div class="kv">
-                    <div class="k">Nombre</div>
-                    <div class="v">${invoice.customerName}</div>
-                    ${customerDocument ? `<div class="k">Documento</div><div class="v">${customerDocument}</div>` : ''}
-                    ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
-                    ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
-                    ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
-                  </div>
-                </div>
-              </div>
-              <div class="totals">
-                <div class="totals-head">Resumen</div>
-                <div class="totals-body">
-                  <div class="totals-row"><div class="label">Subtotal</div><div class="value">RD$ ${formatAmount(invoice.subtotal)}</div></div>
-                  <div class="totals-row"><div class="label">ITBIS</div><div class="value">RD$ ${formatAmount(invoice.tax)}</div></div>
-                  <div class="totals-row total"><div class="label">Total</div><div class="value">RD$ ${formatAmount(invoice.amount)}</div></div>
-                </div>
-              </div>
-            </div>
-
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width: 54px;">No.</th>
-                    <th>Descripción</th>
-                    <th class="num" style="width: 110px;">Precio</th>
-                    <th class="num" style="width: 80px;">Cant.</th>
-                    <th class="num" style="width: 120px;">Importe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${itemsHtml}
-                </tbody>
-              </table>
-            </div>
-
             <script>
               window.onload = function() {
                 window.print();
@@ -1345,21 +1284,23 @@ export default function InvoicesPage() {
     <DashboardLayout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Facturas por Cobrar</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Accounts Receivable Invoices</h1>
           <div className="flex space-x-3">
-            <button 
+            <button
               onClick={handleNewInvoice}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className={primaryButtonClasses}
+              style={{ backgroundColor: theme.primary }}
             >
-              <i className="ri-add-line mr-2"></i>
-              Nueva Factura
+              <i className="ri-add-line"></i>
+              <span>New Invoice</span>
             </button>
-            <button 
+            <button
               onClick={() => handleRegisterPayment()}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className={primaryButtonClasses}
+              style={{ backgroundColor: theme.accent }}
             >
-              <i className="ri-money-dollar-circle-line mr-2"></i>
-              Registrar Pago
+              <i className="ri-money-dollar-circle-line"></i>
+              <span>Record Payment</span>
             </button>
           </div>
         </div>
@@ -1375,37 +1316,42 @@ export default function InvoicesPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por cliente o número de factura..."
+                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-[#4b5c4b] text-sm"
+                placeholder="Search by customer or invoice number..."
               />
             </div>
           </div>
+
           <div className="w-full md:w-48">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-[#4b5c4b] text-sm pr-8"
             >
-              <option value="all">Todos los Estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="partial">Parciales</option>
-              <option value="paid">Pagadas</option>
-              <option value="overdue">Vencidas</option>
-              <option value="cancelled">Anuladas</option>
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           <div className="flex space-x-2">
             <button
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className={primaryButtonClasses}
+              style={{ backgroundColor: theme.danger }}
             >
-              <i className="ri-file-pdf-line mr-2"></i>PDF
+              <i className="ri-file-pdf-line"></i>
+              <span>PDF</span>
             </button>
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className={primaryButtonClasses}
+              style={{ backgroundColor: theme.success }}
             >
-              <i className="ri-file-excel-line mr-2"></i>Excel
+              <i className="ri-file-excel-line"></i>
+              <span>Excel</span>
             </button>
           </div>
         </div>
@@ -1413,38 +1359,38 @@ export default function InvoicesPage() {
         {/* Invoices Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {(loadingCustomers || loadingInvoices) && (
-            <div className="px-6 pt-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Factura
+                    Invoice
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Issue Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vencimiento
+                    Due Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pagado
+                    Paid
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
+                    Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -1464,10 +1410,11 @@ export default function InvoicesPage() {
                       {invoice.dueDate}
                       {invoice.daysOverdue > 0 && (
                         <span className="ml-2 text-red-600 text-xs">
-                          ({invoice.daysOverdue} días)
+                          ({invoice.daysOverdue} days)
                         </span>
                       )}
                     </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       RD${formatAmount(invoice.amount)}
                     </td>
@@ -1487,38 +1434,38 @@ export default function InvoicesPage() {
                         {invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.balance > 0 && (
                           <button
                             onClick={() => handleRegisterPayment(invoice)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Registrar Pago"
+                            className="text-[#3c6b3c] hover:text-[#284528]"
+                            title="Record payment"
                           >
                             <i className="ri-money-dollar-circle-line"></i>
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={() => handleViewInvoice(invoice.id)}
-                          className="text-blue-600 hover:text-blue-900" 
-                          title="Ver Detalles"
+                          className="text-[#1d4ed8] hover:text-[#15359a]"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
-                        <button 
+                        <button
                           onClick={() => handlePrintInvoice(invoice.id)}
-                          className="text-purple-600 hover:text-purple-900" 
-                          title="Imprimir"
+                          className="text-[#6d28d9] hover:text-[#5018a7]"
+                          title="Print invoice"
                         >
                           <i className="ri-printer-line"></i>
                         </button>
                         <button
                           onClick={() => handleExportInvoiceExcel(invoice.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Exportar a Excel"
+                          className="text-[#15803d] hover:text-[#116030]"
+                          title="Export to Excel"
                         >
                           <i className="ri-file-excel-2-line"></i>
                         </button>
                         {invoice.status !== 'paid' && invoice.status !== 'cancelled' && invoice.paidAmount <= 0 && (
                           <button
                             onClick={() => handleCancelInvoice(invoice)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Anular"
+                            className="text-[#b64736] hover:text-[#8a3528]"
+                            title="Void invoice"
                           >
                             <i className="ri-close-circle-line"></i>
                           </button>
@@ -1537,11 +1484,12 @@ export default function InvoicesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Nueva Factura</h3>
+                <h3 className="text-lg font-semibold text-gray-900">New Invoice</h3>
                 <button
                   onClick={() => setShowInvoiceModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
+
                   <i className="ri-close-line"></i>
                 </button>
               </div>
@@ -1550,7 +1498,7 @@ export default function InvoicesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cliente
+                      Customer
                     </label>
                     <select 
                       required
@@ -1559,10 +1507,11 @@ export default function InvoicesPage() {
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                       onChange={(e) => handleNewInvoiceCustomerChange(e.target.value)}
                     >
-                      <option value="">Seleccionar cliente</option>
+                      <option value="">Select customer</option>
                       {customers.map((customer) => (
                         <option key={customer.id} value={customer.id}>
                           {customer.name}
+
                         </option>
                       ))}
                     </select>
@@ -1570,25 +1519,27 @@ export default function InvoicesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Vencimiento
+                      Due Date
                     </label>
                     <DateInput
                       required
                       name="due_date"
+
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de documento (NCF)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Document type (NCF)</label>
                     <select
                       value={newInvoiceDocumentType}
                       onChange={(e) => setNewInvoiceDocumentType(e.target.value)}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Sin seleccionar...</option>
+                      <option value="">Not selected...</option>
                       {Array.from(
                         new Set(
                           (ncfSeries || [])
+
                             .filter((s: any) => s.status === 'active')
                             .map((s: any) => String(s.document_type)),
                         ),
@@ -1605,33 +1556,33 @@ export default function InvoicesPage() {
                   <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
                     <p className="font-medium">{selectedCustomer.name}</p>
                     {selectedCustomer.document && (
-                      <p>Documento: {selectedCustomer.document}</p>
+                      <p>Document: {selectedCustomer.document}</p>
                     )}
                     {selectedCustomer.phone && (
-                      <p>Teléfono: {selectedCustomer.phone}</p>
+                      <p>Phone: {selectedCustomer.phone}</p>
                     )}
                     {selectedCustomer.email && (
                       <p>Email: {selectedCustomer.email}</p>
                     )}
                     {selectedCustomer.address && (
-                      <p>Dirección: {selectedCustomer.address}</p>
+                      <p>Address: {selectedCustomer.address}</p>
                     )}
                   </div>
                 )}
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Productos/Servicios
+                    Products / Services
                   </label>
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Producto</th>
-                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Cantidad</th>
-                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Precio</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Quantity</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Price</th>
                           <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Total</th>
-                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Acción</th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-500 uppercase">Action</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1674,10 +1625,11 @@ export default function InvoicesPage() {
                                   }}
                                   className="w-full p-2 border border-gray-300 rounded text-sm"
                                 >
-                                  <option value="">-- Seleccionar ítem de inventario (opcional) --</option>
+                                  <option value="">-- Select inventory item (optional) --</option>
                                   {inventoryItems.map((it: any) => (
                                     <option key={it.id} value={String(it.id)}>
                                       {it.name}
+
                                     </option>
                                   ))}
                                 </select>
@@ -1699,7 +1651,7 @@ export default function InvoicesPage() {
                                       return next;
                                     });
                                   }}
-                                  placeholder="Descripción del producto o servicio"
+                                  placeholder="Product or service description"
                                   className="w-full p-2 border border-gray-300 rounded text-sm"
                                 />
                               </div>
@@ -1790,10 +1742,11 @@ export default function InvoicesPage() {
                           { itemId: undefined, description: '', quantity: 1, price: 0, total: 0 },
                         ])
                       }
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap md:self-start"
+                      className={primaryButtonClasses}
+                      style={{ backgroundColor: theme.success }}
                     >
-                      <i className="ri-add-line mr-2"></i>
-                      Agregar Producto
+                      <i className="ri-add-line"></i>
+                      <span>Add Product</span>
                     </button>
                     <div className="flex-1 bg-gray-50 p-4 rounded-lg">
                       <div className="space-y-2">
@@ -1802,10 +1755,11 @@ export default function InvoicesPage() {
                           <span className="text-sm font-medium">
                             RD${' '}
                             {formatAmount(newInvoiceSubtotal)}
+
                           </span>
                         </div>
                         <div className="flex justify-between items-center space-x-2">
-                          <span className="text-sm text-gray-600">Descuento global:</span>
+                          <span className="text-sm text-gray-600">Global discount:</span>
                           <div className="flex items-center space-x-2">
                             <select
                               value={newInvoiceDiscountType}
@@ -1821,8 +1775,8 @@ export default function InvoicesPage() {
                               }}
                               className="px-2 py-1 border border-gray-300 rounded text-sm"
                             >
-                              <option value="percentage">% Porcentaje</option>
-                              <option value="fixed">Monto</option>
+                              <option value="percentage">% Percentage</option>
+                              <option value="fixed">Amount</option>
                             </select>
                             <input
                               type="number"
@@ -1843,10 +1797,11 @@ export default function InvoicesPage() {
                           </div>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">ITBIS ({currentItbisRate.toFixed(2)}%):</span>
+                          <span className="text-sm text-gray-600">VAT ({currentItbisRate.toFixed(2)}%):</span>
                           <span className="text-sm font-medium">
                             RD${' '}
                             {formatAmount(newInvoiceTax)}
+
                           </span>
                         </div>
                         <div className="border-t border-gray-200 pt-2">
@@ -1865,13 +1820,13 @@ export default function InvoicesPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción / Notas
+                    Description / Notes
                   </label>
                   <textarea
                     rows={3}
                     name="description"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción general o notas de la factura..."
+                    placeholder="General description or invoice notes..."
                   />
                 </div>
                 
@@ -1879,19 +1834,21 @@ export default function InvoicesPage() {
                   <button
                     type="button"
                     onClick={() => setShowInvoiceModal(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className={`${primaryButtonClasses} flex-1 justify-center`}
+                    style={{ backgroundColor: theme.primary }}
                   >
-                    Crear Factura
+                    <span>Create Invoice</span>
                   </button>
                 </div>
               </form>
             </div>
+
           </div>
         )}
 

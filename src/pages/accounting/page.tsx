@@ -7,6 +7,16 @@ import { exportToExcelWithHeaders, exportToExcelStyled } from '../../utils/expor
 import { formatAmount } from '../../utils/numberFormat';
 import { formatDate } from '../../utils/dateFormat';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 interface JournalEntry {
   id: string;
   entry_number: string;
@@ -225,7 +235,7 @@ export default function AccountingPage() {
     setReportLoading(true);
     try {
       if (!user?.id) {
-        alert('Debes iniciar sesión para generar reportes.');
+        alert('You must be signed in to generate reports.');
         return;
       }
       const today = new Date().toISOString().split('T')[0];
@@ -237,12 +247,12 @@ export default function AccountingPage() {
         case 'balance-sheet':
           {
             const data = await chartAccountsService.generateBalanceSheet(user.id, today);
-            filename = `balance_general_${today}.xlsx`;
+            filename = `balance_sheet_${today}.xlsx`;
             const headers = [
-              { key: 'section', title: 'Sección' },
-              { key: 'code', title: 'Código' },
-              { key: 'name', title: 'Nombre' },
-              { key: 'balance', title: 'Saldo' },
+              { key: 'section', title: 'Section' },
+              { key: 'code', title: 'Code' },
+              { key: 'name', title: 'Account' },
+              { key: 'balance', title: 'Balance' },
             ];
             const rows: any[] = [];
             const pushGroup = (section: string, items: any[], total: number) => {
@@ -250,20 +260,20 @@ export default function AccountingPage() {
               rows.push({ section: `TOTAL ${section.toUpperCase()}`, code: '', name: '', balance: total });
               rows.push({ section: '', code: '', name: '', balance: '' });
             };
-            pushGroup('Activos', data.assets || [], data.totalAssets || 0);
-            pushGroup('Pasivos', data.liabilities || [], data.totalLiabilities || 0);
-            pushGroup('Patrimonio', data.equity || [], data.totalEquity || 0);
-            rows.push({ section: 'TOTAL PASIVOS + PATRIMONIO', code: '', name: '', balance: (data.totalLiabilities || 0) + (data.totalEquity || 0) });
+            pushGroup('Assets', data.assets || [], data.totalAssets || 0);
+            pushGroup('Liabilities', data.liabilities || [], data.totalLiabilities || 0);
+            pushGroup('Equity', data.equity || [], data.totalEquity || 0);
+            rows.push({ section: 'TOTAL LIABILITIES + EQUITY', code: '', name: '', balance: (data.totalLiabilities || 0) + (data.totalEquity || 0) });
             await exportToExcelStyled(
               rows,
               [
-                { key: 'section', title: 'Sección', width: 18 },
-                { key: 'code', title: 'Código', width: 12 },
-                { key: 'name', title: 'Nombre', width: 40 },
-                { key: 'balance', title: 'Saldo', width: 18, numFmt: '#,##0.00' },
+                { key: 'section', title: 'Section', width: 18 },
+                { key: 'code', title: 'Code', width: 12 },
+                { key: 'name', title: 'Account', width: 40 },
+                { key: 'balance', title: 'Balance', width: 18, numFmt: '#,##0.00' },
               ],
               filename.replace('.xlsx',''),
-              'Balance General'
+              'Balance Sheet'
             );
           }
           break;
@@ -271,31 +281,31 @@ export default function AccountingPage() {
         case 'income-statement':
           {
             const data = await chartAccountsService.generateIncomeStatement(user.id, firstDayOfMonth, today);
-            filename = `estado_resultados_${today}.xlsx`;
+            filename = `income_statement_${today}.xlsx`;
             const headers = [
-              { key: 'section', title: 'Sección' },
-              { key: 'code', title: 'Código' },
-              { key: 'name', title: 'Nombre' },
-              { key: 'amount', title: 'Monto' },
+              { key: 'section', title: 'Section' },
+              { key: 'code', title: 'Code' },
+              { key: 'name', title: 'Account' },
+              { key: 'amount', title: 'Amount' },
             ];
             const rows: any[] = [];
-            (data.income || []).forEach(acc => rows.push({ section: 'Ingresos', code: acc.code, name: acc.name, amount: Math.abs(acc.balance || 0) }));
-            rows.push({ section: 'TOTAL INGRESOS', code: '', name: '', amount: data.totalIncome || 0 });
+            (data.income || []).forEach(acc => rows.push({ section: 'Income', code: acc.code, name: acc.name, amount: Math.abs(acc.balance || 0) }));
+            rows.push({ section: 'TOTAL INCOME', code: '', name: '', amount: data.totalIncome || 0 });
             rows.push({ section: '', code: '', name: '', amount: '' });
-            (data.expenses || []).forEach(acc => rows.push({ section: 'Gastos', code: acc.code, name: acc.name, amount: Math.abs(acc.balance || 0) }));
-            rows.push({ section: 'TOTAL GASTOS', code: '', name: '', amount: data.totalExpenses || 0 });
+            (data.expenses || []).forEach(acc => rows.push({ section: 'Expenses', code: acc.code, name: acc.name, amount: Math.abs(acc.balance || 0) }));
+            rows.push({ section: 'TOTAL EXPENSES', code: '', name: '', amount: data.totalExpenses || 0 });
             rows.push({ section: '', code: '', name: '', amount: '' });
-            rows.push({ section: 'UTILIDAD NETA', code: '', name: '', amount: data.netIncome || 0 });
+            rows.push({ section: 'NET INCOME', code: '', name: '', amount: data.netIncome || 0 });
             await exportToExcelStyled(
               rows,
               [
-                { key: 'section', title: 'Sección', width: 18 },
-                { key: 'code', title: 'Código', width: 12 },
-                { key: 'name', title: 'Nombre', width: 40 },
-                { key: 'amount', title: 'Monto', width: 18, numFmt: '#,##0.00' },
+                { key: 'section', title: 'Section', width: 18 },
+                { key: 'code', title: 'Code', width: 12 },
+                { key: 'name', title: 'Account', width: 40 },
+                { key: 'amount', title: 'Amount', width: 18, numFmt: '#,##0.00' },
               ],
               filename.replace('.xlsx',''),
-              'Estado de Resultados'
+              'Income Statement'
             );
           }
           break;
@@ -303,7 +313,7 @@ export default function AccountingPage() {
         case 'trial-balance':
           {
             const data = await chartAccountsService.generateTrialBalance(user.id, today);
-            filename = `balanza_comprobacion_${today}.xlsx`;
+            filename = `trial_balance_${today}.xlsx`;
             const rows: any[] = [];
             const allAccounts = (data.accounts || []) as any[];
 
@@ -349,7 +359,7 @@ export default function AccountingPage() {
             rows.push({
               level: '',
               number: '',
-              name: 'TOTALES',
+              name: 'TOTALS',
               prev_debit: 0,
               prev_credit: 0,
               mov_debit: data.totalDebits || 0,
@@ -360,10 +370,10 @@ export default function AccountingPage() {
             rows.push({
               level: '',
               number: '',
-              name: 'BALANCEADO',
+              name: 'BALANCED',
               prev_debit: '',
               prev_credit: '',
-              mov_debit: data.isBalanced ? 'SÍ' : 'NO',
+              mov_debit: data.isBalanced ? 'YES' : 'NO',
               mov_credit: '',
               final_debit: '',
               final_credit: '',
@@ -371,18 +381,18 @@ export default function AccountingPage() {
             await exportToExcelStyled(
               rows,
               [
-                { key: 'level', title: 'Nivel', width: 6 },
-                { key: 'number', title: 'Número de cuenta', width: 16 },
-                { key: 'name', title: 'Cuenta contable', width: 40 },
-                { key: 'prev_debit', title: 'Saldo anterior Débito', width: 18, numFmt: '#,##0.00' },
-                { key: 'prev_credit', title: 'Saldo anterior Crédito', width: 18, numFmt: '#,##0.00' },
-                { key: 'mov_debit', title: 'Movimientos Débito', width: 18, numFmt: '#,##0.00' },
-                { key: 'mov_credit', title: 'Movimientos Crédito', width: 18, numFmt: '#,##0.00' },
-                { key: 'final_debit', title: 'Saldo final Débito', width: 18, numFmt: '#,##0.00' },
-                { key: 'final_credit', title: 'Saldo final Crédito', width: 18, numFmt: '#,##0.00' },
+                { key: 'level', title: 'Level', width: 6 },
+                { key: 'number', title: 'Account number', width: 16 },
+                { key: 'name', title: 'Account name', width: 40 },
+                { key: 'prev_debit', title: 'Opening Debit', width: 18, numFmt: '#,##0.00' },
+                { key: 'prev_credit', title: 'Opening Credit', width: 18, numFmt: '#,##0.00' },
+                { key: 'mov_debit', title: 'Period Debit', width: 18, numFmt: '#,##0.00' },
+                { key: 'mov_credit', title: 'Period Credit', width: 18, numFmt: '#,##0.00' },
+                { key: 'final_debit', title: 'Ending Debit', width: 18, numFmt: '#,##0.00' },
+                { key: 'final_credit', title: 'Ending Credit', width: 18, numFmt: '#,##0.00' },
               ],
               filename.replace('.xlsx',''),
-              'Balanza de Comprobación'
+              'Trial Balance'
             );
           }
           break;
@@ -390,25 +400,25 @@ export default function AccountingPage() {
         case 'cash-flow':
           {
             const data = await chartAccountsService.generateCashFlowStatement(user.id, firstDayOfMonth, today);
-            filename = `flujo_efectivo_${today}.xlsx`;
+            filename = `cash_flow_${today}.xlsx`;
             const headers = [
-              { key: 'concept', title: 'Concepto' },
-              { key: 'amount', title: 'Monto' },
+              { key: 'concept', title: 'Concept' },
+              { key: 'amount', title: 'Amount' },
             ];
             const rows = [
-              { concept: 'Flujo de Efectivo Operativo', amount: data.operatingCashFlow || 0 },
-              { concept: 'Flujo de Efectivo de Inversión', amount: data.investingCashFlow || 0 },
-              { concept: 'Flujo de Efectivo de Financiamiento', amount: data.financingCashFlow || 0 },
-              { concept: 'Flujo Neto de Efectivo', amount: data.netCashFlow || 0 },
+              { concept: 'Operating cash flow', amount: data.operatingCashFlow || 0 },
+              { concept: 'Investing cash flow', amount: data.investingCashFlow || 0 },
+              { concept: 'Financing cash flow', amount: data.financingCashFlow || 0 },
+              { concept: 'Net cash flow', amount: data.netCashFlow || 0 },
             ];
             await exportToExcelStyled(
               rows,
               [
-                { key: 'concept', title: 'Concepto', width: 50 },
-                { key: 'amount', title: 'Monto', width: 18, numFmt: '#,##0.00' },
+                { key: 'concept', title: 'Concept', width: 50 },
+                { key: 'amount', title: 'Amount', width: 18, numFmt: '#,##0.00' },
               ],
               filename.replace('.xlsx',''),
-              'Flujo de Efectivo'
+              'Cash Flow'
             );
           }
           break;
@@ -416,14 +426,14 @@ export default function AccountingPage() {
         case 'general-ledger':
           {
             const entries = await journalEntriesService.getAll(user.id);
-            filename = `mayor_general_${today}.xlsx`;
+            filename = `general_ledger_${today}.xlsx`;
             const headers = [
-              { key: 'date', title: 'Fecha' },
-              { key: 'number', title: 'Número' },
-              { key: 'description', title: 'Descripción' },
-              { key: 'account', title: 'Cuenta' },
-              { key: 'debit', title: 'Débito' },
-              { key: 'credit', title: 'Crédito' },
+              { key: 'date', title: 'Date' },
+              { key: 'number', title: 'Entry number' },
+              { key: 'description', title: 'Description' },
+              { key: 'account', title: 'Account' },
+              { key: 'debit', title: 'Debit' },
+              { key: 'credit', title: 'Credit' },
             ];
             const rows: any[] = [];
             entries.forEach((entry: any) => {
@@ -438,21 +448,21 @@ export default function AccountingPage() {
                 });
               });
             });
-            exportToExcelWithHeaders(rows, headers, filename.replace('.xlsx',''), 'Mayor General', [12,14,40,28,16,16]);
+            exportToExcelWithHeaders(rows, headers, filename.replace('.xlsx',''), 'General Ledger', [12,14,40,28,16,16]);
           }
           break;
 
         case 'journal-report':
           {
             const journalData = await journalEntriesService.getAll(user.id);
-            filename = `libro_diario_${today}.xlsx`;
+            filename = `journal_report_${today}.xlsx`;
             const headers = [
-              { key: 'date', title: 'Fecha' },
-              { key: 'number', title: 'Número' },
-              { key: 'description', title: 'Descripción' },
-              { key: 'reference', title: 'Referencia' },
-              { key: 'total_debit', title: 'Débito Total' },
-              { key: 'total_credit', title: 'Crédito Total' },
+              { key: 'date', title: 'Date' },
+              { key: 'number', title: 'Entry number' },
+              { key: 'description', title: 'Description' },
+              { key: 'reference', title: 'Reference' },
+              { key: 'total_debit', title: 'Total Debit' },
+              { key: 'total_credit', title: 'Total Credit' },
             ];
             const rows = journalData.map((entry: any) => ({
               date: formatDate(entry.entry_date),
@@ -462,15 +472,15 @@ export default function AccountingPage() {
               total_debit: formatAmount(entry.total_debit),
               total_credit: formatAmount(entry.total_credit),
             }));
-            exportToExcelWithHeaders(rows, headers, filename.replace('.xlsx',''), 'Libro Diario', [12,14,40,18,16,16]);
+            exportToExcelWithHeaders(rows, headers, filename.replace('.xlsx',''), 'Journal Report', [12,14,40,18,16,16]);
           }
           break;
 
         default:
-          alert('Tipo de reporte no soportado');
+          alert('Report type not supported.');
           return;
       }
-      alert(`Reporte ${getReportName(reportType)} generado exitosamente en Excel.`);
+      alert(`${getReportName(reportType)} report generated successfully.`);
     } catch (error) {
       console.error('Error generating report:', error);
       alert('Error al generar el reporte. Intente nuevamente.');
@@ -616,10 +626,10 @@ export default function AccountingPage() {
   };
 
   const getBreakdownLabel = (type: BreakdownType) => {
-    if (type === 'asset') return 'Activos';
-    if (type === 'liability') return 'Pasivos';
-    if (type === 'equity') return 'Patrimonio';
-    return 'Ingresos';
+    if (type === 'asset') return 'Assets';
+    if (type === 'liability') return 'Liabilities';
+    if (type === 'equity') return 'Equity';
+    return 'Income';
   };
 
   const openBreakdown = async (type: BreakdownType) => {
@@ -652,8 +662,8 @@ export default function AccountingPage() {
       <DashboardLayout>
         <div className="p-6 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando datos contables...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: theme.primary }}></div>
+            <p className="mt-4 text-gray-600">Loading accounting data...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -665,46 +675,58 @@ export default function AccountingPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Contabilidad</h1>
-            <p className="text-gray-600 mt-1">Sistema completo de gestión contable</p>
+            <h1 className="text-2xl font-bold text-gray-900">Accounting</h1>
+            <p className="text-gray-600 mt-1">Comprehensive accounting management system</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={() => setShowJournalModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Asiento
+              New Entry
             </button>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button 
               onClick={() => navigate('/accounting/general-journal')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap cursor-pointer"
+              className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Asiento
+              New Entry
             </button>
             
             <button 
               onClick={() => navigate('/accounting/financial-statements')}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap cursor-pointer"
+              className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+              style={{ backgroundColor: theme.accent }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.accent; }}
             >
               <i className="ri-file-chart-line mr-2"></i>
-              Estados Financieros
+              Financial Statements
             </button>
             
             <button 
               onClick={() => navigate('/accounting/bank-reconciliation')}
-              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap cursor-pointer"
+              className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap cursor-pointer"
+              style={{ backgroundColor: theme.softText }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.softText; }}
             >
               <i className="ri-bank-line mr-2"></i>
-              Conciliación Bancaria
+              Bank Reconciliation
             </button>
           </div>
         </div>
@@ -713,24 +735,28 @@ export default function AccountingPage() {
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'overview', label: 'Resumen', icon: 'ri-dashboard-line' },
-              { id: 'journal', label: 'Libro Diario', icon: 'ri-book-line' },
-              { id: 'ledger', label: 'Mayor General', icon: 'ri-file-list-line' },
-              { id: 'reports', label: 'Reportes', icon: 'ri-bar-chart-line' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <i className={`${tab.icon} mr-2`}></i>
-                {tab.label}
-              </button>
-            ))}
+              { id: 'overview', label: 'Overview', icon: 'ri-dashboard-line' },
+              { id: 'journal', label: 'General Journal', icon: 'ri-book-line' },
+              { id: 'ledger', label: 'General Ledger', icon: 'ri-file-list-line' },
+              { id: 'reports', label: 'Reports', icon: 'ri-bar-chart-line' }
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'text-green-800'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  style={isActive ? { borderColor: theme.primary } : undefined}
+                >
+                  <i className={`${tab.icon} mr-2`}></i>
+                  {tab.label}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -739,93 +765,44 @@ export default function AccountingPage() {
           <div className="space-y-6">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <button
-                type="button"
-                onClick={() => openBreakdown('asset')}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start">
-                  <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                    <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
-                  </div>
-                  <div className="ml-3 min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-600 truncate">Activos</p>
-                    {calculateAccountTypeTotal('asset') === null ? (
-                      <p className="text-sm text-gray-500 italic">No hay datos</p>
-                    ) : (
-                      <p className="text-base font-bold text-gray-900 truncate" title={`RD$${formatAmount(calculateAccountTypeTotal('asset')!)}`}>
-                        RD${formatAmount(calculateAccountTypeTotal('asset')!)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openBreakdown('liability')}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start">
-                  <div className="p-2 bg-red-100 rounded-lg flex-shrink-0">
-                    <i className="ri-bank-card-line text-xl text-red-600"></i>
-                  </div>
-                  <div className="ml-3 min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-600 truncate">Pasivos</p>
-                    {calculateAccountTypeTotal('liability') === null ? (
-                      <p className="text-sm text-gray-500 italic">No hay datos</p>
-                    ) : (
-                      <p className="text-base font-bold text-gray-900 truncate" title={`RD$${formatAmount(calculateAccountTypeTotal('liability')!)}`}>
-                        RD${formatAmount(calculateAccountTypeTotal('liability')!)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openBreakdown('equity')}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start">
-                  <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                    <i className="ri-pie-chart-line text-xl text-green-600"></i>
-                  </div>
-                  <div className="ml-3 min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-600 truncate">Patrimonio</p>
-                    {calculateAccountTypeTotal('equity') === null ? (
-                      <p className="text-sm text-gray-500 italic">No hay datos</p>
-                    ) : (
-                      <p className="text-base font-bold text-gray-900 truncate" title={`RD$${formatAmount(calculateAccountTypeTotal('equity')!)}`}>
-                        RD${formatAmount(calculateAccountTypeTotal('equity')!)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => openBreakdown('income')}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-start">
-                  <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
-                    <i className="ri-line-chart-line text-xl text-purple-600"></i>
-                  </div>
-                  <div className="ml-3 min-w-0 flex-1">
-                    <p className="text-xs font-medium text-gray-600 truncate">Ingresos</p>
-                    {calculateAccountTypeTotal('income') === null ? (
-                      <p className="text-sm text-gray-500 italic">No hay datos</p>
-                    ) : (
-                      <p className="text-base font-bold text-gray-900 truncate" title={`RD$${formatAmount(calculateAccountTypeTotal('income')!)}`}>
-                        RD${formatAmount(calculateAccountTypeTotal('income')!)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </button>
+              {[
+                { type: 'asset', label: 'Assets', icon: 'ri-money-dollar-circle-line' },
+                { type: 'liability', label: 'Liabilities', icon: 'ri-bank-card-line' },
+                { type: 'equity', label: 'Equity', icon: 'ri-pie-chart-line' },
+                { type: 'income', label: 'Income', icon: 'ri-line-chart-line' }
+              ].map((card) => {
+                const total = calculateAccountTypeTotal(card.type as BreakdownType);
+                return (
+                  <button
+                    key={card.type}
+                    type="button"
+                    onClick={() => openBreakdown(card.type as BreakdownType)}
+                    className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start">
+                      <div
+                        className="p-2 rounded-lg flex-shrink-0"
+                        style={{ backgroundColor: theme.muted }}
+                      >
+                        <i className={`${card.icon} text-xl`} style={{ color: theme.primary }}></i>
+                      </div>
+                      <div className="ml-3 min-w-0 flex-1">
+                        <p className="text-xs font-medium text-gray-600 truncate">{card.label}</p>
+                        {total === null ? (
+                          <p className="text-sm text-gray-500 italic">No data available</p>
+                        ) : (
+                          <p
+                            className="text-base font-bold text-gray-900 truncate"
+                            title={`RD$${formatAmount(total)}`}
+                          >
+                            RD${formatAmount(total)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             {breakdownOpen && breakdownType && (
@@ -837,9 +814,9 @@ export default function AccountingPage() {
                 <div className="relative bg-white w-full max-w-4xl mx-4 rounded-lg shadow-lg border border-gray-200 max-h-[85vh] overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900">Origen del valor: {getBreakdownLabel(breakdownType)}</h3>
+                      <h3 className="text-lg font-medium text-gray-900">Value source: {getBreakdownLabel(breakdownType)}</h3>
                       <p className="text-sm text-gray-600">
-                        Este total se calcula como la suma de <span className="font-medium">balance</span> de las cuentas tipo <span className="font-medium">{breakdownType}</span> que permiten imputación (<span className="font-medium">allow_posting</span>).
+                        This total is calculated from the <span className="font-medium">balance</span> of <span className="font-medium">{breakdownType}</span> accounts that allow posting (<span className="font-medium">allow_posting</span>).
                       </p>
                     </div>
                     <button
@@ -855,7 +832,7 @@ export default function AccountingPage() {
                   <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(85vh-64px)]">
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-semibold text-gray-900">Cuentas incluidas</h4>
+                        <h4 className="text-sm font-semibold text-gray-900">Included accounts</h4>
                         <div className="text-sm text-gray-700">
                           Total: <span className="font-semibold">RD${formatAmount(calculateAccountTypeTotal(breakdownType) || 0)}</span>
                         </div>
@@ -864,8 +841,8 @@ export default function AccountingPage() {
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
                               <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                             </tr>
                           </thead>
@@ -891,25 +868,25 @@ export default function AccountingPage() {
                           </tfoot>
                         </table>
                         {getAccountsByType(breakdownType).length === 0 && (
-                          <div className="p-4 text-sm text-gray-500">No hay cuentas para este tipo.</div>
+                          <div className="p-4 text-sm text-gray-500">No accounts for this category.</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Movimientos recientes (asientos posteados)</h4>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Recent movements (posted entries)</h4>
                       {breakdownLoading ? (
-                        <div className="text-sm text-gray-600">Cargando movimientos...</div>
+                        <div className="text-sm text-gray-600">Loading movements...</div>
                       ) : (
                         <div className="overflow-x-auto border border-gray-200 rounded-lg">
                           <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asiento</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta</th>
-                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Débito</th>
-                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Crédito</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entry</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Debit</th>
+                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Credit</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -926,7 +903,7 @@ export default function AccountingPage() {
                             {breakdownLines.length > 0 && (
                               <tfoot className="bg-gray-100">
                                 <tr>
-                                  <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Totales:</td>
+                                  <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Totals:</td>
                                   <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
                                     RD${formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.debit_amount || 0), 0))}
                                   </td>
@@ -938,7 +915,7 @@ export default function AccountingPage() {
                             )}
                           </table>
                           {breakdownLines.length === 0 && (
-                            <div className="p-4 text-sm text-gray-500">No hay movimientos recientes para estas cuentas.</div>
+                            <div className="p-4 text-sm text-gray-500">No recent movements for these accounts.</div>
                           )}
                         </div>
                       )}
@@ -951,26 +928,26 @@ export default function AccountingPage() {
             {/* Recent Journal Entries */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Asientos Recientes</h3>
+                <h3 className="text-lg font-medium text-gray-900">Recent Entries</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Número
+                        Number
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha
+                        Date
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Descripción
+                        Description
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Débito
+                        Debit
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Crédito
+                        Credit
                       </th>
                     </tr>
                   </thead>
@@ -999,7 +976,7 @@ export default function AccountingPage() {
                 {journalEntries.length === 0 && (
                   <div className="text-center py-8">
                     <i className="ri-file-list-line text-4xl text-gray-300 mb-4 block"></i>
-                    <p className="text-gray-500">No hay asientos contables registrados</p>
+                    <p className="text-gray-500">No journal entries recorded yet</p>
                   </div>
                 )}
               </div>
@@ -1010,13 +987,16 @@ export default function AccountingPage() {
         {activeTab === 'journal' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Libro Diario</h3>
+              <h3 className="text-lg font-medium text-gray-900">General Journal</h3>
               <button
                 onClick={() => setShowJournalModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                style={{ backgroundColor: theme.primary }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
               >
                 <i className="ri-add-line mr-2"></i>
-                Nuevo Asiento
+                New Entry
               </button>
             </div>
             <div className="overflow-x-auto">
@@ -1024,25 +1004,25 @@ export default function AccountingPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Número
+                      Number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fecha
+                      Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Descripción
+                      Description
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Referencia
+                      Reference
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Débito
+                      Debit
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Crédito
+                      Credit
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Estado
+                      Status
                     </th>
                   </tr>
                 </thead>
@@ -1079,13 +1059,16 @@ export default function AccountingPage() {
               {journalEntries.length === 0 && (
                 <div className="text-center py-8">
                   <i className="ri-book-line text-4xl text-gray-300 mb-4 block"></i>
-                  <p className="text-gray-500 mb-4">No hay asientos en el libro diario</p>
+                  <p className="text-gray-500 mb-4">No journal entries posted yet</p>
                   <button
                     onClick={() => setShowJournalModal(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                    style={{ backgroundColor: theme.primary }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                   >
                     <i className="ri-add-line mr-2"></i>
-                    Crear Primer Asiento
+                    Create First Entry
                   </button>
                 </div>
               )}
@@ -1096,17 +1079,17 @@ export default function AccountingPage() {
         {activeTab === 'reports' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Reportes Contables</h3>
+              <h3 className="text-lg font-medium text-gray-900">Accounting Reports</h3>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[
-                  { id: 'balance-sheet', name: 'Balance General', icon: 'ri-scales-line', description: 'Estado de situación financiera' },
-                  { id: 'income-statement', name: 'Estado de Resultados', icon: 'ri-line-chart-line', description: 'Ingresos y gastos del período' },
-                  { id: 'cash-flow', name: 'Flujo de Efectivo', icon: 'ri-money-dollar-circle-line', description: 'Movimientos de efectivo' },
-                  { id: 'trial-balance', name: 'Balanza de Comprobación', icon: 'ri-calculator-line', description: 'Saldos de todas las cuentas' },
-                  { id: 'general-ledger', name: 'Mayor General', icon: 'ri-book-open-line', description: 'Detalle de movimientos por cuenta' },
-                  { id: 'journal-report', name: 'Libro Diario', icon: 'ri-file-list-line', description: 'Registro cronológico de asientos' }
+                  { id: 'balance-sheet', name: 'Balance Sheet', icon: 'ri-scales-line', description: 'Statement of financial position' },
+                  { id: 'income-statement', name: 'Income Statement', icon: 'ri-line-chart-line', description: 'Period income and expenses' },
+                  { id: 'cash-flow', name: 'Cash Flow', icon: 'ri-money-dollar-circle-line', description: 'Cash movements' },
+                  { id: 'trial-balance', name: 'Trial Balance', icon: 'ri-calculator-line', description: 'Balances for every account' },
+                  { id: 'general-ledger', name: 'General Ledger', icon: 'ri-book-open-line', description: 'Account movements by period' },
+                  { id: 'journal-report', name: 'Journal Report', icon: 'ri-file-list-line', description: 'Chronological entry log' }
                 ].map((report) => (
                   <div key={report.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                     <div className="flex items-center mb-3">
@@ -1121,32 +1104,35 @@ export default function AccountingPage() {
                     {report.id === 'trial-balance' && (
                       <div className="mb-3">
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Modo de balanza
+                          Trial balance mode
                         </label>
                         <select
                           value={trialBalanceMode}
                           onChange={(e) => setTrialBalanceMode(e.target.value as 'detail' | 'summary')}
                           className="w-full px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
-                          <option value="detail">Con detalle (todas las cuentas)</option>
-                          <option value="summary">Sin detalle (solo cuentas de grupo)</option>
+                          <option value="detail">Detailed (all accounts)</option>
+                          <option value="summary">Summary (group accounts only)</option>
                         </select>
                       </div>
                     )}
                     <button
                       onClick={() => handleGenerateReport(report.id)}
                       disabled={reportLoading}
-                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+                      className="w-full text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50"
+                      style={{ backgroundColor: theme.primary }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                     >
                       {reportLoading ? (
                         <>
                           <i className="ri-loader-4-line mr-2 animate-spin"></i>
-                          Generando...
+                          Generating...
                         </>
                       ) : (
                         <>
                           <i className="ri-download-line mr-2"></i>
-                          Generar Reporte
+                          Generate Report
                         </>
                       )}
                     </button>
@@ -1160,20 +1146,21 @@ export default function AccountingPage() {
         {activeTab === 'ledger' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Mayor General</h3>
+              <h3 className="text-lg font-medium text-gray-900">General Ledger</h3>
               <button
                 onClick={() => navigate('/accounting/general-ledger')}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="text-white px-4 py-2 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                style={{ backgroundColor: theme.primary }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
               >
                 <i className="ri-book-open-line mr-2"></i>
-                Ir al Mayor General
+                Go to General Ledger
               </button>
             </div>
             <div className="p-6 text-sm text-gray-600">
               <p>
-                Desde esta pestaña puedes acceder al detalle del Mayor General.
-                Usa el botón "Ir al Mayor General" para ver los movimientos por cuenta
-                con filtros de fechas y exportación a Excel.
+                Review detailed ledger movements here. Use the “Go to General Ledger” button to open the full ledger view with account filters, date ranges, and Excel export.
               </p>
             </div>
           </div>
@@ -1185,7 +1172,7 @@ export default function AccountingPage() {
             <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Nuevo Asiento Contable</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">New Journal Entry</h2>
                   <button
                     onClick={() => setShowJournalModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -1199,7 +1186,7 @@ export default function AccountingPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Número de Asiento
+                        Entry Number
                       </label>
                       <input
                         type="text"
@@ -1211,7 +1198,7 @@ export default function AccountingPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fecha *
+                        Date *
                       </label>
                       <input
                         type="date"
@@ -1223,7 +1210,7 @@ export default function AccountingPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Referencia
+                        Reference
                       </label>
                       <input
                         type="text"
@@ -1236,7 +1223,7 @@ export default function AccountingPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Descripción *
+                      Description *
                     </label>
                     <textarea
                       required
@@ -1250,14 +1237,17 @@ export default function AccountingPage() {
                   {/* Journal Lines */}
                   <div>
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-gray-900">Líneas del Asiento</h3>
+                      <h3 className="text-lg font-medium text-gray-900">Journal Lines</h3>
                       <button
                         type="button"
                         onClick={handleAddJournalLine}
-                        className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                        className="text-white px-3 py-1 rounded-lg shadow-sm transition-colors whitespace-nowrap"
+                        style={{ backgroundColor: theme.primary }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                       >
                         <i className="ri-add-line mr-1"></i>
-                        Agregar Línea
+                        Add Line
                       </button>
                     </div>
 
@@ -1271,7 +1261,7 @@ export default function AccountingPage() {
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
                               required
                             >
-                              <option value="">Seleccionar cuenta</option>
+                              <option value="">Select account</option>
                               {accounts.filter(acc => acc.is_active && acc.allow_posting).map((account) => (
                                 <option key={account.id} value={account.id}>
                                   {account.code} - {account.name}
@@ -1284,7 +1274,7 @@ export default function AccountingPage() {
                               type="text"
                               value={line.description}
                               onChange={(e) => handleJournalLineChange(index, 'description', e.target.value)}
-                              placeholder="Descripción"
+                              placeholder="Description"
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                           </div>
@@ -1294,7 +1284,7 @@ export default function AccountingPage() {
                               step="0.01"
                               value={line.debit}
                               onChange={(e) => handleJournalLineChange(index, 'debit', e.target.value)}
-                              placeholder="Débito"
+                              placeholder="Debit"
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                           </div>
@@ -1304,7 +1294,7 @@ export default function AccountingPage() {
                               step="0.01"
                               value={line.credit}
                               onChange={(e) => handleJournalLineChange(index, 'credit', e.target.value)}
-                              placeholder="Crédito"
+                              placeholder="Credit"
                               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                           </div>
@@ -1326,15 +1316,15 @@ export default function AccountingPage() {
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center">
                         <div className="text-sm">
-                          <span className="font-medium">Total Débito: </span>
+                          <span className="font-medium">Total Debit: </span>
                           <span className="text-blue-600">RD${formatAmount(totalDebit)}</span>
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">Total Crédito: </span>
+                          <span className="font-medium">Total Credit: </span>
                           <span className="text-green-600">RD${formatAmount(totalCredit)}</span>
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">Diferencia: </span>
+                          <span className="font-medium">Difference: </span>
                           <span className={`${Math.abs(totalDebit - totalCredit) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
                             RD${formatAmount(Math.abs(totalDebit - totalCredit))}
                           </span>
@@ -1350,14 +1340,17 @@ export default function AccountingPage() {
                       onClick={() => setShowJournalModal(false)}
                       className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={Math.abs(totalDebit - totalCredit) > 0.01}
-                      className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 text-white py-3 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ backgroundColor: theme.primary }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                     >
-                      Crear Asiento
+                      Create Entry
                     </button>
                   </div>
                 </form>

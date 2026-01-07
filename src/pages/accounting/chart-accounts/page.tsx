@@ -6,6 +6,15 @@ import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 interface ChartAccount {
   id: string;
   code: string;
@@ -146,7 +155,7 @@ export default function ChartAccountsPage() {
     {
       id: 'excel',
       name: 'Microsoft Excel',
-      description: 'Archivos Excel con formato estructurado (.xlsx, .xls)',
+      description: 'Structured Excel files (.xlsx, .xls)',
       fileTypes: ['.xlsx', '.xls'],
       icon: 'ri-file-excel-line',
       color: 'bg-green-100 text-green-800'
@@ -154,13 +163,13 @@ export default function ChartAccountsPage() {
   ];
 
   const accountTypes = [
-    { value: 'all', label: 'Todos los Tipos' },
-    { value: 'asset', label: 'Activos' },
-    { value: 'liability', label: 'Pasivos' },
-    { value: 'equity', label: 'Patrimonio' },
-    { value: 'income', label: 'Ingresos' },
-    { value: 'cost', label: 'Costos' },
-    { value: 'expense', label: 'Gastos' }
+    { value: 'all', label: 'All Types' },
+    { value: 'asset', label: 'Assets' },
+    { value: 'liability', label: 'Liabilities' },
+    { value: 'equity', label: 'Equity' },
+    { value: 'income', label: 'Income' },
+    { value: 'expense', label: 'Expenses' },
+    { value: 'cost', label: 'Costs' },
   ];
 
   const filteredAccounts = accounts.filter(account => {
@@ -187,7 +196,7 @@ export default function ChartAccountsPage() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return;
-    const confirmMsg = `¿Eliminar ${selectedIds.length} cuenta(s)?\nLas cuentas con saldo o con subcuentas no podrán eliminarse.`;
+    const confirmMsg = `Delete ${selectedIds.length} account(s)?\nAccounts with balance or with subaccounts cannot be deleted.`;
     if (!confirm(confirmMsg)) return;
     setIsDeleting(true);
     let deleted = 0;
@@ -198,28 +207,28 @@ export default function ChartAccountsPage() {
         if (!acc) continue;
         const hasChildren = accounts.some(a => a.parentId === id);
         if (hasChildren) {
-          failed.push({ code: acc.code, reason: 'Tiene subcuentas' });
+          failed.push({ code: acc.code, reason: 'Has subaccounts' });
           continue;
         }
         if (acc.balance !== 0) {
-          failed.push({ code: acc.code, reason: 'Tiene saldo distinto de 0' });
+          failed.push({ code: acc.code, reason: 'Has non-zero balance' });
           continue;
         }
         try {
           const relations = await chartAccountsService.checkRelations(id);
           if (relations.hasAccountingSettings) {
-            failed.push({ code: acc.code, reason: 'Usada en configuración contable' });
+            failed.push({ code: acc.code, reason: 'Used in accounting settings' });
             continue;
           }
           if (relations.hasJournalEntries) {
-            failed.push({ code: acc.code, reason: 'Tiene asientos contables registrados' });
+            failed.push({ code: acc.code, reason: 'Has journal entries posted' });
             continue;
           }
 
           await chartAccountsService.delete(id);
           deleted++;
         } catch (e) {
-          failed.push({ code: acc.code, reason: 'Error al eliminar' });
+          failed.push({ code: acc.code, reason: 'Error deleting' });
         }
       }
       await loadAccounts();
@@ -230,14 +239,14 @@ export default function ChartAccountsPage() {
       ];
       if (failed.length > 0) {
         const sample = failed.slice(0, 5).map(f => `- ${f.code}: ${f.reason}`).join('\n');
-        lines.push('Detalles (muestra):');
+        lines.push('Details (sample):');
         lines.push(sample);
-        if (failed.length > 5) lines.push(`... y ${failed.length - 5} más`);
+        if (failed.length > 5) lines.push(`... and ${failed.length - 5} more`);
       }
       alert(lines.join('\n'));
     } catch (err) {
       console.error('Bulk delete error:', err);
-      alert('Error al eliminar las cuentas seleccionadas.');
+      alert('Error deleting selected accounts.');
     } finally {
       setIsDeleting(false);
     }
@@ -246,7 +255,7 @@ export default function ChartAccountsPage() {
   const handleSeedBaseCatalog = async () => {
     if (!user) return;
 
-    const confirmMsg = `Esto cargará nuevamente el catálogo de cuentas base.\n\nSolo agregará las cuentas faltantes; no eliminará ni modificará las existentes.\n\n¿Desea continuar?`;
+    const confirmMsg = `This will load the base chart of accounts again.\n\nIt will only add missing accounts; it will not delete or modify existing ones.\n\nDo you want to continue?`;
     if (!confirm(confirmMsg)) return;
 
     try {
@@ -263,7 +272,7 @@ export default function ChartAccountsPage() {
       }
     } catch (error) {
       console.error('Error applying base chart of accounts manually:', error);
-      alert('Ocurrió un error al aplicar el catálogo de cuentas base.');
+      alert('An error occurred while applying the base chart of accounts.');
     } finally {
       setIsSeedingBase(false);
     }
@@ -271,13 +280,13 @@ export default function ChartAccountsPage() {
 
   const getAccountTypeColor = (type: string) => {
     switch (type) {
-      case 'asset': return 'bg-blue-100 text-blue-800';
-      case 'liability': return 'bg-red-100 text-red-800';
-      case 'equity': return 'bg-green-100 text-green-800';
-      case 'income': return 'bg-purple-100 text-purple-800';
-      case 'cost': return 'bg-yellow-100 text-yellow-800';
-      case 'expense': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'asset': return 'bg-[#dfe6d8] text-[#2f3a2f]';
+      case 'liability': return 'bg-[#cfd6c6] text-[#2f3a2f]';
+      case 'equity': return 'bg-[#e3e8dd] text-[#2f3a2f]';
+      case 'income': return 'bg-[#c9e0c9] text-[#244026]';
+      case 'cost': return 'bg-[#e9e1c8] text-[#3a3424]';
+      case 'expense': return 'bg-[#e7d8d0] text-[#3e2f2b]';
+      default: return 'bg-[#e3e8dd] text-[#2f3a2f]';
     }
   };
 
@@ -881,7 +890,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
 
       ws.mergeCells(currentRow, 1, currentRow, totalColumns);
       const titleCell = ws.getCell(currentRow, 1);
-      titleCell.value = 'Catálogo de Cuentas';
+      titleCell.value = 'Chart of Accounts';
       titleCell.font = { bold: true, size: 14, underline: true };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       currentRow++;
@@ -932,7 +941,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
 
       // Solo título, fila en blanco y encabezados, sin filas de datos
       const aoa = [
-        ['Catálogo de Cuentas - Plantilla'],
+        ['Chart of Accounts - Template'],
         [],
         header,
       ];
@@ -951,7 +960,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
 
       const titleCellRef = 'A1';
       if (!ws[titleCellRef]) {
-        ws[titleCellRef] = { t: 's', v: 'Catálogo de Cuentas - Plantilla' } as any;
+        ws[titleCellRef] = { t: 's', v: 'Chart of Accounts - Template' } as any;
       }
       (ws[titleCellRef] as any).s = {
         font: { bold: true, underline: true, sz: 14 },
@@ -1146,7 +1155,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         <div className="p-6 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Cargando catálogo de cuentas...</p>
+            <p className="mt-4 text-gray-600">Loading chart of accounts...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -1158,8 +1167,8 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 mb-6">
           <div className="flex-1">
-            <p className="text-sm text-gray-600 mb-1">Gestión completa del plan de cuentas contables</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Catálogo de Cuentas</h1>
+            <p className="text-sm text-gray-600 mb-1">Full management of the chart of accounts</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Chart of Accounts</h1>
           </div>
           <div className="flex flex-wrap gap-3 justify-start lg:justify-end w-full lg:w-auto">
             <button
@@ -1167,41 +1176,57 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
               disabled={isSeedingBase}
               className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap border ${
                 isSeedingBase
-                  ? 'bg-gray-100 text-gray-500 cursor-wait border-gray-200'
-                  : 'bg-white text-gray-800 hover:bg-gray-50 border-gray-300'
+                  ? 'bg-[#eef2ea] text-gray-500 cursor-wait border-[#dfe4db]'
+                  : 'bg-white text-[#2f3a2f] border-[#dfe4db] hover:bg-[#eef2ea]'
               }`}
             >
               <i className="ri-refresh-line mr-2"></i>
-              {isSeedingBase ? 'Cargando catálogo base...' : 'Catálogo de cuentas base'}
+              {isSeedingBase ? 'Loading base catalog...' : 'Base chart of accounts'}
             </button>
             <button
               onClick={downloadExcel}
-              className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-white"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.primaryHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = theme.primary)}
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Descargar catálogo de cuentas
+              Download chart of accounts
             </button>
             <button
               onClick={downloadTemplateHeaders}
-              className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-white"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.primaryHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = theme.primary)}
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Descargar plantilla
+              Download template
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap text-white"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = theme.primaryHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = theme.primary)}
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Cuenta
+              New Account
             </button>
             <button
               onClick={handleDeleteSelected}
               disabled={selectedIds.length === 0}
-              className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${selectedIds.length === 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
+              className={`w-full sm:w-auto px-4 py-2 rounded-lg transition-colors whitespace-nowrap ${selectedIds.length === 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'text-white'}`}
+              style={selectedIds.length === 0 ? {} : { backgroundColor: '#b94b4b' }}
+              onMouseEnter={(e) => {
+                if (selectedIds.length !== 0) e.currentTarget.style.backgroundColor = '#a33f3f';
+              }}
+              onMouseLeave={(e) => {
+                if (selectedIds.length !== 0) e.currentTarget.style.backgroundColor = '#b94b4b';
+              }}
             >
               <i className="ri-delete-bin-line mr-2"></i>
-              Eliminar seleccionadas
+              Delete selected
             </button>
           </div>
         </div>
@@ -1209,7 +1234,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         {isDeleting && (
           <div className="mb-4 flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-100 px-3 py-2 rounded-lg">
             <span className="inline-block h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
-            <span>Eliminando cuentas... Por favor espere.</span>
+            <span>Deleting accounts... Please wait.</span>
           </div>
         )}
 
@@ -1225,7 +1250,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar cuentas por código o nombre..."
+                placeholder="Search accounts by code or name..."
               />
             </div>
           </div>
@@ -1243,9 +1268,9 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         </div>
 
         {/* Chart of Accounts */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-2 sm:px-4 py-2 border-b border-gray-200 bg-gray-50 hidden md:block">
-            <div className="grid grid-cols-[auto,auto,minmax(0,3fr),auto,auto,auto,auto,auto,auto] gap-x-6 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div className="bg-white rounded-lg shadow-sm border" style={{ borderColor: theme.softBorder }}>
+          <div className="px-2 sm:px-4 py-2 border-b hidden md:block" style={{ borderColor: theme.softBorder, backgroundColor: theme.muted }}>
+            <div className="grid grid-cols-[auto,auto,minmax(0,3fr),auto,auto,auto,auto,auto,auto] gap-x-6 text-xs font-semibold uppercase tracking-wide text-[#2f3a2f]">
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -1253,22 +1278,22 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
                   onChange={toggleSelectAll}
                 />
               </div>
-              <div className="text-left">Código</div>
-              <div className="text-left pl-2">Nombre de la cuenta</div>
-              <div className="text-center">Grupos</div>
-              <div className="text-center w-6">Nivel</div>
-              <div className="text-center">Tipo</div>
-              <div className="text-right">Saldo</div>
-              <div className="text-center">Estado</div>
-              <div className="text-center">Acciones</div>
+              <div className="text-left">Code</div>
+              <div className="text-left pl-2">Account Name</div>
+              <div className="text-center">Groups</div>
+              <div className="text-center w-6">Level</div>
+              <div className="text-center">Type</div>
+              <div className="text-right">Balance</div>
+              <div className="text-center">Status</div>
+              <div className="text-center">Actions</div>
             </div>
           </div>
           <div className="max-h-[70vh] overflow-y-auto">
             {topLevelAccounts.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <i className="ri-file-list-line text-4xl mb-4 block"></i>
-                <p className="text-lg font-medium mb-2">No hay cuentas registradas</p>
-                <p className="text-sm">Comience agregando su primera cuenta contable o importe un catálogo existente.</p>
+                <p className="text-lg font-medium mb-2">No accounts registered</p>
+                <p className="text-sm">Start by adding your first account or import an existing catalog.</p>
               </div>
             ) : (
               topLevelAccounts.map(account => renderAccountRow(account))
@@ -1280,8 +1305,8 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         {showFormatModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4">Seleccionar Formato de Importación</h3>
-              <p className="text-gray-600 mb-6">Elija el formato del sistema contable desde el cual desea importar el catálogo de cuentas:</p>
+              <h3 className="text-lg font-semibold mb-4">Select Import Format</h3>
+              <p className="text-gray-600 mb-6">Choose the accounting system format from which you want to import the chart of accounts:</p>
               <div className="grid grid-cols-1 gap-4 mb-6 max-w-md mx-auto">
                 {importFormats.map((format) => (
                   <div
@@ -1319,9 +1344,9 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         {showImportModal && selectedFormat && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4">Importar Catálogo desde {selectedFormat.name}</h3>
+              <h3 className="text-lg font-semibold mb-4">Import Chart from {selectedFormat.name}</h3>
               <p className="text-gray-600 mb-4">
-                Seleccione un archivo {selectedFormat.fileTypes.join(', ')} con el catálogo de cuentas.
+                Select a {selectedFormat.fileTypes.join(', ')} file with the chart of accounts.
               </p>
 
               <input
@@ -1351,7 +1376,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4">Agregar Nueva Cuenta</h3>
+              <h3 className="text-lg font-semibold mb-4">Add New Account</h3>
               <div className="space-y-4">
                 {/* Tipo primero */}
                 <div>

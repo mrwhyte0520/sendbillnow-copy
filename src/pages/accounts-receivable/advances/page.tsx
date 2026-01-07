@@ -62,11 +62,11 @@ export default function AdvancesPage() {
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
-      case 'cash': return 'Efectivo';
-      case 'check': return 'Cheque';
-      case 'transfer': return 'Transferencia';
-      case 'card': return 'Tarjeta';
-      default: return 'Otro';
+      case 'cash': return 'Cash';
+      case 'check': return 'Check';
+      case 'transfer': return 'Bank Transfer';
+      case 'card': return 'Card';
+      default: return 'Other';
     }
   };
 
@@ -82,11 +82,11 @@ export default function AdvancesPage() {
 
   const getStatusName = (status: string) => {
     switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'applied': return 'Aplicado';
-      case 'partial': return 'Parcial';
-      case 'cancelled': return 'Cancelado';
-      default: return 'Desconocido';
+      case 'pending': return 'Pending';
+      case 'applied': return 'Applied';
+      case 'partial': return 'Partial';
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
     }
   };
 
@@ -235,13 +235,13 @@ export default function AdvancesPage() {
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
 
     doc.setFontSize(20);
-    doc.text('Reporte de Anticipos de Clientes', 20, 30);
+    doc.text('Customer Advances Report', 20, 30);
     
     doc.setFontSize(12);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 20, 45);
-    doc.text(`Estado: ${statusFilter === 'all' ? 'Todos' : getStatusName(statusFilter)}`, 20, 55);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 45);
+    doc.text(`Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`, 20, 55);
     
-    // Estadísticas
+    // Summary Stats
     const activeAdvances = filteredAdvances.filter(a => a.status !== 'cancelled');
     const totalAmount = activeAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalApplied = activeAdvances.reduce((sum, advance) => sum + advance.appliedAmount, 0);
@@ -249,15 +249,15 @@ export default function AdvancesPage() {
     const pendingAdvances = activeAdvances.filter(a => a.status === 'pending').length;
     
     doc.setFontSize(14);
-    doc.text('Resumen de Anticipos', 20, 75);
+    doc.text('Advance Summary', 20, 75);
     
     const summaryData = [
-      ['Concepto', 'Valor'],
-      ['Total Anticipos', `${formatMoney(totalAmount, 'RD$')}`],
-      ['Total Aplicado', `${formatMoney(totalApplied, 'RD$')}`],
-      ['Saldo Pendiente', `${formatMoney(totalBalance, 'RD$')}`],
-      ['Anticipos Pendientes', pendingAdvances.toString()],
-      ['Total de Anticipos', activeAdvances.length.toString()]
+      ['Metric', 'Value'],
+      ['Total Advances', `${formatMoney(totalAmount, 'RD$')}`],
+      ['Applied Amount', `${formatMoney(totalApplied, 'RD$')}`],
+      ['Outstanding Balance', `${formatMoney(totalBalance, 'RD$')}`],
+      ['Pending Advances', pendingAdvances.toString()],
+      ['Active Advances', activeAdvances.length.toString()]
     ];
     
     (doc as any).autoTable({
@@ -268,9 +268,9 @@ export default function AdvancesPage() {
       headStyles: { fillColor: [59, 130, 246] }
     });
     
-    // Tabla de anticipos
+    // Advances table
     doc.setFontSize(14);
-    doc.text('Detalle de Anticipos', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Advance Details', 20, (doc as any).lastAutoTable.finalY + 20);
     
     const advanceData = activeAdvances.map(advance => [
       advance.advanceNumber,
@@ -284,7 +284,7 @@ export default function AdvancesPage() {
     
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Anticipo', 'Cliente', 'Fecha', 'Monto', 'Aplicado', 'Saldo', 'Estado']],
+      head: [['Advance', 'Customer', 'Date', 'Amount', 'Applied', 'Balance', 'Status']],
       body: advanceData,
       theme: 'striped',
       headStyles: { fillColor: [34, 197, 94] },
@@ -298,7 +298,7 @@ export default function AdvancesPage() {
     const activeAdvances: Advance[] = filteredAdvances.filter(a => a.status !== 'cancelled');
 
     if (!activeAdvances.length) {
-      alert('No hay anticipos para exportar con los filtros actuales.');
+      alert('There are no advances to export with the current filters.');
       return;
     }
 
@@ -330,13 +330,13 @@ export default function AdvancesPage() {
     const todayLocal = new Date().toLocaleDateString();
 
     const headers = [
-      { key: 'advanceNumber', title: 'Anticipo' },
-      { key: 'customerName', title: 'Cliente' },
-      { key: 'date', title: 'Fecha' },
-      { key: 'amount', title: 'Monto' },
-      { key: 'appliedAmount', title: 'Aplicado' },
-      { key: 'balance', title: 'Saldo' },
-      { key: 'status', title: 'Estado' },
+      { key: 'advanceNumber', title: 'Advance' },
+      { key: 'customerName', title: 'Customer' },
+      { key: 'date', title: 'Date' },
+      { key: 'amount', title: 'Amount' },
+      { key: 'appliedAmount', title: 'Applied' },
+      { key: 'balance', title: 'Balance' },
+      { key: 'status', title: 'Status' },
     ];
 
     exportToExcelWithHeaders(
@@ -346,7 +346,7 @@ export default function AdvancesPage() {
       'Anticipos',
       [18, 28, 14, 16, 16, 16, 16],
       {
-        title: `Anticipos de Clientes - ${todayLocal}`,
+        title: `Customer Advances - ${todayLocal}`,
         companyName,
       },
     );
@@ -783,82 +783,84 @@ export default function AdvancesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="min-h-screen p-6 bg-[#f7f3e8]">
+
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Anticipos de Clientes</h1>
-            <nav className="flex space-x-2 text-sm text-gray-600 mt-2">
-              <Link to="/accounts-receivable" className="hover:text-blue-600">Cuentas por Cobrar</Link>
+            <h1 className="text-2xl font-bold text-[#2f3e1e]">Customer Advances</h1>
+            <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
+              <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
-              <span>Anticipos</span>
+              <span>Advances</span>
             </nav>
           </div>
           <button 
             onClick={handleNewAdvance}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Nuevo Anticipo
+            New Advance
           </button>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Anticipos</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Total Advances</p>
+                <p className="text-2xl font-semibold text-[#2f3e1e]">
                   {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.amount, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-money-dollar-circle-line text-2xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
+                <i className="ri-money-dollar-circle-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Saldo Disponible</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Available Balance</p>
+                <p className="text-2xl font-semibold text-[#1f2913]">
                   {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.balance, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-wallet-line text-2xl text-green-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#1f2913]">
+                <i className="ri-wallet-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Monto Aplicado</p>
-                <p className="text-2xl font-bold text-purple-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
+                <p className="text-2xl font-semibold text-[#4a3c24]">
                   {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.appliedAmount, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-check-double-line text-2xl text-purple-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#4a3c24]">
+                <i className="ri-check-double-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Anticipos Pendientes</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Pending Advances</p>
+                <p className="text-2xl font-semibold text-[#bc6c2b]">
                   {filteredAdvances.filter(a => a.status === 'pending').length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-time-line text-2xl text-orange-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#bc6c2b]">
+                <i className="ri-time-line text-2xl"></i>
               </div>
             </div>
           </div>
+
         </div>
 
         {/* Filters and Export */}
@@ -866,14 +868,14 @@ export default function AdvancesPage() {
           <div className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i className="ri-search-line text-gray-400"></i>
+                <i className="ri-search-line text-[#9b8a64]"></i>
               </div>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por cliente, número de anticipo o referencia..."
+                className="block w-full pl-10 pr-3 py-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] text-sm placeholder:text-[#9b8a64]"
+                placeholder="Search by customer, advance number, or reference..."
               />
             </div>
           </div>
@@ -882,26 +884,26 @@ export default function AdvancesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+              className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] text-sm pr-8"
             >
-              <option value="all">Todos los Estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="partial">Parciales</option>
-              <option value="applied">Aplicados</option>
-              <option value="cancelled">Cancelados</option>
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partially Applied</option>
+              <option value="applied">Fully Applied</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           
           <div className="flex space-x-2">
             <button
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="bg-[#7a2e1b] text-white px-4 py-2 rounded-lg hover:bg-[#5c1f12] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-pdf-line mr-2"></i>PDF
             </button>
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-excel-line mr-2"></i>Excel
             </button>
@@ -911,36 +913,38 @@ export default function AdvancesPage() {
         {/* Advances Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {(loadingAdvances || loadingSupport) && (
-            <div className="px-6 pt-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Anticipo
+                    Advance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aplicado
+                    Applied
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
+                    Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -973,23 +977,23 @@ export default function AdvancesPage() {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewAdvance(advance)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Ver detalles"
+                          className="text-[#2f3e1e] hover:text-[#1f2913]"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         <button
                           onClick={() => handlePrintAdvance(advance)}
-                          className="text-purple-600 hover:text-purple-900"
-                          title="Imprimir"
+                          className="text-[#4a3c24] hover:text-[#2f2112]"
+                          title="Print advance"
                         >
                           <i className="ri-printer-line"></i>
                         </button>
                         {advance.balance > 0 && advance.status !== 'cancelled' && (
                           <button
                             onClick={() => handleApplyAdvance(advance)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Aplicar anticipo"
+                            className="text-[#3b5c2e] hover:text-[#2a3f20]"
+                            title="Apply advance"
                           >
                             <i className="ri-check-line"></i>
                           </button>
@@ -997,8 +1001,8 @@ export default function AdvancesPage() {
                         {advance.status === 'pending' && (
                           <button
                             onClick={() => handleCancelAdvance(advance.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Cancelar anticipo"
+                            className="text-[#7a2e1b] hover:text-[#5c1f12]"
+                            title="Cancel advance"
                           >
                             <i className="ri-close-circle-line"></i>
                           </button>
@@ -1017,7 +1021,7 @@ export default function AdvancesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Nuevo Anticipo de Cliente</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">New Customer Advance</h3>
                 <button
                   onClick={() => setShowAdvanceModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1029,17 +1033,17 @@ export default function AdvancesPage() {
               <form onSubmit={handleSaveAdvance} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cliente
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Customer
                     </label>
                     <select 
                       required
                       name="customer_id"
                       value={selectedCustomerId}
                       onChange={(e) => setSelectedCustomerId(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="">Seleccionar cliente</option>
+                      <option value="">Select a customer</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -1047,43 +1051,43 @@ export default function AdvancesPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Date
                     </label>
                     <input
                       type="text"
                       required
                       name="date"
                       defaultValue={new Date().toISOString().split('T')[0]}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                     />
                   </div>
                 </div>
                 
                 {selectedCustomer && (
-                  <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Datos del Cliente</p>
+                  <div className="mt-2 p-4 bg-[#f7f3e8] rounded-lg border border-[#d8cbb5]">
+                    <p className="text-sm font-medium text-[#4a3c24] mb-1">Customer details</p>
                     {selectedCustomer.document && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold">Documento: </span>
+                      <p className="text-sm text-[#6b5c3b]">
+                        <span className="font-semibold">Document: </span>
                         {selectedCustomer.document}
                       </p>
                     )}
                     {selectedCustomer.phone && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold">Teléfono: </span>
+                      <p className="text-sm text-[#6b5c3b]">
+                        <span className="font-semibold">Phone: </span>
                         {selectedCustomer.phone}
                       </p>
                     )}
                     {selectedCustomer.email && (
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-[#6b5c3b]">
                         <span className="font-semibold">Email: </span>
                         {selectedCustomer.email}
                       </p>
                     )}
                     {selectedCustomer.address && (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold">Dirección: </span>
+                      <p className="text-sm text-[#6b5c3b]">
+                        <span className="font-semibold">Address: </span>
                         {selectedCustomer.address}
                       </p>
                     )}
@@ -1092,46 +1096,46 @@ export default function AdvancesPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto del Anticipo
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Advance amount
                     </label>
                     <input
                       type="number" min="0"
                       step="0.01"
                       required
                       name="amount"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                       placeholder="0.00"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Pago
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Payment method
                     </label>
                     <select 
                       required
                       name="payment_method"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="cash">Efectivo</option>
-                      <option value="check">Cheque</option>
-                      <option value="transfer">Transferencia</option>
-                      <option value="card">Tarjeta</option>
+                      <option value="cash">Cash</option>
+                      <option value="check">Check</option>
+                      <option value="transfer">Bank transfer</option>
+                      <option value="card">Card</option>
                     </select>
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Banco
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Bank account
                   </label>
                   <select
                     name="bank_account_id"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                   >
                     <option value="">
-                      Seleccionar cuenta (obligatoria para Cheque, Transferencia o Tarjeta)
+                      Select an account (required for Check, Transfer, or Card)
                     </option>
                     {bankAccounts.map((ba) => (
                       <option key={ba.id} value={ba.id}>
@@ -1139,34 +1143,34 @@ export default function AdvancesPage() {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Si el método de pago es Efectivo, puede dejar este campo en blanco y se usará la cuenta de Caja/Efectivo configurada en Ajustes Contables.
+                  <p className="mt-1 text-xs text-[#6b5c3b]">
+                    If the payment method is Cash, leave this blank and the default Cash account from Accounting Settings will be used.
                   </p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Referencia
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Reference
                   </label>
                   <input
                     type="text"
                     required
                     name="reference"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Número de referencia del pago"
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                    placeholder="Payment reference number"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Concepto
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Concept
                   </label>
                   <textarea
                     rows={3}
                     required
                     name="concept"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción del anticipo recibido..."
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                    placeholder="Describe the received advance..."
                   />
                 </div>
                 
@@ -1174,15 +1178,15 @@ export default function AdvancesPage() {
                   <button
                     type="button"
                     onClick={() => setShowAdvanceModal(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#f3ecda] text-[#6b5c3b] py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap"
                   >
-                    Crear Anticipo
+                    Create Advance
                   </button>
                 </div>
               </form>
@@ -1195,7 +1199,7 @@ export default function AdvancesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Aplicar Anticipo</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Apply Advance</h3>
                 <button
                   onClick={() => {
                     setShowApplyModal(false);
@@ -1207,23 +1211,29 @@ export default function AdvancesPage() {
                 </button>
               </div>
               
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Anticipo: <span className="font-medium">{selectedAdvance.advanceNumber}</span></p>
-                <p className="text-sm text-gray-600">Cliente: <span className="font-medium">{selectedAdvance.customerName}</span></p>
-                <p className="text-lg font-semibold text-green-600">Saldo disponible: {formatMoney(selectedAdvance.balance, 'RD$')}</p>
+              <div className="mb-4 p-4 bg-[#f7f3e8] rounded-lg border border-[#d8cbb5]">
+                <p className="text-sm text-[#4a3c24]">
+                  Advance: <span className="font-medium text-[#2f3e1e]">{selectedAdvance.advanceNumber}</span>
+                </p>
+                <p className="text-sm text-[#4a3c24]">
+                  Customer: <span className="font-medium text-[#2f3e1e]">{selectedAdvance.customerName}</span>
+                </p>
+                <p className="text-lg font-semibold text-[#1f2913]">
+                  Available balance: {formatMoney(selectedAdvance.balance, 'RD$')}
+                </p>
               </div>
               
               <form onSubmit={handleSaveApplication} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Factura a Aplicar
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Invoice to apply
                   </label>
                   <select 
                     required
                     name="invoice_id"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                   >
-                    <option value="">Seleccionar factura</option>
+                    <option value="">Select an invoice</option>
                     {invoices
                       .filter(
                         (inv) =>
@@ -1239,8 +1249,8 @@ export default function AdvancesPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Monto a Aplicar
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Amount to apply
                   </label>
                   <input
                     type="number" min="0"
@@ -1248,19 +1258,19 @@ export default function AdvancesPage() {
                     name="amount_to_apply"
                     required
                     max={selectedAdvance.balance}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                     placeholder="0.00"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observaciones
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Notes
                   </label>
                   <textarea
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Observaciones sobre la aplicación del anticipo..."
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                    placeholder="Observations about this application..."
                   />
                 </div>
                 
@@ -1271,15 +1281,15 @@ export default function AdvancesPage() {
                       setShowApplyModal(false);
                       setSelectedAdvance(null);
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#f3ecda] text-[#6b5c3b] py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap"
                   >
-                    Aplicar Anticipo
+                    Apply Advance
                   </button>
                 </div>
               </form>

@@ -7,6 +7,16 @@ import { formatDate } from '../../../utils/dateFormat';
 import { formatAmount } from '../../../utils/numberFormat';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 interface JournalEntry {
   id: string;
   entry_number: string;
@@ -48,7 +58,7 @@ const AccountingPeriodsPage: FC = () => {
   const [periodEntries, setPeriodEntries] = useState<JournalEntry[]>([]);
   const [loadingEntries, setLoadingEntries] = useState(false);
 
-  // Formulario para nuevo período
+  // Form state for new accounting period
   const [formData, setFormData] = useState({
     month: (new Date().getMonth() + 1).toString(),
     year: new Date().getFullYear().toString(),
@@ -58,7 +68,7 @@ const AccountingPeriodsPage: FC = () => {
     fiscal_year: new Date().getFullYear().toString()
   });
 
-  // Formulario para nuevo período fiscal
+  // Form state for new fiscal year
   const [fiscalYearForm, setFiscalYearForm] = useState({
     year: new Date().getFullYear().toString(),
     autoGenerateMonths: true
@@ -182,68 +192,68 @@ const AccountingPeriodsPage: FC = () => {
   const downloadExcel = () => {
     try {
       if (filteredPeriods.length === 0) {
-        alert('No hay periodos para exportar.');
+        alert('No periods available to export.');
         return;
       }
 
       const rows = filteredPeriods.map(period => ({
-        nombre: period.name,
-        fechaInicio: formatDate(period.start_date),
-        fechaFin: formatDate(period.end_date),
-        anoFiscal: period.fiscal_year,
-        estado: period.status === 'open' ? 'Abierto' : period.status === 'closed' ? 'Cerrado' : 'Bloqueado',
-        asientos: period.entries_count || 0,
-        totalDebitos: period.total_debits || 0,
-        totalCreditos: period.total_credits || 0,
-        fechaCierre: period.closed_at ? formatDate(period.closed_at) : '',
-        cerradoPor: period.closed_by || ''
+        period: period.name,
+        startDate: formatDate(period.start_date),
+        endDate: formatDate(period.end_date),
+        fiscalYear: period.fiscal_year,
+        status: getStatusText(period.status),
+        entries: period.entries_count || 0,
+        totalDebits: period.total_debits || 0,
+        totalCredits: period.total_credits || 0,
+        closeDate: period.closed_at ? formatDate(period.closed_at) : '',
+        closedBy: period.closed_by || ''
       }));
 
       const headers = [
-        { key: 'nombre', title: 'Periodo' },
-        { key: 'fechaInicio', title: 'Fecha Inicio' },
-        { key: 'fechaFin', title: 'Fecha Fin' },
-        { key: 'anoFiscal', title: 'Ano Fiscal' },
-        { key: 'estado', title: 'Estado' },
-        { key: 'asientos', title: 'Asientos' },
-        { key: 'totalDebitos', title: 'Total Debitos' },
-        { key: 'totalCreditos', title: 'Total Creditos' },
-        { key: 'fechaCierre', title: 'Fecha Cierre' },
-        { key: 'cerradoPor', title: 'Cerrado Por' }
+        { key: 'period', title: 'Period' },
+        { key: 'startDate', title: 'Start Date' },
+        { key: 'endDate', title: 'End Date' },
+        { key: 'fiscalYear', title: 'Fiscal Year' },
+        { key: 'status', title: 'Status' },
+        { key: 'entries', title: 'Entries' },
+        { key: 'totalDebits', title: 'Total Debits' },
+        { key: 'totalCredits', title: 'Total Credits' },
+        { key: 'closeDate', title: 'Close Date' },
+        { key: 'closedBy', title: 'Closed By' }
       ];
 
-      const fileBase = `periodos_contables_${new Date().toISOString().split('T')[0]}`;
+      const fileBase = `accounting_periods_${new Date().toISOString().split('T')[0]}`;
 
       exportToExcelWithHeaders(
         rows,
         headers,
         fileBase,
-        'Periodos',
+        'Periods',
         [30, 14, 14, 12, 12, 10, 18, 18, 14, 20],
         {
-          title: 'Periodos Contables',
+          title: 'Accounting Periods',
           companyName: 'ContaBi'
         }
       );
     } catch (error) {
       console.error('Error downloading Excel:', error);
-      alert('Error al descargar el archivo');
+      alert('Error downloading file');
     }
   };
 
   const validatePeriodDates = (startDate: string, endDate: string): string | null => {
     if (!startDate || !endDate) {
-      return 'Debe especificar fecha de inicio y fin';
+      return 'You must specify both start and end dates';
     }
 
     if (new Date(startDate) >= new Date(endDate)) {
-      return 'La fecha de inicio debe ser anterior a la fecha de fin';
+      return 'Start date must be earlier than end date';
     }
 
-    // Verificar solapamiento con períodos existentes ABIERTOS solamente
-    // Permitir crear períodos si el existente está cerrado o bloqueado
+    // Check overlap against existing OPEN periods only
+    // Allow creation if the existing period is closed or locked
     const hasOverlap = periods.some(period => {
-      // Solo validar solapamiento con períodos abiertos
+      // Only validate overlap with open periods
       if (period.status !== 'open') {
         return false;
       }
@@ -257,7 +267,7 @@ const AccountingPeriodsPage: FC = () => {
     });
 
     if (hasOverlap) {
-      return 'El período se solapa con un período existente que está abierto';
+      return 'The new period overlaps with an existing open period';
     }
 
     return null;
@@ -267,23 +277,23 @@ const AccountingPeriodsPage: FC = () => {
     if (!user) return;
 
     try {
-      // Calcular fechas automáticamente según mes y año seleccionados
+      // Auto-calculate dates based on selected month and year
       const monthNum = parseInt(formData.month);
       const yearNum = parseInt(formData.year);
       const startDate = new Date(yearNum, monthNum - 1, 1);
-      const endDate = new Date(yearNum, monthNum, 0); // Último día del mes
+      const endDate = new Date(yearNum, monthNum, 0); // Last day of the month
       
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Validar que existe un período fiscal para este año
+      // Validate that a fiscal period exists for this year
       const fiscalYearExists = periods.some(p => 
         p.fiscal_year === formData.year && 
         (p.name.includes('Año Fiscal') || p.start_date.startsWith(`${formData.year}-01-01`))
       );
 
       if (!fiscalYearExists && periods.filter(p => p.fiscal_year === formData.year).length === 0) {
-        if (!confirm(`No existe un período fiscal para el año ${formData.year}. ¿Desea crear el período de todas formas?`)) {
+        if (!confirm(`There is no fiscal period for ${formData.year}. Do you want to create this period anyway?`)) {
           return;
         }
       }
@@ -295,10 +305,10 @@ const AccountingPeriodsPage: FC = () => {
         return;
       }
 
-      // Generar nombre automático si no se especificó
+      // Generate automatic name if none provided
       const monthNames = [
-        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
       ];
       const autoName = `${monthNames[monthNum - 1]} ${formData.year}`;
       const periodName = formData.name.trim() || autoName;
@@ -319,7 +329,7 @@ const AccountingPeriodsPage: FC = () => {
 
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) {
-        alert('Error: No se pudo resolver el tenant');
+        alert('Error: Could not resolve tenant');
         return;
       }
 
@@ -340,14 +350,14 @@ const AccountingPeriodsPage: FC = () => {
 
         if (error) {
           console.error('Supabase error:', error);
-          alert('Error al guardar el período en la base de datos');
+          alert('Error saving the period in the database');
           return;
         }
         
         setPeriods(prev => [{ ...newPeriod, id: data.id }, ...prev]);
       } catch (supabaseError) {
         console.error('Supabase error:', supabaseError);
-        alert('Error al guardar el período');
+        alert('Error saving the period');
         return;
       }
       
@@ -364,15 +374,15 @@ const AccountingPeriodsPage: FC = () => {
       });
       
       setShowCreateModal(false);
-      alert('Período contable creado exitosamente');
+      alert('Accounting period created successfully');
     } catch (error) {
       console.error('Error creating period:', error);
-      alert('Error al crear el período contable');
+      alert('Error creating accounting period');
     }
   };
 
   const handleClosePeriod = async (periodId: string) => {
-    if (!confirm('¿Está seguro de que desea cerrar este período? Esta acción no se puede deshacer.')) {
+    if (!confirm('Are you sure you want to close this period? This action cannot be undone.')) {
       return;
     }
 
@@ -399,15 +409,15 @@ const AccountingPeriodsPage: FC = () => {
           ? { ...period, ...updatedPeriod }
           : period
       ));
-      alert('Período cerrado exitosamente');
+      alert('Period closed successfully');
     } catch (error) {
       console.error('Error closing period:', error);
-      alert('Error al cerrar el período');
+      alert('Error closing the period');
     }
   };
 
   const handleLockPeriod = async (periodId: string) => {
-    if (!confirm('¿Está seguro de que desea bloquear este período? No se podrán realizar más cambios.')) {
+    if (!confirm('Are you sure you want to lock this period? No additional changes will be allowed.')) {
       return;
     }
 
@@ -430,15 +440,15 @@ const AccountingPeriodsPage: FC = () => {
           ? { ...period, ...updatedPeriod }
           : period
       ));
-      alert('Período bloqueado exitosamente');
+      alert('Period locked successfully');
     } catch (error) {
       console.error('Error locking period:', error);
-      alert('Error al bloquear el período');
+      alert('Error locking the period');
     }
   };
 
   const handleReopenPeriod = async (periodId: string) => {
-    if (!confirm('¿Está seguro de que desea reabrir este período?')) {
+    if (!confirm('Are you sure you want to reopen this period?')) {
       return;
     }
 
@@ -465,10 +475,10 @@ const AccountingPeriodsPage: FC = () => {
           ? { ...period, ...updatedPeriod }
           : period
       ));
-      alert('Período reabierto exitosamente');
+      alert('Period reopened successfully');
     } catch (error) {
       console.error('Error reopening period:', error);
-      alert('Error al reabrir el período');
+      alert('Error reopening the period');
     }
   };
 
@@ -477,11 +487,11 @@ const AccountingPeriodsPage: FC = () => {
     if (!period) return;
 
     if (period.entries_count && period.entries_count > 0) {
-      alert('No se puede eliminar un período que tiene asientos contables registrados.');
+      alert('You cannot delete a period that already has journal entries.');
       return;
     }
 
-    if (!confirm(`¿Está seguro de que desea eliminar el período "${period.name}"? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`Are you sure you want to delete the period "${period.name}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -494,10 +504,10 @@ const AccountingPeriodsPage: FC = () => {
       if (error) throw error;
 
       setPeriods(prev => prev.filter(p => p.id !== periodId));
-      alert('Período eliminado exitosamente');
+      alert('Period deleted successfully');
     } catch (error) {
       console.error('Error deleting period:', error);
-      alert('Error al eliminar el período');
+      alert('Error deleting the period');
     }
   };
 
@@ -920,13 +930,13 @@ const AccountingPeriodsPage: FC = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'open':
-        return 'Abierto';
+        return 'Open';
       case 'closed':
-        return 'Cerrado';
+        return 'Closed';
       case 'locked':
-        return 'Bloqueado';
+        return 'Locked';
       default:
-        return 'Desconocido';
+        return 'Unknown';
     }
   };
 
@@ -945,35 +955,41 @@ const AccountingPeriodsPage: FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Header con botón de regreso */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/accounting')}
             className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <i className="ri-arrow-left-line"></i>
-            Volver a Contabilidad
+            Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Períodos Contables / Fiscales</h1>
-            <p className="text-gray-600">Gestión de períodos contables y fiscales</p>
+            <h1 className="text-2xl font-bold text-gray-900">Accounting / Fiscal Periods</h1>
+            <p className="text-gray-600">Manage accounting and fiscal periods</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCreateFiscalYearModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm transition-colors"
+            style={{ backgroundColor: theme.primary }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
           >
-            <i className="ri-calendar-line"></i>
-            Nuevo Año Fiscal
+            <i className="ri-calendar-event-line"></i>
+            New Fiscal Year
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm transition-colors"
+            style={{ backgroundColor: theme.accent }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.accent; }}
           >
             <i className="ri-add-line"></i>
-            Nuevo Período
+            New Period
           </button>
         </div>
       </div>
@@ -982,11 +998,14 @@ const AccountingPeriodsPage: FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <i className="ri-calendar-check-line text-2xl text-green-600"></i>
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: theme.muted }}
+            >
+              <i className="ri-calendar-check-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Períodos Abiertos</p>
+              <p className="text-sm font-medium text-gray-600">Open Periods</p>
               <p className="text-2xl font-bold text-gray-900">
                 {periods.filter(p => p.status === 'open').length}
               </p>
@@ -996,11 +1015,14 @@ const AccountingPeriodsPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <i className="ri-calendar-close-line text-2xl text-yellow-600"></i>
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: theme.muted }}
+            >
+              <i className="ri-calendar-close-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Períodos Cerrados</p>
+              <p className="text-sm font-medium text-gray-600">Closed Periods</p>
               <p className="text-2xl font-bold text-gray-900">
                 {periods.filter(p => p.status === 'closed').length}
               </p>
@@ -1010,11 +1032,14 @@ const AccountingPeriodsPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <i className="ri-lock-line text-2xl text-red-600"></i>
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: theme.muted }}
+            >
+              <i className="ri-lock-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Períodos Bloqueados</p>
+              <p className="text-sm font-medium text-gray-600">Locked Periods</p>
               <p className="text-2xl font-bold text-gray-900">
                 {periods.filter(p => p.status === 'locked').length}
               </p>
@@ -1024,11 +1049,14 @@ const AccountingPeriodsPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <i className="ri-file-list-3-line text-2xl text-blue-600"></i>
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: theme.muted }}
+            >
+              <i className="ri-file-list-3-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Asientos</p>
+              <p className="text-sm font-medium text-gray-600">Total Entries</p>
               <p className="text-2xl font-bold text-gray-900">
                 {periods.reduce((sum, p) => sum + (p.entries_count || 0), 0)}
               </p>
@@ -1038,11 +1066,14 @@ const AccountingPeriodsPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <i className="ri-calendar-line text-2xl text-purple-600"></i>
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: theme.muted }}
+            >
+              <i className="ri-calendar-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Año Fiscal Actual</p>
+              <p className="text-sm font-medium text-gray-600">Current Fiscal Year</p>
               <p className="text-2xl font-bold text-gray-900">
                 {new Date().getFullYear()}
               </p>
@@ -1051,7 +1082,7 @@ const AccountingPeriodsPage: FC = () => {
         </div>
       </div>
 
-      {/* Tabs: Períodos Contables / Fiscales */}
+      {/* Tabs */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
@@ -1059,23 +1090,23 @@ const AccountingPeriodsPage: FC = () => {
               onClick={() => setActiveTab('accounting')}
               className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'accounting'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-green-700 text-green-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               <i className="ri-calendar-line mr-2"></i>
-              Períodos Contables ({accountingPeriods.length})
+              Accounting Periods ({accountingPeriods.length})
             </button>
             <button
               onClick={() => setActiveTab('fiscal')}
               className={`py-4 px-6 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'fiscal'
-                  ? 'border-green-600 text-green-600'
+                  ? 'border-green-700 text-green-700'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               <i className="ri-calendar-check-line mr-2"></i>
-              Períodos Fiscales ({fiscalPeriods.length})
+              Fiscal Periods ({fiscalPeriods.length})
             </button>
           </nav>
         </div>
@@ -1090,7 +1121,7 @@ const AccountingPeriodsPage: FC = () => {
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder={`Buscar ${activeTab === 'accounting' ? 'períodos contables' : 'períodos fiscales'}...`}
+                  placeholder={`Search ${activeTab === 'accounting' ? 'accounting periods' : 'fiscal periods'}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1102,10 +1133,10 @@ const AccountingPeriodsPage: FC = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
               >
-                <option value="all">Todos los estados</option>
-                <option value="open">Abiertos</option>
-                <option value="closed">Cerrados</option>
-                <option value="locked">Bloqueados</option>
+                <option value="all">All statuses</option>
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+                <option value="locked">Locked</option>
               </select>
               
               <select
@@ -1113,7 +1144,7 @@ const AccountingPeriodsPage: FC = () => {
                 onChange={(e) => setYearFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
               >
-                <option value="">Todos los años</option>
+                <option value="">All years</option>
                 {uniqueYears.map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
@@ -1124,7 +1155,7 @@ const AccountingPeriodsPage: FC = () => {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <i className="ri-file-excel-line"></i>
-              Exportar
+              Export
             </button>
           </div>
         </div>
@@ -1135,28 +1166,28 @@ const AccountingPeriodsPage: FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Período
+                  Period
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Inicio
+                  Start Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha Fin
+                  End Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Año Fiscal
+                  Fiscal Year
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Asientos
+                  Entries
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Volumen contable
+                  Volume
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -1191,7 +1222,7 @@ const AccountingPeriodsPage: FC = () => {
                       <button
                         onClick={() => handleViewPeriod(period)}
                         className="text-blue-600 hover:text-blue-900"
-                        title="Ver detalles"
+                        title="View details"
                       >
                         <i className="ri-eye-line"></i>
                       </button>
@@ -1200,7 +1231,7 @@ const AccountingPeriodsPage: FC = () => {
                         <button
                           onClick={() => handleClosePeriod(period.id)}
                           className="text-yellow-600 hover:text-yellow-900"
-                          title="Cerrar período"
+                          title="Close period"
                         >
                           <i className="ri-lock-line"></i>
                         </button>
@@ -1211,19 +1242,19 @@ const AccountingPeriodsPage: FC = () => {
                           <button
                             onClick={() => handleReopenPeriod(period.id)}
                             className="text-green-600 hover:text-green-900"
-                            title="Reabrir período"
+                            title="Reopen period"
                           >
                             <i className="ri-calendar-check-line"></i>
                           </button>
                         </>
                       )}
 
-                      {/* Botón eliminar - solo si no tiene asientos */}
+                      {/* Delete button - only if it has no entries */}
                       {(period.entries_count || 0) === 0 && (
                         <button
                           onClick={() => handleDeletePeriod(period.id)}
                           className="text-red-600 hover:text-red-900"
-                          title="Eliminar período"
+                          title="Delete period"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -1243,7 +1274,7 @@ const AccountingPeriodsPage: FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Nuevo Período Contable</h2>
+                <h2 className="text-xl font-semibold text-gray-900">New Accounting Period</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1258,38 +1289,38 @@ const AccountingPeriodsPage: FC = () => {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                   <p className="text-sm text-blue-800">
                     <i className="ri-information-line mr-1"></i>
-                    Seleccione el mes y año del período contable. Las fechas se calcularán automáticamente.
+                    Select the month and year of the accounting period. Dates are calculated automatically.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Mes *
+                      Month *
                     </label>
                     <select
                       value={formData.month}
                       onChange={(e) => setFormData(prev => ({ ...prev, month: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="1">Enero</option>
-                      <option value="2">Febrero</option>
-                      <option value="3">Marzo</option>
-                      <option value="4">Abril</option>
-                      <option value="5">Mayo</option>
-                      <option value="6">Junio</option>
-                      <option value="7">Julio</option>
-                      <option value="8">Agosto</option>
-                      <option value="9">Septiembre</option>
-                      <option value="10">Octubre</option>
-                      <option value="11">Noviembre</option>
-                      <option value="12">Diciembre</option>
+                      <option value="1">January</option>
+                      <option value="2">February</option>
+                      <option value="3">March</option>
+                      <option value="4">April</option>
+                      <option value="5">May</option>
+                      <option value="6">June</option>
+                      <option value="7">July</option>
+                      <option value="8">August</option>
+                      <option value="9">September</option>
+                      <option value="10">October</option>
+                      <option value="11">November</option>
+                      <option value="12">December</option>
                     </select>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Año *
+                      Year *
                     </label>
                     <select
                       value={formData.year}
@@ -1305,17 +1336,17 @@ const AccountingPeriodsPage: FC = () => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre del Período (opcional)
+                    Period Name (optional)
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Se generará automáticamente si se deja vacío"
+                    placeholder="Will be generated automatically if left blank"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Por defecto: {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(formData.month) - 1]} {formData.year}
+                    Default: {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][parseInt(formData.month) - 1]} {formData.year}
                   </p>
                 </div>
               </div>
@@ -1325,13 +1356,13 @@ const AccountingPeriodsPage: FC = () => {
                   onClick={() => setShowCreateModal(false)}
                   className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={handleCreatePeriod}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Crear Período Contable
+                  Create Accounting Period
                 </button>
               </div>
             </div>
@@ -1342,10 +1373,10 @@ const AccountingPeriodsPage: FC = () => {
       {/* Create Fiscal Year Modal */}
       {showCreateFiscalYearModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w/full mx-4">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Nuevo Año Fiscal</h2>
+                <h2 className="text-xl font-semibold text-gray-900">New Fiscal Year</h2>
                 <button
                   onClick={() => setShowCreateFiscalYearModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1359,7 +1390,7 @@ const AccountingPeriodsPage: FC = () => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Año Fiscal
+                    Fiscal Year
                   </label>
                   <input
                     type="number"
@@ -1370,7 +1401,7 @@ const AccountingPeriodsPage: FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    El período fiscal abarca del 1 de enero al 31 de diciembre
+                    The fiscal period runs from January 1 to December 31
                   </p>
                 </div>
                 
@@ -1384,10 +1415,10 @@ const AccountingPeriodsPage: FC = () => {
                     />
                     <div>
                       <span className="text-sm font-medium text-blue-900">
-                        Crear automáticamente los 12 períodos contables mensuales
+                        Automatically create the 12 monthly accounting periods
                       </span>
                       <p className="text-xs text-blue-700 mt-1">
-                        Se crearán períodos para Enero, Febrero, Marzo... hasta Diciembre del año seleccionado
+                        Periods for January through December of the selected year will be created
                       </p>
                     </div>
                   </label>
@@ -1397,7 +1428,7 @@ const AccountingPeriodsPage: FC = () => {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-xs text-yellow-800">
                       <i className="ri-information-line mr-1"></i>
-                      Solo se creará un período anual. Podrás crear períodos mensuales manualmente después.
+                      Only the annual period will be created. You can add monthly periods manually later.
                     </p>
                   </div>
                 )}
@@ -1408,14 +1439,14 @@ const AccountingPeriodsPage: FC = () => {
                   onClick={() => setShowCreateFiscalYearModal(false)}
                   className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={handleCreateFiscalYear}
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <i className="ri-calendar-line mr-2"></i>
-                  Crear Año Fiscal
+                  Create Fiscal Year
                 </button>
               </div>
             </div>

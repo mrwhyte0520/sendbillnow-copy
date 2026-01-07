@@ -8,6 +8,16 @@ import { saveAs } from 'file-saver';
 import { formatMoney } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 // Estilos CSS para impresión
 const printStyles = `
   @media print {
@@ -349,10 +359,6 @@ const TrialBalancePage: FC = () => {
     }
   };
 
-  const formatAmount = (value: number) => {
-    return formatMoney(value);
-  };
-
   const renderMoney = (value: number) => {
     const formatted = formatMoney(value);
     const splitAt = formatted.indexOf(' ');
@@ -483,7 +489,10 @@ const TrialBalancePage: FC = () => {
   if (loading && rows.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div
+          className="animate-spin rounded-full h-32 w-32 border-b-2"
+          style={{ borderColor: theme.primary }}
+        ></div>
       </div>
     );
   }
@@ -506,26 +515,32 @@ const TrialBalancePage: FC = () => {
             className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <i className="ri-arrow-left-line"></i>
-            Volver a Contabilidad
+            Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Balanza de Comprobación</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Trial Balance</h1>
             <p className="text-gray-600">
-              Saldos por cuenta contable con saldo anterior, movimientos del período y saldo final
+              Balances by account with opening balance, period movements, and ending balance
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm transition-colors"
+            style={{ backgroundColor: theme.primary }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
           >
             <i className="ri-file-excel-2-line"></i>
             Excel
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm transition-colors"
+            style={{ backgroundColor: theme.accent }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.accent; }}
           >
             <i className="ri-file-pdf-line"></i>
             PDF
@@ -539,31 +554,33 @@ const TrialBalancePage: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha de corte
+                Cutoff date
               </label>
               <input
                 type="date"
                 value={cutoffDate}
                 onChange={(e) => setCutoffDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent text-sm"
+                style={{ borderColor: theme.softBorder }}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fecha inicial (opcional)
+                Start date (optional)
               </label>
               <input
                 type="date"
                 value={manualStartDate}
                 onChange={(e) => setManualStartDate(e.target.value)}
-                placeholder="Por defecto: 1 de enero"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="Default: January 1"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent text-sm"
+                style={{ borderColor: theme.softBorder }}
               />
-              <p className="text-xs text-gray-500 mt-1">Si no se especifica, inicia el 1 de enero del año</p>
+              <p className="text-xs text-gray-500 mt-1">If not set, starts January 1 of the fiscal year.</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Año fiscal
+                Fiscal year
               </label>
               <select
                 value={selectedFiscalYear}
@@ -571,9 +588,10 @@ const TrialBalancePage: FC = () => {
                   setSelectedFiscalYear(e.target.value);
                   setSelectedPeriodIds([]);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent text-sm pr-8"
+                style={{ borderColor: theme.softBorder }}
               >
-                <option value="">Todos</option>
+                <option value="">All</option>
                 {fiscalYears.map((year) => (
                   <option key={year} value={year}>
                     {year}
@@ -583,15 +601,16 @@ const TrialBalancePage: FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Modo de balanza
+                Trial balance mode
               </label>
               <select
                 value={mode}
                 onChange={(e) => setMode(e.target.value as 'detail' | 'summary')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5c4b] focus:border-transparent text-sm pr-8"
+                style={{ borderColor: theme.softBorder }}
               >
-                <option value="detail">Con detalle (todas las cuentas)</option>
-                <option value="summary">Resumida (solo cuentas de grupo)</option>
+                <option value="detail">Detailed (all accounts)</option>
+                <option value="summary">Summary (group accounts)</option>
               </select>
             </div>
           </div>
@@ -599,9 +618,10 @@ const TrialBalancePage: FC = () => {
           {visiblePeriods.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Períodos contables (seleccione uno o más)
+                Accounting periods (select one or more)
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto border rounded-lg p-3"
+                   style={{ borderColor: theme.softBorder, backgroundColor: theme.muted }}>
                 {visiblePeriods.map((period) => (
                   <label key={period.id} className="flex items-center space-x-2 text-sm">
                     <input
@@ -614,7 +634,8 @@ const TrialBalancePage: FC = () => {
                           setSelectedPeriodIds(selectedPeriodIds.filter(id => id !== period.id));
                         }
                       }}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 focus:ring-2"
+                      style={{ accentColor: theme.primary }}
                     />
                     <span className="text-gray-700">{period.name}</span>
                   </label>
@@ -623,22 +644,25 @@ const TrialBalancePage: FC = () => {
               {selectedPeriodIds.length > 0 && (
                 <button
                   onClick={() => setSelectedPeriodIds([])}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                  className="mt-2 text-xs"
+                  style={{ color: theme.primary }}
                 >
-                  Limpiar selección
+                  Clear selection
                 </button>
               )}
             </div>
           )}
 
           {fromDateLabel && toDateLabel && (
-            <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <span className="font-medium text-blue-900">Período del reporte:</span>{' '}
-              <span className="font-semibold text-blue-800">
-                {formatDate(fromDateLabel)} al {formatDate(toDateLabel)}
+            <div className="text-sm text-gray-600 rounded-lg p-3" style={{ backgroundColor: theme.muted, border: `1px solid ${theme.softBorder}` }}>
+              <span className="font-medium" style={{ color: theme.softText }}>Report period:</span>{' '}
+              <span className="font-semibold" style={{ color: theme.softText }}>
+                {formatDate(fromDateLabel)} to {formatDate(toDateLabel)}
               </span>
               {selectedPeriodIds.length > 0 && (
-                <span className="ml-2 text-blue-700">({selectedPeriodIds.length} período{selectedPeriodIds.length > 1 ? 's' : ''} seleccionado{selectedPeriodIds.length > 1 ? 's' : ''})</span>
+                <span className="ml-2" style={{ color: theme.softText }}>
+                  ({selectedPeriodIds.length} period{selectedPeriodIds.length > 1 ? 's' : ''} selected)
+                </span>
               )}
             </div>
           )}
@@ -651,38 +675,38 @@ const TrialBalancePage: FC = () => {
         {companyNameForPrint && (
           <div className="hidden print:block print-title">{companyNameForPrint}</div>
         )}
-        <div className="hidden print:block print-title">BALANZA DE COMPROBACIÓN</div>
+        <div className="hidden print:block print-title">TRIAL BALANCE</div>
         <div className="hidden print:block print-period">
-          Período: {fromDateLabel && formatDate(fromDateLabel)} al{' '}
+          Period: {fromDateLabel && formatDate(fromDateLabel)} to{' '}
           {toDateLabel && formatDate(toDateLabel)}
         </div>
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50" style={{ backgroundColor: theme.muted }}>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Número de cuenta
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Account Number
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nombre de la cuenta
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Account Name
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Saldo anterior Débito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Opening Debit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Saldo anterior Crédito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Opening Credit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Movimientos Débito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Period Debit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Movimientos Crédito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Period Credit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Saldo final Débito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Ending Debit
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Saldo final Crédito
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
+                Ending Credit
               </th>
             </tr>
           </thead>
@@ -692,7 +716,7 @@ const TrialBalancePage: FC = () => {
                 <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                   <div className="flex flex-col items-center">
                     <i className="ri-file-list-line text-4xl text-gray-300 mb-2"></i>
-                    <p>No hay datos para la combinación de filtros seleccionada.</p>
+                    <p>No data for the selected filters.</p>
                   </div>
                 </td>
               </tr>
@@ -728,10 +752,10 @@ const TrialBalancePage: FC = () => {
             )}
           </tbody>
           {rows.length > 0 && (
-            <tfoot className="bg-gray-50">
+            <tfoot className="bg-gray-50" style={{ backgroundColor: theme.muted }}>
               <tr>
                 <td className="px-4 py-3 text-right text-xs font-semibold text-gray-900" colSpan={2}>
-                  Totales:
+                  Totals:
                 </td>
                 <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
                   {renderMoney(totalPrevDebit)}

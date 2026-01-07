@@ -43,21 +43,21 @@ export default function DebitNotesPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-blue-100 text-blue-800';
-      case 'applied': return 'bg-green-100 text-green-800';
-      case 'partial': return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'pending': return 'bg-[#f3ecda] text-[#6b5c3b]';
+      case 'applied': return 'bg-[#d7e4c0] text-[#2f3e1e]';
+      case 'partial': return 'bg-[#fbe8c8] text-[#8a6a2f]';
+      case 'cancelled': return 'bg-[#f4d9d4] text-[#7a2e1b]';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusName = (status: string) => {
     switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'applied': return 'Aplicada';
-      case 'partial': return 'Parcial';
-      case 'cancelled': return 'Cancelada';
-      default: return 'Desconocido';
+      case 'pending': return 'Pending';
+      case 'applied': return 'Applied';
+      case 'partial': return 'Partial';
+      case 'cancelled': return 'Cancelled';
+      default: return 'Unknown';
     }
   };
 
@@ -187,11 +187,11 @@ export default function DebitNotesPage() {
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
 
     doc.setFontSize(20);
-    doc.text('Reporte de Notas de Débito', 20, 30);
+    doc.text('Debit Notes Report', 20, 30);
     
     doc.setFontSize(12);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 20, 45);
-    doc.text(`Estado: ${statusFilter === 'all' ? 'Todos' : getStatusName(statusFilter)}`, 20, 55);
+    doc.text(`Generation date: ${new Date().toLocaleDateString()}`, 20, 45);
+    doc.text(`Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`, 20, 55);
     
     // Estadísticas (excluyendo canceladas)
     const activeNotes = filteredNotes.filter(n => n.status !== 'cancelled');
@@ -201,15 +201,15 @@ export default function DebitNotesPage() {
     const pendingNotes = activeNotes.filter(n => n.status === 'pending').length;
     
     doc.setFontSize(14);
-    doc.text('Resumen de Notas de Débito', 20, 75);
+    doc.text('Debit Notes Summary', 20, 75);
     
     const summaryData = [
-      ['Concepto', 'Valor'],
-      ['Total Notas de Débito', `${formatMoney(totalAmount, 'RD$')}`],
-      ['Total Aplicado', `${formatMoney(totalApplied, 'RD$')}`],
-      ['Saldo Pendiente', `${formatMoney(totalBalance, 'RD$')}`],
-      ['Notas Pendientes', pendingNotes.toString()],
-      ['Total de Notas', activeNotes.length.toString()]
+      ['Metric', 'Value'],
+      ['Total Debit Notes', `${formatMoney(totalAmount, 'RD$')}`],
+      ['Total Applied', `${formatMoney(totalApplied, 'RD$')}`],
+      ['Pending Balance', `${formatMoney(totalBalance, 'RD$')}`],
+      ['Pending Notes', pendingNotes.toString()],
+      ['Number of Notes', activeNotes.length.toString()]
     ];
     
     (doc as any).autoTable({
@@ -217,12 +217,12 @@ export default function DebitNotesPage() {
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      headStyles: { fillColor: [47, 62, 30] }
     });
     
     // Tabla de notas
     doc.setFontSize(14);
-    doc.text('Detalle de Notas de Débito', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Debit Notes Detail', 20, (doc as any).lastAutoTable.finalY + 20);
     
     const noteData = activeNotes.map(note => [
       note.noteNumber,
@@ -237,21 +237,21 @@ export default function DebitNotesPage() {
     
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Nota', 'Cliente', 'Fecha', 'Monto', 'Aplicado', 'Saldo', 'Motivo', 'Estado']],
+      head: [['Note', 'Customer', 'Date', 'Amount', 'Applied', 'Balance', 'Reason', 'Status']],
       body: noteData,
       theme: 'striped',
-      headStyles: { fillColor: [239, 68, 68] },
+      headStyles: { fillColor: [122, 46, 27] },
       styles: { fontSize: 8 }
     });
     
-    doc.save(`notas-debito-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`debit-notes-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
     const activeNotes = filteredNotes.filter(n => n.status !== 'cancelled');
 
     if (!activeNotes.length) {
-      alert('No hay notas de débito para exportar con los filtros actuales.');
+      alert('There are no debit notes to export with the current filters.');
       return;
     }
 
@@ -285,25 +285,25 @@ export default function DebitNotesPage() {
     const todayLocal = new Date().toLocaleDateString();
 
     const headers = [
-      { key: 'noteNumber', title: 'Nota' },
-      { key: 'customerName', title: 'Cliente' },
-      { key: 'date', title: 'Fecha' },
-      { key: 'amount', title: 'Monto' },
-      { key: 'appliedAmount', title: 'Aplicado' },
-      { key: 'balance', title: 'Saldo' },
-      { key: 'reason', title: 'Motivo' },
-      { key: 'concept', title: 'Concepto' },
-      { key: 'status', title: 'Estado' },
+      { key: 'noteNumber', title: 'Note' },
+      { key: 'customerName', title: 'Customer' },
+      { key: 'date', title: 'Date' },
+      { key: 'amount', title: 'Amount' },
+      { key: 'appliedAmount', title: 'Applied' },
+      { key: 'balance', title: 'Balance' },
+      { key: 'reason', title: 'Reason' },
+      { key: 'concept', title: 'Concept' },
+      { key: 'status', title: 'Status' },
     ];
 
     exportToExcelWithHeaders(
       rows,
       headers,
-      `notas-debito-${todayIso}`,
-      'Notas de Débito',
+      `debit-notes-${todayIso}`,
+      'Debit Notes',
       [16, 26, 14, 16, 16, 16, 26, 26, 16],
       {
-        title: `Notas de Débito - ${todayLocal}`,
+        title: `Debit Notes - ${todayLocal}`,
         companyName,
       },
     );
@@ -327,25 +327,25 @@ export default function DebitNotesPage() {
 
   const handleCancelNote = async (noteId: string) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para cancelar notas');
+      alert('You must be signed in to cancel debit notes.');
       return;
     }
-    if (!confirm('¿Está seguro de que desea cancelar esta nota de débito?')) return;
+    if (!confirm('Are you sure you want to cancel this debit note?')) return;
     try {
       await creditDebitNotesService.updateStatus(noteId, 'cancelled');
       await loadNotes();
-      alert('Nota de débito cancelada exitosamente');
+      alert('Debit note cancelled successfully.');
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error('[DebitNotes] Error al cancelar nota', error);
-      alert(`Error al cancelar la nota: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[DebitNotes] Error cancelling note', error);
+      alert(`Error cancelling the note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveNote = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para crear notas de débito');
+      alert('You must be signed in to create debit notes.');
       return;
     }
 
@@ -360,18 +360,18 @@ export default function DebitNotesPage() {
     const creditAccountId = String(formData.get('credit_account_id') || '');
 
     if (!customerId || !amount || !creditAccountId || !invoiceId || !arAccountIdFromForm) {
-      alert('Cliente, monto, factura, cuenta contable de crédito y cuenta por cobrar son obligatorios');
+      alert('Customer, amount, invoice, credit account, and accounts receivable are required.');
       return;
     }
 
     if (amount <= 0) {
-      alert('El monto debe ser mayor que 0');
+      alert('Amount must be greater than 0.');
       return;
     }
 
     const targetInvoice = invoices.find((inv) => String(inv.id) === invoiceId);
     if (!targetInvoice) {
-      alert('No se pudo encontrar la factura seleccionada. Vuelve a cargar la página e inténtalo de nuevo.');
+      alert('We could not find the selected invoice. Reload the page and try again.');
       return;
     }
 
@@ -421,7 +421,7 @@ export default function DebitNotesPage() {
         const arAccountId = arAccountIdFromForm || customerSpecificArId || settings?.ar_account_id;
 
         if (!arAccountId) {
-          alert('Nota de débito creada, pero no se pudo crear el asiento: falta configurar o seleccionar la Cuenta de Cuentas por Cobrar.');
+          alert('Debit note created, but journal entry failed: configure or select an Accounts Receivable account.');
         } else {
           const noteAmount = Number(created.total_amount) || amount;
 
@@ -473,19 +473,19 @@ export default function DebitNotesPage() {
       }
 
       await loadNotes();
-      alert('Nota de débito creada exitosamente');
+      alert('Debit note created successfully.');
       setShowNoteModal(false);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('[DebitNotes] Error al crear nota', error);
-      alert(`Error al crear la nota de débito: ${error?.message || 'revisa la consola para más detalles'}`);
+      alert(`Error creating the debit note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveApplication = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id || !selectedNote) {
-      alert('Debes iniciar sesión y seleccionar una nota válida');
+      alert('You must be signed in and select a valid note.');
       return;
     }
 
@@ -494,17 +494,17 @@ export default function DebitNotesPage() {
     const amountToApply = Number(formData.get('amount_to_apply') || 0);
 
     if (!invoiceId) {
-      alert('Debes seleccionar una factura para aplicar la nota');
+      alert('Please select an invoice to apply the note.');
       return;
     }
 
     if (!amountToApply || amountToApply <= 0) {
-      alert('El monto a aplicar debe ser mayor que 0');
+      alert('The amount to apply must be greater than 0.');
       return;
     }
 
     if (amountToApply > selectedNote.balance) {
-      alert('El monto a aplicar no puede ser mayor que el saldo pendiente de la nota');
+      alert('The amount to apply cannot exceed the pending balance.');
       return;
     }
 
@@ -515,7 +515,7 @@ export default function DebitNotesPage() {
 
     const targetInvoice = invoices.find((inv) => inv.id === invoiceId);
     if (!targetInvoice) {
-      alert('La factura seleccionada no es válida');
+      alert('The selected invoice is not valid.');
       return;
     }
 
@@ -538,91 +538,91 @@ export default function DebitNotesPage() {
         balanceAmount: newBalance,
       });
       await loadNotes();
-      alert('Nota de débito aplicada exitosamente');
+      alert('Debit note applied successfully.');
       setShowApplyModal(false);
       setSelectedNote(null);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('[DebitNotes] Error al aplicar nota', error);
-      alert(`Error al aplicar la nota de débito: ${error?.message || 'revisa la consola para más detalles'}`);
+      alert(`Error applying the debit note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="min-h-screen p-6 bg-[#f7f3e8]">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notas de Débito</h1>
-            <nav className="flex space-x-2 text-sm text-gray-600 mt-2">
-              <Link to="/accounts-receivable" className="hover:text-blue-600">Cuentas por Cobrar</Link>
+            <h1 className="text-2xl font-bold text-[#2f3e1e]">Debit Notes</h1>
+            <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
+              <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
-              <span>Notas de Débito</span>
+              <span>Debit Notes</span>
             </nav>
           </div>
           <button 
             onClick={handleNewNote}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Nueva Nota de Débito
+            New Debit Note
           </button>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Notas</p>
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Total Notes</p>
+                <p className="text-2xl font-semibold text-[#2f3e1e]">
                   {formatMoney(filteredNotes.reduce((sum, n) => sum + n.amount, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <i className="ri-file-text-line text-2xl text-red-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
+                <i className="ri-file-text-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Saldo Pendiente</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Pending Balance</p>
+                <p className="text-2xl font-semibold text-[#1f2913]">
                   {formatMoney(filteredNotes.reduce((sum, n) => sum + n.balance, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-wallet-line text-2xl text-orange-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#1f2913]">
+                <i className="ri-wallet-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Monto Aplicado</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
+                <p className="text-2xl font-semibold text-[#4a3c24]">
                   {formatMoney(filteredNotes.reduce((sum, n) => sum + n.appliedAmount, 0), 'RD$')}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-check-double-line text-2xl text-green-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#4a3c24]">
+                <i className="ri-check-double-line text-2xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Notas Pendientes</p>
-                <p className="text-2xl font-bold text-blue-600">
+                <p className="text-sm font-medium text-[#6b5c3b]">Pending Notes</p>
+                <p className="text-2xl font-semibold text-[#bc6c2b]">
                   {filteredNotes.filter(n => n.status === 'pending').length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-time-line text-2xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#bc6c2b]">
+                <i className="ri-time-line text-2xl"></i>
               </div>
             </div>
           </div>
@@ -633,14 +633,14 @@ export default function DebitNotesPage() {
           <div className="flex-1">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i className="ri-search-line text-gray-400"></i>
+                <i className="ri-search-line text-[#9b8a64]"></i>
               </div>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Buscar por cliente, número de nota o motivo..."
+                className="block w-full pl-10 pr-3 py-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] text-sm placeholder:text-[#9b8a64]"
+                placeholder="Search by customer, note number, or reason..."
               />
             </div>
           </div>
@@ -649,26 +649,26 @@ export default function DebitNotesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+              className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] text-sm pr-8"
             >
-              <option value="all">Todos los Estados</option>
-              <option value="pending">Pendientes</option>
-              <option value="partial">Parciales</option>
-              <option value="applied">Aplicadas</option>
-              <option value="cancelled">Canceladas</option>
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partially Applied</option>
+              <option value="applied">Fully Applied</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
           
           <div className="flex space-x-2">
             <button
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="bg-[#7a2e1b] text-white px-4 py-2 rounded-lg hover:bg-[#5c1f12] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-pdf-line mr-2"></i>PDF
             </button>
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-excel-line mr-2"></i>Excel
             </button>
@@ -676,40 +676,40 @@ export default function DebitNotesPage() {
         </div>
 
         {/* Debit Notes Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-[#e4d8c4]">
           {(loadingNotes || loadingSupport) && (
-            <div className="px-6 pt-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nota
+                    Note
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aplicado
+                    Applied
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
+                    Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Motivo
+                    Reason
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -746,16 +746,16 @@ export default function DebitNotesPage() {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewNote(note)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Ver detalles"
+                          className="text-[#2f3e1e] hover:text-[#1f2913]"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         {note.balance > 0 && note.status !== 'cancelled' && (
                           <button
                             onClick={() => handleApplyNote(note)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Aplicar nota"
+                            className="text-[#4a3c24] hover:text-[#2f3e1e]"
+                            title="Apply note"
                           >
                             <i className="ri-check-line"></i>
                           </button>
@@ -763,8 +763,8 @@ export default function DebitNotesPage() {
                         {note.status === 'pending' && (
                           <button
                             onClick={() => handleCancelNote(note.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Cancelar nota"
+                            className="text-[#7a2e1b] hover:text-[#5c1f12]"
+                            title="Cancel note"
                           >
                             <i className="ri-close-circle-line"></i>
                           </button>
@@ -781,9 +781,9 @@ export default function DebitNotesPage() {
         {/* New Debit Note Modal */}
         {showNoteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#e4d8c4] shadow-lg">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Nueva Nota de Débito</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">New Debit Note</h3>
                 <button
                   onClick={() => setShowNoteModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -795,17 +795,17 @@ export default function DebitNotesPage() {
               <form onSubmit={handleSaveNote} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cliente
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Customer
                     </label>
                     <select 
                       required
                       name="customer_id"
                       value={noteCustomerId}
                       onChange={(e) => setNoteCustomerId(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="">Seleccionar cliente</option>
+                      <option value="">Select a customer</option>
                       {customers.map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -813,44 +813,44 @@ export default function DebitNotesPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Date
                     </label>
                     <input
                       type="date"
                       required
                       name="date"
                       defaultValue={new Date().toISOString().split('T')[0]}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                     />
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Amount
                     </label>
                     <input
                       type="number" min="0"
                       step="0.01"
                       required
                       name="amount"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                       placeholder="0.00"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura Relacionada <span className="text-red-500">*</span>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Related Invoice <span className="text-red-500">*</span>
                     </label>
                     <select 
                       name="invoice_id"
                       required
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     >
-                      <option value="">Seleccionar factura</option>
+                      <option value="">Select an invoice</option>
                       {invoices
                         .filter((inv) => noteCustomerId && inv.customerId === noteCustomerId)
                         .map((inv) => (
@@ -861,35 +861,35 @@ export default function DebitNotesPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Motivo
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Reason
                   </label>
                   <select 
                     required
                     name="reason"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                   >
-                    <option value="">Seleccionar motivo</option>
-                    <option value="Intereses por mora">Intereses por mora</option>
-                    <option value="Gastos de cobranza">Gastos de cobranza</option>
-                    <option value="Ajuste de precio">Ajuste de precio</option>
-                    <option value="Penalización contractual">Penalización contractual</option>
-                    <option value="Cargo por servicio">Cargo por servicio</option>
-                    <option value="Otro">Otro</option>
+                    <option value="">Select a reason</option>
+                    <option value="Late payment interest">Late payment interest</option>
+                    <option value="Collection expenses">Collection expenses</option>
+                    <option value="Price adjustment">Price adjustment</option>
+                    <option value="Contract penalty">Contract penalty</option>
+                    <option value="Service charge">Service charge</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta por Cobrar <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Accounts Receivable <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="ar_account_id"
                     required
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""
                   >
-                    <option value="">Seleccionar cuenta CxC</option>
+                    <option value="">Select AR account</option>
                     {arAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -899,16 +899,16 @@ export default function DebitNotesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta contable de crédito
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Credit account
                   </label>
                   <select
                     required
                     name="credit_account_id"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""
                   >
-                    <option value="">Seleccionar cuenta</option>
+                    <option value="">Select account</option>
                     {creditAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -918,15 +918,15 @@ export default function DebitNotesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Concepto
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Concept
                   </label>
                   <textarea
                     rows={3}
                     required
                     name="concept"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción detallada de la nota de débito..."
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                    placeholder="Describe the debit note details..."
                   />
                 </div>
                 
@@ -934,15 +934,15 @@ export default function DebitNotesPage() {
                   <button
                     type="button"
                     onClick={() => setShowNoteModal(false)}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#f3ecda] text-[#6b5c3b] py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap"
                   >
-                    Crear Nota de Débito
+                    Create Debit Note
                   </button>
                 </div>
               </form>
@@ -953,9 +953,9 @@ export default function DebitNotesPage() {
         {/* Apply Debit Note Modal */}
         {showApplyModal && selectedNote && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#e4d8c4] shadow-lg">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Aplicar Nota de Débito</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Apply Debit Note</h3>
                 <button
                   onClick={() => {
                     setShowApplyModal(false);
@@ -967,23 +967,23 @@ export default function DebitNotesPage() {
                 </button>
               </div>
               
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Nota: <span className="font-medium">{selectedNote.noteNumber}</span></p>
-                <p className="text-sm text-gray-600">Cliente: <span className="font-medium">{selectedNote.customerName}</span></p>
-                <p className="text-lg font-semibold text-orange-600">Saldo pendiente: {formatMoney(selectedNote.balance, 'RD$')}</p>
+              <div className="mb-4 p-4 bg-[#f3ecda] rounded-lg border border-[#e4d8c4]">
+                <p className="text-sm text-[#4a3c24]">Note: <span className="font-semibold text-[#2f3e1e]">{selectedNote.noteNumber}</span></p>
+                <p className="text-sm text-[#4a3c24]">Customer: <span className="font-semibold text-[#2f3e1e]">{selectedNote.customerName}</span></p>
+                <p className="text-lg font-semibold text-[#bc6c2b]">Pending balance: {formatMoney(selectedNote.balance, 'RD$')}</p>
               </div>
               
               <form onSubmit={handleSaveApplication} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Factura a Aplicar
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Invoice to apply
                   </label>
                   <select 
                     required
                     name="invoice_id"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                   >
-                    <option value="">Seleccionar factura</option>
+                    <option value="">Select an invoice</option>
                     {invoices
                       .filter((inv) => inv.customerId === selectedNote.customerId)
                       .filter((inv) => inv.status !== 'Cancelada' && (inv.totalAmount - inv.paidAmount) > 0)
@@ -996,8 +996,8 @@ export default function DebitNotesPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Monto a Aplicar
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Amount to apply
                   </label>
                   <input
                     type="number" min="0"
@@ -1005,19 +1005,19 @@ export default function DebitNotesPage() {
                     name="amount_to_apply"
                     required
                     max={selectedNote?.balance ?? undefined}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                     placeholder="0.00"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Observaciones
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Notes
                   </label>
                   <textarea
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Observaciones sobre la aplicación de la nota..."
+                    className="w-full p-3 border border-[#d8cbb5] bg-white rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                    placeholder="Comments about this application..."
                   />
                 </div>
                 
@@ -1028,15 +1028,15 @@ export default function DebitNotesPage() {
                       setShowApplyModal(false);
                       setSelectedNote(null);
                     }}
-                    className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#f3ecda] text-[#6b5c3b] py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                    className="flex-1 bg-[#2f3e1e] text-white py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap"
                   >
-                    Aplicar Nota
+                    Apply Note
                   </button>
                 </div>
               </form>

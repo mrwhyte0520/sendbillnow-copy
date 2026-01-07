@@ -8,6 +8,15 @@ import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 // Estilos CSS para impresión
 const printStyles = `
   @media print {
@@ -154,7 +163,7 @@ export default function FinancialStatementsPage() {
     for (let i = 0; i < 12; i++) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const value = d.toISOString().slice(0, 7); // YYYY-MM
-      const labelRaw = d.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
+      const labelRaw = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       const label = labelRaw.charAt(0).toUpperCase() + labelRaw.slice(1);
       options.push({ value, label });
     }
@@ -1053,7 +1062,7 @@ export default function FinancialStatementsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return 'bg-yellow-100 text-yellow-800';
-      case 'final': return 'bg-blue-100 text-blue-800';
+      case 'final': return 'bg-[#eef2ea] text-[#2f3a2f]';
       case 'approved': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -2276,16 +2285,19 @@ export default function FinancialStatementsPage() {
         {/* Header */}
         <div className="flex justify-between items-center print-hidden">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Estados Financieros</h1>
-            <p className="text-gray-600">Generación y gestión de reportes financieros</p>
+            <h1 className="text-2xl font-bold text-gray-900">Financial Statements</h1>
+            <p className="text-gray-600">Generation and management of financial reports</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={() => setShowNewStatementModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap shadow-sm"
+              style={{ backgroundColor: theme.primary }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
             >
               <i className="ri-add-line mr-2"></i>
-              Generar Estado
+              Generate Statement
             </button>
           </div>
         </div>
@@ -2294,24 +2306,29 @@ export default function FinancialStatementsPage() {
         <div className="border-b border-gray-200 print-hidden">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'statements', label: 'Estados Generados', icon: 'ri-file-list-3-line' },
-              { id: 'balance', label: 'Balance General', icon: 'ri-scales-3-line' },
-              { id: 'income', label: 'Estado de Resultados', icon: 'ri-line-chart-line' },
-              { id: 'costs', label: 'Estado de Costos de Ventas', icon: 'ri-bill-line' },
-              { id: 'expenses', label: 'Estado de Gastos G. y Adm.', icon: 'ri-bar-chart-2-line' },
-              { id: 'cashflow', label: 'Flujo de Efectivo', icon: 'ri-money-dollar-circle-line' },
-              { id: 'anexos', label: 'Anexos a EE.FF.', icon: 'ri-attachment-2' }
+              { id: 'statements', label: 'Generated Statements', icon: 'ri-file-list-3-line' },
+              { id: 'balance', label: 'Balance Sheet', icon: 'ri-scales-3-line' },
+              { id: 'income', label: 'Income Statement', icon: 'ri-line-chart-line' },
+              { id: 'costs', label: 'Cost of Sales Statement', icon: 'ri-bill-line' },
+              { id: 'expenses', label: 'G&A Expenses Statement', icon: 'ri-bar-chart-2-line' },
+              { id: 'cashflow', label: 'Cash Flow', icon: 'ri-money-dollar-circle-line' },
+              { id: 'anexos', label: 'Notes to FS', icon: 'ri-attachment-2' }
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'text-gray-900'
+                    : 'text-gray-500 hover:text-gray-700'
                 }`}
+                style={
+                  activeTab === tab.id
+                    ? { borderColor: theme.primary, color: theme.softText }
+                    : { borderColor: 'transparent' }
+                }
               >
-                <i className={`${tab.icon} mr-2`}></i>
+                <i className={tab.icon + ' mr-2'}></i>
                 {tab.label}
               </button>
             ))}
@@ -2323,11 +2340,11 @@ export default function FinancialStatementsPage() {
           <div className="bg-white rounded-lg shadow">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-semibold">Estados Financieros Generados</h2>
+                <h2 className="text-lg font-semibold">Generated Financial Statements</h2>
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm pr-8"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm pr-8 bg-white focus:ring-2"
                 >
                   {periodOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -2342,19 +2359,19 @@ export default function FinancialStatementsPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado Financiero
+                        Financial Statement
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Período
+                        Period
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
+                        Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fecha Creación
+                        Created At
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Acciones
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -2383,7 +2400,8 @@ export default function FinancialStatementsPage() {
                           <div className="flex space-x-2">
                             <button 
                               onClick={() => handleViewStatement(statement)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="font-medium"
+                              style={{ color: theme.primary }}
                               title="Ver"
                             >
                               <i className="ri-eye-line"></i>
@@ -2561,7 +2579,8 @@ export default function FinancialStatementsPage() {
                   <label className="inline-flex items-center space-x-2 text-sm text-gray-700">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-300 focus:ring-2"
+                      style={{ accentColor: theme.primary }}
                       checked={showExpensesDetail}
                       onChange={(e) => setShowExpensesDetail(e.target.checked)}
                     />
@@ -3916,7 +3935,10 @@ export default function FinancialStatementsPage() {
                 </select>
                 <button
                   onClick={() => window.print()}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  className="text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-sm"
+                  style={{ backgroundColor: theme.primary }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                 >
                   <i className="ri-printer-line"></i>
                   Imprimir
@@ -4058,15 +4080,18 @@ export default function FinancialStatementsPage() {
                   Cancelar
                 </button>
                 <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                  className="px-4 py-2 text-white rounded-lg flex items-center space-x-2 shadow-sm"
                   disabled={isGenerating}
                   onClick={() => {
                     const typeSelect = document.getElementById('new-statement-type') as HTMLSelectElement | null;
-                    const periodInput = document.getElementById('new-statement-period') as HTMLInputElement | null;
+                    const periodSelect = document.getElementById('new-statement-period') as HTMLSelectElement | null;
                     const typeValue = typeSelect?.value || 'balance_sheet';
-                    const periodValue = periodInput?.value || new Date().toISOString().slice(0, 7);
+                    const periodValue = periodSelect?.value || new Date().toISOString().slice(0, 7);
                     void generateStatement(typeValue, periodValue);
                   }}
+                  style={{ backgroundColor: theme.primary }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                 >
                   {isGenerating && (
                     <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -4124,9 +4149,9 @@ export default function FinancialStatementsPage() {
                   <div className="mt-6">
                     <h4 className="font-medium mb-4">Resumen del Balance General</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: theme.muted }}>
                         <div className="text-sm text-gray-600">Total Activos</div>
-                        <div className="text-lg font-bold text-blue-600">
+                        <div className="text-lg font-bold" style={{ color: theme.softText }}>
                           {formatCurrency(selectedStatement.totalAssets || 0)}
                         </div>
                       </div>
@@ -4162,7 +4187,7 @@ export default function FinancialStatementsPage() {
                           {formatCurrency(selectedStatement.totalExpenses || 0)}
                         </div>
                       </div>
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                      <div className="text-center p-4 rounded-lg" style={{ backgroundColor: theme.muted }}>
                         <div className="text-sm text-gray-600">Utilidad Neta</div>
                         <div className={`text-lg font-bold ${(selectedStatement.netIncome || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {formatCurrency(selectedStatement.netIncome || 0)}
@@ -4255,7 +4280,10 @@ export default function FinancialStatementsPage() {
                     setShowEditModal(false);
                     alert('Estado financiero actualizado exitosamente');
                   }}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                  className="text-white px-4 py-2 rounded-lg whitespace-nowrap shadow-sm"
+                  style={{ backgroundColor: theme.primary }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                 >
                   Guardar Cambios
                 </button>

@@ -8,6 +8,16 @@ import { saveAs } from 'file-saver';
 import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+  badgeBg: '#e3e8dd',
+};
+
 // Estilos CSS para impresión
 const printStyles = `
   @media print {
@@ -80,23 +90,23 @@ const getEntryDocumentType = (entry: LedgerEntry): string => {
   const num = entry.entryNumber || '';
   const desc = (entry.description || '').toLowerCase();
 
-  if (num.startsWith('ED-') || num.startsWith('JE-')) return 'Asiento manual';
-  if (num.startsWith('BCG-')) return 'Cargo bancario';
-  if (num.startsWith('DEP-')) return 'Depósito bancario';
-  if (num.startsWith('CRD-')) return 'Crédito bancario';
-  if (num.startsWith('TRF-')) return 'Transferencia bancaria';
-  if (num.startsWith('CHK-')) return 'Cheque';
-  if (num.startsWith('INV-MOV-')) return 'Movimiento de inventario';
-  if (num.endsWith('-COGS')) return 'Costo de ventas';
-  if (num.startsWith('PCF-')) return 'Fondo de caja chica';
-  if (num.startsWith('PCE-')) return 'Gasto de caja chica';
-  if (num.startsWith('PCT-')) return 'Reembolso de caja chica';
+  if (num.startsWith('ED-') || num.startsWith('JE-')) return 'Manual Entry';
+  if (num.startsWith('BCG-')) return 'Bank Charge';
+  if (num.startsWith('DEP-')) return 'Bank Deposit';
+  if (num.startsWith('CRD-')) return 'Bank Credit';
+  if (num.startsWith('TRF-')) return 'Bank Transfer';
+  if (num.startsWith('CHK-')) return 'Check';
+  if (num.startsWith('INV-MOV-')) return 'Inventory Movement';
+  if (num.endsWith('-COGS')) return 'Cost of Goods Sold';
+  if (num.startsWith('PCF-')) return 'Petty Cash Fund';
+  if (num.startsWith('PCE-')) return 'Petty Cash Expense';
+  if (num.startsWith('PCT-')) return 'Petty Cash Reimbursement';
 
-  if (desc.includes('factura suplidor')) return 'Factura de suplidor';
-  if (desc.startsWith('factura ')) return 'Factura de venta';
-  if (desc.includes('pago a proveedor')) return 'Pago a proveedor';
+  if (desc.includes('factura suplidor')) return 'Supplier Invoice';
+  if (desc.startsWith('factura ')) return 'Sales Invoice';
+  if (desc.includes('pago a proveedor')) return 'Vendor Payment';
 
-  return 'Otro';
+  return 'Other';
 };
 
 const GeneralLedgerPage: FC = () => {
@@ -525,7 +535,7 @@ const GeneralLedgerPage: FC = () => {
       {/* Estilos de impresión */}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
 
-      {/* Header con botón de regreso */}
+      {/* Header with back button */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
           <button
@@ -533,24 +543,30 @@ const GeneralLedgerPage: FC = () => {
             className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <i className="ri-arrow-left-line"></i>
-            Volver a Contabilidad
+            Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Mayor General</h1>
-            <p className="text-gray-600">Movimientos por cuenta contable</p>
+            <h1 className="text-2xl font-bold text-gray-900">General Ledger</h1>
+            <p className="text-gray-600">Account movements</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={downloadExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm"
+            style={{ backgroundColor: theme.primary }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
           >
             <i className="ri-file-excel-2-line"></i>
             Excel
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm"
+            style={{ backgroundColor: theme.accent }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.accent; }}
           >
             <i className="ri-file-pdf-line"></i>
             PDF
@@ -562,11 +578,11 @@ const GeneralLedgerPage: FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8 print:hidden">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <i className="ri-safe-line text-2xl text-blue-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-safe-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Activos</p>
+              <p className="text-sm font-medium text-gray-600">Assets</p>
               <p className="text-xl font-bold text-gray-900">
                 {accounts.filter(acc => acc.type === 'asset').length}
               </p>
@@ -576,11 +592,11 @@ const GeneralLedgerPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <i className="ri-bank-line text-2xl text-red-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-bank-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pasivos</p>
+              <p className="text-sm font-medium text-gray-600">Liabilities</p>
               <p className="text-xl font-bold text-gray-900">
                 {accounts.filter(acc => acc.type === 'liability').length}
               </p>
@@ -590,11 +606,11 @@ const GeneralLedgerPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <i className="ri-funds-line text-2xl text-green-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-funds-line text-2xl" style={{ color: theme.primary }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Patrimonio</p>
+              <p className="text-sm font-medium text-gray-600">Equity</p>
               <p className="text-xl font-bold text-gray-900">
                 {accounts.filter(acc => acc.type === 'equity').length}
               </p>
@@ -604,11 +620,11 @@ const GeneralLedgerPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <i className="ri-money-dollar-circle-line text-2xl text-purple-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-money-dollar-circle-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Ingresos</p>
+              <p className="text-sm font-medium text-gray-600">Income</p>
               <p className="text-xl font-bold text-gray-900">
                 {accounts.filter(acc => acc.type === 'income').length}
               </p>
@@ -618,11 +634,11 @@ const GeneralLedgerPage: FC = () => {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <i className="ri-shopping-cart-line text-2xl text-orange-600"></i>
+            <div className="p-2 rounded-lg" style={{ backgroundColor: theme.muted }}>
+              <i className="ri-shopping-cart-line text-2xl" style={{ color: theme.softText }}></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Gastos</p>
+              <p className="text-sm font-medium text-gray-600">Expenses</p>
               <p className="text-xl font-bold text-gray-900">
                 {accounts.filter(acc => acc.type === 'expense').length}
               </p>
@@ -741,29 +757,32 @@ const GeneralLedgerPage: FC = () => {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setShowAccountSelector(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-sm"
+                      style={{ backgroundColor: theme.primary }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                     >
                       <i className="ri-list-check"></i>
-                      Cambiar Cuenta
+                      Change Account
                     </button>
                     <div>
                       <h2 className="text-lg font-semibold text-gray-900">
                         {selectedAccount.id === 'ALL'
-                          ? 'Mayor General - Todas las cuentas'
+                          ? 'General Ledger - All Accounts'
                           : `${selectedAccount.code} - ${selectedAccount.name}`}
                       </h2>
                       <p className="text-sm text-gray-600">
                         {selectedAccount.id === 'ALL'
-                          ? 'Incluye todas las cuentas contables'
-                          : `${getAccountTypeName(selectedAccount.type)} | Balance Normal: ${
-                              selectedAccount.normalBalance === 'debit' ? 'Débito' : 'Crédito'
+                          ? 'Includes all accounts'
+                          : `${getAccountTypeName(selectedAccount.type)} | Normal Balance: ${
+                              selectedAccount.normalBalance === 'debit' ? 'Debit' : 'Credit'
                             }`}
                       </p>
                     </div>
                   </div>
                   {selectedAccount.id !== 'ALL' && (
                     <div className="text-right">
-                      <div className="text-sm text-gray-600">Balance Actual</div>
+                      <div className="text-sm text-gray-600">Current Balance</div>
                       <div
                         className={`text-xl font-bold ${getBalanceColor(
                           selectedAccount.balance,
@@ -776,19 +795,20 @@ const GeneralLedgerPage: FC = () => {
                   )}
                 </div>
 
-                {/* Filtros compactos en una sola fila */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                {/* Compact filters */}
+                <div className="grid grid-cols-2 md-grid-cols-4 lg:grid-cols-7 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Año Fiscal</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Fiscal Year</label>
                     <select
                       value={selectedFiscalYear}
                       onChange={(e) => {
                         setSelectedFiscalYear(e.target.value);
                         setSelectedPeriodId('');
                       }}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-[#4b5c4b]"
+                      style={{ borderColor: theme.softBorder }}
                     >
-                      <option value="">Todos</option>
+                      <option value="">All</option>
                       {fiscalYears.map((year) => (
                         <option key={year} value={year}>
                           {year}
@@ -797,13 +817,14 @@ const GeneralLedgerPage: FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Período</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Period</label>
                     <select
                       value={selectedPeriodId}
                       onChange={(e) => handlePeriodChange(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-[#4b5c4b]"
+                      style={{ borderColor: theme.softBorder }}
                     >
-                      <option value="">Todos</option>
+                      <option value="">All</option>
                       {visiblePeriods.map((period) => (
                         <option key={period.id} value={period.id}>
                           {period.name}
@@ -812,7 +833,7 @@ const GeneralLedgerPage: FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Doc.</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Document Type</label>
                     <select
                       multiple
                       value={documentTypeFilter}
@@ -820,7 +841,8 @@ const GeneralLedgerPage: FC = () => {
                         const options = Array.from(e.target.selectedOptions).map((option) => option.value);
                         setDocumentTypeFilter(options);
                       }}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-[#4b5c4b]"
+                      style={{ borderColor: theme.softBorder }}
                     >
                       {documentTypes.map((type) => (
                         <option key={type} value={type}>
@@ -830,21 +852,23 @@ const GeneralLedgerPage: FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Desde</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
                     <input
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-[#4b5c4b]"
+                      style={{ borderColor: theme.softBorder }}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Hasta</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-[#4b5c4b]"
+                      style={{ borderColor: theme.softBorder }}
                     />
                   </div>
                   <div className="flex items-end">
@@ -856,15 +880,19 @@ const GeneralLedgerPage: FC = () => {
                         setSelectedPeriodId('');
                         setDocumentTypeFilter([]);
                       }}
-                      className="w-full px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                      className="w-full px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900 border rounded hover:bg-gray-50 transition-colors"
+                      style={{ borderColor: theme.softBorder }}
                     >
-                      Limpiar
+                      Clear
                     </button>
                   </div>
                   <div className="flex items-end">
                     <button
                       onClick={downloadExcel}
-                      className="w-full px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                      className="w-full px-3 py-1.5 text-xs text-white rounded shadow-sm transition-colors"
+                      style={{ backgroundColor: theme.primary }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
                     >
                       <i className="ri-file-excel-2-line"></i> Excel
                     </button>
@@ -1076,16 +1104,19 @@ const GeneralLedgerPage: FC = () => {
           ) : (
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <i className="ri-file-list-3-line text-6xl text-gray-300 mb-4"></i>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Selecciona una Cuenta</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Select an Account</h3>
               <p className="text-gray-600 mb-4">
-                Haz clic en el botón para elegir una cuenta del catálogo y ver su mayor general.
+                Click the button to choose an account from the catalog and view its general ledger.
               </p>
               <button
                 onClick={() => setShowAccountSelector(true)}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 text-white rounded-lg shadow-sm transition-colors"
+                style={{ backgroundColor: theme.primary }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primaryHover; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = theme.primary; }}
               >
                 <i className="ri-list-check mr-2"></i>
-                Seleccionar Cuenta
+                Select Account
               </button>
             </div>
           )}

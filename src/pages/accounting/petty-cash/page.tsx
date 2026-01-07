@@ -12,6 +12,15 @@ import {
   suppliersService,
 } from '../../../services/database';
 
+const theme = {
+  primary: '#4b5c4b',
+  primaryHover: '#3f4f3f',
+  accent: '#6d806d',
+  muted: '#eef2ea',
+  softBorder: '#dfe4db',
+  softText: '#2f3a2f',
+};
+
 interface PettyCashFund {
   id: string;
   name: string;
@@ -189,6 +198,11 @@ const PettyCashPage: React.FC = () => {
     loadSuppliers();
   }, [user?.id]);
 
+  const handleFundSelection = (fund: PettyCashFund) => {
+    setSelectedFund(fund);
+    setShowFundModal(true);
+  };
+
   const handleSubmitFund = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -346,84 +360,30 @@ const PettyCashPage: React.FC = () => {
   );
 
   const handleApproveExpense = async (expenseId: string) => {
+    if (!window.confirm('Approve this petty cash disbursement?')) return;
     if (!user) return;
-    const expense = expenses.find((e) => e.id === expenseId);
-    if (!expense) return;
-
-    if (!window.confirm('¿Desea aprobar este desembolso de caja chica?')) return;
 
     try {
-      const approver =
-        (user as any)?.full_name ||
-        (user as any)?.email ||
-        String((user as any)?.id || '');
-
-      const updated = await pettyCashService.approveExpense(user.id, expenseId, approver || null);
-
-      setExpenses((prev) =>
-        prev.map((e) =>
-          e.id === expenseId
-            ? {
-                ...e,
-                status: 'approved',
-                approvedBy: updated.approved_by || approver || e.approvedBy,
-              }
-            : e,
-        ),
-      );
-
-      // Refrescar fondos para reflejar el nuevo saldo
-      const fundsData = await pettyCashService.getFunds(user.id);
-      const mappedFunds: PettyCashFund[] = (fundsData || []).map((f: any) => ({
-        id: f.id,
-        name: f.name,
-        location: f.location || '',
-        custodian: f.custodian || '',
-        initialAmount: Number(f.initial_amount) || 0,
-        currentBalance: Number(f.current_balance) || 0,
-        status: (f.status as 'active' | 'inactive') || 'active',
-        createdAt: f.created_at ? String(f.created_at).split('T')[0] : '',
-        pettyCashAccountId: f.petty_cash_account_id || undefined,
-        bankAccountId: f.bank_account_id || undefined,
-      }));
-      setFunds(mappedFunds);
+      const updated = await pettyCashService.approveExpense(user.id, expenseId);
+      setExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error approving petty cash expense:', error);
-      alert('Error al aprobar el desembolso de caja chica');
+      alert('Error approving petty cash disbursement');
     }
   };
 
   const handleRejectExpense = async (expenseId: string) => {
+    if (!window.confirm('Reject this petty cash disbursement?')) return;
     if (!user) return;
-    const expense = expenses.find((e) => e.id === expenseId);
-    if (!expense) return;
-
-    if (!window.confirm('¿Desea rechazar este desembolso de caja chica?')) return;
 
     try {
-      const approver =
-        (user as any)?.full_name ||
-        (user as any)?.email ||
-        String((user as any)?.id || '');
-
-      const updated = await pettyCashService.rejectExpense(user.id, expenseId, approver || null);
-
-      setExpenses((prev) =>
-        prev.map((e) =>
-          e.id === expenseId
-            ? {
-                ...e,
-                status: 'rejected',
-                approvedBy: updated.approved_by || approver || e.approvedBy,
-              }
-            : e,
-        ),
-      );
+      const updated = await pettyCashService.rejectExpense(user.id, expenseId);
+      setExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error rejecting petty cash expense:', error);
-      alert('Error al rechazar el desembolso de caja chica');
+      alert('Error rejecting petty cash disbursement');
     }
   };
 
@@ -445,15 +405,15 @@ const PettyCashPage: React.FC = () => {
     const expenseAccountId = String(formData.get('expenseAccountId') || '').trim();
 
     if (!fundId) {
-      alert('Debe seleccionar un fondo de caja chica.');
+      alert('You must select a petty cash fund.');
       return;
     }
     if (!description || !category || !receipt || !expenseAccountId) {
-      alert('Debe completar todos los campos requeridos del desembolso.');
+      alert('Please complete all required disbursement fields.');
       return;
     }
     if (ncf && !supplierId) {
-      alert('Si indica un NCF debe seleccionar un proveedor.');
+      alert('If you provide an NCF you must select a supplier.');
       return;
     }
 
@@ -504,7 +464,7 @@ const PettyCashPage: React.FC = () => {
 
       setExpenses((prev) => [mapped, ...prev]);
 
-      // Recargar fondos para reflejar el nuevo saldo si la lógica de backend los actualiza
+      // Refresh funds to reflect updated balance if backend updates them
       const fundsData = await pettyCashService.getFunds(user.id);
       const mappedFunds: PettyCashFund[] = (fundsData || []).map((f: any) => ({
         id: f.id,
@@ -525,7 +485,7 @@ const PettyCashPage: React.FC = () => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error creating petty cash expense:', error);
-      alert('Error al registrar el desembolso de caja chica');
+      alert('Error creating petty cash disbursement');
     }
   };
 
@@ -658,11 +618,13 @@ const PettyCashPage: React.FC = () => {
           { key: 'status', title: 'Estado' },
         ];
 
-        const rows = (categories || []).map((cat: any) => ({
-          name: cat.name,
-          description: cat.description || '',
-          status: cat.is_active ? 'Activa' : 'Inactiva',
-        }));
+        const rows = (categories || [])
+          .map((cat: any) => ({
+            name: cat.name,
+            description: cat.description || '',
+            status: cat.is_active ? 'Activa' : 'Inactiva',
+          }))
+          .filter((row) => row.name.trim().length > 0);
 
         if (!rows.length) {
           alert('No hay categorías configuradas para exportar.');
@@ -695,8 +657,8 @@ const PettyCashPage: React.FC = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Caja Chica</h1>
-            <p className="text-gray-600">Gestión de fondos de gastos menores</p>
+            <h1 className="text-3xl font-bold text-gray-900">Petty Cash</h1>
+            <p className="text-gray-600">Manage small-expense funds</p>
           </div>
           <div className="flex space-x-3">
             <button
@@ -704,21 +666,21 @@ const PettyCashPage: React.FC = () => {
               className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Descargar Excel
+              Download Excel
             </button>
             <Link
               to="/accounting/petty-cash/report"
               className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap flex items-center"
             >
               <i className="ri-file-list-2-line mr-2"></i>
-              Reporte de Caja Chica
+              Petty Cash Report
             </Link>
             <button
               onClick={() => window.location.href = '/dashboard'}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-home-line mr-2"></i>
-              Volver al Inicio
+              Back to Home
             </button>
           </div>
         </div>
@@ -731,7 +693,7 @@ const PettyCashPage: React.FC = () => {
                 <i className="ri-wallet-3-line text-xl text-blue-600"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total en Fondos</p>
+                <p className="text-sm font-medium text-gray-600">Total Funds</p>
                 <p className="text-2xl font-bold text-gray-900">
                   RD${getTotalFunds().toLocaleString()}
                 </p>
@@ -745,7 +707,7 @@ const PettyCashPage: React.FC = () => {
                 <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Fondos Activos</p>
+                <p className="text-sm font-medium text-gray-600">Active Funds</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {funds.filter(f => f.status === 'active').length}
                 </p>
@@ -759,7 +721,7 @@ const PettyCashPage: React.FC = () => {
                 <i className="ri-file-list-3-line text-xl text-orange-600"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Gastos Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending Expenses</p>
                 <p className="text-2xl font-bold text-gray-900">{getPendingExpenses()}</p>
               </div>
             </div>
@@ -771,7 +733,7 @@ const PettyCashPage: React.FC = () => {
                 <i className="ri-shopping-cart-line text-xl text-red-600"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Gastos</p>
+                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
                 <p className="text-2xl font-bold text-gray-900">
                   RD${getTotalExpenses().toLocaleString()}
                 </p>
@@ -784,14 +746,14 @@ const PettyCashPage: React.FC = () => {
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg flex items-start space-x-3">
             <i className="ri-alert-line mt-0.5"></i>
             <div>
-              <p className="font-semibold">Alerta de Caja Chica</p>
+              <p className="font-semibold">Petty Cash Alert</p>
               <p className="text-sm">
-                Los siguientes fondos tienen una disponibilidad igual o inferior al 10% del monto inicial. Se recomienda solicitar la reposición correspondiente.
+                The following funds have availability at or below 10% of the initial amount. Consider requesting a replenishment.
               </p>
               <ul className="mt-2 list-disc list-inside text-sm">
                 {lowBalanceFunds.map((fund) => (
                   <li key={fund.id}>
-                    {fund.name}: RD${fund.currentBalance.toLocaleString()} de RD${fund.initialAmount.toLocaleString()}
+                    {fund.name}: RD${fund.currentBalance.toLocaleString()} of RD${fund.initialAmount.toLocaleString()}
                   </li>
                 ))}
               </ul>
@@ -812,7 +774,7 @@ const PettyCashPage: React.FC = () => {
                 }`}
               >
                 <i className="ri-wallet-3-line mr-2"></i>
-                Fondos de Caja Chica
+                Petty Cash Funds
               </button>
               <button
                 onClick={() => setActiveTab('expenses')}
@@ -823,7 +785,7 @@ const PettyCashPage: React.FC = () => {
                 }`}
               >
                 <i className="ri-shopping-cart-line mr-2"></i>
-                Desembolsos
+                Disbursements
               </button>
               <button
                 onClick={() => setActiveTab('reimbursements')}
@@ -834,7 +796,7 @@ const PettyCashPage: React.FC = () => {
                 }`}
               >
                 <i className="ri-refund-2-line mr-2"></i>
-                Reposiciones
+                Replenishments
               </button>
               <button
                 onClick={() => setActiveTab('categories')}
@@ -845,7 +807,7 @@ const PettyCashPage: React.FC = () => {
                 }`}
               >
                 <i className="ri-price-tag-3-line mr-2"></i>
-                Categorías
+                Categories
               </button>
             </nav>
           </div>
@@ -855,7 +817,7 @@ const PettyCashPage: React.FC = () => {
             {activeTab === 'funds' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-900">Fondos de Caja Chica</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Petty Cash Funds</h2>
                   <button
                     onClick={() => {
                       setSelectedFund(null);
@@ -864,14 +826,14 @@ const PettyCashPage: React.FC = () => {
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                   >
                     <i className="ri-add-line mr-2"></i>
-                    Crear Fondo
+                    Create Fund
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {loadingFunds && funds.length === 0 && (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center text-gray-500">
-                      Cargando fondos de caja chica...
+                      Loading petty cash funds...
                     </div>
                   )}
                   {funds.map((fund) => (
@@ -883,23 +845,23 @@ const PettyCashPage: React.FC = () => {
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {fund.status === 'active' ? 'Activo' : 'Inactivo'}
+                          {fund.status === 'active' ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                       
                       <div className="space-y-2 text-sm text-gray-600">
                         <p><i className="ri-map-pin-line mr-2"></i>{fund.location}</p>
-                        <p><i className="ri-user-line mr-2"></i>Custodio: {fund.custodian}</p>
-                        <p><i className="ri-calendar-line mr-2"></i>Creado: {fund.createdAt}</p>
+                        <p><i className="ri-user-line mr-2"></i>Custodian: {fund.custodian}</p>
+                        <p><i className="ri-calendar-line mr-2"></i>Created: {fund.createdAt}</p>
                       </div>
 
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-gray-600">Monto Inicial:</span>
+                          <span className="text-sm text-gray-600">Initial Amount:</span>
                           <span className="font-medium">RD${fund.initialAmount.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Balance Actual:</span>
+                          <span className="text-sm text-gray-600">Current Balance:</span>
                           <span className="font-bold text-lg text-blue-600">
                             RD${fund.currentBalance.toLocaleString()}
                           </span>
@@ -911,26 +873,23 @@ const PettyCashPage: React.FC = () => {
                           className="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
                           onClick={() => {
                             const details = [
-                              `Fondo: ${fund.name}`,
-                              `Ubicación: ${fund.location || 'N/D'}`,
-                              `Custodio: ${fund.custodian || 'N/D'}`,
-                              `Monto inicial: RD$${fund.initialAmount.toLocaleString()}`,
-                              `Balance actual: RD$${fund.currentBalance.toLocaleString()}`,
-                              `Estado: ${fund.status === 'active' ? 'Activo' : 'Inactivo'}`,
+                              `Fund: ${fund.name}`,
+                              `Location: ${fund.location || 'N/A'}`,
+                              `Custodian: ${fund.custodian || 'N/A'}`,
+                              `Initial amount: RD$${fund.initialAmount.toLocaleString()}`,
+                              `Current balance: RD$${fund.currentBalance.toLocaleString()}`,
+                              `Status: ${fund.status === 'active' ? 'Active' : 'Inactive'}`,
                             ].join('\n');
                             alert(details);
                           }}
                         >
-                          Ver Detalles
+                          View Details
                         </button>
                         <button
                           className="flex-1 bg-gray-600 text-white py-2 px-3 rounded text-sm hover:bg-gray-700 transition-colors whitespace-nowrap"
-                          onClick={() => {
-                            setSelectedFund(fund);
-                            setShowFundModal(true);
-                          }}
+                          onClick={() => handleFundSelection(fund)}
                         >
-                          Editar
+                          Edit
                         </button>
                       </div>
                     </div>
@@ -1712,7 +1671,7 @@ const PettyCashPage: React.FC = () => {
 
                     setReimbursements(prev => [mapped, ...prev]);
 
-                    // Recargar fondos para reflejar nuevo saldo
+                    // Refresh funds to reflect updated balance
                     const fundsData = await pettyCashService.getFunds(user.id);
                     const mappedFunds: PettyCashFund[] = (fundsData || []).map((f: any) => ({
                       id: f.id,
