@@ -344,6 +344,37 @@ export default function ReportsPage() {
     setShowReportPreviewModal(true);
   };
 
+  const paletteGreen = [47, 62, 30];
+  const paletteCream = [243, 236, 218];
+
+  const getPaymentMethodLabel = (method: string) => {
+    switch (method) {
+      case 'transfer':
+        return 'Transfer';
+      case 'check':
+        return 'Check';
+      case 'cash':
+        return 'Cash';
+      case 'card':
+        return 'Card';
+      default:
+        return method ? method.charAt(0).toUpperCase() + method.slice(1) : 'Other';
+    }
+  };
+
+  const getCustomerStatusLabel = (status: ReportCustomer['status']) => {
+    switch (status) {
+      case 'Activo':
+        return 'Active';
+      case 'Inactivo':
+        return 'Inactive';
+      case 'Bloqueado':
+        return 'Blocked';
+      default:
+        return 'Unknown';
+    }
+  };
+
   const handleGenerateAgingReport = () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -353,15 +384,16 @@ export default function ReportsPage() {
     doc.text(companyName, centerX, 20, { align: 'center' });
 
     doc.setFontSize(14);
-    doc.text('Reporte de Antigüedad de Saldos', centerX, 28, { align: 'center' });
+    doc.text('Accounts Receivable Aging Report', centerX, 28, { align: 'center' });
 
     doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, centerX, 36, { align: 'center' });
 
     // Análisis por períodos
     const agingData = customers.map(customer => {
       const customerInvoices = invoices.filter(inv => inv.customerId === customer.id && inv.balance > 0);
       const current = customerInvoices.filter(inv => inv.daysOverdue === 0).reduce((sum, inv) => sum + inv.balance, 0);
+
       const days1to30 = customerInvoices.filter(inv => inv.daysOverdue >= 1 && inv.daysOverdue <= 30).reduce((sum, inv) => sum + inv.balance, 0);
       const days31to60 = customerInvoices.filter(inv => inv.daysOverdue >= 31 && inv.daysOverdue <= 60).reduce((sum, inv) => sum + inv.balance, 0);
       const days61to90 = customerInvoices.filter(inv => inv.daysOverdue >= 61 && inv.daysOverdue <= 90).reduce((sum, inv) => sum + inv.balance, 0);
@@ -380,15 +412,15 @@ export default function ReportsPage() {
 
     (doc as any).autoTable({
       startY: 48,
-      head: [['Cliente', 'Corriente', '1-30 días', '31-60 días', '61-90 días', '+90 días', 'Total']],
+      head: [['Customer', 'Current', '1-30 days', '31-60 days', '61-90 days', '+90 days', 'Total']],
       body: agingData,
       theme: 'striped',
-      headStyles: { fillColor: [239, 68, 68] },
+      headStyles: { fillColor: paletteGreen, textColor: paletteCream },
       styles: { fontSize: 8 }
     });
 
-    const filename = `antiguedad-saldos-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Reporte de Antigüedad de Saldos', filename);
+    const filename = `aging-report-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Accounts Receivable Aging Report', filename);
   };
 
   const handleGenerateStatementReport = () => {
@@ -978,31 +1010,44 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Reportes de Cuentas por Cobrar</h1>
+      <div className="p-6 bg-[#f7f3e8] min-h-screen">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Analytics</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Receivable Reports</h1>
+          </div>
+          <div className="flex items-center gap-2 text-[#6b5c3b] bg-white border border-[#e4d8c4] px-4 py-2 rounded-full shadow-sm">
+            <i className="ri-bar-chart-grouped-line text-xl"></i>
+            <span className="text-sm font-medium">Military Green dashboard</span>
+          </div>
         </div>
 
         {/* Date Filter */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtros de Fecha</h3>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">Date Filters</h3>
+            <div className="text-sm text-[#6b5c3b] flex items-center gap-2">
+              <i className="ri-time-line"></i>
+              <span>Choose the analysis window</span>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Desde</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Date From</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Hasta</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Date To</label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
               />
             </div>
           </div>
@@ -1011,54 +1056,64 @@ export default function ReportsPage() {
         {/* Reports Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Aging Report */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Antigüedad de Saldos</h3>
-              <i className="ri-calendar-line text-2xl text-blue-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Aging Analysis</h3>
+                <p className="text-sm text-[#6b5c3b]">Track past-due balances by customer and bucket</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-calendar-schedule-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Análisis de vencimientos por cliente y períodos de antigüedad</p>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleGenerateAgingReport}
-                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
-              >
-                <i className="ri-file-pdf-line mr-2"></i>PDF
-              </button>
-            </div>
+            <button
+              onClick={handleGenerateAgingReport}
+              className="w-full bg-[#7a2e1b] text-white py-2.5 rounded-lg hover:bg-[#5c1f12] transition-colors shadow-sm"
+            >
+              <i className="ri-file-pdf-line mr-2"></i>Generate PDF
+            </button>
           </div>
 
           {/* Statement Report */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Estado de Cuenta</h3>
-              <i className="ri-file-list-line text-2xl text-green-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Account Statement</h3>
+                <p className="text-sm text-[#6b5c3b]">Detailed movement per customer with invoices and payments</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-file-list-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Movimientos detallados por cliente con facturas y pagos</p>
             <button
               onClick={handleGenerateStatementReport}
-              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="w-full bg-[#2f3e1e] text-white py-2.5 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
             >
-              <i className="ri-file-pdf-line mr-2"></i>Generar PDF
+              <i className="ri-file-pdf-line mr-2"></i>Generate PDF
             </button>
           </div>
 
           {/* Collection Report */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Reporte de Cobranza</h3>
-              <i className="ri-money-dollar-circle-line text-2xl text-purple-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Collection Summary</h3>
+                <p className="text-sm text-[#6b5c3b]">Payments by period and method to monitor inflows</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-money-dollar-circle-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Resumen de pagos recibidos por período y método de pago</p>
-            <div className="flex space-x-2">
+            <div className="flex gap-3">
               <button
                 onClick={handleGenerateCollectionReport}
-                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+                className="flex-1 bg-[#7a2e1b] text-white py-2.5 rounded-lg hover:bg-[#5c1f12] transition-colors shadow-sm"
               >
                 <i className="ri-file-pdf-line mr-2"></i>PDF
               </button>
               <button
                 onClick={handleGenerateCollectionExcel}
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                className="flex-1 bg-[#2f3e1e] text-white py-2.5 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
               >
                 <i className="ri-file-excel-line mr-2"></i>Excel
               </button>
@@ -1066,47 +1121,59 @@ export default function ReportsPage() {
           </div>
 
           {/* Customer Balance Report */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Saldos por Cliente</h3>
-              <i className="ri-user-line text-2xl text-orange-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Customer Balances</h3>
+                <p className="text-sm text-[#6b5c3b]">Current receivables vs. credit limits with utilization</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-user-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Listado de saldos actuales por cliente con límites de crédito</p>
             <button
               onClick={handleGenerateCustomerBalanceReport}
-              className="w-full bg-orange-600 text-white py-2 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap"
+              className="w-full bg-[#2f3e1e] text-white py-2.5 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
             >
-              <i className="ri-file-pdf-line mr-2"></i>Generar PDF
+              <i className="ri-file-pdf-line mr-2"></i>Generate PDF
             </button>
           </div>
 
           {/* Overdue Report */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Facturas Vencidas</h3>
-              <i className="ri-alarm-warning-line text-2xl text-red-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Overdue Invoices</h3>
+                <p className="text-sm text-[#6b5c3b]">Invoices past due grouped by days late and customer</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-alarm-warning-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Listado de facturas vencidas con días de atraso</p>
             <button
               onClick={handleGenerateOverdueReport}
-              className="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="w-full bg-[#7a2e1b] text-white py-2.5 rounded-lg hover:bg-[#5c1f12] transition-colors shadow-sm"
             >
-              <i className="ri-file-pdf-line mr-2"></i>Generar PDF
+              <i className="ri-file-pdf-line mr-2"></i>Generate PDF
             </button>
           </div>
 
           {/* Payment Analysis */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Análisis de Pagos</h3>
-              <i className="ri-bar-chart-line text-2xl text-indigo-600"></i>
+              <div>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Payment Analysis</h3>
+                <p className="text-sm text-[#6b5c3b]">Statistical trends for payment frequency and methods</p>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#f3ecda] text-[#2f3e1e] flex items-center justify-center">
+                <i className="ri-bar-chart-line text-xl"></i>
+              </div>
             </div>
-            <p className="text-gray-600 mb-4">Análisis estadístico de patrones de pago por cliente</p>
             <button
               onClick={handleGeneratePaymentAnalysisReport}
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
+              className="w-full bg-[#2f3e1e] text-white py-2.5 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
             >
-              <i className="ri-file-pdf-line mr-2"></i>Generar PDF
+              <i className="ri-file-pdf-line mr-2"></i>Generate PDF
             </button>
           </div>
         </div>
@@ -1118,25 +1185,25 @@ export default function ReportsPage() {
           onClick={handleCloseReportPreview}
         >
           <div
-            className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-white rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col border border-[#e4d8c4]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
               <div className="min-w-0">
-                <h3 className="text-xl font-semibold text-gray-900 truncate">{reportPreviewTitle}</h3>
+                <h3 className="text-xl font-semibold text-[#2f3e1e] truncate">{reportPreviewTitle}</h3>
                 {reportPreviewFilename ? (
-                  <p className="text-sm text-gray-500 truncate">{reportPreviewFilename}</p>
+                  <p className="text-sm text-[#6b5c3b] truncate">{reportPreviewFilename}</p>
                 ) : null}
               </div>
               <button
                 onClick={handleCloseReportPreview}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-[#6b5c3b] hover:text-[#2f3e1e] transition-colors"
               >
                 <i className="ri-close-line text-2xl"></i>
               </button>
             </div>
 
-            <div className="flex-1 overflow-auto border border-gray-200 rounded-lg bg-white">
+            <div className="flex-1 overflow-auto border border-[#e4d8c4] rounded-xl bg-white">
               {reportPreviewType === 'pdf' ? (
                 reportPreviewUrl ? (
                   <iframe
@@ -1145,43 +1212,43 @@ export default function ReportsPage() {
                     className="w-full h-[70vh]"
                   />
                 ) : (
-                  <div className="p-6 text-gray-600">No hay vista previa disponible.</div>
+                  <div className="p-6 text-[#6b5c3b]">No preview available.</div>
                 )
               ) : (
                 <div className="p-4 space-y-4">
                   {reportPreviewSummary.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {reportPreviewSummary.map((item, idx) => (
-                        <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">{item.label}</div>
-                          <div className="text-sm font-semibold text-gray-900">{item.value}</div>
+                        <div key={idx} className="bg-[#f3ecda] border border-[#e4d8c4] rounded-xl p-3">
+                          <div className="text-xs text-[#6b5c3b] uppercase tracking-wide">{item.label}</div>
+                          <div className="text-sm font-semibold text-[#2f3e1e]">{item.value}</div>
                         </div>
                       ))}
                     </div>
                   ) : null}
 
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="border border-[#e4d8c4] rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50 sticky top-0">
+                      <table className="min-w-full divide-y divide-[#e4d8c4]">
+                        <thead className="bg-[#f7f3e8] sticky top-0">
                           <tr>
                             {reportPreviewHeaders.map((header, idx) => (
                               <th
                                 key={idx}
-                                className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap"
+                                className="px-4 py-2 text-left text-xs font-semibold text-[#6b5c3b] uppercase whitespace-nowrap"
                               >
                                 {header}
                               </th>
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-[#f3ecda]">
                           {reportPreviewRows.map((row, rowIdx) => (
-                            <tr key={rowIdx} className="hover:bg-gray-50">
+                            <tr key={rowIdx} className="hover:bg-[#fffdf6]">
                               {row.map((cell, cellIdx) => (
                                 <td
                                   key={cellIdx}
-                                  className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap"
+                                  className="px-4 py-2 text-sm text-[#2f3e1e] whitespace-nowrap"
                                 >
                                   {cell !== null && cell !== undefined ? String(cell) : ''}
                                 </td>
@@ -1199,16 +1266,16 @@ export default function ReportsPage() {
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={handleCloseReportPreview}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                className="bg-[#f3ecda] text-[#6b5c3b] px-4 py-2 rounded-lg hover:bg-[#e6ddc4] transition-colors"
               >
-                Cerrar
+                Close
               </button>
               <button
                 onClick={handleDownloadReportPreview}
                 disabled={!reportPreviewBlob || !reportPreviewFilename}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Descargar
+                Download
               </button>
             </div>
           </div>

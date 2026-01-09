@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { settingsService, auditLogsService } from '../../../services/database';
+import { settingsService, auditLogsService, dataBackupsService } from '../../../services/database';
 
 interface BackupRecord {
   id: string;
@@ -38,7 +38,7 @@ export default function BackupSettingsPage() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading audit log:', error);
-      setMessage({ type: 'error', text: 'Error al descargar el log de auditoría' });
+      setMessage({ type: 'error', text: 'Error downloading the audit log' });
     }
   };
 
@@ -47,7 +47,7 @@ export default function BackupSettingsPage() {
       try {
         const [acc, backups] = await Promise.all([
           settingsService.getAccountingSettings(),
-          settingsService.getBackups(),
+          dataBackupsService.getBackups(),
         ]);
         if (acc) {
           setAccountingSettings(acc);
@@ -82,9 +82,9 @@ export default function BackupSettingsPage() {
       };
       await settingsService.saveAccountingSettings(payload);
       setAccountingSettings(payload);
-      setMessage({ type: 'success', text: 'Configuración de respaldos guardada exitosamente' });
+      setMessage({ type: 'success', text: 'Backup configuration saved successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al guardar la configuración' });
+      setMessage({ type: 'error', text: 'Error saving backup settings' });
     } finally {
       setLoading(false);
     }
@@ -95,15 +95,15 @@ export default function BackupSettingsPage() {
     setMessage(null);
 
     try {
-      const backup = await settingsService.createBackup({
+      const backup = await dataBackupsService.createBackup({
         backup_type: 'manual',
-        backup_name: `Respaldo manual - ${new Date().toLocaleString()}`,
+        backup_name: `Manual Backup - ${new Date().toLocaleString()}`,
         retention_days: retentionDays,
       });
       setHistory((prev) => [backup as BackupRecord, ...prev]);
-      setMessage({ type: 'success', text: 'Respaldo creado exitosamente' });
+      setMessage({ type: 'success', text: 'Backup created successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error al crear el respaldo' });
+      setMessage({ type: 'error', text: 'Error creating the backup' });
     } finally {
       setLoading(false);
     }
@@ -126,44 +126,46 @@ export default function BackupSettingsPage() {
   };
 
   const handleDelete = async (backup: BackupRecord) => {
-    if (!window.confirm('¿Eliminar este respaldo de forma permanente?')) return;
+    if (!window.confirm('Delete this backup permanently?')) return;
+
     try {
-      await settingsService.deleteBackup(backup.id);
+      await dataBackupsService.deleteBackup(backup.id);
       setHistory((prev) => prev.filter((b) => b.id !== backup.id));
-      setMessage({ type: 'success', text: 'Respaldo eliminado correctamente' });
+      setMessage({ type: 'success', text: 'Backup deleted successfully' });
     } catch (error) {
       console.error('Error deleting backup:', error);
-      setMessage({ type: 'error', text: 'Error al eliminar el respaldo' });
+      setMessage({ type: 'error', text: 'Error deleting the backup' });
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Respaldos y Seguridad</h1>
-              <p className="text-gray-600 mt-1">
-                Configura respaldos automáticos y políticas de seguridad
+              <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Security</p>
+              <h1 className="text-3xl font-bold text-[#2f3e1e]">Backups & Security</h1>
+              <p className="text-[#6b5c3b] mt-1">
+                Configure automated backups, retention policies, and audit protections.
               </p>
             </div>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => window.REACT_APP_NAVIGATE('/settings')}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+                className="flex items-center space-x-2 text-[#6b5c3b] hover:text-[#2f3e1e]"
               >
                 <i className="ri-arrow-left-line"></i>
-                <span>Volver</span>
+                <span>Back to Settings</span>
               </button>
               <button
                 onClick={handleBackupNow}
                 disabled={loading}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
+                className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2a15] disabled:opacity-50 flex items-center space-x-2"
               >
                 <i className="ri-download-cloud-line"></i>
-                <span>{loading ? 'Creando...' : 'Respaldar Ahora'}</span>
+                <span>{loading ? 'Creating...' : 'Backup Now'}</span>
               </button>
             </div>
           </div>
@@ -180,8 +182,8 @@ export default function BackupSettingsPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Backup Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración de Respaldos</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+            <h2 className="text-lg font-semibold text-[#2f3e1e] mb-4">Backup Preferences</h2>
             <div className="space-y-4">
               <div className="flex items-center">
                 <input
@@ -189,33 +191,33 @@ export default function BackupSettingsPage() {
                   id="auto_backup"
                   checked={autoBackup}
                   onChange={(e) => setAutoBackup(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#2f3e1e] focus:ring-[#6b8a45] border-[#d9ceb5] rounded"
                 />
-                <label htmlFor="auto_backup" className="ml-2 block text-sm text-gray-900">
-                  Habilitar respaldos automáticos
+                <label htmlFor="auto_backup" className="ml-2 block text-sm text-[#2f3e1e]">
+                  Enable automatic backups
                 </label>
               </div>
               
               {autoBackup && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Frecuencia de Respaldo
+                    <label className="block text-sm font-medium text-[#4a3c23] mb-2">
+                      Backup frequency
                     </label>
                     <select
                       value={backupFrequency}
                       onChange={(e) => setBackupFrequency(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
                     >
-                      <option value="hourly">Cada hora</option>
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="monthly">Mensual</option>
+                      <option value="hourly">Hourly</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Período de Retención (días)
+                    <label className="block text-sm font-medium text-[#4a3c23] mb-2">
+                      Retention period (days)
                     </label>
                     <input
                       type="number"
@@ -223,7 +225,7 @@ export default function BackupSettingsPage() {
                       max="365"
                       value={retentionDays}
                       onChange={(e) => setRetentionDays(parseInt(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
                     />
                   </div>
                 </div>
@@ -235,32 +237,32 @@ export default function BackupSettingsPage() {
                   id="encrypt_backups"
                   checked={encryptBackups}
                   onChange={(e) => setEncryptBackups(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#2f3e1e] focus:ring-[#6b8a45] border-[#d9ceb5] rounded"
                 />
-                <label htmlFor="encrypt_backups" className="ml-2 block text-sm text-gray-900">
-                  Encriptar respaldos
+                <label htmlFor="encrypt_backups" className="ml-2 block text-sm text-[#2f3e1e]">
+                  Encrypt backups at rest
                 </label>
               </div>
             </div>
           </div>
 
           {/* Security Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración de Seguridad</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+            <h2 className="text-lg font-semibold text-[#2f3e1e] mb-4">Security Controls</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-[#f7f3e8] rounded-lg border border-[#e4d8c4]">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">Registro de Auditoría</h3>
-                    <p className="text-xs text-gray-500">Habilitar logs de actividad</p>
+                    <h3 className="text-sm font-medium text-[#2f3e1e]">Audit log</h3>
+                    <p className="text-xs text-[#6b5c3b]">Capture user activity for compliance</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <button
                       type="button"
                       onClick={handleDownloadAuditLog}
-                      className="px-3 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+                      className="px-3 py-1 text-xs rounded bg-white text-[#2f3e1e] hover:bg-[#f3e7cf] border border-[#d9ceb5]"
                     >
-                      Descargar log (JSON)
+                      Download log (JSON)
                     </button>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -269,16 +271,16 @@ export default function BackupSettingsPage() {
                         checked={auditLogEnabled}
                         onChange={(e) => setAuditLogEnabled(e.target.checked)}
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#6b8a45] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2f3e1e]"></div>
                     </label>
                   </div>
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-[#f7f3e8] rounded-lg border border-[#e4d8c4]">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">Sesiones Automáticas</h3>
-                    <p className="text-xs text-gray-500">Cerrar sesión automáticamente</p>
+                    <h3 className="text-sm font-medium text-[#2f3e1e]">Auto sign-out</h3>
+                    <p className="text-xs text-[#6b5c3b]">Force log out after inactivity</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -287,7 +289,7 @@ export default function BackupSettingsPage() {
                       checked={autoLogoutEnabled}
                       onChange={(e) => setAutoLogoutEnabled(e.target.checked)}
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#6b8a45] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2f3e1e]"></div>
                   </label>
                 </div>
               </div>
@@ -298,55 +300,58 @@ export default function BackupSettingsPage() {
             <button
               type="button"
               onClick={() => window.REACT_APP_NAVIGATE('/settings')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-6 py-2 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg hover:bg-[#f3e7cf]"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2a15] disabled:opacity-50"
             >
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>
 
         {/* Backup History */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Historial de Respaldos</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="p-6 border-b border-[#e4d8c4] flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[#2f3e1e]">Backup history</h2>
+            <span className="text-sm text-[#6b5c3b]">
+              {history.length} record{history.length === 1 ? '' : 's'}
+            </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#f7f3e8]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha y Hora
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
+                    Date & time
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tamaño
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
+                    Size
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f1e4cd]">
                 {history.map((backup) => (
                   <tr key={backup.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
                       {new Date(backup.backup_date || backup.created_at || '').toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6b5c3b]">
                       {backup.file_size ? `${(backup.file_size / (1024 * 1024)).toFixed(2)} MB` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        {backup.status || 'Completado'}
+                        {backup.status || 'Completed'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -354,14 +359,14 @@ export default function BackupSettingsPage() {
                         <button
                           type="button"
                           onClick={() => handleDownload(backup)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#2f3e1e] hover:text-[#1f2a15]"
                         >
                           <i className="ri-download-line"></i>
                         </button>
                         <button
                           type="button"
-                          className="text-green-400 cursor-not-allowed"
-                          title="Restaurar (próximamente)"
+                          className="text-[#6b5c3b] cursor-not-allowed"
+                          title="Restore (coming soon)"
                           disabled
                         >
                           <i className="ri-refresh-line"></i>

@@ -3,6 +3,15 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { suppliersService, apInvoicesService, apInvoiceNotesService, chartAccountsService } from '../../../services/database';
 
+const palette = {
+  cream: '#F6F1E7',
+  green: '#2F4F30',
+  greenDark: '#1F2B1A',
+  greenMid: '#4B5E2F',
+  greenSoft: '#7E8F63',
+  badgeNeutral: '#E5DCC3',
+};
+
 export default function APDebitCreditNotesPage() {
   const { user } = useAuth();
 
@@ -37,7 +46,7 @@ export default function APDebitCreditNotesPage() {
       setAccounts(postable);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error cargando catálogos para notas de proveedor', error);
+      console.error('Error loading supplier note lookups', error);
       setSuppliers([]);
       setAccounts([]);
     }
@@ -50,7 +59,7 @@ export default function APDebitCreditNotesPage() {
       setNotes(data || []);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error cargando notas de proveedor', error);
+      console.error('Error loading supplier notes', error);
       setNotes([]);
     }
   };
@@ -70,7 +79,7 @@ export default function APDebitCreditNotesPage() {
       setInvoices(filtered);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error cargando facturas para notas de proveedor', error);
+      console.error('Error loading invoices for supplier note', error);
       setInvoices([]);
     }
   };
@@ -91,28 +100,28 @@ export default function APDebitCreditNotesPage() {
     e.preventDefault();
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar notas de proveedor');
+      alert('You must sign in to record supplier notes.');
       return;
     }
 
     if (!selectedSupplierId) {
-      alert('Debes seleccionar un suplidor');
+      alert('Select a supplier.');
       return;
     }
 
     if (!selectedInvoiceId) {
-      alert('Debes seleccionar una factura pendiente de ese suplidor');
+      alert('Select an outstanding invoice for that supplier.');
       return;
     }
 
     const amount = Number(form.amount || 0);
     if (amount <= 0) {
-      alert('El monto de la nota debe ser mayor a 0');
+      alert('The note amount must be greater than 0.');
       return;
     }
 
     if (!form.accountId) {
-      alert('Debes seleccionar la cuenta contable a afectar');
+      alert('Select the ledger account to impact.');
       return;
     }
 
@@ -128,7 +137,7 @@ export default function APDebitCreditNotesPage() {
         reason: form.reason,
       });
 
-      alert('Nota registrada exitosamente');
+      alert('Note saved successfully.');
       setForm({
         noteType: 'credit',
         noteDate: new Date().toISOString().slice(0, 10),
@@ -141,34 +150,42 @@ export default function APDebitCreditNotesPage() {
       loadNotes();
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error creando nota de proveedor', error);
-      alert('No se pudo registrar la nota');
+      console.error('Error creating supplier note', error);
+      alert('The note could not be saved.');
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div
+        className="space-y-6 rounded-3xl"
+        style={{ backgroundColor: palette.cream, minHeight: '100vh', padding: '24px' }}
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Notas de Débito / Crédito de Proveedor</h1>
-            <p className="text-gray-600 text-sm">
-              Registra ajustes a facturas de suplidor seleccionando el suplidor y una factura pendiente.
+            <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: palette.greenSoft }}>
+              Accounts Payable · Adjustments
+            </p>
+            <h1 className="text-3xl font-bold" style={{ color: palette.greenDark }}>Supplier Debit / Credit Notes</h1>
+            <p className="text-base" style={{ color: palette.greenSoft }}>
+              Register invoice adjustments by selecting a supplier and an outstanding bill.
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-800">Nueva Nota</h2>
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold" style={{ color: palette.greenDark }}>New Note</h2>
+          </div>
           <form onSubmit={handleCreateNote} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
               <select
                 value={selectedSupplierId}
                 onChange={(e) => handleSupplierChange(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Seleccione un suplidor...</option>
+                <option value="">Select supplier...</option>
                 {suppliers.map((s: any) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
@@ -176,18 +193,18 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Factura pendiente *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Outstanding invoice *</label>
               <select
                 value={selectedInvoiceId}
                 onChange={(e) => setSelectedInvoiceId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Seleccione una factura...</option>
+                <option value="">Select an invoice...</option>
                 {invoices.map((inv: any) => {
                   const balance = Number(inv.balance_amount ?? inv.total_to_pay ?? 0);
                   return (
                     <option key={inv.id} value={inv.id}>
-                      {inv.invoice_number || inv.id} - {inv.invoice_date} - Saldo {inv.currency || 'DOP'} {balance.toLocaleString()}
+                      {inv.invoice_number || inv.id} · {inv.invoice_date} · Balance {inv.currency || 'DOP'} {balance.toLocaleString()}
                     </option>
                   );
                 })}
@@ -195,19 +212,19 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de nota *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Note type *</label>
               <select
                 value={form.noteType}
                 onChange={(e) => setForm(prev => ({ ...prev, noteType: e.target.value }))}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="credit">Nota de Crédito (disminuye saldo)</option>
-                <option value="debit">Nota de Débito (aumenta saldo)</option>
+                <option value="credit">Credit Note (reduces balance)</option>
+                <option value="debit">Debit Note (increases balance)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input
                 type="date"
                 value={form.noteDate}
@@ -217,7 +234,7 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
               <input
                 type="text"
                 value={form.currency}
@@ -227,7 +244,7 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monto *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount *</label>
               <input
                 type="number" min="0"
                 step="0.01"
@@ -238,7 +255,7 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta contable *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ledger account *</label>
               <select
                 value={form.accountId}
                 onChange={(e) => setForm(prev => ({ ...prev, accountId: e.target.value }))}
@@ -273,61 +290,62 @@ export default function APDebitCreditNotesPage() {
             </div>
 
             <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Motivo / Descripción</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason / Description</label>
               <textarea
                 value={form.reason}
                 onChange={(e) => setForm(prev => ({ ...prev, reason: e.target.value }))}
                 rows={2}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Ej: Descuento por pronto pago, ajuste de precio, devolución parcial, etc."
+                placeholder="E.g. early payment discount, price adjustment, partial return..."
               />
             </div>
 
             <div className="md:col-span-2 lg:col-span-3 flex justify-end">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                className="px-4 py-2 rounded-lg text-white text-sm font-semibold shadow"
+                style={{ backgroundColor: palette.greenMid }}
               >
-                Guardar Nota
+                Save Note
               </button>
             </div>
           </form>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-800">Notas registradas</h2>
-            <span className="text-xs text-gray-500">Total: {notes.length}</span>
+            <h2 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Recorded Notes</h2>
+            <span className="text-xs" style={{ color: palette.greenSoft }}>Total: {notes.length}</span>
           </div>
           {notes.length === 0 ? (
-            <div className="p-4 text-sm text-gray-500">No hay notas de débito/crédito registradas aún.</div>
+            <div className="p-4 text-sm text-gray-500">No debit/credit notes recorded yet.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Fecha</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Tipo</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Suplidor</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Factura</th>
-                    <th className="px-3 py-2 text-right font-medium text-gray-600">Monto</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Motivo</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Estado</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Date</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Type</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Supplier</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Invoice</th>
+                    <th className="px-3 py-2 text-right font-medium text-gray-600">Amount</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Reason</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {notes.map((n: any) => {
-                    const supplierName = (n.suppliers as any)?.name || 'Suplidor';
+                    const supplierName = (n.suppliers as any)?.name || 'Supplier';
                     const inv = n.ap_invoices as any;
                     return (
                       <tr key={n.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2 whitespace-nowrap">{n.note_date}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{n.note_type === 'debit' ? 'Débito' : 'Crédito'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{n.note_type === 'debit' ? 'Debit' : 'Credit'}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{supplierName}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{inv?.invoice_number || inv?.id || ''}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-right">{n.currency} {Number(n.amount || 0).toLocaleString()}</td>
                         <td className="px-3 py-2 whitespace-nowrap max-w-xs truncate" title={n.reason || ''}>{n.reason || '-'}</td>
-                        <td className="px-3 py-2 whitespace-nowrap">{n.status}</td>
+                        <td className="px-3 py-2 whitespace-nowrap capitalize">{n.status || 'Pending'}</td>
                       </tr>
                     );
                   })}

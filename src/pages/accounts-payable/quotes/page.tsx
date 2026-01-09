@@ -8,12 +8,29 @@ import { useAuth } from '../../../hooks/useAuth';
 import { suppliersService, apQuotesService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
+const palette = {
+  cream: '#F6F1E7',
+  green: '#2F4F30',
+  greenDark: '#1F2B1A',
+  greenMid: '#4B5E2F',
+  greenSoft: '#7E8F63',
+  badgeNeutral: '#E5DCC3',
+  badgeSoft: '#D3E0CF',
+};
+
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
     lastAutoTable?: { finalY: number };
   }
 }
+
+const statusLabels: Record<string, string> = {
+  Pendiente: 'Pending',
+  'En Evaluación': 'In Review',
+  Aprobada: 'Approved',
+  Rechazada: 'Rejected',
+};
 
 export default function QuotesPage() {
   const { user } = useAuth();
@@ -26,7 +43,7 @@ export default function QuotesPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'Materiales',
+    category: 'Materials',
     dueDate: '',
     estimatedAmount: '',
     specifications: '',
@@ -34,6 +51,7 @@ export default function QuotesPage() {
   });
 
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
+
   const [suppliers, setSuppliers] = useState<any[]>([]);
 
   const loadSuppliers = async () => {
@@ -94,8 +112,6 @@ export default function QuotesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const categories = ['Materiales', 'Servicios', 'Equipos', 'Tecnología', 'Construcción'];
-
   const filteredQuotes = quotes.filter(quote => {
     return filterStatus === 'all' || quote.status === filterStatus;
   });
@@ -104,17 +120,11 @@ export default function QuotesPage() {
     e.preventDefault();
     
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar solicitudes de cotización');
+      alert('You must sign in to record quote requests.');
       return;
     }
 
-    const suppliersArray = formData.suppliers.filter(s => s.trim() !== '').map(supplier => ({
-      name: supplier,
-      amount: 0,
-      deliveryTime: '',
-      notes: '',
-      status: 'Pendiente'
-    }));
+    const supplierNames = formData.suppliers.filter(s => s.trim() !== '');
 
     const quotePayload = {
       number: editingQuote?.number || `RFQ-${new Date().getFullYear()}-${String(quotes.length + 1).padStart(3, '0')}`,
@@ -128,17 +138,17 @@ export default function QuotesPage() {
 
     try {
       if (editingQuote) {
-        await apQuotesService.update(String(editingQuote.id), quotePayload, formData.suppliers);
+        await apQuotesService.update(String(editingQuote.id), quotePayload, supplierNames);
       } else {
-        await apQuotesService.create(user.id, quotePayload, formData.suppliers);
+        await apQuotesService.create(user.id, quotePayload, supplierNames);
       }
       await loadQuotes();
       resetForm();
-      alert(editingQuote ? 'Solicitud de cotización actualizada exitosamente' : 'Solicitud de cotización creada exitosamente');
+      alert(editingQuote ? 'Quote request updated successfully.' : 'Quote request created successfully.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving AP quote', error);
-      alert('Error al guardar la solicitud de cotización');
+      alert('The quote request could not be saved.');
     }
   };
 
@@ -146,7 +156,7 @@ export default function QuotesPage() {
     setFormData({
       title: '',
       description: '',
-      category: 'Materiales',
+      category: 'Materials',
       dueDate: '',
       estimatedAmount: '',
       specifications: '',
@@ -171,28 +181,28 @@ export default function QuotesPage() {
   };
 
   const handleApprove = async (id: string | number) => {
-    if (!confirm('¿Aprobar esta solicitud de cotización?')) return;
+    if (!confirm('Approve this quote request?')) return;
     try {
       await apQuotesService.updateStatus(String(id), 'Aprobada');
       await loadQuotes();
-      alert('Solicitud de cotización aprobada exitosamente');
+      alert('Quote request approved.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error approving AP quote', error);
-      alert('No se pudo aprobar la solicitud de cotización');
+      alert('The quote request could not be approved.');
     }
   };
 
   const handleReject = async (id: string | number) => {
-    if (!confirm('¿Rechazar esta solicitud de cotización?')) return;
+    if (!confirm('Reject this quote request?')) return;
     try {
       await apQuotesService.updateStatus(String(id), 'Rechazada');
       await loadQuotes();
-      alert('Solicitud de cotización rechazada');
+      alert('Quote request rejected.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error rejecting AP quote', error);
-      alert('No se pudo rechazar la solicitud de cotización');
+      alert('The quote request could not be rejected.');
     }
   };
 
@@ -234,8 +244,9 @@ export default function QuotesPage() {
   const exportToPDF = async () => {
     const doc = new jsPDF();
 
-    // Encabezado con nombre de la empresa
+    // Company header
     let companyName = 'ContaBi';
+
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
@@ -254,20 +265,20 @@ export default function QuotesPage() {
 
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Nombre de empresa centrado
+    // Company name centered
     doc.setFontSize(14);
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' as any });
 
-    // Título centrado
+    // Title centered
     doc.setFontSize(18);
-    doc.text('Solicitudes de Cotización', pageWidth / 2, 25, { align: 'center' as any });
+    doc.text('Quote Requests', pageWidth / 2, 25, { align: 'center' as any });
 
-    // Información del reporte
+    // Report info
     doc.setFontSize(11);
-    doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-DO')}`, 20, 40);
-    doc.text(`Total de Solicitudes: ${filteredQuotes.length}`, 20, 48);
+    doc.text(`Generated: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
+    doc.text(`Total Requests: ${filteredQuotes.length}`, 20, 48);
 
-    // Preparar datos para la tabla
+    // Table data
     const tableData = filteredQuotes.map((quote: any) => [
       quote.number,
       formatDate(quote.date),
@@ -279,9 +290,9 @@ export default function QuotesPage() {
       quote.suppliers.length.toString(),
     ]);
 
-    // Crear la tabla
     doc.autoTable({
-      head: [['Número', 'Fecha', 'Descripción', 'Solicitado por', 'Vencimiento', 'Monto Est.', 'Estado', 'Proveedores']],
+      head: [['Number', 'Date', 'Description', 'Requested By', 'Due Date', 'Est. Amount', 'Status', 'Suppliers']],
+
       body: tableData,
       startY: 70,
       theme: 'striped',
@@ -295,10 +306,9 @@ export default function QuotesPage() {
       },
     });
 
-    // Detalle de proveedores por cotización
     doc.addPage();
     doc.setFontSize(16);
-    doc.text('Detalle de Proveedores por Cotización', 20, 20);
+    doc.text('Suppliers Detail by Quote', 20, 20);
 
     let startY = 40;
     filteredQuotes.forEach((quote: any) => {
@@ -320,7 +330,8 @@ export default function QuotesPage() {
         ]);
 
         doc.autoTable({
-          head: [['Proveedor', 'Monto', 'Tiempo Entrega', 'Estado']],
+          head: [['Supplier', 'Amount', 'Delivery Time', 'Status']],
+
           body: supplierData,
           startY: startY,
           theme: 'grid',
@@ -339,46 +350,47 @@ export default function QuotesPage() {
       }
     });
 
-    // Estadísticas
     const pendingQuotes = filteredQuotes.filter(q => q.status === 'Pendiente').length;
+
     const approvedQuotes = filteredQuotes.filter(q => q.status === 'Aprobada').length;
     const rejectedQuotes = filteredQuotes.filter(q => q.status === 'Rechazada').length;
 
     doc.addPage();
     doc.setFontSize(16);
-    doc.text('Estadísticas', 20, 20);
+    doc.text('Summary', 20, 20);
 
     doc.autoTable({
       body: [
-        ['Solicitudes Pendientes:', `${pendingQuotes}`],
-        ['Solicitudes Aprobadas:', `${approvedQuotes}`],
-        ['Solicitudes Rechazadas:', `${rejectedQuotes}`],
-        ['Total Solicitudes:', `${filteredQuotes.length}`]
+        ['Pending Requests:', `${pendingQuotes}`],
+        ['Approved Requests:', `${approvedQuotes}`],
+        ['Rejected Requests:', `${rejectedQuotes}`],
+        ['Total Requests:', `${filteredQuotes.length}`]
       ],
+
       startY: 40,
       theme: 'plain',
       styles: { fontStyle: 'bold' }
     });
 
-    // Pie de página
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
+
       doc.setPage(i);
       doc.setFontSize(10);
       doc.text(
-        `Página ${i} de ${pageCount}`,
+        `Page ${i} of ${pageCount}`,
         doc.internal.pageSize.width - 50,
         doc.internal.pageSize.height - 10,
       );
-      doc.text('Sistema Contable - Solicitudes de Cotización', 20, doc.internal.pageSize.height - 10);
+      doc.text('ContaBi • Quote Requests', 20, doc.internal.pageSize.height - 10);
     }
 
-    doc.save(`solicitudes-cotizacion-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`quote-requests-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
     if (!filteredQuotes.length) {
-      alert('No hay solicitudes para exportar.');
+      alert('No quote requests to export.');
       return;
     }
 
@@ -402,18 +414,17 @@ export default function QuotesPage() {
       });
     };
 
-    // Hoja 1: Solicitudes
-    const ws = wb.addWorksheet('Solicitudes');
+    const ws = wb.addWorksheet('Quote Requests');
     const headers = [
-      { title: 'Número', width: 18 },
-      { title: 'Fecha', width: 14 },
-      { title: 'Título', width: 30 },
-      { title: 'Descripción', width: 40 },
-      { title: 'Categoría', width: 16 },
-      { title: 'Vencimiento', width: 14 },
-      { title: 'Monto Estimado', width: 18 },
-      { title: 'Estado', width: 14 },
-      { title: 'Proveedor Sel.', width: 24 },
+      { title: 'Number', width: 18 },
+      { title: 'Date', width: 14 },
+      { title: 'Title', width: 30 },
+      { title: 'Description', width: 40 },
+      { title: 'Category', width: 16 },
+      { title: 'Due Date', width: 14 },
+      { title: 'Estimated Amount', width: 18 },
+      { title: 'Status', width: 14 },
+      { title: 'Selected Supplier', width: 24 },
     ];
 
     let currentRow = 1;
@@ -423,12 +434,14 @@ export default function QuotesPage() {
     currentRow++;
 
     ws.mergeCells(currentRow, 1, currentRow, headers.length);
-    ws.getCell(currentRow, 1).value = 'Solicitudes de Cotización';
+    ws.getCell(currentRow, 1).value = 'Quote Requests';
+
     ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
     currentRow++;
 
     ws.mergeCells(currentRow, 1, currentRow, headers.length);
-    ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+    ws.getCell(currentRow, 1).value = `Generated: ${new Date().toLocaleDateString('en-US')}`;
+
     currentRow++;
     currentRow++;
 
@@ -458,32 +471,35 @@ export default function QuotesPage() {
       ws.getColumn(idx + 1).width = h.width;
     });
 
-    // Estadísticas
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Estadísticas';
+    ws.getCell(currentRow, 1).value = 'Summary';
+
     ws.getCell(currentRow, 1).font = { bold: true };
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Pendientes';
+    ws.getCell(currentRow, 1).value = 'Pending';
+
     ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Pendiente').length;
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Aprobadas';
+    ws.getCell(currentRow, 1).value = 'Approved';
+
     ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Aprobada').length;
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Rechazadas';
+    ws.getCell(currentRow, 1).value = 'Rejected';
+
     ws.getCell(currentRow, 2).value = filteredQuotes.filter((q) => q.status === 'Rechazada').length;
     currentRow++;
     ws.getCell(currentRow, 1).value = 'Total';
+
     ws.getCell(currentRow, 2).value = filteredQuotes.length;
 
-    // Hoja 2: Detalle de Proveedores
-    const wsSupp = wb.addWorksheet('Proveedores');
+    const wsSupp = wb.addWorksheet('Suppliers');
     const suppHeaders = [
-      { title: 'Cotización', width: 18 },
-      { title: 'Proveedor', width: 30 },
-      { title: 'Monto', width: 16 },
-      { title: 'Tiempo Entrega', width: 18 },
-      { title: 'Notas', width: 30 },
-      { title: 'Estado', width: 14 },
+      { title: 'Quote', width: 18 },
+      { title: 'Supplier', width: 30 },
+      { title: 'Amount', width: 16 },
+      { title: 'Delivery Time', width: 18 },
+      { title: 'Notes', width: 30 },
+      { title: 'Status', width: 14 },
     ];
 
     const suppHeaderRow = wsSupp.getRow(1);
@@ -515,7 +531,7 @@ export default function QuotesPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    saveAs(blob, `solicitudes-cotizacion-${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, `quote-requests-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleViewDetails = (quote: any) => {
@@ -548,133 +564,152 @@ export default function QuotesPage() {
     }
   };
 
+  const translateStatus = (status: string) => statusLabels[status] || status;
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div
+        className="space-y-6 rounded-3xl"
+        style={{ backgroundColor: palette.cream, minHeight: '100vh', padding: '24px' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Solicitudes de Cotización</h1>
-            <p className="text-gray-600">Gestiona solicitudes y comparación de cotizaciones</p>
+            <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: palette.greenSoft }}>
+              Procurement · Vendor Quotes
+            </p>
+            <h1 className="text-3xl font-bold" style={{ color: palette.greenDark }}>
+              Quote Requests
+            </h1>
+            <p className="text-base" style={{ color: palette.greenSoft }}>
+              Manage vendor requests, follow-ups, and comparison workflows
+            </p>
           </div>
           <div className="flex space-x-3">
             <button 
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.greenDark }}
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button 
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.greenMid }}
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.green }}
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Solicitud
+              New Request
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-file-list-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: palette.badgeSoft }}>
+                <i className="ri-file-list-line text-xl" style={{ color: palette.greenDark }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Solicitudes</p>
-                <p className="text-2xl font-bold text-gray-900">{quotes.length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Requests</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>{quotes.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-time-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#F2E3C1' }}>
+                <i className="ri-time-line text-xl" style={{ color: palette.greenMid }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">{quotes.filter(q => q.status === 'Pendiente').length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Pending</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>{quotes.filter(q => q.status === 'Pendiente').length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-search-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#E5D7F0' }}>
+                <i className="ri-search-line text-xl" style={{ color: palette.green }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">En Evaluación</p>
-                <p className="text-2xl font-bold text-gray-900">{quotes.filter(q => q.status === 'En Evaluación').length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>In Review</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>{quotes.filter(q => q.status === 'En Evaluación').length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: palette.badgeNeutral }}>
+                <i className="ri-check-line text-xl" style={{ color: palette.green }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprobadas</p>
-                <p className="text-2xl font-bold text-gray-900">{quotes.filter(q => q.status === 'Aprobada').length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Approved</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>{quotes.filter(q => q.status === 'Aprobada').length}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium mb-2" style={{ color: palette.greenDark }}>
+                Status <span className="text-red-500">*</span>
+              </label>
               <select 
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2"
+                style={{ borderColor: palette.badgeNeutral, color: palette.greenDark }}
               >
-                <option value="all">Todos los Estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="En Evaluación">En Evaluación</option>
-                <option value="Aprobada">Aprobada</option>
-                <option value="Rechazada">Rechazada</option>
+                <option value="all">All Statuses</option>
+                <option value="Pendiente">Pending</option>
+                <option value="En Evaluación">In Review</option>
+                <option value="Aprobada">Approved</option>
+                <option value="Rechazada">Rejected</option>
               </select>
             </div>
             <div className="md:col-span-2 flex items-end">
               <button 
                 onClick={() => setFilterStatus('all')}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="w-full text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap shadow"
+                style={{ backgroundColor: palette.greenDark }}
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Quotes Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)]">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Solicitudes de Cotización</h3>
+            <h3 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Quote Request List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solicitado por</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Est.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requested By</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -695,7 +730,7 @@ export default function QuotesPage() {
                         quote.status === 'En Evaluación' ? 'bg-purple-100 text-purple-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {quote.status}
+                        {translateStatus(quote.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -744,23 +779,23 @@ export default function QuotesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Nueva Solicitud de Cotización</h3>
+                <h3 className="text-lg font-semibold text-gray-900">New Quote Request</h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripción *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
                   <textarea 
                     required
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Describe los productos o servicios que necesitas..."
+                    placeholder="Describe the products or services you need..."
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monto Estimado <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Amount <span className="text-red-500">*</span></label>
                     <input 
                       type="number" min="0"
                       step="0.01"
@@ -771,7 +806,7 @@ export default function QuotesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Límite *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
                     <input 
                       type="date"
                       required
@@ -785,14 +820,14 @@ export default function QuotesPage() {
                 {/* Suppliers */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-gray-700">Proveedores a Contactar *</label>
+                    <label className="block text-sm font-medium text-gray-700">Suppliers to Contact *</label>
                     <button 
                       type="button"
                       onClick={addSupplier}
                       className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 whitespace-nowrap"
                     >
                       <i className="ri-add-line mr-1"></i>
-                      Agregar
+                      Add
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -804,7 +839,7 @@ export default function QuotesPage() {
                           onChange={(e) => updateSupplier(index, e.target.value)}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          <option value="">Seleccionar proveedor</option>
+                          <option value="">Select supplier</option>
                           {suppliers.map((sup: any) => (
                             <option key={sup.id} value={sup.name}>{sup.name}</option>
                           ))}
@@ -824,13 +859,13 @@ export default function QuotesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Especificaciones Adicionales</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Specifications</label>
                   <textarea 
                     value={formData.specifications}
                     onChange={(e) => setFormData({...formData, specifications: e.target.value})}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Especificaciones técnicas, términos de entrega, etc..."
+                    placeholder="Technical specs, delivery terms, etc."
                   />
                 </div>
 
@@ -840,13 +875,13 @@ export default function QuotesPage() {
                     onClick={resetForm}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button 
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
                   >
-                    Crear Solicitud
+                    Create Request
                   </button>
                 </div>
               </form>
@@ -860,7 +895,7 @@ export default function QuotesPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Detalles de Cotización - {selectedQuote.number}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Quote Details - {selectedQuote.number}</h3>
                   <button 
                     onClick={() => setSelectedQuote(null)}
                     className="text-gray-400 hover:text-gray-600"
@@ -872,38 +907,38 @@ export default function QuotesPage() {
               <div className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Número</p>
+                    <p className="text-sm font-medium text-gray-600">Number</p>
                     <p className="text-sm text-gray-900">{selectedQuote.number}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Fecha</p>
+                    <p className="text-sm font-medium text-gray-600">Date</p>
                     <p className="text-sm text-gray-900">{selectedQuote.date}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Solicitado por</p>
+                    <p className="text-sm font-medium text-gray-600">Requested By</p>
                     <p className="text-sm text-gray-900">{selectedQuote.requestedBy}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Fecha Límite</p>
+                    <p className="text-sm font-medium text-gray-600">Due Date</p>
                     <p className="text-sm text-gray-900">{selectedQuote.dueDate}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm font-medium text-gray-600">Descripción</p>
+                    <p className="text-sm font-medium text-gray-600">Description</p>
                     <p className="text-sm text-gray-900">{selectedQuote.description}</p>
                   </div>
                 </div>
 
                 {/* Responses */}
                 <div>
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">Respuestas de Proveedores</h4>
+                  <h4 className="text-md font-semibold text-gray-900 mb-4">Supplier Responses</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiempo Entrega</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery Time</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -911,7 +946,7 @@ export default function QuotesPage() {
                           <tr key={index}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{response.supplier}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                              {response.amount > 0 ? `RD$ ${response.amount.toLocaleString()}` : 'Pendiente'}
+                              {response.amount > 0 ? `RD$ ${response.amount.toLocaleString()}` : 'Pending'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{response.deliveryTime || 'N/A'}</td>
                             <td className="px-6 py-4 whitespace-nowrap">

@@ -86,7 +86,7 @@ export default function CommissionTypesPage() {
     e.preventDefault();
 
     if (!user) {
-      alert('Debe iniciar sesión para gestionar tipos de comisiones.');
+      alert('You must be logged in to manage commission types.');
       return;
     }
 
@@ -150,7 +150,7 @@ export default function CommissionTypesPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving commission type:', error);
-      alert('Error al guardar el tipo de comisión');
+      alert('Error saving the commission type.');
     }
   };
 
@@ -198,7 +198,7 @@ export default function CommissionTypesPage() {
       ));
     } catch (error) {
       console.error('Error toggling commission type status:', error);
-      alert('Error al cambiar el estado del tipo de comisión');
+      alert('Error changing commission type status.');
     }
   };
 
@@ -209,40 +209,40 @@ export default function CommissionTypesPage() {
       name: type.name,
       description: type.description,
       calcType:
-        type.calculationType === 'percentage' ? 'Porcentaje' :
-        type.calculationType === 'fixed' ? 'Monto Fijo' : 'Escalonado',
+        type.calculationType === 'percentage' ? 'Percentage' :
+        type.calculationType === 'fixed' ? 'Fixed Amount' : 'Tiered',
       rate:
         type.calculationType === 'percentage'
           ? `${type.rate}%`
           : `$${type.rate.toLocaleString()}`,
       basedOn:
-        type.basedOn === 'sales' ? 'Ventas' :
-        type.basedOn === 'profit' ? 'Utilidad' :
-        type.basedOn === 'units' ? 'Unidades' : 'Ingresos',
+        type.basedOn === 'sales' ? 'Sales' :
+        type.basedOn === 'profit' ? 'Profit' :
+        type.basedOn === 'units' ? 'Units' : 'Revenue',
       frequency:
-        type.paymentFrequency === 'monthly' ? 'Mensual' :
-        type.paymentFrequency === 'quarterly' ? 'Trimestral' : 'Anual',
-      status: type.isActive ? 'Activo' : 'Inactivo',
+        type.paymentFrequency === 'monthly' ? 'Monthly' :
+        type.paymentFrequency === 'quarterly' ? 'Quarterly' : 'Annual',
+      status: type.isActive ? 'Active' : 'Inactive',
     }));
 
     if (!rows.length) {
-      alert('No hay tipos de comisiones para exportar.');
+      alert('No commission types to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'name', title: 'Nombre', width: 24 },
-        { key: 'description', title: 'Descripción', width: 40 },
-        { key: 'calcType', title: 'Tipo de Cálculo', width: 20 },
-        { key: 'rate', title: 'Tasa/Monto', width: 18 },
-        { key: 'basedOn', title: 'Basado en', width: 18 },
-        { key: 'frequency', title: 'Frecuencia', width: 16 },
-        { key: 'status', title: 'Estado', width: 12 },
+        { key: 'name', title: 'Name', width: 24 },
+        { key: 'description', title: 'Description', width: 40 },
+        { key: 'calcType', title: 'Calculation Type', width: 20 },
+        { key: 'rate', title: 'Rate/Amount', width: 18 },
+        { key: 'basedOn', title: 'Based On', width: 18 },
+        { key: 'frequency', title: 'Frequency', width: 16 },
+        { key: 'status', title: 'Status', width: 12 },
       ],
-      `tipos_comisiones_${today}`,
-      'Tipos de Comisiones'
+      `commission_types_${today}`,
+      'Commission Types'
     );
   };
 
@@ -257,15 +257,15 @@ export default function CommissionTypesPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Comisiones</h1>
-            <p className="text-gray-600">Gestiona los diferentes tipos de comisiones para empleados</p>
+            <h1 className="text-2xl font-bold text-gray-900">Commission Types</h1>
+            <p className="text-gray-600">Manage commission types for employees</p>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Nuevo Tipo
+            New Type
           </button>
         </div>
 
@@ -273,11 +273,11 @@ export default function CommissionTypesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-percent-line text-blue-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-percent-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Tipos</p>
+                <p className="text-sm font-medium text-gray-600">Total Types</p>
                 <p className="text-2xl font-bold text-gray-900">{commissionTypes.length}</p>
               </div>
             </div>
@@ -285,11 +285,11 @@ export default function CommissionTypesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-check-line text-green-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-check-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Activos</p>
+                <p className="text-sm font-medium text-gray-600">Active</p>
                 <p className="text-2xl font-bold text-gray-900">{activeTypes}</p>
               </div>
             </div>
@@ -297,11 +297,11 @@ export default function CommissionTypesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-calculator-line text-purple-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-calculator-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tasa Promedio</p>
+                <p className="text-sm font-medium text-gray-600">Average Rate</p>
                 <p className="text-2xl font-bold text-gray-900">{(totalCommissionRate / Math.max(activeTypes, 1)).toFixed(1)}%</p>
               </div>
             </div>
@@ -309,11 +309,11 @@ export default function CommissionTypesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-calendar-line text-orange-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-calendar-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Frecuencias</p>
+                <p className="text-sm font-medium text-gray-600">Frequencies</p>
                 <p className="text-2xl font-bold text-gray-900">{new Set(commissionTypes.map(t => t.paymentFrequency)).size}</p>
               </div>
             </div>
@@ -324,53 +324,53 @@ export default function CommissionTypesPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search <span className="text-red-500">*</span></label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar tipos de comisión..."
+                  placeholder="Search commission types..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Frecuencia</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
               <select
                 value={filterFrequency}
                 onChange={(e) => setFilterFrequency(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todas</option>
-                <option value="monthly">Mensual</option>
-                <option value="quarterly">Trimestral</option>
-                <option value="annually">Anual</option>
+                <option value="all">All</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="annually">Annual</option>
               </select>
             </div>
 
             <div className="flex items-end">
               <button
                 onClick={exportToCSV}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors text-sm whitespace-nowrap shadow-sm"
               >
                 <i className="ri-download-line mr-2"></i>
-                Exportar
+                Export
               </button>
             </div>
           </div>
@@ -383,22 +383,22 @@ export default function CommissionTypesPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo de Comisión
+                    Commission Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cálculo
+                    Calculation
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Basado en
+                    Based On
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Frecuencia
+                    Frequency
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -415,39 +415,39 @@ export default function CommissionTypesPage() {
                       <div className="text-sm text-gray-900">
                         {type.calculationType === 'percentage' ? `${type.rate}%` : 
                          type.calculationType === 'fixed' ? `$${type.rate.toLocaleString()}` : 
-                         'Escalonado'}
+                         'Tiered'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {type.calculationType === 'percentage' ? 'Porcentaje' : 
-                         type.calculationType === 'fixed' ? 'Monto Fijo' : 
-                         'Por Tramos'}
+                        {type.calculationType === 'percentage' ? 'Percentage' : 
+                         type.calculationType === 'fixed' ? 'Fixed Amount' : 
+                         'Tiered'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {type.basedOn === 'sales' ? 'Ventas' : 
-                         type.basedOn === 'profit' ? 'Utilidad' : 
-                         type.basedOn === 'units' ? 'Unidades' : 'Ingresos'}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e6e9d5] text-[#4b5320]">
+                        {type.basedOn === 'sales' ? 'Sales' : 
+                         type.basedOn === 'profit' ? 'Profit' : 
+                         type.basedOn === 'units' ? 'Units' : 'Revenue'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {type.paymentFrequency === 'monthly' ? 'Mensual' : 
-                       type.paymentFrequency === 'quarterly' ? 'Trimestral' : 'Anual'}
+                      {type.paymentFrequency === 'monthly' ? 'Monthly' : 
+                       type.paymentFrequency === 'quarterly' ? 'Quarterly' : 'Annual'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         type.isActive 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#e6e9d5] text-[#4b5320]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {type.isActive ? 'Activo' : 'Inactivo'}
+                        {type.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(type)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#4b5320] hover:text-[#3d431a]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -473,7 +473,7 @@ export default function CommissionTypesPage() {
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-900">
-                    {editingType ? 'Editar Tipo de Comisión' : 'Nuevo Tipo de Comisión'}
+                    {editingType ? 'Edit Commission Type' : 'New Commission Type'}
                   </h2>
                   <button
                     onClick={resetForm}
@@ -487,52 +487,52 @@ export default function CommissionTypesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nombre *
+                        Name *
                       </label>
                       <input
                         type="text"
                         required
                         value={formData.name}
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Ej: Comisión por Ventas"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                        placeholder="E.g., Sales Commission"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tipo de Cálculo *
+                        Calculation Type *
                       </label>
                       <select
                         required
                         value={formData.calculationType}
                         onChange={(e) => setFormData(prev => ({ ...prev, calculationType: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent pr-8"
                       >
-                        <option value="percentage">Porcentaje</option>
-                        <option value="fixed">Monto Fijo</option>
-                        <option value="tiered">Escalonado</option>
+                        <option value="percentage">Percentage</option>
+                        <option value="fixed">Fixed Amount</option>
+                        <option value="tiered">Tiered</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Descripción
+                      Description
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Descripción del tipo de comisión..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                      placeholder="Description of the commission type..."
                     />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {formData.calculationType === 'percentage' ? 'Porcentaje (%)' : 'Monto ($)'} *
+                        {formData.calculationType === 'percentage' ? 'Percentage (%)' : 'Amount ($)'} *
                       </label>
                       <input
                         type="number"
@@ -541,40 +541,40 @@ export default function CommissionTypesPage() {
                         min="0"
                         value={formData.rate}
                         onChange={(e) => setFormData(prev => ({ ...prev, rate: parseFloat(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Basado en *
+                        Based On *
                       </label>
                       <select
                         required
                         value={formData.basedOn}
                         onChange={(e) => setFormData(prev => ({ ...prev, basedOn: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent pr-8"
                       >
-                        <option value="sales">Ventas</option>
-                        <option value="profit">Utilidad</option>
-                        <option value="units">Unidades</option>
-                        <option value="revenue">Ingresos</option>
+                        <option value="sales">Sales</option>
+                        <option value="profit">Profit</option>
+                        <option value="units">Units</option>
+                        <option value="revenue">Revenue</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Frecuencia de Pago *
+                        Payment Frequency *
                       </label>
                       <select
                         required
                         value={formData.paymentFrequency}
                         onChange={(e) => setFormData(prev => ({ ...prev, paymentFrequency: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent pr-8"
                       >
-                        <option value="monthly">Mensual</option>
-                        <option value="quarterly">Trimestral</option>
-                        <option value="annually">Anual</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="annually">Annual</option>
                       </select>
                     </div>
                   </div>
@@ -583,7 +583,7 @@ export default function CommissionTypesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Monto Mínimo
+                          Minimum Amount
                         </label>
                         <input
                           type="number"
@@ -591,14 +591,14 @@ export default function CommissionTypesPage() {
                           min="0"
                           value={formData.minAmount}
                           onChange={(e) => setFormData(prev => ({ ...prev, minAmount: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                           placeholder="0.00"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Monto Máximo
+                          Maximum Amount
                         </label>
                         <input
                           type="number"
@@ -606,7 +606,7 @@ export default function CommissionTypesPage() {
                           min="0"
                           value={formData.maxAmount}
                           onChange={(e) => setFormData(prev => ({ ...prev, maxAmount: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                           placeholder="0.00"
                         />
                       </div>
@@ -619,13 +619,13 @@ export default function CommissionTypesPage() {
                       onClick={resetForm}
                       className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
                     >
-                      {editingType ? 'Actualizar' : 'Crear'} Tipo
+                      {editingType ? 'Update' : 'Create'} Type
                     </button>
                   </div>
                 </form>

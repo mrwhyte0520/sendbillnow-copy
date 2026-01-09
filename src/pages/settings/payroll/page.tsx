@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { settingsService } from '../../../services/database';
+import { payrollSettingsService } from '../../../services/database';
 
 interface PayrollSettings {
   id?: string;
@@ -46,7 +46,8 @@ export default function PayrollSettingsPage() {
 
   const loadSettings = async () => {
     try {
-      const data = await settingsService.getPayrollSettings();
+      const data = await payrollSettingsService.getPayrollSettings();
+
       if (data) {
         setSettings({
           id: data.id,
@@ -67,7 +68,8 @@ export default function PayrollSettingsPage() {
 
   const loadConcepts = async () => {
     try {
-      const data = await settingsService.getPayrollConcepts();
+      const data = await payrollSettingsService.getPayrollConcepts();
+
       setConcepts(data);
     } catch (error) {
       console.error('Error loading payroll concepts:', error);
@@ -80,7 +82,8 @@ export default function PayrollSettingsPage() {
     setMessage(null);
 
     try {
-      await settingsService.savePayrollSettings(settings);
+      await payrollSettingsService.savePayrollSettings(settings);
+
       setMessage({ type: 'success', text: 'Configuración de nómina guardada exitosamente' });
     } catch (error) {
       setMessage({ type: 'error', text: 'Error al guardar la configuración' });
@@ -94,10 +97,12 @@ export default function PayrollSettingsPage() {
     setLoading(true);
 
     try {
-      await settingsService.createPayrollConcept(newConcept);
+      await payrollSettingsService.createPayrollConcept(newConcept);
+
       setMessage({ type: 'success', text: 'Concepto de nómina creado exitosamente' });
       setShowModal(false);
-      setNewConcept({ name: '', type: 'earning', formula: '' });
+      setNewConcept({ name: '', type: 'income', formula: '' });
+
       loadConcepts();
     } catch (error) {
       setMessage({ type: 'error', text: 'Error al crear el concepto' });

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
-import { settingsService, chartAccountsService } from '../../../services/database';
+import { settingsService, chartAccountsService, payrollSettingsService } from '../../../services/database';
+
 import { useAuth } from '../../../hooks/useAuth';
 
 interface PayrollConfig {
@@ -59,9 +60,9 @@ export default function PayrollConfigurationPage() {
   const [formData, setFormData] = useState<any>({});
 
   const getAccountDisplay = (accountId: string | undefined) => {
-    if (!accountId) return 'Ninguna';
+    if (!accountId) return 'None';
     const account = accounts.find(a => a.id === accountId);
-    return account ? `${account.code} - ${account.name}` : 'No encontrada';
+    return account ? `${account.code} - ${account.name}` : 'Not found';
   };
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function PayrollConfigurationPage() {
     setLoading(true);
     try {
       const [data, companyInfo] = await Promise.all([
-        settingsService.getPayrollSettings(),
+        payrollSettingsService.getPayrollSettings(),
         settingsService.getCompanyInfo(),
       ]);
 
@@ -169,7 +170,7 @@ export default function PayrollConfigurationPage() {
         });
       }
 
-      const bracketsData = await settingsService.getPayrollTaxBrackets();
+      const bracketsData = await payrollSettingsService.getPayrollTaxBrackets();
       const normalizedBrackets: TaxBracket[] = (bracketsData || []).map((b: any) => ({
         id: b.id,
         min_amount: Number(b.min_amount) || 0,
@@ -228,13 +229,13 @@ export default function PayrollConfigurationPage() {
         infotep_expense_account_id: config.infotep_expense_account_id || null,
       };
 
-      const saved = await settingsService.savePayrollSettings(payload);
+      const saved = await payrollSettingsService.savePayrollSettings(payload);
       setConfig(prev => prev ? { ...prev, id: saved.id } : prev);
 
-      alert('Configuración guardada exitosamente');
+      alert('Configuration saved successfully');
     } catch (error) {
       console.error('Error saving configuration:', error);
-      alert('Error al guardar la configuración');
+      alert('Error saving configuration');
     } finally {
       setLoading(false);
     }
@@ -266,7 +267,8 @@ export default function PayrollConfigurationPage() {
     try {
       setLoading(true);
       if (formData.id) {
-        const updated = await settingsService.updatePayrollTaxBracket(formData.id, payload);
+        const updated = await payrollSettingsService.updatePayrollTaxBracket(formData.id, payload);
+
         setTaxBrackets(prev => prev.map(bracket =>
           bracket.id === formData.id
             ? {
@@ -281,7 +283,8 @@ export default function PayrollConfigurationPage() {
             : bracket
         ));
       } else {
-        const created = await settingsService.createPayrollTaxBracket(payload);
+        const created = await payrollSettingsService.createPayrollTaxBracket(payload);
+
         const newBracket: TaxBracket = {
           id: created.id,
           min_amount: Number(created.min_amount) || 0,
@@ -298,22 +301,23 @@ export default function PayrollConfigurationPage() {
       setFormData({});
     } catch (error) {
       console.error('Error saving tax bracket:', error);
-      alert('Error al guardar el tramo fiscal');
+      alert('Error saving the tax bracket');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteTaxBracket = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea eliminar este tramo fiscal?')) return;
+    if (!confirm('Are you sure you want to delete this tax bracket?')) return;
 
     try {
       setLoading(true);
-      await settingsService.deletePayrollTaxBracket(id);
+      await payrollSettingsService.deletePayrollTaxBracket(id);
+
       setTaxBrackets(prev => prev.filter(bracket => bracket.id !== id));
     } catch (error) {
       console.error('Error deleting tax bracket:', error);
-      alert('Error al eliminar el tramo fiscal');
+      alert('Error deleting the tax bracket');
     } finally {
       setLoading(false);
     }
@@ -327,29 +331,29 @@ export default function PayrollConfigurationPage() {
       // General configuration rows
       if (config) {
         const generalPairs: [string, any][] = [
-          ['Empresa', config.company_name],
-          ['RNC', config.tax_id],
-          ['Seguridad Social (%)', config.social_security_rate],
-          ['ISR Base (%)', config.income_tax_rate],
-          ['Regalía Pascual (%)', config.christmas_bonus_rate],
-          ['Días de Vacaciones', config.vacation_days],
-          ['Días por Enfermedad', config.sick_days],
-          ['Horas Extras (Factor)', config.overtime_rate],
-          ['Turno Nocturno (Factor)', config.night_shift_rate],
-          ['Domingo (Factor)', config.sunday_rate],
-          ['Días Feriados (Factor)', config.holiday_rate],
-          ['Salario Mínimo', config.min_wage],
-          ['Moneda', config.currency],
-          ['Frecuencia de Pago', config.pay_frequency],
-          ['Inicio Año Fiscal', config.fiscal_year_start],
-          ['Cálculo Automático de Impuestos', (config.auto_calculate_taxes ? 'Sí' : 'No')],
-          ['Generación Automática de Reportes', (config.auto_generate_reports ? 'Sí' : 'No')],
-          ['Frecuencia de Respaldo', config.backup_frequency],
-          ['Cuenta Nómina por Pagar', getAccountDisplay(config.payroll_payable_account_id)],
-          ['Cuenta Retenciones TSS por Pagar', getAccountDisplay(config.tss_payable_account_id)],
-          ['Cuenta ISR de Nómina por Pagar', getAccountDisplay(config.isr_payable_account_id)],
-          ['Cuenta Otras Deducciones por Pagar', getAccountDisplay(config.other_deductions_payable_account_id)],
-          ['Cuenta Gastos de Sueldos y Salarios', getAccountDisplay(config.salary_expense_account_id)],
+          ['Company', config.company_name],
+          ['Tax ID', config.tax_id],
+          ['Social Security Rate (%)', config.social_security_rate],
+          ['Income Tax Rate (%)', config.income_tax_rate],
+          ['Christmas Bonus Rate (%)', config.christmas_bonus_rate],
+          ['Vacation Days', config.vacation_days],
+          ['Sick Days', config.sick_days],
+          ['Overtime Rate (Factor)', config.overtime_rate],
+          ['Night Shift Rate (Factor)', config.night_shift_rate],
+          ['Sunday Rate (Factor)', config.sunday_rate],
+          ['Holiday Rate (Factor)', config.holiday_rate],
+          ['Minimum Wage', config.min_wage],
+          ['Currency', config.currency],
+          ['Pay Frequency', config.pay_frequency],
+          ['Fiscal Year Start', config.fiscal_year_start],
+          ['Automatic Tax Calculation', (config.auto_calculate_taxes ? 'Yes' : 'No')],
+          ['Automatic Report Generation', (config.auto_generate_reports ? 'Yes' : 'No')],
+          ['Backup Frequency', config.backup_frequency],
+          ['Payroll Payable Account', getAccountDisplay(config.payroll_payable_account_id)],
+          ['TSS Payable Account', getAccountDisplay(config.tss_payable_account_id)],
+          ['ISR Payable Account', getAccountDisplay(config.isr_payable_account_id)],
+          ['Other Deductions Payable Account', getAccountDisplay(config.other_deductions_payable_account_id)],
+          ['Salary Expense Account', getAccountDisplay(config.salary_expense_account_id)],
         ];
         generalPairs.forEach(([k, v]) => rows.push({ section: 'General', key: k, value: v ?? '', from: '', to: '', rate: '', fixed: '' }));
       }
@@ -360,11 +364,11 @@ export default function PayrollConfigurationPage() {
       // Tax brackets rows
       taxBrackets.forEach(br => {
         rows.push({
-          section: 'Tramos',
+          section: 'Tax Brackets',
           key: '',
           value: '',
           from: br.min_amount || 0,
-          to: br.max_amount === Infinity ? 'En adelante' : (br.max_amount || 0),
+          to: br.max_amount === Infinity ? 'Forward' : (br.max_amount || 0),
           rate: br.rate || 0,
           fixed: br.fixed_amount || 0,
         });
@@ -373,30 +377,30 @@ export default function PayrollConfigurationPage() {
       await exportToExcelStyled(
         rows,
         [
-          { key: 'section', title: 'Sección', width: 12 },
-          { key: 'key', title: 'Clave', width: 28 },
-          { key: 'value', title: 'Valor', width: 28 },
-          { key: 'from', title: 'Desde', width: 16, numFmt: '#,##0.00' },
-          { key: 'to', title: 'Hasta', width: 16 },
-          { key: 'rate', title: 'Tasa (%)', width: 12, numFmt: '0.00' },
-          { key: 'fixed', title: 'Monto Fijo', width: 16, numFmt: '#,##0.00' },
+          { key: 'section', title: 'Section', width: 12 },
+          { key: 'key', title: 'Key', width: 28 },
+          { key: 'value', title: 'Value', width: 28 },
+          { key: 'from', title: 'From', width: 16, numFmt: '#,##0.00' },
+          { key: 'to', title: 'To', width: 16 },
+          { key: 'rate', title: 'Rate (%)', width: 12, numFmt: '0.00' },
+          { key: 'fixed', title: 'Fixed Amount', width: 16, numFmt: '#,##0.00' },
         ],
-        `configuracion_nomina_${today}`,
-        'Configuración'
+        `payroll_configuration_${today}`,
+        'Payroll Configuration'
       );
     } catch (error) {
       console.error('Error exporting payroll configuration:', error);
-      alert('Error al exportar la configuración a Excel');
+      alert('Error exporting configuration to Excel');
     }
   };
 
   const renderGeneralConfig = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Información de la Empresa</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Company Information</h3>
         <form onSubmit={handleSaveConfig} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa <span className="text-red-500">*</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Company Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={config?.company_name || ''}
@@ -405,7 +409,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">RNC/Cédula</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID / National ID</label>
             <input
               type="text"
               value={config?.tax_id || ''}
@@ -414,31 +418,31 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
             <select
               value={config?.currency || 'DOP'}
               onChange={(e) => setConfig(prev => prev ? { ...prev, currency: e.target.value } : null)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="DOP">Peso Dominicano (DOP)</option>
-              <option value="USD">Dólar Americano (USD)</option>
+              <option value="DOP">Dominican Peso (DOP)</option>
+              <option value="USD">US Dollar (USD)</option>
               <option value="EUR">Euro (EUR)</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia de Pago</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pay Frequency</label>
             <select
               value={config?.pay_frequency || 'monthly'}
               onChange={(e) => setConfig(prev => prev ? { ...prev, pay_frequency: e.target.value as any } : null)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="weekly">Semanal</option>
-              <option value="biweekly">Quincenal</option>
-              <option value="monthly">Mensual</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Biweekly</option>
+              <option value="monthly">Monthly</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Inicio del Año Fiscal</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fiscal Year Start</label>
             <input
               type="date"
               value={config?.fiscal_year_start || ''}
@@ -447,7 +451,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Salario Mínimo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Salary</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -460,10 +464,10 @@ export default function PayrollConfigurationPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tasas y Porcentajes</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Rates and Percentages</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Seguridad Social (%)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Social Security (%)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -473,7 +477,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ISR Base (%)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Income Tax Base (%)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -483,7 +487,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Regalía Pascual (%)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Christmas Bonus (%)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -493,7 +497,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Horas Extras (Factor)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Overtime (Factor)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -503,7 +507,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Turno Nocturno (Factor)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Night Shift (Factor)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -513,7 +517,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Domingo (Factor)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sunday (Factor)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -523,7 +527,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Días Feriados (Factor)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Holidays (Factor)</label>
             <input
               type="number" min="0"
               step="0.01"
@@ -533,7 +537,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Días de Vacaciones</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Vacation Days</label>
             <input
               type="number" min="0"
               value={config?.vacation_days || ''}
@@ -542,7 +546,7 @@ export default function PayrollConfigurationPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Días por Enfermedad</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sick Days</label>
             <input
               type="number" min="0"
               value={config?.sick_days || ''}
@@ -554,12 +558,12 @@ export default function PayrollConfigurationPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuraciones Automáticas</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Automatic Settings</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-900">Cálculo Automático de Impuestos</h4>
-              <p className="text-sm text-gray-500">Calcular automáticamente ISR y Seguridad Social</p>
+              <h4 className="text-sm font-medium text-gray-900">Automatic Tax Calculation</h4>
+              <p className="text-sm text-gray-500">Automatically calculate income tax and social security</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -568,13 +572,13 @@ export default function PayrollConfigurationPage() {
                 onChange={(e) => setConfig(prev => prev ? { ...prev, auto_calculate_taxes: e.target.checked } : null)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#9cae77] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4b5320]"></div>
             </label>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-900">Generación Automática de Reportes</h4>
-              <p className="text-sm text-gray-500">Generar reportes automáticamente al cerrar períodos</p>
+              <h4 className="text-sm font-medium text-gray-900">Automatic Report Generation</h4>
+              <p className="text-sm text-gray-500">Automatically generate reports when closing periods</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -583,19 +587,19 @@ export default function PayrollConfigurationPage() {
                 onChange={(e) => setConfig(prev => prev ? { ...prev, auto_generate_reports: e.target.checked } : null)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#9cae77] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#4b5320]"></div>
             </label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia de Respaldo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Backup Frequency</label>
             <select
               value={config?.backup_frequency || 'weekly'}
               onChange={(e) => setConfig(prev => prev ? { ...prev, backup_frequency: e.target.value as any } : null)}
               className="w-full md:w-1/3 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="daily">Diario</option>
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
             </select>
           </div>
         </div>
@@ -604,18 +608,18 @@ export default function PayrollConfigurationPage() {
       <div className="flex justify-end space-x-4">
         <button
           onClick={exportConfiguration}
-          className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+          className="bg-[#4b5320] text-white px-6 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
         >
           <i className="ri-download-line mr-2"></i>
-          Exportar Configuración
+          Export Configuration
         </button>
         <button
           type="submit"
           onClick={handleSaveConfig}
           disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+          className="bg-[#4b5320] text-white px-6 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap disabled:opacity-50"
         >
-          {loading ? 'Guardando...' : 'Guardar Configuración'}
+          {loading ? 'Saving...' : 'Save Configuration'}
         </button>
       </div>
     </div>
@@ -624,13 +628,13 @@ export default function PayrollConfigurationPage() {
   const renderTaxBrackets = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Tramos Fiscales ISR</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">ISR Tax Brackets</h3>
         <button
           onClick={handleAddTaxBracket}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className="bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
-          Agregar Tramo
+          Add Bracket
         </button>
       </div>
 
@@ -639,11 +643,11 @@ export default function PayrollConfigurationPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Desde</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hasta</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa (%)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto Fijo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">From</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate (%)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fixed Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -653,7 +657,7 @@ export default function PayrollConfigurationPage() {
                     RD${bracket.min_amount.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {bracket.max_amount === Infinity ? 'En adelante' : `RD$${bracket.max_amount.toLocaleString()}`}
+                    {bracket.max_amount === Infinity ? 'And forward' : `RD$${bracket.max_amount.toLocaleString()}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {bracket.rate}%
@@ -664,7 +668,7 @@ export default function PayrollConfigurationPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => handleEditTaxBracket(bracket)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-[#4b5320] hover:text-[#3d431a]"
                     >
                       <i className="ri-edit-line"></i>
                     </button>
@@ -686,10 +690,9 @@ export default function PayrollConfigurationPage() {
         <div className="flex items-start">
           <i className="ri-information-line text-blue-500 mt-1 mr-3"></i>
           <div>
-            <h4 className="text-sm font-medium text-blue-800">Información sobre Tramos Fiscales</h4>
+            <h4 className="text-sm font-medium text-blue-800">About Tax Brackets</h4>
             <p className="text-sm text-blue-700 mt-1">
-              Los tramos fiscales se utilizan para calcular el Impuesto Sobre la Renta (ISR) de forma progresiva.
-              Cada tramo tiene un rango de ingresos, una tasa de impuesto y un monto fijo que se suma al cálculo.
+              Tax brackets are used to progressively calculate income tax (ISR). Each bracket has an income range, a tax rate, and a fixed amount added to the calculation.
             </p>
           </div>
         </div>
@@ -704,23 +707,24 @@ export default function PayrollConfigurationPage() {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cuentas de Pasivos (Nómina)</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payroll Liability Accounts</h3>
           <p className="text-sm text-gray-600 mb-6">
-            Seleccione las cuentas del catálogo contable donde se registrarán los pasivos de nómina.
-            Estas cuentas deben ser de tipo Pasivo (código 2.x) y permitir movimientos.
+            Select the chart of accounts entries where payroll liabilities will be posted.
+            These must be Liability type (code 2.x) and allow posting.
           </p>
+
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-money-dollar-circle-line mr-2"></i>
-                Nómina por Pagar
+                Payroll Payable
               </label>
               <select
                 value={config?.payroll_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, payroll_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -728,21 +732,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para registrar salarios netos pendientes de pago (ej: 2101 - Salarios por Pagar)
+                Account for net salaries pending payment (e.g., 2101 - Salaries Payable)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-shield-check-line mr-2"></i>
-                Retenciones TSS por Pagar
+                TSS Withholdings Payable
               </label>
               <select
                 value={config?.tss_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, tss_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -750,21 +754,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para retenciones de AFP, SFS y SRL (ej: 2102 - Retenciones TSS por Pagar)
+                Account for AFP, SFS, SRL withholdings (e.g., 2102 - TSS Withholdings Payable)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-percent-line mr-2"></i>
-                ISR de Nómina por Pagar
+                Payroll ISR Payable
               </label>
               <select
                 value={config?.isr_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, isr_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -772,21 +776,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para retenciones de ISR sobre salarios (ej: 2104 - ISR de Nómina por Pagar)
+                Account for ISR withholdings on salaries (e.g., 2104 - Payroll ISR Payable)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-subtract-line mr-2"></i>
-                Otras Deducciones por Pagar
+                Other Deductions Payable
               </label>
               <select
                 value={config?.other_deductions_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, other_deductions_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -794,21 +798,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para otras deducciones a empleados (ej: 2103 - Otras Deducciones por Pagar)
+                Account for other employee deductions (e.g., 2103 - Other Deductions Payable)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-time-line mr-2"></i>
-                Horas Extras por Pagar
+                Overtime Payable
               </label>
               <select
                 value={config?.overtime_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, overtime_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -816,21 +820,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para horas extras pendientes de pago
+                Account for overtime pending payment
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-gift-line mr-2"></i>
-                Incentivos por Pagar
+                Incentives Payable
               </label>
               <select
                 value={config?.incentives_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, incentives_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -838,21 +842,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para incentivos y bonificaciones por pagar
+                Account for incentives and bonuses payable
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-sun-line mr-2"></i>
-                Vacaciones por Pagar
+                Vacation Payable
               </label>
               <select
                 value={config?.vacation_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, vacation_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -860,21 +864,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para vacaciones pendientes de pago
+                Account for vacations pending payment
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-building-2-line mr-2"></i>
-                INFOTEP por Pagar
+                INFOTEP Payable
               </label>
               <select
                 value={config?.infotep_payable_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, infotep_payable_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {liabilityAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -882,30 +886,31 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para aportes al INFOTEP por pagar (1% del empleador)
+                Account for INFOTEP employer contributions payable (1%)
               </p>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Cuentas de Gastos (Nómina)</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payroll Expense Accounts</h3>
           <p className="text-sm text-gray-600 mb-6">
-            Seleccione las cuentas del catálogo contable donde se registrarán los gastos de nómina.
-            Estas cuentas deben ser de tipo Gasto (código 6.x) y permitir movimientos.
+            Select the chart of accounts entries where payroll expenses will be posted.
+            These must be Expense type (code 6.x) and allow posting.
           </p>
+
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-user-line mr-2"></i>
-                Gastos de Sueldos y Salarios
+                Salary & Wages Expense
               </label>
               <select
                 value={config?.salary_expense_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, salary_expense_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {expenseAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -913,21 +918,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para gastos de sueldos y salarios brutos (ej: 6101 - Sueldos y Salarios)
+                Account for gross salaries and wages expense (e.g., 6101 - Salaries and Wages)
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-time-line mr-2"></i>
-                Gastos de Horas Extras
+                Overtime Expense
               </label>
               <select
                 value={config?.overtime_expense_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, overtime_expense_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {expenseAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -935,21 +940,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para gastos por horas extras trabajadas
+                Account for overtime expenses
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-gift-line mr-2"></i>
-                Gastos de Incentivos
+                Incentives Expense
               </label>
               <select
                 value={config?.incentives_expense_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, incentives_expense_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {expenseAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -957,21 +962,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para gastos por incentivos y bonificaciones
+                Account for incentives and bonuses expense
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-sun-line mr-2"></i>
-                Gastos de Vacaciones
+                Vacation Expense
               </label>
               <select
                 value={config?.vacation_expense_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, vacation_expense_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {expenseAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -979,21 +984,21 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para gastos por vacaciones pagadas
+                Account for paid vacation expenses
               </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <i className="ri-building-2-line mr-2"></i>
-                Gastos de INFOTEP
+                INFOTEP Expense
               </label>
               <select
                 value={config?.infotep_expense_account_id || ''}
                 onChange={(e) => setConfig(prev => prev ? { ...prev, infotep_expense_account_id: e.target.value || undefined } : null)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">-- Seleccionar Cuenta --</option>
+                <option value="">-- Select Account --</option>
                 {expenseAccounts.map(acc => (
                   <option key={acc.id} value={acc.id}>
                     {acc.code} - {acc.name}
@@ -1001,7 +1006,7 @@ export default function PayrollConfigurationPage() {
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Cuenta para gastos por aportes al INFOTEP
+                Account for INFOTEP employer contribution expenses
               </p>
             </div>
           </div>
@@ -1011,13 +1016,13 @@ export default function PayrollConfigurationPage() {
           <div className="flex items-start">
             <i className="ri-information-line text-blue-500 mt-1 mr-3"></i>
             <div>
-              <h4 className="text-sm font-medium text-blue-800">Información sobre Cuentas Contables</h4>
+              <h4 className="text-sm font-medium text-blue-800">Information about Accounting Entries</h4>
               <p className="text-sm text-blue-700 mt-1">
-                Al configurar estas cuentas, el sistema generará automáticamente asientos contables al procesar la nómina:
+                When you configure these accounts, the system will automatically generate journal entries when processing payroll:
               </p>
               <ul className="text-sm text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                <li><strong>Débito:</strong> Gastos de Sueldos y Salarios (gasto)</li>
-                <li><strong>Crédito:</strong> Nómina por Pagar + Retenciones TSS + Otras Deducciones (pasivos)</li>
+                <li><strong>Debit:</strong> Salary &amp; Wages Expense (expense)</li>
+                <li><strong>Credit:</strong> Payroll Payable + TSS Withholdings + Other Deductions (liabilities)</li>
               </ul>
             </div>
           </div>
@@ -1028,9 +1033,9 @@ export default function PayrollConfigurationPage() {
             type="submit"
             onClick={handleSaveConfig}
             disabled={loading}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+            className="bg-[#4b5320] text-white px-6 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap disabled:opacity-50"
           >
-            {loading ? 'Guardando...' : 'Guardar Configuración'}
+            {loading ? 'Saving...' : 'Save Configuration'}
           </button>
         </div>
       </div>
@@ -1045,7 +1050,7 @@ export default function PayrollConfigurationPage() {
         <div className="bg-white rounded-lg p-6 w-full max-w-md">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {formData.id ? 'Editar' : 'Agregar'} Tramo Fiscal
+              {formData.id ? 'Edit' : 'Add'} Tax Bracket
             </h3>
             <button
               onClick={() => setShowModal(false)}
@@ -1057,7 +1062,7 @@ export default function PayrollConfigurationPage() {
 
           <form onSubmit={handleSaveTaxBracket} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Desde</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount From</label>
               <input
                 type="number" min="0"
                 step="0.01"
@@ -1068,18 +1073,18 @@ export default function PayrollConfigurationPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Hasta <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount To <span className="text-red-500">*</span></label>
               <input
                 type="number" min="0"
                 step="0.01"
                 value={formData.max_amount === Infinity ? '' : formData.max_amount || ''}
                 onChange={(e) => setFormData({ ...formData, max_amount: e.target.value ? parseFloat(e.target.value) : Infinity })}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Dejar vacío para 'En adelante'"
+                placeholder="Leave empty for 'Forward'"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tasa (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rate (%)</label>
               <input
                 type="number" min="0"
                 step="0.01"
@@ -1090,7 +1095,7 @@ export default function PayrollConfigurationPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Monto Fijo <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fixed Amount <span className="text-red-500">*</span></label>
               <input
                 type="number" min="0"
                 step="0.01"
@@ -1107,13 +1112,13 @@ export default function PayrollConfigurationPage() {
                 onClick={() => setShowModal(false)}
                 className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="flex-1 bg-[#4b5320] text-white py-2 px-4 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
               >
-                {formData.id ? 'Actualizar' : 'Crear'}
+                {formData.id ? 'Update' : 'Create'}
               </button>
             </div>
           </form>
@@ -1135,15 +1140,17 @@ export default function PayrollConfigurationPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Configuración de Nóminas</h1>
-            <p className="text-gray-600">Configurar parámetros generales del sistema de nómina</p>
+            <h1 className="text-2xl font-bold text-gray-900">Payroll Configuration</h1>
+            <p className="text-gray-600">Configure general parameters of the payroll system</p>
           </div>
+
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll')}
             className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <i className="ri-arrow-left-line"></i>
-            <span>Volver a Nóminas</span>
+            <span>Back to Payroll</span>
+
           </button>
         </div>
 
@@ -1151,16 +1158,17 @@ export default function PayrollConfigurationPage() {
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'general', name: 'Configuración General', icon: 'ri-settings-line' },
-              { id: 'tax-brackets', name: 'Tramos Fiscales', icon: 'ri-percent-line' },
-              { id: 'accounting', name: 'Cuentas Contables', icon: 'ri-book-line' }
+              { id: 'general', name: 'General Settings', icon: 'ri-settings-line' },
+              { id: 'tax-brackets', name: 'Tax Brackets', icon: 'ri-percent-line' },
+              { id: 'accounting', name: 'Chart of Accounts', icon: 'ri-book-line' }
+
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#4b5320] text-[#4b5320]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >

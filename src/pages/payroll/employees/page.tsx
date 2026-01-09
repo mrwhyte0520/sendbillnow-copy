@@ -73,6 +73,126 @@ export default function EmployeesPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
+  const handleOpenModal = (type: 'create' | 'edit' | 'details', employee?: Employee) => {
+    setModalType(type);
+    setShowModal(true);
+
+    if (employee) {
+      setSelectedEmployee(employee);
+      setFormData({
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        email: employee.email,
+        phone: employee.phone,
+        identification: employee.identification,
+        department_id: employee.department_id,
+        position_id: employee.position_id,
+        employee_type_id: employee.employee_type_id,
+        salary_type_id: employee.salary_type_id,
+        base_salary: employee.base_salary,
+        hire_date: employee.hire_date,
+        birth_date: employee.birth_date,
+        gender: employee.gender,
+        marital_status: employee.marital_status,
+        address: employee.address,
+        bank_account: employee.bank_account,
+        bank_name: employee.bank_name,
+        emergency_contact: employee.emergency_contact,
+        emergency_phone: employee.emergency_phone,
+        status: employee.status,
+        photo_url: employee.photo_url ?? '',
+      });
+    } else {
+      setSelectedEmployee(null);
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        identification: '',
+        department_id: '',
+        position_id: '',
+        employee_type_id: '',
+        salary_type_id: '',
+        base_salary: '',
+        hire_date: new Date().toISOString().slice(0, 10),
+        birth_date: '',
+        gender: 'M',
+        marital_status: 'single',
+        address: '',
+        bank_account: '',
+        bank_name: '',
+        emergency_contact: '',
+        emergency_phone: '',
+        status: 'active',
+        photo_url: '',
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalType('');
+    setSelectedEmployee(null);
+    setFormData({});
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await handleSave();
+  };
+
+  const loadData = async () => {
+    if (!user?.id) return;
+    setLoading(true);
+
+    try {
+      const [empRows, deptRows, positionRows, employeeTypeRows, salaryTypeRows] = await Promise.all([
+        employeesService.getAll(user.id),
+        departmentsService.getAll(user.id),
+        positionsService.getAll(user.id),
+        employeeTypesService.getAll(user.id),
+        salaryTypesService.getAll(user.id),
+      ]);
+
+      const mappedEmployees: Employee[] = (empRows || []).map((row: any): Employee => ({
+        id: row.id,
+        employee_code: row.employee_code || '',
+        first_name: row.first_name || '',
+        last_name: row.last_name || '',
+        email: row.email || '',
+        phone: row.phone || '',
+        identification: row.identification || '',
+        department_id: row.department_id || '',
+        position_id: row.position_id || '',
+        employee_type_id: row.employee_type_id || '',
+        salary_type_id: row.salary_type_id || '',
+        base_salary: Number(row.base_salary ?? 0),
+        hire_date: row.hire_date || '',
+        birth_date: row.birth_date || '',
+        gender: row.gender === 'F' ? 'F' : 'M',
+        marital_status: (row.marital_status as Employee['marital_status']) || 'single',
+        address: row.address || '',
+        bank_account: row.bank_account || '',
+        bank_name: row.bank_name || '',
+        emergency_contact: row.emergency_contact || '',
+        emergency_phone: row.emergency_phone || '',
+        status: (row.status as Employee['status']) || 'active',
+        photo_url: row.photo_url || undefined,
+      }));
+
+      setEmployees(mappedEmployees);
+      setDepartments(deptRows || []);
+      setPositions(positionRows || []);
+      setEmployeeTypes(employeeTypeRows || []);
+      setSalaryTypes(salaryTypeRows || []);
+    } catch (error) {
+      console.error('Error loading employee catalogs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
   }, [user]);
@@ -85,7 +205,8 @@ export default function EmployeesPage() {
       if (!selectedEmployee) {
         const { allowed, message } = checkQuantityLimit('maxEmployees', employees.length);
         if (!allowed) {
-          alert(message || 'Has alcanzado el límite de empleados de tu plan.');
+          alert(message || 'You have reached the employee limit for your plan.');
+
           return;
         }
       }
@@ -184,14 +305,15 @@ export default function EmployeesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea eliminar este empleado?')) return;
+    if (!confirm('Are you sure you want to delete this employee?')) return;
 
     try {
       await employeesService.delete(id);
       setEmployees(prev => prev.filter(emp => emp.id !== id));
     } catch (error) {
       console.error('Error deleting employee:', error);
-      alert('Ocurrió un error al eliminar el empleado.');
+      alert('An error occurred while deleting the employee.');
+
     }
   };
 
@@ -244,49 +366,50 @@ export default function EmployeesPage() {
     }));
 
     if (!rows.length) {
-      alert('No hay empleados para exportar.');
+      alert('There are no employees to export.');
+
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'code', title: 'Código', width: 14 },
-        { key: 'name', title: 'Nombre', width: 28 },
+        { key: 'code', title: 'Code', width: 14 },
+        { key: 'name', title: 'Employee', width: 28 },
         { key: 'email', title: 'Email', width: 26 },
-        { key: 'phone', title: 'Teléfono', width: 16 },
-        { key: 'identification', title: 'Identificación', width: 18 },
-        { key: 'department', title: 'Departamento', width: 22 },
-        { key: 'position', title: 'Posición', width: 22 },
-        { key: 'employeeType', title: 'Tipo Empleado', width: 18 },
-        { key: 'salaryType', title: 'Tipo Salario', width: 18 },
-        { key: 'baseSalary', title: 'Salario Base', width: 16, numFmt: '#,##0.00' },
-        { key: 'hireDate', title: 'Fecha Contratación', width: 16 },
-        { key: 'status', title: 'Estado', width: 12 },
+        { key: 'phone', title: 'Phone', width: 16 },
+        { key: 'identification', title: 'ID Number', width: 18 },
+        { key: 'department', title: 'Department', width: 22 },
+        { key: 'position', title: 'Position', width: 22 },
+        { key: 'employeeType', title: 'Employee Type', width: 18 },
+        { key: 'salaryType', title: 'Salary Type', width: 18 },
+        { key: 'baseSalary', title: 'Base Salary', width: 16, numFmt: '#,##0.00' },
+        { key: 'hireDate', title: 'Hire Date', width: 16 },
+        { key: 'status', title: 'Status', width: 12 },
       ],
-      `empleados_${today}`,
-      'Empleados'
+      `employees_${today}`,
+      'Employees'
     );
   };
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = (action: 'activate' | 'deactivate' | 'suspend') => {
     if (selectedEmployees.length === 0) {
-      alert('Seleccione al menos un empleado');
+      alert('Select at least one employee');
       return;
     }
 
-    if (!confirm(`¿Está seguro de que desea ${action} ${selectedEmployees.length} empleado(s)?`)) return;
+    if (!confirm(`Are you sure you want to ${action} ${selectedEmployees.length} employee(s)?`)) return;
 
-    if (action === 'activar') {
-      setEmployees(prev => prev.map(emp => 
+    if (action === 'activate') {
+      setEmployees(prev => prev.map(emp =>
         selectedEmployees.includes(emp.id) ? { ...emp, status: 'active' } : emp
       ));
-    } else if (action === 'desactivar') {
-      setEmployees(prev => prev.map(emp => 
+    } else if (action === 'deactivate') {
+      setEmployees(prev => prev.map(emp =>
         selectedEmployees.includes(emp.id) ? { ...emp, status: 'inactive' } : emp
       ));
-    } else if (action === 'suspender') {
-      setEmployees(prev => prev.map(emp => 
+    } else if (action === 'suspend') {
+      setEmployees(prev => prev.map(emp =>
         selectedEmployees.includes(emp.id) ? { ...emp, status: 'suspended' } : emp
       ));
     }
@@ -440,10 +563,10 @@ export default function EmployeesPage() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#f6f1e3] rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
-              {selectedEmployee ? 'Editar' : 'Agregar'} Empleado
+              {selectedEmployee ? 'Edit Employee' : 'Add Employee'}
             </h3>
             <button
               onClick={handleCloseModal}
@@ -455,99 +578,99 @@ export default function EmployeesPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Información Personal */}
+              {/* Personal Information */}
               <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Información Personal</h4>
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Personal Information</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                     <input
                       type="text"
                       value={formData.first_name || ''}
                       onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                     <input
                       type="text"
                       value={formData.last_name || ''}
                       onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Identificación *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Identification *</label>
                     <input
                       type="text"
                       value={formData.identification || ''}
                       onChange={(e) => setFormData({...formData, identification: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       placeholder="001-1234567-8"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date <span className="text-red-500">*</span></label>
                     <input
                       type="date"
                       value={formData.birth_date || ''}
                       onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Género</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                     <select
                       value={formData.gender || 'M'}
                       onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     >
-                      <option value="M">Masculino</option>
-                      <option value="F">Femenino</option>
+                      <option value="M">Male</option>
+                      <option value="F">Female</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado Civil</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
                     <select
                       value={formData.marital_status || 'single'}
                       onChange={(e) => setFormData({...formData, marital_status: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     >
-                      <option value="single">Soltero(a)</option>
-                      <option value="married">Casado(a)</option>
-                      <option value="divorced">Divorciado(a)</option>
-                      <option value="widowed">Viudo(a)</option>
+                      <option value="single">Single</option>
+                      <option value="married">Married</option>
+                      <option value="divorced">Divorced</option>
+                      <option value="widowed">Widowed</option>
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                   <textarea
                     value={formData.address || ''}
                     onChange={(e) => setFormData({...formData, address: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     rows={2}
                   />
                 </div>
               </div>
 
-              {/* Información Laboral */}
+              {/* Job Information */}
               <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Información Laboral</h4>
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Job Information</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Departamento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
                     <select
                       value={formData.department_id || ''}
                       onChange={(e) => setFormData({...formData, department_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar departamento</option>
+                      <option value="">Select department</option>
                       {departments
                         .filter(dept => !dept.status || dept.status === 'active' || dept.status === 'activo')
                         .map(dept => (
@@ -556,42 +679,42 @@ export default function EmployeesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Posición *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
                     <select
                       value={formData.position_id || ''}
                       onChange={(e) => setFormData({...formData, position_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar posición</option>
+                      <option value="">Select position</option>
                       {positions.filter(pos => !formData.department_id || pos.department_id === formData.department_id).map(pos => (
                         <option key={pos.id} value={pos.id}>{pos.title}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Empleado *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee Type *</label>
                     <select
                       value={formData.employee_type_id || ''}
                       onChange={(e) => setFormData({...formData, employee_type_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar tipo</option>
+                      <option value="">Select type</option>
                       {employeeTypes.map(type => (
                         <option key={type.id} value={type.id}>{type.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Salario *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Salary Type *</label>
                     <select
                       value={formData.salary_type_id || ''}
                       onChange={(e) => setFormData({...formData, salary_type_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar tipo</option>
+                      <option value="">Select type</option>
                       {salaryTypes.map(type => (
                         <option key={type.id} value={type.id}>{type.name}</option>
                       ))}
@@ -599,47 +722,47 @@ export default function EmployeesPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Salario Base * {formData.salary_type_id === '2' ? '(por hora)' : '(mensual)'}
+                      Base Salary * {formData.salary_type_id === '2' ? '(hourly)' : '(monthly)'}
                     </label>
                     <input
                       type="number" min="0"
                       step="0.01"
                       value={formData.base_salary || ''}
                       onChange={(e) => setFormData({...formData, base_salary: parseFloat(e.target.value)})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Contratación *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hire Date *</label>
                     <input
                       type="date"
                       value={formData.hire_date || ''}
                       onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Estado <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status <span className="text-red-500">*</span></label>
                   <select
                     value={formData.status || 'active'}
                     onChange={(e) => setFormData({...formData, status: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                   >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                    <option value="suspended">Suspendido</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended</option>
                   </select>
                 </div>
               </div>
             </div>
 
-            {/* Información de Contacto */}
+            {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Información de Contacto</h4>
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Contact Information</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
@@ -647,39 +770,39 @@ export default function EmployeesPage() {
                       type="email"
                       value={formData.email || ''}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                     <input
                       type="tel"
                       value={formData.phone || ''}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       placeholder="809-000-0000"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact *</label>
                     <input
                       type="text"
                       value={formData.emergency_contact || ''}
                       onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nombre del contacto"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
+                      placeholder="Contact name"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone *</label>
                     <input
                       type="tel"
                       value={formData.emergency_phone || ''}
                       onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       placeholder="809-000-0000"
                       required
                     />
@@ -688,17 +811,17 @@ export default function EmployeesPage() {
               </div>
 
               <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Información Bancaria</h4>
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Bank Information</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
                     <input
                       type="text"
                       list="bancos-list"
                       value={formData.bank_name || ''}
                       onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Escriba o seleccione el banco"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
+                      placeholder="Type or select bank"
                     />
                     <datalist id="bancos-list">
                       <option value="Banco Popular Dominicano" />
@@ -722,12 +845,12 @@ export default function EmployeesPage() {
                     </datalist>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número de Cuenta</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
                     <input
                       type="text"
                       value={formData.bank_account || ''}
                       onChange={(e) => setFormData({...formData, bank_account: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                 </div>
@@ -740,14 +863,14 @@ export default function EmployeesPage() {
                 onClick={handleCloseModal}
                 className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+                className="flex-1 bg-[#4b5320] text-white py-2 px-4 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap disabled:opacity-50"
               >
-                {loading ? 'Guardando...' : (selectedEmployee ? 'Actualizar' : 'Crear')}
+                {loading ? 'Saving...' : (selectedEmployee ? 'Update' : 'Create')}
               </button>
             </div>
           </form>
@@ -761,8 +884,8 @@ export default function EmployeesPage() {
       <div className="space-y-6 px-4 sm:px-6 lg:px-8 pt-4">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Empleados</h1>
-            <p className="text-gray-600">Administrar información completa de empleados</p>
+            <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
+            <p className="text-gray-600">Manage complete employee information</p>
           </div>
           <div className="flex space-x-3">
             <button
@@ -770,14 +893,14 @@ export default function EmployeesPage() {
               className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
             >
               <i className="ri-arrow-left-line"></i>
-              <span>Volver a Nóminas</span>
+              <span>Back to Payroll</span>
             </button>
             <button
               onClick={() => handleOpenModal('create')}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
-              Agregar Empleado
+              Add Employee
             </button>
           </div>
         </div>
@@ -788,7 +911,7 @@ export default function EmployeesPage() {
             <div>
               <input
                 type="text"
-                placeholder="Buscar empleados..."
+                placeholder="Search employees..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -800,7 +923,7 @@ export default function EmployeesPage() {
                 onChange={(e) => setFilterDepartment(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Todos los departamentos</option>
+                <option value="">All departments</option>
                 {departments.map(dept => (
                   <option key={dept.id} value={dept.id}>{dept.name}</option>
                 ))}
@@ -812,52 +935,52 @@ export default function EmployeesPage() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Todos los estados</option>
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-                <option value="suspended">Suspendido</option>
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
               </select>
             </div>
             <div>
               <button
                 onClick={exportToExcel}
-                className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4b5320] text-white px-3 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
               >
                 <i className="ri-download-line mr-2"></i>
-                Exportar
+                Export
               </button>
             </div>
             <div className="text-sm text-gray-600 flex items-center">
-              Mostrando {filteredEmployees.length} de {employees.length} empleados
+              Showing {filteredEmployees.length} of {employees.length} employees
             </div>
           </div>
         </div>
 
         {/* Bulk Actions */}
         {selectedEmployees.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-[#f3f6eb] border border-[#d5ddb8] rounded-lg p-4">
             <div className="flex items-center justify-between">
-              <span className="text-blue-800 font-medium">
-                {selectedEmployees.length} empleado(s) seleccionado(s)
+              <span className="text-[#4b5320] font-medium">
+                {selectedEmployees.length} employee(s) selected
               </span>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleBulkAction('activar')}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                  onClick={() => handleBulkAction('activate')}
+                  className="bg-[#4b5320] text-white px-3 py-1 rounded text-sm hover:bg-[#3d431a] transition-colors"
                 >
-                  Activar
+                  Activate
                 </button>
                 <button
-                  onClick={() => handleBulkAction('suspender')}
-                  className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 transition-colors"
+                  onClick={() => handleBulkAction('suspend')}
+                  className="bg-[#9cae77] text-[#1f2610] px-3 py-1 rounded text-sm hover:bg-[#8b9d68] transition-colors"
                 >
-                  Suspender
+                  Suspend
                 </button>
                 <button
-                  onClick={() => handleBulkAction('desactivar')}
+                  onClick={() => handleBulkAction('deactivate')}
                   className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
                 >
-                  Desactivar
+                  Deactivate
                 </button>
               </div>
             </div>
@@ -884,14 +1007,14 @@ export default function EmployeesPage() {
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posición</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salario</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">

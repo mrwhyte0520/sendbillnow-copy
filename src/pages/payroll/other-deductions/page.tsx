@@ -80,7 +80,7 @@ export default function OtherDeductionsPage() {
     try {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) {
-        alert('No se pudo determinar la empresa del usuario.');
+        alert('Could not determine the user company.');
         return;
       }
 
@@ -104,10 +104,10 @@ export default function OtherDeductionsPage() {
 
       await loadData();
       resetForm();
-      alert('Deducción guardada correctamente');
+      alert('Deduction saved successfully');
     } catch (error) {
       console.error('Error saving deduction:', error);
-      alert('Error al guardar la deducción');
+      alert('Error saving deduction');
     }
   };
 
@@ -125,7 +125,7 @@ export default function OtherDeductionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta deducción?')) return;
+    if (!confirm('Are you sure you want to delete this deduction?')) return;
 
     try {
       await supabase
@@ -135,7 +135,7 @@ export default function OtherDeductionsPage() {
       await loadData();
     } catch (error) {
       console.error('Error deleting deduction:', error);
-      alert('Error al eliminar la deducción');
+      alert('Error deleting deduction');
     }
   };
 
@@ -179,20 +179,20 @@ export default function OtherDeductionsPage() {
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
-      multa: 'Multa',
-      descuento: 'Descuento',
-      adelanto: 'Adelanto de Salario',
-      dano_equipo: 'Daño a Equipo',
-      faltante: 'Faltante de Caja',
-      otro: 'Otro'
+      multa: 'Fine',
+      descuento: 'Discount',
+      adelanto: 'Salary Advance',
+      dano_equipo: 'Equipment Damage',
+      faltante: 'Cash Shortage',
+      otro: 'Other'
     };
     return labels[category] || category;
   };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      pendiente: 'bg-yellow-100 text-yellow-800',
-      aplicada: 'bg-green-100 text-green-800',
+      pendiente: 'bg-[#f1e4c2] text-[#3d451b]',
+      aplicada: 'bg-[#dbe8c0] text-[#2f3a1f]',
       cancelada: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
@@ -208,68 +208,68 @@ export default function OtherDeductionsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Otras Deducciones</h1>
-            <p className="text-gray-600">Gestión de deducciones eventuales y únicas</p>
+            <h1 className="text-2xl font-bold text-gray-900">Other Deductions</h1>
+            <p className="text-gray-700">Manage one-time and occasional deductions</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => navigate('/payroll')}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
             >
-              <i className="ri-arrow-left-line mr-2"></i>
-              Volver
+              <i className="ri-arrow-left-line"></i>
+              Back
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
             >
-              <i className="ri-add-line mr-2"></i>
-              Nueva Deducción
+              <i className="ri-add-line"></i>
+              New Deduction
             </button>
           </div>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-100 mr-4">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#f1e4c2] mr-4">
+                <i className="ri-time-line text-xl text-[#4b5320]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Deducciones Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending deductions</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  RD$ {totalPendiente.toLocaleString('es-DO')}
+                  RD$ {totalPendiente.toLocaleString('en-US')}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100 mr-4">
-                <i className="ri-checkbox-circle-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#dbe8c0] mr-4">
+                <i className="ri-checkbox-circle-line text-xl text-[#3d451b]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Deducciones Aplicadas</p>
+                <p className="text-sm font-medium text-gray-600">Applied deductions</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  RD$ {totalAplicada.toLocaleString('es-DO')}
+                  RD$ {totalAplicada.toLocaleString('en-US')}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100 mr-4">
-                <i className="ri-file-list-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#e0e5d0] mr-4">
+                <i className="ri-file-list-line text-xl text-[#4b5320]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total de Deducciones</p>
+                <p className="text-sm font-medium text-gray-600">Total deductions</p>
                 <p className="text-2xl font-bold text-gray-900">{filteredDeductions.length}</p>
               </div>
             </div>
@@ -277,69 +277,69 @@ export default function OtherDeductionsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Buscar
+                Search
               </label>
               <input
                 type="text"
-                placeholder="Buscar por nombre..."
+                placeholder="Search by name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoría
+                Category
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="todos">Todas las categorías</option>
-                <option value="multa">Multa</option>
-                <option value="descuento">Descuento</option>
-                <option value="adelanto">Adelanto de Salario</option>
-                <option value="dano_equipo">Daño a Equipo</option>
-                <option value="faltante">Faltante de Caja</option>
-                <option value="otro">Otro</option>
+                <option value="todos">All categories</option>
+                <option value="multa">Fine</option>
+                <option value="descuento">Discount</option>
+                <option value="adelanto">Salary Advance</option>
+                <option value="dano_equipo">Equipment Damage</option>
+                <option value="faltante">Cash Shortage</option>
+                <option value="otro">Other</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
+                Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="todos">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="aplicada">Aplicada</option>
-                <option value="cancelada">Cancelada</option>
+                <option value="todos">All statuses</option>
+                <option value="pendiente">Pending</option>
+                <option value="aplicada">Applied</option>
+                <option value="cancelada">Cancelled</option>
               </select>
             </div>
           </div>
         </div>
 
         {/* Deductions List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deducción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deduction</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -358,14 +358,14 @@ export default function OtherDeductionsPage() {
                       {getCategoryLabel(deduction.category)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {new Date(deduction.deduction_date).toLocaleDateString('es-DO')}
+                      {new Date(deduction.deduction_date).toLocaleDateString('en-US')}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      RD$ {deduction.amount.toLocaleString('es-DO')}
+                      RD$ {deduction.amount.toLocaleString('en-US')}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(deduction.status)}`}>
-                        {deduction.status}
+                        {deduction.status === 'pendiente' ? 'Pending' : deduction.status === 'aplicada' ? 'Applied' : 'Cancelled'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -374,22 +374,22 @@ export default function OtherDeductionsPage() {
                           <>
                             <button
                               onClick={() => changeStatus(deduction.id, 'aplicada')}
-                              className="text-green-600 hover:text-green-800"
-                              title="Marcar como aplicada"
+                              className="text-[#4b5320] hover:text-[#2f3a1f]"
+                              title="Mark as applied"
                             >
                               <i className="ri-checkbox-circle-line"></i>
                             </button>
                             <button
                               onClick={() => handleEdit(deduction)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="Editar"
+                              className="text-[#4b5320] hover:text-[#2f3a1f]"
+                              title="Edit"
                             >
                               <i className="ri-edit-line"></i>
                             </button>
                             <button
                               onClick={() => changeStatus(deduction.id, 'cancelada')}
                               className="text-red-600 hover:text-red-800"
-                              title="Cancelar"
+                              title="Cancel"
                             >
                               <i className="ri-close-circle-line"></i>
                             </button>
@@ -399,7 +399,7 @@ export default function OtherDeductionsPage() {
                           <button
                             onClick={() => handleDelete(deduction.id)}
                             className="text-red-600 hover:text-red-800"
-                            title="Eliminar"
+                            title="Delete"
                           >
                             <i className="ri-delete-bin-line"></i>
                           </button>
@@ -411,7 +411,7 @@ export default function OtherDeductionsPage() {
                 {filteredDeductions.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      No se encontraron deducciones
+                      No deductions found
                     </td>
                   </tr>
                 )}
@@ -423,81 +423,62 @@ export default function OtherDeductionsPage() {
         {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {editingDeduction ? 'Editar Deducción' : 'Nueva Deducción'}
+                {editingDeduction ? 'Edit Deduction' : 'New Deduction'}
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Empleado *
-                    </label>
-                    <select
-                      value={formData.employee_id}
-                      onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      required
-                    >
-                      <option value="">Seleccionar empleado</option>
-                      {employees.map(emp => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.employee_code} - {emp.first_name} {emp.last_name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la Deducción *
+                      Deduction name *
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
-                      placeholder="Ej: Multa por tardanza"
+                      placeholder="e.g. Late arrival fine"
                     />
                   </div>
 
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
+                      Description
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       rows={2}
-                      placeholder="Detalles adicionales..."
+                      placeholder="Additional details..."
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría *
+                      Category *
                     </label>
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     >
-                      <option value="multa">Multa</option>
-                      <option value="descuento">Descuento</option>
-                      <option value="adelanto">Adelanto de Salario</option>
-                      <option value="dano_equipo">Daño a Equipo</option>
-                      <option value="faltante">Faltante de Caja</option>
-                      <option value="otro">Otro</option>
+                      <option value="multa">Fine</option>
+                      <option value="descuento">Discount</option>
+                      <option value="adelanto">Salary Advance</option>
+                      <option value="dano_equipo">Equipment Damage</option>
+                      <option value="faltante">Cash Shortage</option>
+                      <option value="otro">Other</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Monto (RD$) *
+                      Amount (RD$) *
                     </label>
                     <input
                       type="number"
@@ -505,20 +486,20 @@ export default function OtherDeductionsPage() {
                       min="0.01"
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha de Aplicación *
+                      Application date *
                     </label>
                     <input
                       type="date"
                       value={formData.deduction_date}
                       onChange={(e) => setFormData({ ...formData, deduction_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
@@ -528,15 +509,15 @@ export default function OtherDeductionsPage() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
-                    {editingDeduction ? 'Actualizar' : 'Crear'} Deducción
+                    {editingDeduction ? 'Update' : 'Create'} Deduction
                   </button>
                 </div>
               </form>

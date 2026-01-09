@@ -71,11 +71,15 @@ export default function EmployeeTypesPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const averageVacationDays = employeeTypes.length
+    ? Math.round(employeeTypes.reduce((sum, t) => sum + t.vacationDays, 0) / employeeTypes.length)
+    : 0;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user) {
-      alert('Debe iniciar sesión para gestionar tipos de empleados.');
+      alert('You must be logged in to manage employee types.');
       return;
     }
 
@@ -130,7 +134,7 @@ export default function EmployeeTypesPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving employee type:', error);
-      alert('Error al guardar el tipo de empleado');
+      alert('Error saving the employee type.');
     }
   };
 
@@ -182,14 +186,14 @@ export default function EmployeeTypesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este tipo de empleado?')) return;
+    if (!confirm('Are you sure you want to delete this employee type?')) return;
 
     try {
       await employeeTypesService.delete(id);
       setEmployeeTypes(prev => prev.filter(type => type.id !== id));
     } catch (error) {
       console.error('Error deleting employee type:', error);
-      alert('Error al eliminar el tipo de empleado');
+      alert('Error deleting the employee type.');
     }
   };
 
@@ -207,7 +211,7 @@ export default function EmployeeTypesPage() {
       ));
     } catch (error) {
       console.error('Error toggling employee type status:', error);
-      alert('Error al cambiar el estado del tipo de empleado');
+      alert('Error changing the employee type status.');
     }
   };
 
@@ -218,65 +222,119 @@ export default function EmployeeTypesPage() {
         name: type.name,
         description: type.description,
         workingHours: type.workingHours,
-        overtime: type.overtimeEligible ? 'Sí' : 'No',
+        overtime: type.overtimeEligible ? 'Yes' : 'No',
         vacationDays: type.vacationDays,
         benefits: type.benefits.join(', '),
-        status: type.status === 'active' ? 'Activo' : 'Inactivo',
+        status: type.status === 'active' ? 'Active' : 'Inactive',
         createdAt: type.createdAt,
       }));
       await exportToExcelStyled(
         rows,
         [
-          { key: 'name', title: 'Nombre', width: 22 },
-          { key: 'description', title: 'Descripción', width: 40 },
-          { key: 'workingHours', title: 'Horas Trabajo/Día', width: 18 },
-          { key: 'overtime', title: 'Horas Extras', width: 14 },
-          { key: 'vacationDays', title: 'Vacaciones/Año', width: 16 },
-          { key: 'benefits', title: 'Beneficios', width: 36 },
-          { key: 'status', title: 'Estado', width: 12 },
-          { key: 'createdAt', title: 'Creado', width: 14 },
+          { key: 'name', title: 'Name', width: 22 },
+          { key: 'description', title: 'Description', width: 40 },
+          { key: 'workingHours', title: 'Working Hours/Day', width: 18 },
+          { key: 'overtime', title: 'Overtime Eligible', width: 14 },
+          { key: 'vacationDays', title: 'Vacation Days/Year', width: 16 },
+          { key: 'benefits', title: 'Benefits', width: 36 },
+          { key: 'status', title: 'Status', width: 12 },
+          { key: 'createdAt', title: 'Created', width: 14 },
         ],
-        `tipos_empleados_${today}`,
-        'Tipos de Empleados'
+        `employee_types_${today}`,
+        'Employee Types'
       );
     } catch (error) {
       console.error('Error exporting employee types:', error);
-      alert('Error al exportar a Excel');
+      alert('Error exporting to Excel.');
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Empleados</h1>
-            <p className="text-gray-600">Gestiona los diferentes tipos de empleados y sus características</p>
+            <h1 className="text-2xl font-bold text-gray-900">Employee Types</h1>
+            <p className="text-gray-700">Manage the different employee types and their characteristics</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={downloadExcel}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-download-line"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-add-line"></i>
-              Nuevo Tipo
+              New Type
             </button>
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Types</p>
+                <p className="text-2xl font-bold text-gray-900">{employeeTypes.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-[#e5ead7] rounded-lg flex items-center justify-center">
+                <i className="ri-team-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]">
+                  {employeeTypes.filter(t => t.status === 'active').length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-[#dbe8c0] rounded-lg flex items-center justify-center">
+                <i className="ri-check-line text-[#3d451b] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overtime Eligible</p>
+                <p className="text-2xl font-bold text-[#3d451b]">
+                  {employeeTypes.filter(t => t.overtimeEligible).length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-[#f1e4c2] rounded-lg flex items-center justify-center">
+                <i className="ri-time-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Average Vacation</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]">
+                  {averageVacationDays} days
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-[#e0e5d0] rounded-lg flex items-center justify-center">
+                <i className="ri-calendar-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
+                Search
               </label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -284,23 +342,23 @@ export default function EmployeeTypesPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por nombre o descripción..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search by name or description..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
+                Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="all">Todos los estados</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -309,91 +367,37 @@ export default function EmployeeTypesPage() {
                   setSearchTerm('');
                   setStatusFilter('all');
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-[#4b5320] hover:text-[#2f3a1f] transition-colors"
               >
-                Limpiar filtros
+                Clear filters
               </button>
             </div>
           </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Tipos</p>
-                <p className="text-2xl font-bold text-gray-900">{employeeTypes.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-team-line text-blue-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Activos</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {employeeTypes.filter(t => t.status === 'active').length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-check-line text-green-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Con Horas Extras</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {employeeTypes.filter(t => t.overtimeEligible).length}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-time-line text-orange-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Promedio Vacaciones</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {Math.round(employeeTypes.reduce((sum, t) => sum + t.vacationDays, 0) / employeeTypes.length)} días
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-calendar-line text-purple-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabla */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        {/* Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo de Empleado
+                    Employee Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Horas de Trabajo
+                    Working Hours
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Horas Extras
+                    Overtime
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vacaciones
+                    Vacation
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -405,40 +409,40 @@ export default function EmployeeTypesPage() {
                         <div className="text-sm font-medium text-gray-900">{type.name}</div>
                         <div className="text-sm text-gray-500">{type.description}</div>
                         <div className="text-xs text-gray-400 mt-1">
-                          Beneficios: {type.benefits.join(', ')}
+                          Benefits: {type.benefits.join(', ')}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{type.workingHours} horas/día</span>
+                      <span className="text-sm text-gray-900">{type.workingHours} hours/day</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         type.overtimeEligible 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#dbe8c0] text-[#2f3a1f]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {type.overtimeEligible ? 'Sí' : 'No'}
+                        {type.overtimeEligible ? 'Yes' : 'No'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{type.vacationDays} días/año</span>
+                      <span className="text-sm text-gray-900">{type.vacationDays} days/year</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         type.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#dbe8c0] text-[#2f3a1f]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {type.status === 'active' ? 'Activo' : 'Inactivo'}
+                        {type.status === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(type)}
-                          className="text-blue-600 hover:text-blue-900 transition-colors"
-                          title="Editar"
+                          className="text-[#4b5320] hover:text-[#2f3a1f] transition-colors"
+                          title="Edit"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -447,16 +451,16 @@ export default function EmployeeTypesPage() {
                           className={`transition-colors ${
                             type.status === 'active' 
                               ? 'text-red-600 hover:text-red-900' 
-                              : 'text-green-600 hover:text-green-900'
+                              : 'text-[#4b5320] hover:text-[#2f3a1f]'
                           }`}
-                          title={type.status === 'active' ? 'Desactivar' : 'Activar'}
+                          title={type.status === 'active' ? 'Deactivate' : 'Activate'}
                         >
                           <i className={type.status === 'active' ? 'ri-pause-line' : 'ri-play-line'}></i>
                         </button>
                         <button
                           onClick={() => handleDelete(type.id)}
                           className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -469,13 +473,13 @@ export default function EmployeeTypesPage() {
           </div>
         </div>
 
-        {/* Modal de formulario */}
+        {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#f6f1e3] rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editingType ? 'Editar Tipo de Empleado' : 'Nuevo Tipo de Empleado'}
+                  {editingType ? 'Edit Employee Type' : 'New Employee Type'}
                 </h2>
                 <button
                   onClick={resetForm}
@@ -489,47 +493,47 @@ export default function EmployeeTypesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Tipo *
+                      Type Name *
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
+                      Status
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción *
+                    Description *
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={5}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Beneficios
+                    Benefits
                   </label>
                   <div className="space-y-2">
                     <div className="flex gap-2">
@@ -538,13 +542,13 @@ export default function EmployeeTypesPage() {
                         value={newBenefit}
                         onChange={(e) => setNewBenefit(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addBenefit())}
-                        placeholder="Escriba un beneficio y presione Agregar"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter a benefit and click Add"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       />
                       <button
                         type="button"
                         onClick={addBenefit}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                       >
                         <i className="ri-add-line"></i>
                       </button>
@@ -554,13 +558,13 @@ export default function EmployeeTypesPage() {
                         {formData.benefits.map((benefit, index) => (
                           <span
                             key={index}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#e5ead4] text-[#4b5320] rounded-full text-sm"
                           >
                             {benefit}
                             <button
                               type="button"
                               onClick={() => removeBenefit(index)}
-                              className="text-blue-600 hover:text-red-600 transition-colors"
+                              className="text-[#4b5320] hover:text-red-600 transition-colors"
                             >
                               <i className="ri-close-line"></i>
                             </button>
@@ -574,7 +578,7 @@ export default function EmployeeTypesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Horas de Trabajo/Día
+                      Working Hours/Day
                     </label>
                     <input
                       type="number"
@@ -582,19 +586,19 @@ export default function EmployeeTypesPage() {
                       onChange={(e) => setFormData({...formData, workingHours: parseInt(e.target.value)})}
                       min="0"
                       max="24"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Días de Vacaciones/Año
+                      Vacation Days/Year
                     </label>
                     <input
                       type="number"
                       value={formData.vacationDays}
                       onChange={(e) => setFormData({...formData, vacationDays: parseInt(e.target.value)})}
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
                   <div className="flex items-center pt-6">
@@ -603,9 +607,9 @@ export default function EmployeeTypesPage() {
                         type="checkbox"
                         checked={formData.overtimeEligible}
                         onChange={(e) => setFormData({...formData, overtimeEligible: e.target.checked})}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="rounded border-gray-300 text-[#4b5320] focus:ring-[#4b5320]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Elegible para horas extras</span>
+                      <span className="ml-2 text-sm text-gray-700">Eligible for overtime</span>
                     </label>
                   </div>
                 </div>
@@ -616,13 +620,13 @@ export default function EmployeeTypesPage() {
                     onClick={resetForm}
                     className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
-                    {editingType ? 'Actualizar' : 'Crear'} Tipo
+                    {editingType ? 'Update' : 'Create'} Type
                   </button>
                 </div>
               </form>

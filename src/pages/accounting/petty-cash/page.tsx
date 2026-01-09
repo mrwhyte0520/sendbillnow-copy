@@ -12,15 +12,6 @@ import {
   suppliersService,
 } from '../../../services/database';
 
-const theme = {
-  primary: '#4b5c4b',
-  primaryHover: '#3f4f3f',
-  accent: '#6d806d',
-  muted: '#eef2ea',
-  softBorder: '#dfe4db',
-  softText: '#2f3a2f',
-};
-
 interface PettyCashFund {
   id: string;
   name: string;
@@ -72,8 +63,6 @@ const PettyCashPage: React.FC = () => {
   const [showReimbursementModal, setShowReimbursementModal] = useState(false);
 
   const [selectedFund, setSelectedFund] = useState<PettyCashFund | null>(null);
-  const [selectedExpense, setSelectedExpense] = useState<PettyCashExpense | null>(null);
-  const [selectedReimbursementFundId, setSelectedReimbursementFundId] = useState('');
 
   const [accounts, setAccounts] = useState<any[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
@@ -82,7 +71,7 @@ const PettyCashPage: React.FC = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [selectedSupplierTaxId, setSelectedSupplierTaxId] = useState('');
-  const [showExpenseDetailsModal, setShowExpenseDetailsModal] = useState(false);
+
   const receiptInputRef = useRef<HTMLInputElement | null>(null);
 
   const [loadingFunds, setLoadingFunds] = useState(false);
@@ -132,7 +121,7 @@ const PettyCashPage: React.FC = () => {
             return current <= initial * 0.1;
           });
           if (criticalFunds.length > 0) {
-            const names = criticalFunds.map((f) => `${f.name} (RD$ ${f.currentBalance.toLocaleString()} de RD$ ${f.initialAmount.toLocaleString()})`).join('\n');
+            console.info(`Critical petty cash funds detected: ${criticalFunds.length}`);
           }
         } catch (e) {
           // eslint-disable-next-line no-console
@@ -364,7 +353,8 @@ const PettyCashPage: React.FC = () => {
     if (!user) return;
 
     try {
-      const updated = await pettyCashService.approveExpense(user.id, expenseId);
+      const updated = await pettyCashService.approveExpense(user.id, expenseId, user.id);
+
       setExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -378,7 +368,8 @@ const PettyCashPage: React.FC = () => {
     if (!user) return;
 
     try {
-      const updated = await pettyCashService.rejectExpense(user.id, expenseId);
+      const updated = await pettyCashService.rejectExpense(user.id, expenseId, user.id);
+
       setExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -653,31 +644,33 @@ const PettyCashPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
+
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Petty Cash</h1>
-            <p className="text-gray-600">Manage small-expense funds</p>
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Cash Management</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Petty Cash</h1>
+            <p className="text-[#6b5c3b]">Manage small-expense funds and replenishments.</p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={downloadExcel}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-6 py-2 rounded-lg hover:bg-[#1f2a15] transition-colors whitespace-nowrap flex items-center"
             >
               <i className="ri-file-excel-line mr-2"></i>
               Download Excel
             </button>
             <Link
               to="/accounting/petty-cash/report"
-              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap flex items-center"
+              className="border border-[#d9ceb5] text-[#2f3e1e] px-6 py-2 rounded-lg hover:bg-[#f3e7cf] transition-colors whitespace-nowrap flex items-center"
             >
               <i className="ri-file-list-2-line mr-2"></i>
               Petty Cash Report
             </Link>
             <button
               onClick={() => window.location.href = '/dashboard'}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#4b5f36] text-white px-6 py-2 rounded-lg hover:bg-[#3a4b2a] transition-colors whitespace-nowrap flex items-center"
             >
               <i className="ri-home-line mr-2"></i>
               Back to Home
@@ -687,59 +680,42 @@ const PettyCashPage: React.FC = () => {
 
         {/* Métricas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-wallet-3-line text-xl text-blue-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Funds</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  RD${getTotalFunds().toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Funds</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {funds.filter(f => f.status === 'active').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-file-list-3-line text-xl text-orange-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Expenses</p>
-                <p className="text-2xl font-bold text-gray-900">{getPendingExpenses()}</p>
+          {[
+            {
+              label: 'Total Funds',
+              value: `RD$${getTotalFunds().toLocaleString()}`,
+              icon: 'ri-wallet-3-line',
+            },
+            {
+              label: 'Active Funds',
+              value: funds.filter(f => f.status === 'active').length,
+              icon: 'ri-money-dollar-circle-line',
+            },
+            {
+              label: 'Pending Expenses',
+              value: getPendingExpenses(),
+              icon: 'ri-file-list-3-line',
+            },
+            {
+              label: 'Total Expenses',
+              value: `RD$${getTotalExpenses().toLocaleString()}`,
+              icon: 'ri-shopping-cart-line',
+            },
+          ].map((metric, idx) => (
+            <div key={metric.label} className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+              <div className="flex items-center">
+                <div className="p-2 rounded-lg bg-[#eef2ea] text-[#4b5f36]">
+                  <i className={`${metric.icon} text-xl`}></i>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-[#6b5c3b]">{metric.label}</p>
+                  <p className={`text-2xl font-bold ${idx === 1 ? 'text-[#2f3e1e]' : 'text-[#2f3e1e]'}`}>
+                    {metric.value}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <i className="ri-shopping-cart-line text-xl text-red-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Expenses</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  RD${getTotalExpenses().toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {lowBalanceFunds.length > 0 && (
@@ -980,11 +956,19 @@ const PettyCashPage: React.FC = () => {
                             <button
                               className="text-blue-600 hover:text-blue-900 mr-3"
                               onClick={() => {
-                                setSelectedExpense(expense);
-                                setShowExpenseDetailsModal(true);
+                                const details = [
+                                  `Fund: ${funds.find(f => f.id === expense.fundId)?.name || expense.fundId}`,
+                                  `Description: ${expense.description}`,
+                                  `Category: ${expense.category}`,
+                                  `Amount: RD$${expense.amount.toLocaleString()}`,
+                                  `Status: ${expense.status}`,
+                                  `Receipt: ${expense.receipt}`,
+                                  `NCF: ${expense.ncf || 'N/A'}`,
+                                ].join('\n');
+                                alert(details);
                               }}
                             >
-                              Ver
+                              View
                             </button>
                             {expense.status === 'pending' && (
                               <button
@@ -1704,7 +1688,6 @@ const PettyCashPage: React.FC = () => {
                     name="fundId"
                     required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    onChange={(e) => setSelectedReimbursementFundId(e.target.value)}
                   >
                     <option value="">Seleccionar fondo</option>
                     {funds.filter(f => f.status === 'active').map(fund => (

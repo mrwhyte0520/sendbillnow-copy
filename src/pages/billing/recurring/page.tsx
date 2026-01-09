@@ -38,7 +38,7 @@ export default function RecurringBillingPage() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading recurring billing data:', error);
-      toast.error('Error al cargar las suscripciones recurrentes');
+      toast.error('Failed to load recurring subscriptions');
     }
   };
 
@@ -61,21 +61,21 @@ export default function RecurringBillingPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Activa';
-      case 'paused': return 'Pausada';
-      case 'cancelled': return 'Cancelada';
-      case 'expired': return 'Expirada';
-      default: return 'Desconocido';
+      case 'active': return 'Active';
+      case 'paused': return 'Paused';
+      case 'cancelled': return 'Cancelled';
+      case 'expired': return 'Expired';
+      default: return 'Unknown';
     }
   };
 
   const getFrequencyText = (frequency: string) => {
     switch (frequency) {
-      case 'weekly': return 'Semanal';
-      case 'monthly': return 'Mensual';
-      case 'quarterly': return 'Trimestral';
-      case 'yearly': return 'Anual';
-      default: return 'Desconocido';
+      case 'weekly': return 'Weekly';
+      case 'monthly': return 'Monthly';
+      case 'quarterly': return 'Quarterly';
+      case 'yearly': return 'Annual';
+      default: return 'Unknown';
     }
   };
 
@@ -95,7 +95,7 @@ export default function RecurringBillingPage() {
     const details = error?.details ? String(error.details) : '';
 
     const parts = [msg, details, hint].filter(Boolean);
-    const base = parts.length > 0 ? parts.join(' | ') : 'Error desconocido';
+    const base = parts.length > 0 ? parts.join(' | ') : 'Unknown error';
     return code ? `[${code}] ${base}` : base;
   };
 
@@ -112,13 +112,14 @@ export default function RecurringBillingPage() {
     setItbisRate(18);
     setFormErrors({});
     setShowNewSubscriptionModal(true);
-    toast.info('📝 Creando nueva suscripción');
+    toast.info('📝 Creating new subscription');
   };
 
   const handleViewSubscription = (subscriptionId: string) => {
     const sub = subscriptions.find(s => s.id === subscriptionId);
     if (!sub) {
-      toast.error('No se encontró la suscripción');
+      toast.error('Subscription not found');
+
       return;
     }
 
@@ -134,7 +135,7 @@ export default function RecurringBillingPage() {
     setItbisRate(Number(sub.itbis_rate) || 18);
     setFormErrors({});
     setShowNewSubscriptionModal(true);
-    toast.info(`📋 Editando suscripción: ${sub.service_name || 'Sin nombre'}`);
+    toast.info(`📋 Editing subscription: ${sub.service_name || 'Untitled'}`);
   };
 
   const handleEditSubscription = (subscriptionId: string) => {
@@ -143,55 +144,58 @@ export default function RecurringBillingPage() {
 
   const handlePauseSubscription = async (subscriptionId: string) => {
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para pausar suscripciones');
+      toast.error('You must sign in to pause subscriptions');
       return;
     }
-    if (!confirm(`¿Pausar suscripción ${subscriptionId}?`)) return;
+    if (!confirm(`Pause subscription ${subscriptionId}?`)) return;
+
     const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'paused' });
       await loadData();
-      toast.success(`⏸️ Suscripción pausada: ${sub?.service_name || subscriptionId}`);
+      toast.success(`⏸️ Subscription paused: ${sub?.service_name || subscriptionId}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error pausing subscription:', error);
-      toast.error(`❌ Error al pausar: ${formatActionError(error)}`, { duration: 9000 });
+      toast.error(`❌ Failed to pause: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
   const handleResumeSubscription = async (subscriptionId: string) => {
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para reanudar suscripciones');
+      toast.error('You must sign in to resume subscriptions');
       return;
     }
-    if (!confirm(`¿Reanudar suscripción ${subscriptionId}?`)) return;
+    if (!confirm(`Resume subscription ${subscriptionId}?`)) return;
+
     const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'active' });
       await loadData();
-      toast.success(`▶️ Suscripción reanudada: ${sub?.service_name || subscriptionId}`);
+      toast.success(`▶️ Subscription resumed: ${sub?.service_name || subscriptionId}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error resuming subscription:', error);
-      toast.error(`❌ Error al reanudar: ${formatActionError(error)}`, { duration: 9000 });
+      toast.error(`❌ Failed to resume: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
   const handleCancelSubscription = async (subscriptionId: string) => {
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para cancelar suscripciones');
+      toast.error('You must sign in to cancel subscriptions');
       return;
     }
-    if (!confirm(`¿Cancelar suscripción ${subscriptionId}? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`Cancel subscription ${subscriptionId}? This action cannot be undone.`)) return;
+
     const sub = subscriptions.find(s => s.id === subscriptionId);
     try {
       await recurringSubscriptionsService.update(subscriptionId, { status: 'cancelled' });
       await loadData();
-      toast.success(`🚫 Suscripción cancelada: ${sub?.service_name || subscriptionId}`);
+      toast.success(`🚫 Subscription cancelled: ${sub?.service_name || subscriptionId}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error cancelling subscription:', error);
-      toast.error(`❌ Error al cancelar: ${formatActionError(error)}`, { duration: 9000 });
+      toast.error(`❌ Failed to cancel: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
@@ -199,28 +203,31 @@ export default function RecurringBillingPage() {
     const sub = subscriptions.find(s => s.id === subscriptionId);
     if (!sub) return;
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para generar facturas');
+      toast.error('You must sign in to generate invoices');
       return;
     }
     if (!sub.customer_id) {
-      toast.error('La suscripción no tiene un cliente válido');
+      toast.error('Subscription is missing a valid customer');
       return;
     }
 
-    if (!confirm(`¿Generar factura para suscripción ${subscriptionId}?`)) return;
+    if (!confirm(`Generate an invoice for subscription ${subscriptionId}?`)) return;
 
     try {
-      const loadingId = toast.loading('Generando factura...');
+      const loadingId = toast.loading('Creating invoice...');
+
       const today = new Date().toISOString().slice(0, 10);
       const amt = Number(sub.amount) || 0;
 
-      // Calcular ITBIS si aplica
+      // Calculate ITBIS if applicable
+
       const subApplyItbis = sub.apply_itbis !== false;
       const subItbisRate = Number(sub.itbis_rate) || 18;
       const taxAmount = subApplyItbis ? Number((amt * subItbisRate / 100).toFixed(2)) : 0;
       const totalAmount = Number((amt + taxAmount).toFixed(2));
 
-      // Generar número de factura único
+      // Generate a unique invoice number
+
       const invoiceNumber = `REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
 
       const invoicePayload = {
@@ -234,12 +241,13 @@ export default function RecurringBillingPage() {
         total_amount: totalAmount,
         paid_amount: 0,
         status: 'pending',
-        notes: `Factura recurrente - Suscripción ID: ${sub.id} | ${sub.service_name || 'Servicio'}`,
+        notes: `Recurring invoice - Subscription ID: ${sub.id} | ${sub.service_name || 'Service'}`,
       };
 
       const linesPayload = [
         {
-          description: sub.service_name || 'Servicio recurrente',
+          description: sub.service_name || 'Recurring service',
+
           quantity: 1,
           unit_price: amt,
           line_total: amt,
@@ -249,7 +257,8 @@ export default function RecurringBillingPage() {
 
       const { invoice } = await invoicesService.create(user.id, invoicePayload, linesPayload);
 
-      // Avanzar próxima fecha
+      // Move to the next billing date
+
       let nextDate: string | null = null;
       const billingDate = sub.next_billing_date as string;
       if (billingDate) {
@@ -269,80 +278,83 @@ export default function RecurringBillingPage() {
 
       await loadData();
       toast.dismiss(loadingId);
-      toast.success(`✅ Factura generada: ${invoiceNumber}${taxAmount > 0 ? ` (incluye ITBIS: RD$ ${taxAmount.toLocaleString()})` : ''}`);
+      toast.success(`✅ Invoice generated: ${invoiceNumber}${taxAmount > 0 ? ` (includes ITBIS: RD$ ${taxAmount.toLocaleString()})` : ''}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating invoice for subscription:', error);
-      toast.error(`❌ No se pudo generar la factura: ${formatActionError(error)}`, { duration: 9000 });
+      toast.error(`❌ Invoice could not be generated: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
   const handleViewInvoices = async (subscriptionId: string) => {
     const sub = subscriptions.find(s => s.id === subscriptionId);
     if (!sub) {
-      toast.error('No se encontró la suscripción');
+      toast.error('Subscription not found');
       return;
     }
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para ver facturas');
+      toast.error('You must sign in to view invoices');
       return;
     }
-
     if (!sub.customer_id) {
-      toast.error('La suscripción no tiene un cliente válido');
+      toast.error('Subscription is missing a valid customer');
       return;
     }
 
     try {
-      const loadingId = toast.loading('Buscando facturas...');
+      const loadingId = toast.loading('Searching invoices...');
+
       const allInvoices = await invoicesService.getAll(user.id);
       const customerInvoices = allInvoices.filter((inv: any) => inv.customer_id === sub.customer_id);
 
       if (customerInvoices.length === 0) {
         toast.dismiss(loadingId);
-        toast.info('No hay facturas registradas para esta suscripción (cliente)');
+        toast.info('No invoices exist for this subscription (customer)');
         return;
       }
 
       const total = customerInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
       toast.dismiss(loadingId);
-      toast.info(`Facturas para este cliente/suscripción: ${customerInvoices.length} | Total: RD$ ${total.toLocaleString()}`);
+      toast.info(`Invoices for this customer/subscription: ${customerInvoices.length} | Total: RD$ ${total.toLocaleString()}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error loading invoices for subscription:', error);
-      toast.error(`❌ No se pudieron cargar las facturas: ${formatActionError(error)}`, { duration: 9000 });
+      toast.error(`❌ Invoices could not be loaded: ${formatActionError(error)}`, { duration: 9000 });
     }
   };
 
   const handleProcessPendingBilling = async () => {
     if (!user?.id) {
-      toast.error('Debes iniciar sesión para procesar facturaciones');
+      toast.error('You must sign in to process billing runs');
       return;
     }
-    if (!confirm('¿Procesar todas las facturaciones pendientes?')) return;
+    if (!confirm('Process all pending recurring invoices now?')) return;
+
     try {
       const result = await recurringSubscriptionsService.processPending(user.id);
       await loadData();
 
-      // Mostrar resultados detallados
+      // Show detailed results
+
       if (result.errors && result.errors.length > 0) {
-        // Si hay errores, mostrarlos
+        // Surface errors if any
+
         result.errors.forEach((err: string) => {
           toast.error(err, { duration: 8000 });
         });
       }
 
       if (result.processed > 0) {
-        toast.success(`✅ Facturas generadas: ${result.processed}`);
+        toast.success(`✅ Invoices generated: ${result.processed}`);
       } else if (result.skipped > 0) {
-        toast.info(`ℹ️ Suscripciones omitidas: ${result.skipped} (ya facturadas o expiradas)`);
+        toast.info(`ℹ️ Subscriptions skipped: ${result.skipped} (already billed or expired)`);
       } else if (result.errors.length === 0) {
-        toast.info('No hay suscripciones pendientes de facturar');
+        toast.info('No subscriptions are pending billing');
       }
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error processing pending recurring billing:', error);
-      toast.error(error?.message || 'Error al procesar las facturaciones pendientes');
+      toast.error(error?.message || 'Failed to process pending recurring billing');
     }
   };
 
@@ -350,84 +362,85 @@ export default function RecurringBillingPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-[#F7F1E3] border border-[#E4DAC7] rounded-2xl p-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Facturación Recurrente</h1>
-            <p className="text-gray-600">Gestión de suscripciones y facturación automática</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-[#6A7458]">Recurring Suite</p>
+            <h1 className="text-3xl font-semibold text-[#2F3E2C]">Recurring Billing</h1>
+            <p className="text-[#4B5640]">Manage subscriptions, automate invoices, and keep revenue steady.</p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={handleProcessPendingBilling}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#3E4B31] text-[#F7F1E3] rounded-lg hover:bg-[#2f3a28] transition-colors whitespace-nowrap flex items-center shadow-sm"
             >
               <i className="ri-refresh-line mr-2"></i>
-              Procesar Pendientes
+              Process Pending
             </button>
             <button
               onClick={handleCreateSubscription}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#FDFBF6] text-[#2F3E2C] border border-[#2F3E2C] rounded-lg hover:bg-[#F2E9D7] transition-colors whitespace-nowrap flex items-center shadow-sm"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Suscripción
+              New Subscription
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Suscripciones Activas</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm font-medium text-[#6B6A5E]">Active Subscriptions</p>
+                <p className="text-3xl font-semibold text-[#2F3E2C] mt-1">
                   {subscriptions.filter(s => s.status === 'active').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#DCE4C9] text-[#2F3E2C]">
+                <i className="ri-check-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Ingresos Mensuales</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm font-medium text-[#6B6A5E]">Monthly Revenue</p>
+                <p className="text-3xl font-semibold text-[#2F3E2C] mt-1">
                   RD$ {subscriptions
                     .filter(s => s.status === 'active' && s.frequency === 'monthly')
                     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
                     .toLocaleString()}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#E0E5D4] text-[#2F3E2C]">
+                <i className="ri-money-dollar-circle-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Próximas Facturas</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-sm font-medium text-[#6B6A5E]">Upcoming Invoices</p>
+                <p className="text-3xl font-semibold text-[#2F3E2C] mt-1">
                   {subscriptions.filter(s => s.status === 'active' && s.next_billing_date).length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-100">
-                <i className="ri-calendar-line text-xl text-yellow-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#EDE3C9] text-[#6A5A38]">
+                <i className="ri-calendar-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Suscripciones</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{subscriptions.length}</p>
+                <p className="text-sm font-medium text-[#6B6A5E]">Total Subscriptions</p>
+                <p className="text-3xl font-semibold text-[#2F3E2C] mt-1">{subscriptions.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
-                <i className="ri-repeat-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#E5DCDA] text-[#5B4A47]">
+                <i className="ri-repeat-line text-xl"></i>
               </div>
             </div>
           </div>
@@ -437,11 +450,11 @@ export default function RecurringBillingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por cliente, servicio o ID..."
+                  placeholder="Search by customer, service or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -450,17 +463,17 @@ export default function RecurringBillingPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
               >
-                <option value="all">Todos los estados</option>
-                <option value="active">Activas</option>
-                <option value="paused">Pausadas</option>
-                <option value="cancelled">Canceladas</option>
-                <option value="expired">Expiradas</option>
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="expired">Expired</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -472,7 +485,7 @@ export default function RecurringBillingPage() {
                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
               >
                 <i className="ri-refresh-line mr-2"></i>
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
@@ -482,9 +495,10 @@ export default function RecurringBillingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              Suscripciones ({filteredSubscriptions.length})
+              Subscriptions ({filteredSubscriptions.length})
             </h3>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -493,26 +507,27 @@ export default function RecurringBillingPage() {
                     ID
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Servicio
+                    Service
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Frecuencia
+                    Frequency
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Próxima Factura
+                    Next Invoice
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -556,22 +571,22 @@ export default function RecurringBillingPage() {
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewSubscription(subscription.id)}
-                          className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Ver suscripción"
+                          className="text-[#2F3E2C] hover:text-[#3E4B31] p-1"
+                          title="View subscription"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         <button
                           onClick={() => handleEditSubscription(subscription.id)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Editar suscripción"
+                          className="text-[#3E4B31] hover:text-[#2F3E2C] p-1"
+                          title="Edit subscription"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => handleViewInvoices(subscription.id)}
-                          className="text-purple-600 hover:text-purple-900 p-1"
-                          title="Ver facturas"
+                          className="text-[#6A5A38] hover:text-[#4B3F2A] p-1"
+                          title="View invoices"
                         >
                           <i className="ri-file-list-line"></i>
                         </button>
@@ -579,15 +594,15 @@ export default function RecurringBillingPage() {
                           <>
                             <button
                               onClick={() => handleGenerateInvoice(subscription.id)}
-                              className="text-green-600 hover:text-green-900 p-1"
-                              title="Generar factura"
+                              className="text-[#3E4B31] hover:text-[#2F3E2C] p-1"
+                              title="Generate invoice"
                             >
                               <i className="ri-file-add-line"></i>
                             </button>
                             <button
                               onClick={() => handlePauseSubscription(subscription.id)}
-                              className="text-yellow-600 hover:text-yellow-900 p-1"
-                              title="Pausar suscripción"
+                              className="text-[#B2822D] hover:text-[#8C6420] p-1"
+                              title="Pause subscription"
                             >
                               <i className="ri-pause-line"></i>
                             </button>
@@ -596,8 +611,8 @@ export default function RecurringBillingPage() {
                         {subscription.status === 'paused' && (
                           <button
                             onClick={() => handleResumeSubscription(subscription.id)}
-                            className="text-green-600 hover:text-green-900 p-1"
-                            title="Reanudar suscripción"
+                            className="text-[#3E4B31] hover:text-[#2F3E2C] p-1"
+                            title="Resume subscription"
                           >
                             <i className="ri-play-line"></i>
                           </button>
@@ -605,8 +620,8 @@ export default function RecurringBillingPage() {
                         {subscription.status !== 'cancelled' && (
                           <button
                             onClick={() => handleCancelSubscription(subscription.id)}
-                            className="text-red-600 hover:text-red-900 p-1"
-                            title="Cancelar suscripción"
+                            className="text-[#8F2F2F] hover:text-[#6C1F1F] p-1"
+                            title="Cancel subscription"
                           >
                             <i className="ri-close-line"></i>
                           </button>
@@ -627,7 +642,7 @@ export default function RecurringBillingPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Nueva Suscripción</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">New Subscription</h3>
                   <button
                     onClick={() => setShowNewSubscriptionModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -639,13 +654,13 @@ export default function RecurringBillingPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
                     <select
                       value={selectedCustomerId}
                       onChange={(e) => setSelectedCustomerId(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Seleccionar cliente...</option>
+                      <option value="">Select customer...</option>
                       {customers.map((customer) => (
                         <option key={customer.id} value={customer.id}>{customer.name}</option>
                       ))}
@@ -655,12 +670,12 @@ export default function RecurringBillingPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Servicio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Service</label>
                     <input
                       type="text"
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
-                      placeholder="Nombre del servicio"
+                      placeholder="Service name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     {formErrors.service && (
@@ -668,7 +683,7 @@ export default function RecurringBillingPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
                     <input
                       type="number" min="0"
                       value={amount === '' ? '' : amount}
@@ -681,24 +696,24 @@ export default function RecurringBillingPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Frecuencia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Frequency</label>
                     <select
                       value={frequency}
                       onChange={(e) => setFrequency(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Seleccionar frecuencia...</option>
-                      <option value="weekly">Semanal</option>
-                      <option value="monthly">Mensual</option>
-                      <option value="quarterly">Trimestral</option>
-                      <option value="yearly">Anual</option>
+                      <option value="">Select frequency...</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Annual</option>
                     </select>
                     {formErrors.frequency && (
                       <p className="mt-1 text-xs text-red-600">{formErrors.frequency}</p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Inicio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <input
                       type="date"
                       value={startDate}
@@ -710,7 +725,7 @@ export default function RecurringBillingPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Fin (Opcional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
                     <input
                       type="date"
                       value={endDate}
@@ -721,19 +736,19 @@ export default function RecurringBillingPage() {
                 </div>
                 
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripción del Servicio</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Description</label>
                   <textarea
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción detallada del servicio..."
+                    placeholder="Detailed description of the service..."
                   ></textarea>
                 </div>
 
-                {/* Configuración de ITBIS */}
+                {/* Tax Settings */}
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Configuración de Impuestos</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Tax Settings</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center">
                       <input
@@ -744,12 +759,12 @@ export default function RecurringBillingPage() {
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <label htmlFor="applyItbis" className="ml-2 text-sm text-gray-700">
-                        Aplicar ITBIS automáticamente
+                        Apply ITBIS automatically
                       </label>
                     </div>
                     {applyItbis && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Tasa ITBIS (%)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ITBIS Rate (%)</label>
                         <input
                           type="number"
                           min="0"
@@ -764,7 +779,7 @@ export default function RecurringBillingPage() {
                   </div>
                   {applyItbis && amount !== '' && Number(amount) > 0 && (
                     <div className="mt-3 text-sm text-gray-600">
-                      <span className="font-medium">Vista previa:</span> Monto: RD$ {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%): RD$ {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900">RD$ {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
+                      <span className="font-medium">Preview:</span> Amount: RD$ {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%): RD$ {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900">RD$ {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
@@ -774,21 +789,21 @@ export default function RecurringBillingPage() {
                   onClick={() => setShowNewSubscriptionModal(false)}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   onClick={async () => {
                     if (!user?.id) {
-                      toast.error('Debes iniciar sesión para crear suscripciones');
+                      toast.error('You must sign in to create subscriptions');
                       return;
                     }
 
                     const errors: typeof formErrors = {};
-                    if (!selectedCustomerId) errors.customer = 'Selecciona un cliente';
-                    if (!serviceName.trim()) errors.service = 'Ingresa el nombre del servicio';
-                    if (amount === '' || Number(amount) <= 0) errors.amount = 'Ingresa un monto mayor que 0';
-                    if (!frequency) errors.frequency = 'Selecciona la frecuencia';
-                    if (!startDate) errors.startDate = 'Selecciona la fecha de inicio';
+                    if (!selectedCustomerId) errors.customer = 'Select a customer';
+                    if (!serviceName.trim()) errors.service = 'Enter a service name';
+                    if (amount === '' || Number(amount) <= 0) errors.amount = 'Enter an amount greater than 0';
+                    if (!frequency) errors.frequency = 'Select a frequency';
+                    if (!startDate) errors.startDate = 'Select the start date';
 
                     setFormErrors(errors);
                     if (Object.keys(errors).length > 0) return;
@@ -824,16 +839,16 @@ export default function RecurringBillingPage() {
 
                       await loadData();
                       setShowNewSubscriptionModal(false);
-                      toast.success(editingSubscriptionId ? 'Suscripción actualizada correctamente' : 'Suscripción creada correctamente');
+                      toast.success(editingSubscriptionId ? 'Subscription updated successfully' : 'Subscription created successfully');
                     } catch (err) {
                       // eslint-disable-next-line no-console
                       console.error('Error saving subscription:', err);
-                      toast.error('Error al guardar la suscripción');
+                      toast.error('Subscription could not be saved');
                     }
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
                 >
-                  {editingSubscriptionId ? 'Guardar Cambios' : 'Crear Suscripción'}
+                  {editingSubscriptionId ? 'Save Changes' : 'Create Subscription'}
                 </button>
               </div>
             </div>

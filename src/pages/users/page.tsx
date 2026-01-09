@@ -15,21 +15,21 @@ const APP_MODULES = [
 ];
 
 const MODULE_LABELS: Record<string, string> = {
-  dashboard: 'Panel',
-  accounting: 'Contabilidad',
-  'banks-module': 'Bancos',
-  pos: 'Punto de venta',
-  sales: 'Ventas',
-  products: 'Productos',
-  inventory: 'Inventario',
-  'fixed-assets': 'Activos fijos',
-  'accounts-receivable': 'Cuentas por cobrar',
-  'accounts-payable': 'Cuentas por pagar',
-  billing: 'Facturación',
-  taxes: 'Impuestos',
-  plans: 'Planes',
-  customers: 'Clientes',
-  users: 'Usuarios',
+  dashboard: 'Dashboard',
+  accounting: 'Accounting',
+  'banks-module': 'Banks',
+  pos: 'Point of Sale',
+  sales: 'Sales',
+  products: 'Products',
+  inventory: 'Inventory',
+  'fixed-assets': 'Fixed Assets',
+  'accounts-receivable': 'Accounts Receivable',
+  'accounts-payable': 'Accounts Payable',
+  billing: 'Billing',
+  taxes: 'Taxes',
+  plans: 'Plans',
+  customers: 'Customers',
+  users: 'Users',
 };
 
 export default function UsersPage() {
@@ -66,11 +66,11 @@ export default function UsersPage() {
     if (!email || !newUserPassword || !newUserRoleId) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      alert('Email inválido. Verifique el formato (ej. usuario@correo.com).');
+      alert('Invalid email. Check the format (e.g. user@email.com).');
       return;
     }
     if (newUserPassword.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres');
+      alert('Password must be at least 6 characters long');
       return;
     }
     try {
@@ -93,7 +93,7 @@ export default function UsersPage() {
           .maybeSingle();
 
         if (ownerCheck) {
-          alert('Este usuario ya es propietario de otro tenant y no puede ser agregado como subusuario.');
+          alert('This user already owns another tenant and cannot be added as a sub-user.');
           return;
         }
 
@@ -107,7 +107,7 @@ export default function UsersPage() {
         setNewUserPassword('');
         setNewUserRoleId('');
         await load();
-        alert('Usuario existente agregado como subusuario correctamente.');
+        alert('Existing user added as a sub-user successfully.');
         return;
       }
 
@@ -118,8 +118,8 @@ export default function UsersPage() {
       });
 
       if (error) {
-        console.error('Error al crear usuario:', error);
-        alert(error.message || 'Error al crear usuario');
+        console.error('Error creating user:', error);
+        alert(error.message || 'Error creating user');
         return;
       }
 
@@ -141,7 +141,7 @@ export default function UsersPage() {
       setNewUserPassword('');
       setNewUserRoleId('');
       await load();
-      alert('Usuario creado correctamente. Verifique el correo para activar su cuenta si es necesario.');
+      alert('User created successfully. Please check their email to activate the account if necessary.');
     } finally {
       setCreatingUser(false);
     }
@@ -265,7 +265,10 @@ export default function UsersPage() {
   };
 
   const addRole = async () => {
-    if (!newRoleName.trim()) return;
+    if (!newRoleName.trim()) {
+      alert('Role name is required');
+      return;
+    }
     if (user?.id) {
       try {
         const { data } = await supabase
@@ -286,7 +289,7 @@ export default function UsersPage() {
   };
 
   const deleteRole = async (roleId: string) => {
-    if (!confirm('¿Eliminar rol?')) return;
+    if (!confirm('Delete this role?')) return;
     if (user?.id) {
       try {
         await supabase
@@ -358,31 +361,31 @@ export default function UsersPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-[#F8F3E7] min-h-full">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Usuarios y Roles</h1>
-            <p className="text-gray-600">Gestiona roles y permisos por módulo</p>
+            <h1 className="text-2xl font-bold text-[#1F2618]">Users & Roles</h1>
+            <p className="text-[#5B6844]">Manage roles and permissions per module</p>
           </div>
         </div>
 
         {/* Roles */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
           <div className="flex flex-col md:flex-row md:items-end gap-3">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Rol</label>
-              <input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full p-2 border rounded" placeholder="Ej. Supervisor" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
+              <input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Ex. Supervisor" />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-              <input value={newRoleDesc} onChange={e => setNewRoleDesc(e.target.value)} className="w-full p-2 border rounded" placeholder="Opcional" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <input value={newRoleDesc} onChange={e => setNewRoleDesc(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Optional" />
             </div>
             <button 
               onClick={addRole} 
               disabled={!isOwner}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#566738]/30"
             >
-              Crear Rol
+              Create Role
             </button>
           </div>
 
@@ -390,8 +393,8 @@ export default function UsersPage() {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permisos por módulo</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permissions by module</th>
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
@@ -429,25 +432,25 @@ export default function UsersPage() {
                         disabled={!isOwner}
                         className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Eliminar
+                        Delete
                       </button>
                     </td>
                   </tr>
                 ))}
                 {roles.length === 0 && (
-                  <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">No hay roles</td></tr>
+                  <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">No roles yet</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Crear Usuario */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        {/* Create User */}
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Crear Usuario</h3>
+            <h3 className="text-lg font-semibold">Create User</h3>
             {!isOwner && (
-              <span className="text-xs text-gray-500">Solo el usuario principal puede crear usuarios</span>
+              <span className="text-xs text-gray-500">Only the primary account owner can create users</span>
             )}
           </div>
           <div className="flex flex-col md:flex-row gap-3 md:items-end">
@@ -458,30 +461,30 @@ export default function UsersPage() {
                 value={newUserEmail}
                 onChange={e => setNewUserEmail(e.target.value)}
                 disabled={!isOwner}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="usuario@gmail.com"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
                 type="password"
                 value={newUserPassword}
                 onChange={e => setNewUserPassword(e.target.value)}
                 disabled={!isOwner}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="Mínimo 6 caracteres"
+                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="At least 6 characters"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
               <select
                 value={newUserRoleId}
                 onChange={e => setNewUserRoleId(e.target.value)}
                 disabled={!isOwner}
-                className="w-full p-2 border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                <option value="">Seleccionar...</option>
+                <option value="">Select…</option>
                 {roles.map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
@@ -490,24 +493,24 @@ export default function UsersPage() {
             <button
               onClick={createUser}
               disabled={!isOwner || creatingUser || !newUserEmail || !newUserPassword || !newUserRoleId}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[#3E4D2C] text-white rounded-lg hover:bg-[#2D3A1C] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#3E4D2C]/30"
             >
-              {creatingUser ? 'Creando…' : 'Crear Usuario'}
+              {creatingUser ? 'Creating…' : 'Create User'}
             </button>
           </div>
         </div>
 
-        {/* Usuarios con roles asignados */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold mb-4">Usuarios con Roles Asignados</h3>
+        {/* Users with assigned roles */}
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+          <h3 className="text-lg font-semibold mb-4">Users with Assigned Roles</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rol</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -523,7 +526,7 @@ export default function UsersPage() {
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         u.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {u.status === 'active' ? 'Activo' : 'Inactivo'}
+                        {u.status === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -537,21 +540,21 @@ export default function UsersPage() {
                               : 'bg-green-600 text-white hover:bg-green-700'
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                          {u.status === 'active' ? 'Desactivar' : 'Activar'}
+                          {u.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
                           onClick={() => deleteUser(u.id, u.user_role_id)}
                           disabled={!isOwner}
                           className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Eliminar
+                          Delete
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {usersWithRoles.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">Sin usuarios asignados</td></tr>
+                  <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">No users assigned</td></tr>
                 )}
               </tbody>
             </table>

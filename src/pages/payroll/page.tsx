@@ -69,6 +69,17 @@ interface PayrollEntry {
   status: 'draft' | 'approved' | 'paid';
 }
 
+const palette = {
+  background: 'bg-[#f8f4ec]',
+  card: 'bg-white/90 border border-[#e0d7c9] shadow-sm',
+  heading: 'text-[#233022]',
+  subheading: 'text-[#5b5a50]',
+  accentIcon: 'bg-[#e4dac8] text-[#455139]',
+  primaryButton: 'bg-[#4b5b3f] text-white hover:bg-[#3c4a30]',
+  secondaryButton: 'bg-[#d8ccb6] text-[#2f2a1f] hover:bg-[#c9bca3]',
+  outlineButton: 'border border-[#c6b9a2] text-[#2f2a1f] hover:bg-[#efe6d8]',
+};
+
 export default function PayrollPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -648,75 +659,62 @@ export default function PayrollPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Dashboard de Nómina</h2>
-            <p className="text-gray-600">Resumen general del sistema de nómina</p>
+            <h2 className={`text-2xl font-bold ${palette.heading}`}>Payroll Dashboard</h2>
+            <p className={`${palette.subheading}`}>High-level overview of your payroll activity</p>
           </div>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/dashboard')}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors ${palette.outlineButton}`}
           >
             <i className="ri-arrow-left-line"></i>
-            <span>Volver al Inicio</span>
+            <span>Back to Home</span>
           </button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100">
-                <i className="ri-user-line text-2xl text-blue-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Empleados</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalEmployees}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-green-100">
-                <i className="ri-user-check-line text-2xl text-green-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Empleados Activos</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activeEmployees}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-yellow-100">
-                <i className="ri-money-dollar-circle-line text-2xl text-yellow-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Nómina Total</p>
-                <p className="text-2xl font-semibold text-gray-900">{formatMoney(stats.totalSalaries, 'RD$')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-purple-100">
-                <i className="ri-calculator-line text-2xl text-purple-600"></i>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Salario Promedio</p>
-                <p className="text-2xl font-semibold text-gray-900">{formatMoney(Math.round(stats.avgSalary), 'RD$')}</p>
+          {[
+            {
+              label: 'Total Employees',
+              value: stats.totalEmployees,
+              icon: 'ri-user-line',
+            },
+            {
+              label: 'Active Employees',
+              value: stats.activeEmployees,
+              icon: 'ri-user-check-line',
+            },
+            {
+              label: 'Total Payroll',
+              value: formatMoney(stats.totalSalaries, 'RD$'),
+              icon: 'ri-money-dollar-circle-line',
+            },
+            {
+              label: 'Average Salary',
+              value: formatMoney(Math.round(stats.avgSalary), 'RD$'),
+              icon: 'ri-calculator-line',
+            },
+          ].map((card) => (
+            <div key={card.label} className={`${palette.card} rounded-xl p-6`}>
+              <div className="flex items-center">
+                <div className={`p-3 rounded-full ${palette.accentIcon}`}>
+                  <i className={`${card.icon} text-2xl`}></i>
+                </div>
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${palette.subheading}`}>{card.label}</p>
+                  <p className={`text-2xl font-semibold ${palette.heading}`}>{card.value}</p>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Departamentos */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Empleados por Departamento</h3>
+          {/* Departments */}
+          <div className={`${palette.card} rounded-xl`}>
+            <div className="p-6 border-b border-[#e7decd]">
+              <h3 className={`text-lg font-semibold ${palette.heading}`}>Employees by Department</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
@@ -726,12 +724,12 @@ export default function PayrollPage() {
                   return (
                     <div key={dept.id} className="flex justify-between items-center">
                       <div>
-                        <p className="font-medium text-gray-900">{dept.name}</p>
-                        <p className="text-sm text-gray-500">{deptEmployees.length} empleados</p>
+                        <p className={`font-medium ${palette.heading}`}>{dept.name}</p>
+                        <p className={`text-sm ${palette.subheading}`}>{deptEmployees.length} employees</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-gray-900">{formatMoney(deptSalaries, 'RD$')}</p>
-                        <p className="text-sm text-gray-500">Nómina mensual</p>
+                        <p className={`font-medium ${palette.heading}`}>{formatMoney(deptSalaries, 'RD$')}</p>
+                        <p className={`text-sm ${palette.subheading}`}>Monthly payroll</p>
                       </div>
                     </div>
                   );
@@ -740,31 +738,38 @@ export default function PayrollPage() {
             </div>
           </div>
 
-          {/* Períodos Recientes */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Períodos de Nómina Recientes</h3>
+          {/* Recent Periods */}
+          <div className={`${palette.card} rounded-xl`}>
+            <div className="p-6 border-b border-[#e7decd]">
+              <h3 className={`text-lg font-semibold ${palette.heading}`}>Recent Payroll Periods</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {payrollPeriods.slice(0, 5).map(period => (
                   <div key={period.id} className="flex justify-between items-center">
                     <div>
-                      <p className="font-medium text-gray-900">{period.period_name}</p>
-                      <p className="text-sm text-gray-500">{period.employee_count} empleados</p>
+                      <p className={`font-medium ${palette.heading}`}>{period.period_name}</p>
+                      <p className={`text-sm ${palette.subheading}`}>{period.employee_count} employees</p>
                     </div>
                     <div className="text-right">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        period.status === 'paid' ? 'bg-green-100 text-green-800' :
-                        period.status === 'closed' ? 'bg-blue-100 text-blue-800' :
-                        period.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
+                        period.status === 'paid'
+                          ? 'bg-green-100 text-green-900'
+                          : period.status === 'closed'
+                          ? 'bg-[#d7ccb6] text-[#2f2a1f]'
+                          : period.status === 'processing'
+                          ? 'bg-yellow-100 text-yellow-900'
+                          : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {period.status === 'paid' ? 'Pagado' :
-                         period.status === 'closed' ? 'Cerrado' :
-                         period.status === 'processing' ? 'Procesando' : 'Abierto'}
+                        {period.status === 'paid'
+                          ? 'Paid'
+                          : period.status === 'closed'
+                          ? 'Closed'
+                          : period.status === 'processing'
+                          ? 'Processing'
+                          : 'Open'}
                       </span>
-                      <p className="text-sm text-gray-500 mt-1">{formatMoney(period.total_net, 'RD$')}</p>
+                      <p className={`text-sm mt-1 ${palette.subheading}`}>{formatMoney(period.total_net, 'RD$')}</p>
                     </div>
                   </div>
                 ))}
@@ -774,36 +779,40 @@ export default function PayrollPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+        <div className={`${palette.card} rounded-xl p-6`}>
+          <h3 className={`text-lg font-semibold mb-4 ${palette.heading}`}>Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => handleOpenModal('employee')}
-              className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors ${palette.primaryButton}`}
             >
               <i className="ri-user-add-line"></i>
-              <span>Agregar Empleado</span>
+              <span>Add Employee</span>
             </button>
             <button
               onClick={() => handleOpenModal('payroll-period')}
-              className="flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors"
+              className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors ${palette.secondaryButton}`}
             >
               <i className="ri-calendar-line"></i>
-              <span>Nuevo Período</span>
+              <span>New Period</span>
             </button>
             <button
-              onClick={() => exportToExcel(employees.map(emp => ({
-                Código: emp.employee_code,
-                Nombre: `${emp.first_name} ${emp.last_name}`,
-                Departamento: getDepartmentName(emp.department_id),
-                Posición: getPositionTitle(emp.position_id),
-                Salario: emp.salary,
-                Estado: emp.status
-              })), 'empleados', 'Reporte de Empleados')}
-              className="flex items-center justify-center space-x-2 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+              onClick={() => exportToExcel(
+                employees.map(emp => ({
+                  Código: emp.employee_code,
+                  Nombre: `${emp.first_name} ${emp.last_name}`,
+                  Departamento: getDepartmentName(emp.department_id),
+                  Posición: getPositionTitle(emp.position_id),
+                  Salario: emp.salary,
+                  Estado: emp.status
+                })),
+                'empleados',
+                'Reporte de Empleados'
+              )}
+              className="flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-white transition-colors bg-[#704f98] hover:bg-[#5b3f7a]"
             >
               <i className="ri-download-line"></i>
-              <span>Exportar Empleados</span>
+              <span>Export Employees</span>
             </button>
           </div>
         </div>
@@ -815,35 +824,35 @@ export default function PayrollPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Gestión de Empleados</h3>
+        <h3 className={`text-lg font-semibold ${palette.heading}`}>Employee Management</h3>
         <button
           onClick={() => handleOpenModal('employee')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className={`${palette.primaryButton} px-4 py-2 rounded-lg transition-colors whitespace-nowrap`}
         >
           <i className="ri-add-line mr-2"></i>
-          Agregar Empleado
+          Add Employee
         </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className={`${palette.card} rounded-xl p-4`}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <input
               type="text"
-              placeholder="Buscar empleados..."
+              placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#d9cfbf] rounded-lg focus:ring-2 focus:ring-[#4b5b3f] focus:border-transparent bg-white/70"
             />
           </div>
           <div>
             <select
               value={filterDepartment}
               onChange={(e) => setFilterDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#d9cfbf] rounded-lg focus:ring-2 focus:ring-[#4b5b3f] focus:border-transparent bg-white/70"
             >
-              <option value="">Todos los departamentos</option>
+              <option value="">All departments</option>
               {departments.map(dept => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
@@ -853,56 +862,56 @@ export default function PayrollPage() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-[#d9cfbf] rounded-lg focus:ring-2 focus:ring-[#4b5b3f] focus:border-transparent bg-white/70"
             >
-              <option value="">Todos los estados</option>
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
           <div className="flex space-x-2">
             <button
               onClick={() => exportToExcel(filteredEmployees.map(emp => ({
-                Código: emp.employee_code,
-                Nombre: `${emp.first_name} ${emp.last_name}`,
+                Code: emp.employee_code,
+                Name: `${emp.first_name} ${emp.last_name}`,
                 Email: emp.email,
-                Teléfono: emp.phone,
-                Departamento: getDepartmentName(emp.department_id),
-                Posición: getPositionTitle(emp.position_id),
-                Salario: emp.salary,
-                'Fecha Contratación': emp.hire_date,
-                Estado: emp.status
-              })), 'empleados_filtrados', 'Empleados (Filtros Aplicados)')}
-              className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                Phone: emp.phone,
+                Department: getDepartmentName(emp.department_id),
+                Position: getPositionTitle(emp.position_id),
+                Salary: emp.salary,
+                'Hire Date': emp.hire_date,
+                Status: emp.status
+              })), 'employees_filtered', 'Employees (Filtered)')}
+              className={`${palette.secondaryButton} px-3 py-2 rounded-lg transition-colors whitespace-nowrap`}
             >
               <i className="ri-download-line"></i>
             </button>
           </div>
         </div>
-        <div className="mt-4 text-sm text-gray-600">
-          Mostrando {filteredEmployees.length} de {employees.length} empleados
+        <div className={`mt-4 text-sm ${palette.subheading}`}>
+          Showing {filteredEmployees.length} of {employees.length} employees
         </div>
       </div>
 
       {/* Bulk Actions */}
       {selectedEmployees.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-[#eef2e7] border border-[#c0c9b6] rounded-lg p-4">
           <div className="flex items-center justify-between">
-            <span className="text-blue-800 font-medium">
-              {selectedEmployees.length} empleado(s) seleccionado(s)
+            <span className="text-[#2f2a1f] font-medium">
+              {selectedEmployees.length} employee(s) selected
             </span>
             <div className="flex space-x-2">
               <button
                 onClick={() => handleBulkAction('activate')}
-                className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                className="bg-[#4b5b3f] text-white px-3 py-1 rounded text-sm hover:bg-[#3c4a30] transition-colors"
               >
-                Activar
+                Activate
               </button>
               <button
                 onClick={() => handleBulkAction('deactivate')}
-                className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 transition-colors"
+                className="bg-[#c48f31] text-white px-3 py-1 rounded text-sm hover:bg-[#a57422] transition-colors"
               >
-                Desactivar
+                Deactivate
               </button>
             </div>
           </div>
@@ -910,10 +919,10 @@ export default function PayrollPage() {
       )}
 
       {/* Employees Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className={`${palette.card} rounded-xl overflow-hidden`}>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#e8ded0]">
+            <thead className="bg-[#f4ede0]">
               <tr>
                 <th className="px-6 py-3 text-left">
                   <input
@@ -929,19 +938,19 @@ export default function PayrollPage() {
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posición</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salario</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Code</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Employee</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Position</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Salary</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/80 divide-y divide-[#eee5d7]">
               {filteredEmployees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50">
+                <tr key={employee.id} className="hover:bg-[#f8f3ea] transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -956,30 +965,30 @@ export default function PayrollPage() {
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2f2a1f]">
                     {employee.employee_code}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className={`text-sm font-medium ${palette.heading}`}>
                         {employee.first_name} {employee.last_name}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        Contratado: {new Date(employee.hire_date).toLocaleDateString('es-DO')}
+                      <div className={`text-sm ${palette.subheading}`}>
+                        Hired: {new Date(employee.hire_date).toLocaleDateString('en-US')}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{employee.email}</div>
-                    <div className="text-sm text-gray-500">{employee.phone}</div>
+                    <div className={`text-sm ${palette.heading}`}>{employee.email}</div>
+                    <div className={`text-sm ${palette.subheading}`}>{employee.phone}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.subheading}`}>
                     {getDepartmentName(employee.department_id)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.subheading}`}>
                     {getPositionTitle(employee.position_id)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.heading}`}>
                     {formatMoney(employee.salary, 'RD$')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -1017,13 +1026,13 @@ export default function PayrollPage() {
   const renderDepartments = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Departamentos</h3>
+        <h3 className={`text-lg font-semibold ${palette.heading}`}>Departments</h3>
         <button
           onClick={() => handleOpenModal('department')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className={`${palette.primaryButton} px-4 py-2 rounded-lg transition-colors whitespace-nowrap`}
         >
           <i className="ri-add-line mr-2"></i>
-          Agregar Departamento
+          Add Department
         </button>
       </div>
 
@@ -1033,9 +1042,9 @@ export default function PayrollPage() {
           const deptSalaries = deptEmployees.reduce((sum, emp) => sum + emp.salary, 0);
           
           return (
-            <div key={department.id} className="bg-white rounded-lg shadow p-6">
+            <div key={department.id} className={`${palette.card} rounded-xl p-6`}>
               <div className="flex justify-between items-start mb-4">
-                <h4 className="text-lg font-semibold text-gray-900">{department.name}</h4>
+                <h4 className={`text-lg font-semibold ${palette.heading}`}>{department.name}</h4>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleOpenModal('department', department)}
@@ -1045,19 +1054,19 @@ export default function PayrollPage() {
                   </button>
                 </div>
               </div>
-              <p className="text-gray-600 mb-4">{department.description}</p>
+              <p className={`${palette.subheading} mb-4`}>{department.description}</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Empleados:</span>
+                  <span className={`text-sm ${palette.subheading}`}>Employees:</span>
                   <span className="text-sm font-medium">{deptEmployees.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Nómina mensual:</span>
+                  <span className={`text-sm ${palette.subheading}`}>Monthly payroll:</span>
                   <span className="text-sm font-medium">{formatMoney(deptSalaries, 'RD$')}</span>
                 </div>
                 {department.budget && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Presupuesto:</span>
+                    <span className={`text-sm ${palette.subheading}`}>Budget:</span>
                     <span className="text-sm font-medium">{formatMoney(department.budget, 'RD$')}</span>
                   </div>
                 )}
@@ -1072,51 +1081,51 @@ export default function PayrollPage() {
   const renderPositions = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Posiciones</h3>
+        <h3 className={`text-lg font-semibold ${palette.heading}`}>Positions</h3>
         <button
           onClick={() => handleOpenModal('position')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className={`${palette.primaryButton} px-4 py-2 rounded-lg transition-colors whitespace-nowrap`}
         >
           <i className="ri-add-line mr-2"></i>
-          Agregar Posición
+          Add Position
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className={`${palette.card} rounded-xl overflow-hidden`}>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#e8ded0]">
+            <thead className="bg-[#f4ede0]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Título</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleados</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rango Salarial</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Employees</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Salary Range</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6c6658] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white/80 divide-y divide-[#eee5d7]">
               {positions.map((position) => {
                 const posEmployees = employees.filter(emp => emp.position_id === position.id);
                 
                 return (
-                  <tr key={position.id} className="hover:bg-gray-50">
+                  <tr key={position.id} className="hover:bg-[#f8f3ea] transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{position.title}</div>
-                        <div className="text-sm text-gray-500">{position.description}</div>
+                        <div className={`text-sm font-medium ${palette.heading}`}>{position.title}</div>
+                        <div className={`text-sm ${palette.subheading}`}>{position.description}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.subheading}`}>
                       {getDepartmentName(position.department_id)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.heading}`}>
                       {posEmployees.length}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.heading}`}>
                       {position.min_salary && position.max_salary ? (
                         `${formatMoney(position.min_salary, 'RD$')} - ${formatMoney(position.max_salary, 'RD$')}`
-                      ) : 'No definido'}
+                      ) : 'Not defined'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -1124,7 +1133,7 @@ export default function PayrollPage() {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {position.is_active ? 'Activo' : 'Inactivo'}
+                        {position.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -1232,52 +1241,52 @@ export default function PayrollPage() {
   const renderReports = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Reportes de Nómina</h3>
+        <h3 className={`text-lg font-semibold ${palette.heading}`}>Payroll Reports</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Reporte de Empleados */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Employees Report */}
+        <div className={`${palette.card} rounded-xl p-6`}>
           <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-blue-100">
-              <i className="ri-user-line text-2xl text-blue-600"></i>
+            <div className="p-3 rounded-full bg-[#e6e9d5] text-[#4b5320]">
+              <i className="ri-user-line text-2xl"></i>
             </div>
             <div className="ml-4">
-              <h4 className="text-lg font-semibold text-gray-900">Reporte de Empleados</h4>
-              <p className="text-sm text-gray-500">Lista completa de empleados</p>
+              <h4 className={`text-lg font-semibold ${palette.heading}`}>Employees Report</h4>
+              <p className={`${palette.subheading} text-sm`}>Complete employee directory</p>
             </div>
           </div>
           <button
             onClick={() => exportToExcel(employees.map(emp => ({
-              Código: emp.employee_code,
-              Nombre: `${emp.first_name} ${emp.last_name}`,
+              Code: emp.employee_code,
+              Name: `${emp.first_name} ${emp.last_name}`,
               Email: emp.email,
-              Teléfono: emp.phone,
-              Departamento: getDepartmentName(emp.department_id),
-              Posición: getPositionTitle(emp.position_id),
-              Salario: emp.salary,
-              'Fecha Contratación': emp.hire_date,
-              Estado: emp.status,
-              'Cuenta Bancaria': emp.bank_account || '',
-              Identificación: emp.identification || '',
-              Dirección: emp.address || ''
-            })), 'reporte_empleados', 'Reporte de Empleados')}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              Phone: emp.phone,
+              Department: getDepartmentName(emp.department_id),
+              Position: getPositionTitle(emp.position_id),
+              Salary: emp.salary,
+              'Hire Date': emp.hire_date,
+              Status: emp.status,
+              'Bank Account': emp.bank_account || '',
+              ID: emp.identification || '',
+              Address: emp.address || ''
+            })), 'employees_report', 'Employees Report')}
+            className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors shadow-sm"
           >
             <i className="ri-download-line mr-2"></i>
-            Descargar Reporte
+            Download Report
           </button>
         </div>
 
-        {/* Reporte de Nómina por Departamento */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Payroll by Department */}
+        <div className={`${palette.card} rounded-xl p-6`}>
           <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-green-100">
-              <i className="ri-building-line text-2xl text-green-600"></i>
+            <div className="p-3 rounded-full bg-[#e6e9d5] text-[#4b5320]">
+              <i className="ri-building-line text-2xl"></i>
             </div>
             <div className="ml-4">
-              <h4 className="text-lg font-semibold text-gray-900">Nómina por Departamento</h4>
-              <p className="text-sm text-gray-500">Resumen por departamentos</p>
+              <h4 className={`text-lg font-semibold ${palette.heading}`}>Payroll by Department</h4>
+              <p className={`${palette.subheading} text-sm`}>Department level breakdown</p>
             </div>
           </div>
           <button
@@ -1285,88 +1294,88 @@ export default function PayrollPage() {
               const deptEmployees = employees.filter(emp => emp.department_id === dept.id);
               const totalSalaries = deptEmployees.reduce((sum, emp) => sum + emp.salary, 0);
               return {
-                Departamento: dept.name,
-                Descripción: dept.description,
-                'Número de Empleados': deptEmployees.length,
-                'Nómina Total': formatMoney(totalSalaries, 'RD$'),
-                'Salario Promedio': deptEmployees.length > 0 ? Math.round(totalSalaries / deptEmployees.length) : 0,
-                Presupuesto: dept.budget || 0
+                Department: dept.name,
+                Description: dept.description,
+                'Employee Count': deptEmployees.length,
+                'Total Payroll': formatMoney(totalSalaries, 'RD$'),
+                'Average Salary': deptEmployees.length > 0 ? Math.round(totalSalaries / deptEmployees.length) : 0,
+                Budget: dept.budget || 0
               };
-            }), 'nomina_por_departamento')}
-            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            }), 'payroll_by_department')}
+            className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors shadow-sm"
           >
             <i className="ri-download-line mr-2"></i>
-            Descargar Reporte
+            Download Report
           </button>
         </div>
 
-        {/* Reporte de Períodos de Nómina */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Payroll Periods */}
+        <div className={`${palette.card} rounded-xl p-6`}>
           <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-purple-100">
-              <i className="ri-calendar-line text-2xl text-purple-600"></i>
+            <div className="p-3 rounded-full bg-[#e6e9d5] text-[#4b5320]">
+              <i className="ri-calendar-line text-2xl"></i>
             </div>
             <div className="ml-4">
-              <h4 className="text-lg font-semibold text-gray-900">Períodos de Nómina</h4>
-              <p className="text-sm text-gray-500">Historial de períodos</p>
+              <h4 className={`text-lg font-semibold ${palette.heading}`}>Payroll Periods</h4>
+              <p className={`${palette.subheading} text-sm`}>Historical period overview</p>
             </div>
           </div>
           <button
             onClick={() => exportToExcel(payrollPeriods.map(period => ({
-              Período: period.period_name,
-              'Fecha Inicio': period.start_date,
-              'Fecha Fin': period.end_date,
-              'Fecha Pago': period.pay_date,
-              Estado: period.status,
-              'Empleados': period.employee_count,
-              'Total Bruto': period.total_gross,
-              'Total Deducciones': period.total_deductions,
-              'Total Neto': period.total_net
-            })), 'periodos_nomina')}
-            className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+              Period: period.period_name,
+              'Start Date': period.start_date,
+              'End Date': period.end_date,
+              'Pay Date': period.pay_date,
+              Status: period.status,
+              Employees: period.employee_count,
+              'Total Gross': period.total_gross,
+              'Total Deductions': period.total_deductions,
+              'Total Net': period.total_net
+            })), 'payroll_periods')}
+            className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors shadow-sm"
           >
             <i className="ri-download-line mr-2"></i>
-            Descargar Reporte
+            Download Report
           </button>
         </div>
 
-        {/* Reporte de Análisis Salarial */}
-        <div className="bg-white rounded-lg shadow p-6">
+        {/* Salary Analysis */}
+        <div className={`${palette.card} rounded-xl p-6`}>
           <div className="flex items-center mb-4">
-            <div className="p-3 rounded-full bg-yellow-100">
-              <i className="ri-bar-chart-line text-2xl text-yellow-600"></i>
+            <div className="p-3 rounded-full bg-[#e6e9d5] text-[#4b5320]">
+              <i className="ri-bar-chart-line text-2xl"></i>
             </div>
             <div className="ml-4">
-              <h4 className="text-lg font-semibold text-gray-900">Análisis Salarial</h4>
-              <p className="text-sm text-gray-500">Estadísticas salariales</p>
+              <h4 className={`text-lg font-semibold ${palette.heading}`}>Salary Analysis</h4>
+              <p className={`${palette.subheading} text-sm`}>Compensation statistics</p>
             </div>
           </div>
           <button
             onClick={() => {
               const stats = calculateDashboardStats();
               const salaryRanges = {
-                'Menos de 30,000': employees.filter(emp => emp.salary < 30000).length,
+                'Under 30,000': employees.filter(emp => emp.salary < 30000).length,
                 '30,000 - 50,000': employees.filter(emp => emp.salary >= 30000 && emp.salary < 50000).length,
                 '50,000 - 70,000': employees.filter(emp => emp.salary >= 50000 && emp.salary < 70000).length,
                 '70,000 - 90,000': employees.filter(emp => emp.salary >= 70000 && emp.salary < 90000).length,
-                'Más de 90,000': employees.filter(emp => emp.salary >= 90000).length
+                'Over 90,000': employees.filter(emp => emp.salary >= 90000).length
               };
               
               exportToExcel([
-                { Métrica: 'Total de Empleados', Valor: stats.totalEmployees },
-                { Métrica: 'Empleados Activos', Valor: stats.activeEmployees },
-                { Métrica: 'Nómina Total Mensual', Valor: formatMoney(stats.totalSalaries, 'RD$') },
-                { Métrica: 'Salario Promedio', Valor: formatMoney(Math.round(stats.avgSalary), 'RD$') },
-                ...Object.entries(salaryRanges).map(([rango, cantidad]) => ({
-                  Métrica: `Empleados con salario ${rango}`,
-                  Valor: cantidad
+                { Metric: 'Total Employees', Value: stats.totalEmployees },
+                { Metric: 'Active Employees', Value: stats.activeEmployees },
+                { Metric: 'Total Monthly Payroll', Value: formatMoney(stats.totalSalaries, 'RD$') },
+                { Metric: 'Average Salary', Value: formatMoney(Math.round(stats.avgSalary), 'RD$') },
+                ...Object.entries(salaryRanges).map(([range, count]) => ({
+                  Metric: `Employees earning ${range}`,
+                  Value: count
                 }))
-              ], 'analisis_salarial');
+              ], 'salary_analysis');
             }}
-            className="w-full bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+            className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors shadow-sm"
           >
             <i className="ri-download-line mr-2"></i>
-            Descargar Análisis
+            Download Analysis
           </button>
         </div>
       </div>
@@ -1378,18 +1387,18 @@ export default function PayrollPage() {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#f6f1e3] rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
               {modalType === 'employee' || modalType === 'department' || modalType === 'position' || modalType === 'payroll-period'
-                ? `${selectedItem ? 'Editar' : 'Agregar'} ${
+                ? `${selectedItem ? 'Edit' : 'Add'} ${
                     modalType === 'employee'
-                      ? 'Empleado'
+                      ? 'Employee'
                       : modalType === 'department'
-                      ? 'Departamento'
+                      ? 'Department'
                       : modalType === 'position'
-                      ? 'Posición'
-                      : 'Período de Nómina'
+                      ? 'Position'
+                      : 'Payroll Period'
                   }`
                 : modalType === 'employee-details'
                 ? 'Detalles del Empleado'
@@ -1577,22 +1586,22 @@ export default function PayrollPage() {
               {modalType === 'employee' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                     <input
                       type="text"
                       value={formData.first_name || ''}
                       onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                     <input
                       type="text"
                       value={formData.last_name || ''}
                       onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
@@ -1602,111 +1611,111 @@ export default function PayrollPage() {
                       type="email"
                       value={formData.email || ''}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone <span className="text-red-500">*</span></label>
                     <input
                       type="tel"
                       value={formData.phone || ''}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Identificación</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Identification</label>
                     <input
                       type="text"
                       value={formData.identification || ''}
                       onChange={(e) => setFormData({...formData, identification: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       placeholder="001-1234567-8"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Departamento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
                     <select
                       value={formData.department_id || ''}
                       onChange={(e) => setFormData({...formData, department_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar departamento</option>
+                      <option value="">Select department</option>
                       {departments.map(dept => (
                         <option key={dept.id} value={dept.id}>{dept.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Posición *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
                     <select
                       value={formData.position_id || ''}
                       onChange={(e) => setFormData({...formData, position_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar posición</option>
+                      <option value="">Select position</option>
                       {positions.filter(pos => !formData.department_id || pos.department_id === formData.department_id).map(pos => (
                         <option key={pos.id} value={pos.id}>{pos.title}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Salario *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Salary *</label>
                     <input
                       type="number" min="0"
                       step="0.01"
                       value={formData.salary || ''}
                       onChange={(e) => setFormData({...formData, salary: parseFloat(e.target.value)})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Contratación *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Hire Date *</label>
                     <input
                       type="date"
                       value={formData.hire_date || ''}
                       onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta Bancaria <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Account <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       value={formData.bank_account || ''}
                       onChange={(e) => setFormData({...formData, bank_account: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contacto de Emergencia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
                     <input
                       type="text"
                       value={formData.emergency_contact || ''}
                       onChange={(e) => setFormData({...formData, emergency_contact: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Emergencia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
                     <input
                       type="tel"
                       value={formData.emergency_phone || ''}
                       onChange={(e) => setFormData({...formData, emergency_phone: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                     <textarea
                       value={formData.address || ''}
                       onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       rows={2}
                     />
                   </div>
@@ -1716,7 +1725,7 @@ export default function PayrollPage() {
               {modalType === 'department' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Departamento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department Name *</label>
                     <input
                       type="text"
                       value={formData.name || ''}
@@ -1726,7 +1735,7 @@ export default function PayrollPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -1735,7 +1744,7 @@ export default function PayrollPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Presupuesto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
                     <input
                       type="number" min="0"
                       step="0.01"
@@ -1750,57 +1759,57 @@ export default function PayrollPage() {
               {modalType === 'position' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Título de la Posición *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Position Title *</label>
                     <input
                       type="text"
                       value={formData.title || ''}
                       onChange={(e) => setFormData({...formData, title: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Departamento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
                     <select
                       value={formData.department_id || ''}
                       onChange={(e) => setFormData({...formData, department_id: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       required
                     >
-                      <option value="">Seleccionar departamento</option>
+                      <option value="">Select department</option>
                       {departments.map(dept => (
                         <option key={dept.id} value={dept.id}>{dept.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea
                       value={formData.description || ''}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       rows={3}
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Salario Mínimo</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Salary</label>
                       <input
                         type="number" min="0"
                         step="0.01"
                         value={formData.min_salary || ''}
                         onChange={(e) => setFormData({...formData, min_salary: parseFloat(e.target.value)})}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Salario Máximo</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Salary</label>
                       <input
                         type="number" min="0"
                         step="0.01"
                         value={formData.max_salary || ''}
                         onChange={(e) => setFormData({...formData, max_salary: parseFloat(e.target.value)})}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#4b5320]"
                       />
                     </div>
                   </div>
@@ -1814,14 +1823,14 @@ export default function PayrollPage() {
                     onClick={handleCloseModal}
                     className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50"
+                    className="flex-1 bg-[#4b5320] text-white py-2 px-4 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap disabled:opacity-50"
                   >
-                    {loading ? 'Guardando...' : (selectedItem ? 'Actualizar' : 'Crear')}
+                    {loading ? 'Saving...' : (selectedItem ? 'Update' : 'Create')}
                   </button>
                 </div>
               )}
@@ -1841,28 +1850,28 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 px-4 sm:px-6 lg:px-8 pt-4">
+    <div className={`${palette.background} min-h-screen space-y-6 px-4 sm:px-6 lg:px-8 pt-6 pb-10`}>
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Gestión de Nómina</h1>
+        <h1 className={`text-3xl font-bold ${palette.heading}`}>Payroll Management</h1>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-[#d6c9b5]">
+        <nav className="-mb-px flex flex-wrap gap-4">
           {[
             { id: 'dashboard', name: 'Dashboard', icon: 'ri-dashboard-line' },
-            { id: 'employees', name: 'Empleados', icon: 'ri-user-line' },
-            { id: 'departments', name: 'Departamentos', icon: 'ri-building-line' },
-            { id: 'positions', name: 'Posiciones', icon: 'ri-briefcase-line' },
-            { id: 'reports', name: 'Reportes', icon: 'ri-bar-chart-line' }
+            { id: 'employees', name: 'Employees', icon: 'ri-user-line' },
+            { id: 'departments', name: 'Departments', icon: 'ri-building-line' },
+            { id: 'positions', name: 'Positions', icon: 'ri-briefcase-line' },
+            { id: 'reports', name: 'Reports', icon: 'ri-bar-chart-line' }
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-[#4b5b3f] text-[#4b5b3f]'
+                  : 'border-transparent text-[#7f7968] hover:text-[#4b5b3f] hover:border-[#c4b59d]'
               }`}
             >
               <i className={`${tab.icon} mr-2`}></i>
@@ -1882,127 +1891,127 @@ export default function PayrollPage() {
       </div>
 
       {/* Navigation Buttons for Other Modules */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Otros Módulos de Nómina</h3>
+      <div className={`${palette.card} rounded-xl p-6`}>
+        <h3 className={`text-lg font-semibold mb-4 ${palette.heading}`}>More Payroll Modules</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/configuration')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-settings-line"></i>
-            <span>Configuración</span>
+            <span>Configuration</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/employee-types')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-user-settings-line"></i>
-            <span>Tipos de Empleados</span>
+            <span>Employee Types</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/salary-types')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-money-dollar-box-line"></i>
-            <span>Tipos de Salario</span>
+            <span>Salary Types</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/concepts')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-list-check"></i>
-            <span>Conceptos</span>
+            <span>Concepts</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/periods')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-calendar-line"></i>
-            <span>Períodos</span>
+            <span>Periods</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/commission-types')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-percent-line"></i>
-            <span>Tipos de Comisión</span>
+            <span>Commission Types</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/vacations')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-plane-line"></i>
-            <span>Vacaciones</span>
+            <span>Vacations</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/overtime')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hoverbg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-time-line"></i>
-            <span>Horas Extras</span>
+            <span>Overtime</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/holidays')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-calendar-event-line"></i>
-            <span>Días Feriados</span>
+            <span>Holidays</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/bonuses')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-gift-line"></i>
-            <span>Bonificaciones</span>
+            <span>Bonuses</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/royalties')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-award-line"></i>
-            <span>Regalías</span>
+            <span>Royalties</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/deductions')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-subtract-line"></i>
-            <span>Deducciones</span>
+            <span>Deductions</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/absences')}
-            className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-user-unfollow-line"></i>
-            <span>Ausencias</span>
+            <span>Absences</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/salary-changes')}
-            className="flex items-center space-x-2 bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-exchange-dollar-line"></i>
-            <span>Cambios de Salario</span>
+            <span>Salary Changes</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/employee-exits')}
-            className="flex items-center space-x-2 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#f0e7d8] hover:bg-[#e3d8c4] text-[#2f2a1f] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-logout-box-line"></i>
-            <span>Salida de Empleados</span>
+            <span>Employee Exits</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/payroll-process')}
-            className="flex items-center space-x-2 bg-green-100 hover:bg-green-200 text-green-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#4b5b3f] hover:bg-[#3c4a30] text-white px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-play-circle-line"></i>
-            <span>Procesar Nómina</span>
+            <span>Payroll Processing</span>
           </button>
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll/journal-entry')}
-            className="flex items-center space-x-2 bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-3 rounded-lg transition-colors"
+            className="flex items-center space-x-2 bg-[#e0d7c9] hover:bg-[#d3c8b7] text-[#233022] px-4 py-3 rounded-lg transition-colors"
           >
             <i className="ri-book-2-line"></i>
-            <span>Entrada al Diario</span>
+            <span>Journal Entry</span>
           </button>
         </div>
       </div>

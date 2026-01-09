@@ -110,7 +110,7 @@ export default function FixedAssetsReportPage() {
 
   const handleExportExcel = async () => {
     if (filteredAssets.length === 0) {
-      alert('No hay datos para exportar');
+      alert('There are no assets to export.');
       return;
     }
 
@@ -127,8 +127,7 @@ export default function FixedAssetsReportPage() {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel del reporte de activos fijos:', error);
+      console.error('Error fetching company info for fixed asset report Excel export:', error);
     }
 
     const rows = filteredAssets.map((asset) => ({
@@ -137,7 +136,7 @@ export default function FixedAssetsReportPage() {
       category: asset.category,
       location: asset.location,
       acquisitionDate: asset.acquisitionDate
-        ? new Date(asset.acquisitionDate).toLocaleDateString('es-DO')
+        ? new Date(asset.acquisitionDate).toLocaleDateString('en-US')
         : '',
       acquisitionCost: asset.acquisitionCost,
       currentValue: asset.currentValue,
@@ -148,23 +147,23 @@ export default function FixedAssetsReportPage() {
     }));
 
     const headers = [
-      { key: 'code', title: 'Código' },
-      { key: 'name', title: 'Nombre del Activo' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'location', title: 'Ubicación' },
-      { key: 'acquisitionDate', title: 'Fecha Adquisición' },
-      { key: 'acquisitionCost', title: 'Costo Adquisición' },
-      { key: 'currentValue', title: 'Valor Actual' },
-      { key: 'accumulatedDepreciation', title: 'Depreciación Acumulada' },
-      { key: 'status', title: 'Estado' },
-      { key: 'supplier', title: 'Proveedor' },
-      { key: 'description', title: 'Descripción' },
+      { key: 'code', title: 'Code' },
+      { key: 'name', title: 'Asset Name' },
+      { key: 'category', title: 'Category' },
+      { key: 'location', title: 'Location' },
+      { key: 'acquisitionDate', title: 'Acquisition Date' },
+      { key: 'acquisitionCost', title: 'Acquisition Cost' },
+      { key: 'currentValue', title: 'Current Value' },
+      { key: 'accumulatedDepreciation', title: 'Accumulated Depreciation' },
+      { key: 'status', title: 'Status' },
+      { key: 'supplier', title: 'Supplier' },
+      { key: 'description', title: 'Description' },
     ];
 
     const today = new Date().toISOString().split('T')[0];
-    const fileBase = `reporte_activos_fijos_${today}`;
-    const title = 'Reporte de Activos Fijos';
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const fileBase = `fixed_assets_report_${today}`;
+    const title = 'Fixed Asset Report';
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
@@ -183,48 +182,48 @@ export default function FixedAssetsReportPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reporte de Activos Fijos</h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Listado de activos fijos con costos, depreciación acumulada y valor en libros.
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Fixed Asset Report</h1>
+            <p className="text-[#6b5c3b] text-sm mt-1">
+              Listings of fixed assets with cost basis, accumulated depreciation, and book value.
             </p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={handleExportExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#3f5d2a] text-white px-4 py-2 rounded-lg hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm border border-[#2d451f] flex items-center"
             >
               <i className="ri-file-excel-line mr-2" />
-              Exportar Excel
+              Export Excel
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Search</label>
               <div className="relative">
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-[#b29a71]" />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, código o categoría..."
+                  placeholder="Search by asset, code, or category..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a]"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Activo</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Asset Type</label>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a]"
               >
-                <option value="">Todos</option>
+                <option value="">All types</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
@@ -233,17 +232,17 @@ export default function FixedAssetsReportPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a]"
               >
-                <option value="">Todos</option>
-                <option value="Activo">Activo</option>
-                <option value="Inactivo">Inactivo</option>
-                <option value="En Mantenimiento">En Mantenimiento</option>
-                <option value="Dado de Baja">Dado de Baja</option>
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="maintenance">Under Maintenance</option>
+                <option value="retired">Disposed</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -253,74 +252,74 @@ export default function FixedAssetsReportPage() {
                   setFilterCategory('');
                   setFilterStatus('');
                 }}
-                className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4a3c24] text-white px-4 py-2 rounded-lg hover:bg-[#2f3e1e] transition-colors whitespace-nowrap shadow-sm border border-[#2f3e1e]"
               >
-                Limpiar filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Resumen</h3>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="p-6 border-b border-[#e4d8c4]">
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
               <div>
-                <p className="text-sm text-gray-500">Total de Activos</p>
-                <p className="text-xl font-semibold text-gray-900">{totals.totalAssets}</p>
+                <p className="text-sm text-[#6b5c3b]">Total Assets</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{totals.totalAssets}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Costo Total</p>
-                <p className="text-xl font-semibold text-gray-900">{formatCurrency(totals.totalCost)}</p>
+                <p className="text-sm text-[#6b5c3b]">Total Cost</p>
+                <p className="text-2xl font-bold text-[#7a2e1b]">{formatCurrency(totals.totalCost)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Valor Actual Total</p>
-                <p className="text-xl font-semibold text-gray-900">{formatCurrency(totals.totalCurrentValue)}</p>
+                <p className="text-sm text-[#6b5c3b]">Total Current Value</p>
+                <p className="text-2xl font-bold text-[#245c39]">{formatCurrency(totals.totalCurrentValue)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Depreciación Acumulada</p>
-                <p className="text-xl font-semibold text-gray-900">{formatCurrency(totals.totalDepreciation)}</p>
+                <p className="text-sm text-[#6b5c3b]">Accumulated Depreciation</p>
+                <p className="text-2xl font-bold text-[#7a2e1b]">{formatCurrency(totals.totalDepreciation)}</p>
               </div>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             {loading ? (
-              <div className="p-6 text-sm text-gray-500">Cargando datos...</div>
+              <div className="p-6 text-sm text-[#6b5c3b]">Loading assets...</div>
             ) : filteredAssets.length === 0 ? (
-              <div className="p-6 text-sm text-gray-500">No hay activos que coincidan con los filtros seleccionados.</div>
+              <div className="p-6 text-sm text-[#6b5c3b]">No assets match the selected filters.</div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-[#ede7d7]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ubicación</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Actual</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación Acum.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Code</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Asset</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Category</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Cost</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Current Value</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Accum. Depreciation</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#f3ecda]">
                   {filteredAssets.map((asset) => (
-                    <tr key={asset.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{asset.code}</td>
+                    <tr key={asset.id} className="hover:bg-[#fffdf6]">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#2f3e1e]">{asset.code}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{asset.name}</div>
-                          <div className="text-xs text-gray-500 truncate max-w-xs">{asset.description}</div>
+                          <div className="text-sm font-semibold text-[#2f3e1e]">{asset.name}</div>
+                          <div className="text-xs text-[#6b5c3b] truncate max-w-xs">{asset.description}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.category}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{asset.location}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(asset.acquisitionCost)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(asset.currentValue)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(asset.accumulatedDepreciation)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">{asset.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">{asset.location}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">{formatCurrency(asset.acquisitionCost)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#245c39] font-semibold">{formatCurrency(asset.currentValue)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7a2e1b]">{formatCurrency(asset.accumulatedDepreciation)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {asset.status}
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#d7e4c0] text-[#1f2913]">
+                          {asset.status || 'N/A'}
                         </span>
                       </td>
                     </tr>

@@ -61,18 +61,18 @@ export default function DepreciationTypesPage() {
 
   const handleDeleteType = async (typeId: string) => {
     if (!user) return;
-    if (!confirm('¿Está seguro de que desea eliminar este tipo de depreciación?')) return;
+    if (!confirm('Are you sure you want to delete this depreciation type?')) return;
     try {
       await assetDepreciationTypesService.delete(typeId);
       setTypes(prev => prev.filter(type => type.id !== typeId));
     } catch (error) {
       console.error('Error deleting depreciation type:', error);
-      alert('Error al eliminar el tipo de depreciación');
+      alert('Error deleting the depreciation type');
     }
   };
 
   const handleGenerateCode = () => {
-    // Generar un código simple basado en la cantidad existente, ej: DEP-001, DEP-002, etc.
+    // Generate a simple code based on the existing count, e.g., DEP-001, DEP-002, etc.
     const base = 'DEP';
     const nextNumber = types.length + 1;
     const padded = String(nextNumber).padStart(3, '0');
@@ -104,7 +104,7 @@ export default function DepreciationTypesPage() {
     };
 
     if (!payload.code || !payload.name) {
-      alert('Código y nombre son obligatorios');
+      alert('Code and name are required');
       return;
     }
 
@@ -142,15 +142,15 @@ export default function DepreciationTypesPage() {
       form.reset();
     } catch (error) {
       console.error('Error saving depreciation type:', error);
-      alert('Error al guardar el tipo de depreciación');
+      alert('Error saving the depreciation type');
     }
   };
 
   const methods = [
-    'Línea Recta',
-    'Suma de Dígitos',
-    'Saldo Decreciente',
-    'Unidades de Producción',
+    'Straight Line',
+    'Sum-of-the-Years\' Digits',
+    'Declining Balance',
+    'Units of Production',
   ];
 
   const filteredTypes = types.filter(type => {
@@ -164,12 +164,12 @@ export default function DepreciationTypesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="p-6 space-y-6 bg-[#f7f3e8] min-h-screen">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Depreciación</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Catálogo de métodos y parámetros de depreciación para activos fijos.
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Depreciation Types</h1>
+            <p className="text-sm text-[#6b5c3b] mt-1">
+              Catalog of depreciation methods and parameters for fixed assets.
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -177,60 +177,60 @@ export default function DepreciationTypesPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por código, nombre o descripción"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by code, name, or description"
+              className="border border-[#d8cbb5] rounded-lg px-3 py-2 text-sm bg-white text-[#2f3e1e] focus:outline-none focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a]"
             />
             <button
               onClick={handleAddType}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg text-sm hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm border border-[#1f2913] flex items-center"
             >
               <i className="ri-add-line mr-1" />
-              Nuevo Tipo
+              New Type
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] overflow-hidden">
           <div className="min-w-full overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#f0ead7]">
+              <thead className="bg-[#ede7d7]">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Vida Útil (años)</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Tasa Anual (%)</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Method</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Useful Life (years)</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Annual Rate (%)</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Description</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f3ecda]">
                 {filteredTypes.map((type) => (
-                  <tr key={type.id}>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{type.code}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{type.name}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{type.method || '-'}</td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
+                  <tr key={type.id} className="hover:bg-[#fffdf6]">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2f3e1e] font-semibold">{type.code}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2f3e1e]">{type.name}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#6b5c3b]">{type.method || '-'}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[#2f3e1e]">
                       {type.usefulLifeMonths != null ? (type.usefulLifeMonths / 12).toFixed(2) : '-'}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
-                      {type.annualRate != null ? type.annualRate.toFixed(2) : '-'}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-[#7a2e1b] font-semibold">
+                      {type.annualRate != null ? `${type.annualRate.toFixed(2)}%` : '-'}
                     </td>
-                    <td className="px-4 py-2 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-[#4a3c24]">
                       <div className="max-w-md whitespace-normal break-words">
                         {type.description || '-'}
                       </div>
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-right space-x-3">
                       <button
                         onClick={() => handleEditType(type)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        className="text-[#2f3e1e] hover:text-[#1f2913]"
                       >
                         <i className="ri-edit-line" />
                       </button>
                       <button
                         onClick={() => handleDeleteType(type.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-[#7a2e1b] hover:text-[#5c1f12]"
                       >
                         <i className="ri-delete-bin-line" />
                       </button>
@@ -239,8 +239,8 @@ export default function DepreciationTypesPage() {
                 ))}
                 {filteredTypes.length === 0 && (
                   <tr>
-                    <td className="px-4 py-4 text-sm text-gray-500 text-center" colSpan={7}>
-                      No hay tipos de depreciación registrados.
+                    <td className="px-4 py-6 text-sm text-[#6b5c3b] text-center" colSpan={7}>
+                      There are no depreciation types registered.
                     </td>
                   </tr>
                 )}
@@ -251,14 +251,14 @@ export default function DepreciationTypesPage() {
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#fffaf1] rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#e4d8c4] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingType ? 'Editar Tipo de Depreciación' : 'Nuevo Tipo de Depreciación'}
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">
+                  {editingType ? 'Edit Depreciation Type' : 'New Depreciation Type'}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e]"
                 >
                   <i className="ri-close-line text-xl" />
                 </button>
@@ -267,8 +267,8 @@ export default function DepreciationTypesPage() {
               <form onSubmit={handleSaveType} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Código *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Code *
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -277,49 +277,49 @@ export default function DepreciationTypesPage() {
                         required
                         value={codeValue}
                         onChange={(e) => setCodeValue(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ej: LINEAL-10"
+                        className="flex-1 px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
+                        placeholder="Ex: LINEAR-10"
                       />
                       <button
                         type="button"
                         onClick={handleGenerateCode}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
+                        className="px-3 py-2 bg-[#f0ead7] text-[#2f3e1e] rounded-lg border border-[#d8cbb5] hover:bg-[#e1d5ba] transition-colors whitespace-nowrap text-sm"
                       >
-                        Generar
+                        Generate
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Name *
                     </label>
                     <input
                       type="text"
                       name="name"
                       required
                       defaultValue={editingType?.name || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Línea Recta 10%"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
+                      placeholder="Straight Line 10%"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Method
                     </label>
                     <select
                       name="method"
                       defaultValue={editingType?.method || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
                     >
-                      <option value="">Seleccionar método</option>
+                      <option value="">Select method</option>
                       {methods.map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Vida Útil (años)
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Useful Life (years)
                     </label>
                     <input
                       type="number"
@@ -331,13 +331,13 @@ export default function DepreciationTypesPage() {
                           ? String(editingType.usefulLifeMonths / 12)
                           : ''
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: 10"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
+                      placeholder="Ex: 10"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tasa Anual (%)
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Annual Rate (%)
                     </label>
                     <input
                       type="number"
@@ -346,36 +346,36 @@ export default function DepreciationTypesPage() {
                       min="0"
                       max="100"
                       defaultValue={editingType?.annualRate ?? ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: 10.00"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
+                      placeholder="Ex: 10.00"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Description
                   </label>
                   <textarea
                     name="description"
                     rows={3}
                     defaultValue={editingType?.description || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción del método y política de depreciación"
+                    className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#3f5d2a] focus:border-[#3f5d2a] bg-white text-[#2f3e1e]"
+                    placeholder="Describe the method and depreciation policy"
                   />
                 </div>
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-[#2f3e1e] bg-[#f0ead7] rounded-lg hover:bg-[#e1d5ba] border border-[#d8cbb5] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#3f5d2a] text-white rounded-lg hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm border border-[#2d451f]"
                   >
-                    {editingType ? 'Actualizar' : 'Crear'} Tipo
+                    {editingType ? 'Update Type' : 'Create Type'}
                   </button>
                 </div>
               </form>

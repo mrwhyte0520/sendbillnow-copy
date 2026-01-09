@@ -57,14 +57,14 @@ export default function PayrollRoyaltiesPage() {
 
   const departments = Array.from(new Set(employees.map(e => e.department).filter(Boolean)));
   const royaltyTypes = [
-    { value: 'percentage', label: 'Porcentaje' },
-    { value: 'fixed', label: 'Monto Fijo' },
-    { value: 'formula', label: 'Fórmula' }
+    { value: 'percentage', label: 'Percentage' },
+    { value: 'fixed', label: 'Fixed Amount' },
+    { value: 'formula', label: 'Formula' }
   ];
   const periods = [
-    { value: 'monthly', label: 'Mensual' },
-    { value: 'quarterly', label: 'Trimestral' },
-    { value: 'annual', label: 'Anual' }
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'quarterly', label: 'Quarterly' },
+    { value: 'annual', label: 'Annual' }
   ];
 
   useEffect(() => {
@@ -251,7 +251,7 @@ export default function PayrollRoyaltiesPage() {
       });
     } catch (error) {
       console.error('Error saving royalty:', error);
-      alert('Error al guardar la regalía');
+      alert('Error saving the royalty.');
     }
   };
 
@@ -277,13 +277,13 @@ export default function PayrollRoyaltiesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta regalía?')) return;
+    if (!confirm('Are you sure you want to delete this royalty?')) return;
     try {
       await royaltiesService.delete(id);
       setRoyalties(prev => prev.filter(royalty => royalty.id !== id));
     } catch (error) {
       console.error('Error deleting royalty:', error);
-      alert('Error al eliminar la regalía');
+      alert('Error deleting the royalty.');
     }
   };
 
@@ -294,34 +294,34 @@ export default function PayrollRoyaltiesPage() {
       employee: royalty.employeeName,
       department: royalty.department,
       type:
-        royalty.royaltyType === 'percentage' ? 'Porcentaje' :
-        royalty.royaltyType === 'fixed' ? 'Monto Fijo' : 'Fórmula',
+        royalty.royaltyType === 'percentage' ? 'Percentage' :
+        royalty.royaltyType === 'fixed' ? 'Fixed Amount' : 'Formula',
       baseAmount: royalty.baseAmount,
       calculatedAmount: royalty.calculatedAmount,
       period:
-        royalty.period === 'monthly' ? 'Mensual' :
-        royalty.period === 'quarterly' ? 'Trimestral' : 'Anual',
-      status: royalty.isActive ? 'Activo' : 'Inactivo',
+        royalty.period === 'monthly' ? 'Monthly' :
+        royalty.period === 'quarterly' ? 'Quarterly' : 'Annual',
+      status: royalty.isActive ? 'Active' : 'Inactive',
     }));
 
     if (!rows.length) {
-      alert('No hay regalías para exportar.');
+      alert('No royalties to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'employee', title: 'Empleado', width: 26 },
-        { key: 'department', title: 'Departamento', width: 22 },
-        { key: 'type', title: 'Tipo', width: 16 },
-        { key: 'baseAmount', title: 'Monto Base', width: 16, numFmt: '#,##0.00' },
-        { key: 'calculatedAmount', title: 'Monto Calculado', width: 18, numFmt: '#,##0.00' },
-        { key: 'period', title: 'Período', width: 14 },
-        { key: 'status', title: 'Estado', width: 12 },
+        { key: 'employee', title: 'Employee', width: 26 },
+        { key: 'department', title: 'Department', width: 22 },
+        { key: 'type', title: 'Type', width: 16 },
+        { key: 'baseAmount', title: 'Base Amount', width: 16, numFmt: '#,##0.00' },
+        { key: 'calculatedAmount', title: 'Calculated Amount', width: 18, numFmt: '#,##0.00' },
+        { key: 'period', title: 'Period', width: 14 },
+        { key: 'status', title: 'Status', width: 12 },
       ],
-      `regalias_${today}`,
-      'Regalías'
+      `royalties_${today}`,
+      'Royalties'
     );
   };
 
@@ -333,8 +333,8 @@ export default function PayrollRoyaltiesPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Regalías</h1>
-            <p className="text-gray-600">Gestión de regalías y participaciones</p>
+            <h1 className="text-2xl font-bold text-gray-900">Royalties</h1>
+            <p className="text-gray-600">Manage royalties and profit shares</p>
           </div>
           <div className="flex gap-3">
             <button
@@ -342,34 +342,34 @@ export default function PayrollRoyaltiesPage() {
               className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
             >
               <i className="ri-arrow-left-line mr-2"></i>
-              Volver
+              Back
             </button>
             <button
               onClick={exportToExcel}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Regalía
+              New Royalty
             </button>
           </div>
         </div>
 
-        {/* Estadísticas */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-blue-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-money-dollar-circle-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Regalías</p>
+                <p className="text-sm font-medium text-gray-600">Total Royalties</p>
                 <p className="text-2xl font-bold text-gray-900">
                   ${totalRoyalties.toLocaleString()}
                 </p>
@@ -379,11 +379,11 @@ export default function PayrollRoyaltiesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-user-star-line text-green-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-user-star-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Regalías Activas</p>
+                <p className="text-sm font-medium text-gray-600">Active Royalties</p>
                 <p className="text-2xl font-bold text-gray-900">{activeRoyalties}</p>
               </div>
             </div>
@@ -391,11 +391,11 @@ export default function PayrollRoyaltiesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-percentage-line text-purple-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-percentage-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Promedio Mensual</p>
+                <p className="text-sm font-medium text-gray-600">Monthly Average</p>
                 <p className="text-2xl font-bold text-gray-900">
                   ${Math.round(totalRoyalties / Math.max(activeRoyalties, 1)).toLocaleString()}
                 </p>
@@ -405,36 +405,36 @@ export default function PayrollRoyaltiesPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-team-line text-orange-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-team-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Empleados</p>
+                <p className="text-sm font-medium text-gray-600">Total Employees</p>
                 <p className="text-2xl font-bold text-gray-900">{royalties.length}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filtros */}
+        {/* Filters */}
         <div className="bg-white p-4 rounded-lg shadow-sm border mb-6">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <input
                 type="text"
-                placeholder="Buscar empleado..."
+                placeholder="Search employee..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
               />
             </div>
             <div>
               <select
                 value={filterDepartment}
                 onChange={(e) => setFilterDepartment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
               >
-                <option value="">Todos los departamentos</option>
+                <option value="">All departments</option>
                 {departments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -444,9 +444,9 @@ export default function PayrollRoyaltiesPage() {
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
               >
-                <option value="">Todos los tipos</option>
+                <option value="">All types</option>
                 {royaltyTypes.map(type => (
                   <option key={type.value} value={type.value}>{type.label}</option>
                 ))}
@@ -456,9 +456,9 @@ export default function PayrollRoyaltiesPage() {
               <select
                 value={filterPeriod}
                 onChange={(e) => setFilterPeriod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
               >
-                <option value="">Todos los períodos</option>
+                <option value="">All periods</option>
                 {periods.map(period => (
                   <option key={period.value} value={period.value}>{period.label}</option>
                 ))}
@@ -474,41 +474,41 @@ export default function PayrollRoyaltiesPage() {
                 }}
                 className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm whitespace-nowrap"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
-        {/* Tabla */}
+        {/* Table */}
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empleado
+                    Employee
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Departamento
+                    Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
+                    Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto Base
+                    Base Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto Calculado
+                    Calculated Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Período
+                    Period
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -525,13 +525,9 @@ export default function PayrollRoyaltiesPage() {
                       {royalty.department}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        royalty.royaltyType === 'percentage' ? 'bg-blue-100 text-blue-800' :
-                        royalty.royaltyType === 'fixed' ? 'bg-green-100 text-green-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {royalty.royaltyType === 'percentage' ? 'Porcentaje' :
-                         royalty.royaltyType === 'fixed' ? 'Monto Fijo' : 'Fórmula'}
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-[#e6e9d5] text-[#4b5320]">
+                        {royalty.royaltyType === 'percentage' ? 'Percentage' :
+                         royalty.royaltyType === 'fixed' ? 'Fixed Amount' : 'Formula'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -541,21 +537,21 @@ export default function PayrollRoyaltiesPage() {
                       ${royalty.calculatedAmount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {royalty.period === 'monthly' ? 'Mensual' :
-                       royalty.period === 'quarterly' ? 'Trimestral' : 'Anual'}
+                      {royalty.period === 'monthly' ? 'Monthly' :
+                       royalty.period === 'quarterly' ? 'Quarterly' : 'Annual'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        royalty.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        royalty.isActive ? 'bg-[#e6e9d5] text-[#4b5320]' : 'bg-red-100 text-red-800'
                       }`}>
-                        {royalty.isActive ? 'Activo' : 'Inactivo'}
+                        {royalty.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(royalty)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#4b5320] hover:text-[#3d431a]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -574,14 +570,14 @@ export default function PayrollRoyaltiesPage() {
           </div>
         </div>
 
-        {/* Modal de formulario */}
+        {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-gray-900">
-                    {editingRoyalty ? 'Editar Regalía' : 'Nueva Regalía'}
+                    {editingRoyalty ? 'Edit Royalty' : 'New Royalty'}
                   </h2>
                   <button
                     onClick={() => {
@@ -598,7 +594,7 @@ export default function PayrollRoyaltiesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Empleado *
+                        Employee *
                       </label>
                       <select
                         required
@@ -617,9 +613,9 @@ export default function PayrollRoyaltiesPage() {
                             }));
                           }
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       >
-                        <option value="">Seleccionar empleado...</option>
+                        <option value="">Select employee...</option>
                         {employees.map(emp => (
                           <option key={emp.id} value={emp.id}>
                             {emp.code ? `${emp.code} - ${emp.name}` : emp.name}
@@ -632,7 +628,7 @@ export default function PayrollRoyaltiesPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        ID Empleado
+                        Employee ID
                       </label>
                       <input
                         type="text"
@@ -644,7 +640,7 @@ export default function PayrollRoyaltiesPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Departamento
+                        Department
                       </label>
                       <input
                         type="text"
@@ -656,7 +652,7 @@ export default function PayrollRoyaltiesPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Posición
+                        Position
                       </label>
                       <input
                         type="text"
@@ -668,13 +664,13 @@ export default function PayrollRoyaltiesPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tipo de Regalía *
+                        Royalty Type *
                       </label>
                       <select
                         required
                         value={formData.royaltyType}
                         onChange={(e) => setFormData(prev => ({ ...prev, royaltyType: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       >
                         {royaltyTypes.map(type => (
                           <option key={type.value} value={type.value}>{type.label}</option>
@@ -684,13 +680,13 @@ export default function PayrollRoyaltiesPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Período *
+                        Period *
                       </label>
                       <select
                         required
                         value={formData.period}
                         onChange={(e) => setFormData(prev => ({ ...prev, period: e.target.value as any }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       >
                         {periods.map(period => (
                           <option key={period.value} value={period.value}>{period.label}</option>
@@ -701,14 +697,16 @@ export default function PayrollRoyaltiesPage() {
                     {formData.royaltyType !== 'fixed' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Monto Base
+                          Base Amount
                         </label>
                         <input
-                          type="number" min="0"
+                          required
+                          type="number"
                           step="0.01"
+                          min="0"
                           value={formData.baseAmount}
                           onChange={(e) => setFormData(prev => ({ ...prev, baseAmount: parseFloat(e.target.value) || 0 }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                         />
                       </div>
                     )}
@@ -716,14 +714,15 @@ export default function PayrollRoyaltiesPage() {
                     {formData.royaltyType === 'percentage' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Porcentaje (%)
+                          Percentage (%)
                         </label>
                         <input
-                          type="number" min="0"
+                          type="number"
                           step="0.01"
+                          min="0"
                           value={formData.percentage}
                           onChange={(e) => setFormData(prev => ({ ...prev, percentage: parseFloat(e.target.value) || 0 }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                         />
                       </div>
                     )}
@@ -731,40 +730,41 @@ export default function PayrollRoyaltiesPage() {
                     {formData.royaltyType === 'fixed' && (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Monto Fijo
+                          Fixed Amount
                         </label>
                         <input
-                          type="number" min="0"
+                          type="number"
                           step="0.01"
+                          min="0"
                           value={formData.fixedAmount}
                           onChange={(e) => setFormData(prev => ({ ...prev, fixedAmount: parseFloat(e.target.value) || 0 }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                         />
                       </div>
                     )}
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fecha Inicio *
+                        Start Date *
                       </label>
                       <input
                         type="date"
                         required
                         value={formData.startDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fecha Fin
+                        End Date
                       </label>
                       <input
                         type="date"
                         value={formData.endDate}
                         onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       />
                     </div>
                   </div>
@@ -772,30 +772,31 @@ export default function PayrollRoyaltiesPage() {
                   {formData.royaltyType === 'formula' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fórmula
+                        Formula
                       </label>
                       <input
                         type="text"
-                        placeholder="Ej: (baseAmount * 0.03) + 2000"
+                        placeholder="e.g., baseAmount * 1.2"
                         value={formData.formula}
                         onChange={(e) => setFormData(prev => ({ ...prev, formula: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Use 'baseAmount' como variable en la fórmula
+                        Use 'baseAmount' as the variable in the formula
                       </p>
                     </div>
                   )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
+                      Description
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
+                      placeholder="Notes about this royalty or formula"
                     />
                   </div>
 
@@ -805,10 +806,10 @@ export default function PayrollRoyaltiesPage() {
                       id="isActive"
                       checked={formData.isActive}
                       onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-[#4b5320] focus:ring-[#4b5320] border-gray-300 rounded"
                     />
                     <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                      Regalía activa
+                      Active royalty
                     </label>
                   </div>
 
@@ -821,13 +822,13 @@ export default function PayrollRoyaltiesPage() {
                       }}
                       className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
                     >
-                      {editingRoyalty ? 'Actualizar' : 'Crear'} Regalía
+                      {editingRoyalty ? 'Update' : 'Create'} Royalty
                     </button>
                   </div>
                 </form>

@@ -6,6 +6,17 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 
+const BASE_CARD_CLASSES =
+  'bg-[#FBF7EF] border border-[#D9C8A9] rounded-2xl shadow-[0_18px_38px_rgba(55,74,58,0.12)]';
+const INPUT_CLASSES =
+  'w-full px-3 py-2 border border-[#D9C8A9] rounded-lg text-sm bg-white text-[#2F3D2E] focus:ring-2 focus:ring-[#3C4F3C] focus:border-[#3C4F3C] transition';
+const PRIMARY_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#3C4F3C] text-white rounded-lg hover:bg-[#2D3B2E] text-sm font-semibold flex items-center gap-2 shadow-[0_10px_25px_rgba(60,79,60,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed';
+const PDF_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#B9583C] text-white rounded-lg hover:bg-[#a24b31] text-sm font-semibold flex items-center gap-2 shadow-[0_10px_20px_rgba(185,88,60,0.35)] transition disabled:opacity-50 disabled:cursor-not-allowed';
+const EXCEL_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#7A705A] text-white rounded-lg hover:bg-[#6A5F53] text-sm font-semibold flex items-center gap-2 shadow-[0_10px_20px_rgba(122,112,90,0.35)] transition disabled:opacity-50 disabled:cursor-not-allowed';
+
 interface CommissionRow {
   salesRepId: string;
   salesRepName: string;
@@ -233,151 +244,188 @@ export default function CommissionReportPage() {
     );
   };
 
+  const summaryCards = [
+    {
+      id: 'total-sales',
+      title: 'Total Sales',
+      value: `RD$ ${totalSalesAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
+      helper: 'All sales for the selected filters',
+      icon: 'ri-funds-box-line',
+      accentBg: 'bg-[#DDE7D0]',
+      iconColor: 'text-[#2F3D2E]',
+    },
+    {
+      id: 'total-commission',
+      title: 'Total Commissions',
+      value: `RD$ ${totalCommissionAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
+      helper: 'Estimated payouts',
+      icon: 'ri-hand-coin-line',
+      accentBg: 'bg-[#E7DFC9]',
+      iconColor: 'text-[#324532]',
+    },
+    {
+      id: 'active-reps',
+      title: 'Reps with Sales',
+      value: rows.length.toString(),
+      helper: 'Unique sales reps',
+      icon: 'ri-user-star-line',
+      accentBg: 'bg-[#E5E2D9]',
+      iconColor: 'text-[#2F3D2E]',
+    },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 bg-[#F4ECDC] min-h-screen rounded-[32px] p-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reporte de Comisión</h1>
-            <p className="text-gray-600 text-sm max-w-2xl">
-              Ventas por vendedor en el período y tiendas seleccionadas, para fines de cálculo de comisiones.
-            </p>
-          </div>
+        <div>
+          <span className="inline-flex items-center text-xs font-semibold tracking-[0.2em] uppercase text-[#7A705A]">
+            Performance
+          </span>
+          <h1 className="text-3xl font-semibold text-[#2F3D2E] mt-2">Commission Report</h1>
+          <p className="text-[#5F6652] max-w-2xl">
+            Review sales by representative, store, and time period to calculate commissions with confidence.
+          </p>
         </div>
 
-        {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
+        {/* Filters */}
+        <div className={`${BASE_CARD_CLASSES} space-y-4 p-6`}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-1">From</label>
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={INPUT_CLASSES}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-1">To</label>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={INPUT_CLASSES}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vendedor</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-1">Sales Representative</label>
               <select
                 value={selectedSalesRepId}
                 onChange={(e) => setSelectedSalesRepId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                className={`${INPUT_CLASSES} pr-8`}
               >
-                <option value="all">Todos los vendedores</option>
+                <option value="all">All sales reps</option>
                 {salesReps.map((rep) => (
                   <option key={rep.id} value={String(rep.id)}>{rep.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tienda / Sucursal</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-1">Store / Branch</label>
               <select
                 value={selectedStoreName}
                 onChange={(e) => setSelectedStoreName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                className={`${INPUT_CLASSES} pr-8`}
               >
-                <option value="all">Todas las tiendas</option>
+                <option value="all">All stores</option>
                 {stores.map((s) => (
                   <option key={s.id} value={s.name}>{s.name}</option>
                 ))}
               </select>
             </div>
           </div>
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={handleGenerate}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center space-x-2"
-            >
+          <div className="flex flex-wrap justify-end gap-3">
+            <button type="button" onClick={handleGenerate} className={PRIMARY_BUTTON_CLASSES}>
               <i className="ri-file-chart-line" />
-              <span>Generar Reporte</span>
+              <span>Generate Report</span>
             </button>
             <button
               type="button"
               onClick={handleExportPdf}
               disabled={rows.length === 0}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed text-sm font-medium flex items-center space-x-2"
+              className={PDF_BUTTON_CLASSES}
             >
               <i className="ri-file-pdf-line" />
-              <span>Exportar a PDF</span>
+              <span>Export PDF</span>
             </button>
             <button
               type="button"
               onClick={handleExportExcel}
               disabled={rows.length === 0}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed text-sm font-medium flex items-center space-x-2"
+              className={EXCEL_BUTTON_CLASSES}
             >
               <i className="ri-file-excel-line" />
-              <span>Exportar a Excel</span>
+              <span>Export Excel</span>
             </button>
           </div>
         </div>
 
-        {/* Resumen */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Ventas totales</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">RD$ {totalSalesAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Comisión total</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">RD$ {totalCommissionAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Vendedores con ventas</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{rows.length}</p>
-          </div>
+        {/* Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {summaryCards.map((card) => (
+            <div key={card.id} className={`${BASE_CARD_CLASSES} p-6`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#5F6652]">{card.title}</p>
+                  <p className="text-2xl font-semibold text-[#2F3D2E] mt-1">{card.value}</p>
+                  <p className="text-xs text-[#7A705A] mt-1">{card.helper}</p>
+                </div>
+                <div className={`${card.accentBg} ${card.iconColor} ${'w-12 h-12 rounded-xl flex items-center justify-center'}`}>
+                  <i className={`${card.icon} text-xl`}></i>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Tabla de resultados */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-            <h2 className="text-sm font-semibold text-gray-700">Detalle por Vendedor</h2>
-            {loading && <span className="text-xs text-gray-500">Cargando...</span>}
+        {/* Results Table */}
+        <div className={`${BASE_CARD_CLASSES} overflow-hidden`}>
+          <div className="px-6 py-4 border-b border-[#D9C8A9] flex items-center justify-between bg-[#F8F1E3] rounded-t-2xl">
+            <div>
+              <h2 className="text-sm font-semibold text-[#2F3D2E]">Sales by Representative</h2>
+              <p className="text-xs text-[#7A705A]">Detailed commission breakdown</p>
+            </div>
+            {loading && (
+              <span className="text-xs text-[#7A705A] flex items-center gap-1">
+                <span className="inline-block w-3 h-3 rounded-full border-2 border-[#3C4F3C] border-t-transparent animate-spin" />
+                Loading...
+              </span>
+            )}
           </div>
           {rows.length === 0 && !loading ? (
-            <div className="p-6 text-center text-sm text-gray-500">
-              No hay ventas registradas para los filtros seleccionados.
+            <div className="p-6 text-center text-sm text-[#7A705A]">
+              No sales match the selected filters.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[#EADDC4] text-sm text-[#2F3D2E]">
+                <thead className="bg-[#FFF9EE] text-xs uppercase tracking-wide text-[#7A705A]">
                   <tr>
-                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Vendedor</th>
-                    <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Tiendas</th>
-                    <th className="px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider"># Facturas</th>
-                    <th className="px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Ventas (RD$)</th>
-                    <th className="px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">% Comisión</th>
-                    <th className="px-6 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Comisión (RD$)</th>
+                    <th className="px-6 py-3 text-left font-semibold">Sales Rep</th>
+                    <th className="px-6 py-3 text-left font-semibold">Stores</th>
+                    <th className="px-6 py-3 text-right font-semibold"># Invoices</th>
+                    <th className="px-6 py-3 text-right font-semibold">Sales (RD$)</th>
+                    <th className="px-6 py-3 text-right font-semibold">Commission %</th>
+                    <th className="px-6 py-3 text-right font-semibold">Commission (RD$)</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-[#F0E4CF] bg-white">
                   {rows.map((row) => (
-                    <tr key={row.salesRepId} className="hover:bg-gray-50">
-                      <td className="px-6 py-3 whitespace-nowrap text-gray-900">{row.salesRepName}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-gray-900 text-xs">
-                        {row.storeNames.length > 0 ? row.storeNames.join(', ') : 'Sin tienda'}
+                    <tr key={row.salesRepId} className="hover:bg-[#FFF7E8] transition">
+                      <td className="px-6 py-3 whitespace-nowrap">{row.salesRepName}</td>
+                      <td className="px-6 py-3 whitespace-nowrap text-xs text-[#5F6652]">
+                        {row.storeNames.length > 0 ? row.storeNames.join(', ') : 'No store'}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-right text-gray-900">{row.invoiceCount}</td>
-                      <td className="px-6 py-3 whitespace-nowrap text-right text-gray-900">
+                      <td className="px-6 py-3 whitespace-nowrap text-right">{row.invoiceCount}</td>
+                      <td className="px-6 py-3 whitespace-nowrap text-right">
                         RD$ {row.totalSales.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-right text-gray-900">
+                      <td className="px-6 py-3 whitespace-nowrap text-right">
                         {row.commissionRate.toLocaleString('es-DO', { maximumFractionDigits: 2 })}%
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-right text-gray-900 font-semibold">
+                      <td className="px-6 py-3 whitespace-nowrap text-right font-semibold">
                         RD$ {row.commissionAmount.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
                       </td>
                     </tr>

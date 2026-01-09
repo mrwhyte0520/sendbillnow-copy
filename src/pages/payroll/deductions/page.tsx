@@ -89,7 +89,7 @@ export default function PeriodicDeductionsPage() {
     try {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) {
-        alert('No se pudo determinar la empresa del usuario.');
+        alert('Could not determine the user company.');
         return;
       }
 
@@ -114,7 +114,7 @@ export default function PeriodicDeductionsPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving deduction:', error);
-      alert('Error al guardar la deducción');
+      alert('Error saving deduction');
     }
   };
 
@@ -136,7 +136,7 @@ export default function PeriodicDeductionsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta deducción periódica?')) return;
+    if (!confirm('Are you sure you want to delete this periodic deduction?')) return;
 
     try {
       await supabase
@@ -146,7 +146,7 @@ export default function PeriodicDeductionsPage() {
       await loadData();
     } catch (error) {
       console.error('Error deleting deduction:', error);
-      alert('Error al eliminar la deducción');
+      alert('Error deleting deduction');
     }
   };
 
@@ -193,93 +193,93 @@ export default function PeriodicDeductionsPage() {
 
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
-      prestamo: 'Préstamo',
-      pension_alimenticia: 'Pensión Alimenticia',
-      seguro: 'Seguro',
-      sindicato: 'Sindicato',
-      cooperativa: 'Cooperativa',
-      otro: 'Otro'
+      prestamo: 'Loan',
+      pension_alimenticia: 'Alimony',
+      seguro: 'Insurance',
+      sindicato: 'Union',
+      cooperativa: 'Cooperative',
+      otro: 'Other'
     };
     return labels[category] || category;
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Deducciones Periódicas</h1>
-            <p className="text-gray-600">Gestión de deducciones recurrentes por empleado</p>
+            <h1 className="text-2xl font-bold text-gray-900">Periodic Deductions</h1>
+            <p className="text-gray-700">Manage recurring deductions per employee</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => navigate('/payroll')}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
             >
-              <i className="ri-arrow-left-line mr-2"></i>
-              Volver
+              <i className="ri-arrow-left-line"></i>
+              Back
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
             >
-              <i className="ri-add-line mr-2"></i>
-              Nueva Deducción
+              <i className="ri-add-line"></i>
+              New Deduction
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-4">
+          <div className="grid grid-cols-1 md-grid-cols-2 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Buscar
+                Search
               </label>
               <input
                 type="text"
-                placeholder="Buscar por nombre o descripción..."
+                placeholder="Search by name or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoría
+                Category
               </label>
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="todos">Todas las categorías</option>
-                <option value="prestamo">Préstamo</option>
-                <option value="pension_alimenticia">Pensión Alimenticia</option>
-                <option value="seguro">Seguro</option>
-                <option value="sindicato">Sindicato</option>
-                <option value="cooperativa">Cooperativa</option>
-                <option value="otro">Otro</option>
+                <option value="todos">All categories</option>
+                <option value="prestamo">Loan</option>
+                <option value="pension_alimenticia">Alimony</option>
+                <option value="seguro">Insurance</option>
+                <option value="sindicato">Union</option>
+                <option value="cooperativa">Cooperative</option>
+                <option value="otro">Other</option>
               </select>
             </div>
           </div>
         </div>
 
         {/* Deductions List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deducción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoría</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frecuencia</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deduction</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -298,34 +298,34 @@ export default function PeriodicDeductionsPage() {
                       {getCategoryLabel(deduction.category)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {deduction.type === 'fijo' ? 'Monto Fijo' : 'Porcentaje'}
+                      {deduction.type === 'fijo' ? 'Fixed Amount' : 'Percentage'}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {deduction.type === 'fijo'
-                        ? `RD$ ${deduction.amount.toLocaleString('es-DO')}`
+                        ? `RD$ ${deduction.amount.toLocaleString('en-US')}`
                         : `${deduction.percentage}%`
                       }
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 capitalize">
-                      {deduction.frequency}
+                      {deduction.frequency === 'semanal' ? 'Weekly' : deduction.frequency === 'quincenal' ? 'Biweekly' : 'Monthly'}
                     </td>
                     <td className="px-6 py-4">
                       <button
                         onClick={() => toggleStatus(deduction)}
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           deduction.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
+                            ? 'bg-[#dbe8c0] text-[#2f3a1f]'
+                            : 'bg-red-100 text-red-800'
                         }`}
                       >
-                        {deduction.is_active ? 'Activa' : 'Inactiva'}
+                        {deduction.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEdit(deduction)}
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-[#4b5320] hover:text-[#2f3a1f]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -342,7 +342,7 @@ export default function PeriodicDeductionsPage() {
                 {filteredDeductions.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      No se encontraron deducciones periódicas
+                      No periodic deductions found
                     </td>
                   </tr>
                 )}
@@ -354,24 +354,24 @@ export default function PeriodicDeductionsPage() {
         {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {editingDeduction ? 'Editar Deducción Periódica' : 'Nueva Deducción Periódica'}
+                {editingDeduction ? 'Edit Periodic Deduction' : 'New Periodic Deduction'}
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Empleado *
+                      Employee *
                     </label>
                     <select
                       value={formData.employee_id}
                       onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     >
-                      <option value="">Seleccionar empleado</option>
+                      <option value="">Select employee</option>
                       {employees.map(emp => (
                         <option key={emp.id} value={emp.id}>
                           {emp.employee_code} - {emp.first_name} {emp.last_name}
@@ -382,88 +382,88 @@ export default function PeriodicDeductionsPage() {
 
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la Deducción *
+                      Deduction name *
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Descripción
+                      Description
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       rows={2}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría *
+                      Category *
                     </label>
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     >
-                      <option value="prestamo">Préstamo</option>
-                      <option value="pension_alimenticia">Pensión Alimenticia</option>
-                      <option value="seguro">Seguro</option>
-                      <option value="sindicato">Sindicato</option>
-                      <option value="cooperativa">Cooperativa</option>
-                      <option value="otro">Otro</option>
+                      <option value="prestamo">Loan</option>
+                      <option value="pension_alimenticia">Alimony</option>
+                      <option value="seguro">Insurance</option>
+                      <option value="sindicato">Union</option>
+                      <option value="cooperativa">Cooperative</option>
+                      <option value="otro">Other</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de Deducción *
+                      Deduction type *
                     </label>
                     <select
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     >
-                      <option value="fijo">Monto Fijo</option>
-                      <option value="porcentaje">Porcentaje</option>
+                      <option value="fijo">Fixed Amount</option>
+                      <option value="porcentaje">Percentage</option>
                     </select>
                   </div>
 
                   {formData.type === 'fijo' ? (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Monto (RD$) *
+                        Amount (RD$) *
                       </label>
                       <input
                         type="number" min="0"
                         step="0.01"
                         value={formData.amount}
                         onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                         required
                       />
                     </div>
                   ) : (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Porcentaje (%) *
+                        Percentage (%) *
                       </label>
                       <input
                         type="number" min="0"
                         step="0.01"
                         value={formData.percentage}
                         onChange={(e) => setFormData({ ...formData, percentage: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                         required
                       />
                     </div>
@@ -471,42 +471,42 @@ export default function PeriodicDeductionsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Frecuencia *
+                      Frequency *
                     </label>
                     <select
                       value={formData.frequency}
                       onChange={(e) => setFormData({ ...formData, frequency: e.target.value as any })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     >
-                      <option value="semanal">Semanal</option>
-                      <option value="quincenal">Quincenal</option>
-                      <option value="mensual">Mensual</option>
+                      <option value="semanal">Weekly</option>
+                      <option value="quincenal">Biweekly</option>
+                      <option value="mensual">Monthly</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha de Inicio *
+                      Start date *
                     </label>
                     <input
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha de Fin (Opcional)
+                      End date (optional)
                     </label>
                     <input
                       type="date"
                       value={formData.end_date}
                       onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -515,15 +515,15 @@ export default function PeriodicDeductionsPage() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
-                    {editingDeduction ? 'Actualizar' : 'Crear'} Deducción
+                    {editingDeduction ? 'Update' : 'Create'} Deduction
                   </button>
                 </div>
               </form>

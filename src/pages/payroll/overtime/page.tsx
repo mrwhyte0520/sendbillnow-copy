@@ -224,7 +224,7 @@ export default function OvertimePage() {
       resetForm();
     } catch (error) {
       console.error('Error saving overtime record:', error);
-      alert('Error al guardar el registro de horas extras');
+      alert('Error saving the overtime record.');
     }
   };
 
@@ -289,7 +289,7 @@ export default function OvertimePage() {
       ));
     } catch (error) {
       console.error('Error updating overtime status:', error);
-      alert('Error al actualizar el estado del registro');
+      alert('Error updating the record status.');
     }
   };
 
@@ -303,35 +303,35 @@ export default function OvertimePage() {
       hours: record.totalHours,
       type:
         record.overtimeType === 'regular' ? 'Regular' :
-        record.overtimeType === 'night' ? 'Nocturno' :
-        record.overtimeType === 'holiday' ? 'Feriado' : 'Domingo',
+        record.overtimeType === 'night' ? 'Night' :
+        record.overtimeType === 'holiday' ? 'Holiday' : 'Sunday',
       rate: `${record.overtimeRate}x`,
       total: record.totalAmount,
       status:
-        record.status === 'pending' ? 'Pendiente' :
-        record.status === 'approved' ? 'Aprobado' :
-        record.status === 'rejected' ? 'Rechazado' : 'Pagado',
+        record.status === 'pending' ? 'Pending' :
+        record.status === 'approved' ? 'Approved' :
+        record.status === 'rejected' ? 'Rejected' : 'Paid',
     }));
 
     if (!rows.length) {
-      alert('No hay registros de horas extras para exportar.');
+      alert('No overtime records to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'employee', title: 'Empleado', width: 26 },
-        { key: 'department', title: 'Departamento', width: 22 },
-        { key: 'date', title: 'Fecha', width: 14 },
-        { key: 'hours', title: 'Horas', width: 10, numFmt: '0.0' },
-        { key: 'type', title: 'Tipo', width: 16 },
-        { key: 'rate', title: 'Tasa', width: 10 },
+        { key: 'employee', title: 'Employee', width: 26 },
+        { key: 'department', title: 'Department', width: 22 },
+        { key: 'date', title: 'Date', width: 14 },
+        { key: 'hours', title: 'Hours', width: 10, numFmt: '0.0' },
+        { key: 'type', title: 'Type', width: 16 },
+        { key: 'rate', title: 'Rate', width: 10 },
         { key: 'total', title: 'Total', width: 16, numFmt: '#,##0.00' },
-        { key: 'status', title: 'Estado', width: 14 },
+        { key: 'status', title: 'Status', width: 14 },
       ],
-      `horas_extras_${today}`,
-      'Horas Extras'
+      `overtime_${today}`,
+      'Overtime'
     );
   };
 
@@ -346,15 +346,15 @@ export default function OvertimePage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Horas Extras</h1>
-            <p className="text-gray-600">Administra el registro y aprobación de horas extras</p>
+            <h1 className="text-2xl font-bold text-gray-900">Overtime Management</h1>
+            <p className="text-gray-600">Manage overtime logging and approvals</p>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Registrar Horas
+            Log Overtime
           </button>
         </div>
 
@@ -362,11 +362,11 @@ export default function OvertimePage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-time-line text-blue-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-time-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Registros</p>
+                <p className="text-sm font-medium text-gray-600">Total Records</p>
                 <p className="text-2xl font-bold text-gray-900">{overtimeRecords.length}</p>
               </div>
             </div>
@@ -374,11 +374,11 @@ export default function OvertimePage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <i className="ri-hourglass-line text-yellow-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-hourglass-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-2xl font-bold text-gray-900">{pendingRecords}</p>
               </div>
             </div>
@@ -386,11 +386,11 @@ export default function OvertimePage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-check-line text-green-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-check-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Horas</p>
+                <p className="text-sm font-medium text-gray-600">Total Hours</p>
                 <p className="text-2xl font-bold text-gray-900">{totalHours.toFixed(1)}</p>
               </div>
             </div>
@@ -398,11 +398,11 @@ export default function OvertimePage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-purple-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-money-dollar-circle-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Aprobado</p>
+                <p className="text-sm font-medium text-gray-600">Approved Total</p>
                 <p className="text-2xl font-bold text-gray-900">${totalAmount.toLocaleString()}</p>
               </div>
             </div>
@@ -413,57 +413,57 @@ export default function OvertimePage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search <span className="text-red-500">*</span></label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar empleado..."
+                  placeholder="Search employee..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
-                <option value="pending">Pendiente</option>
-                <option value="approved">Aprobado</option>
-                <option value="rejected">Rechazado</option>
-                <option value="paid">Pagado</option>
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="paid">Paid</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
+                <option value="all">All</option>
                 <option value="regular">Regular</option>
-                <option value="night">Nocturno</option>
-                <option value="holiday">Feriado</option>
-                <option value="sunday">Domingo</option>
+                <option value="night">Night</option>
+                <option value="holiday">Holiday</option>
+                <option value="sunday">Sunday</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Departamento</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
               <select
                 value={filterDepartment}
                 onChange={(e) => setFilterDepartment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
+                <option value="all">All</option>
                 {departments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -473,10 +473,10 @@ export default function OvertimePage() {
             <div className="flex items-end">
               <button
                 onClick={exportToCSV}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors text-sm whitespace-nowrap shadow-sm"
               >
                 <i className="ri-download-line mr-2"></i>
-                Exportar
+                Export
               </button>
             </div>
           </div>
@@ -489,22 +489,22 @@ export default function OvertimePage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empleado
+                    Employee
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha/Horario
+                    Date/Time
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo/Horas
+                    Type/Hours
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cálculo
+                    Calculation
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -523,17 +523,12 @@ export default function OvertimePage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          record.overtimeType === 'regular' ? 'bg-blue-100 text-blue-800' :
-                          record.overtimeType === 'night' ? 'bg-purple-100 text-purple-800' :
-                          record.overtimeType === 'holiday' ? 'bg-red-100 text-red-800' :
-                          'bg-orange-100 text-orange-800'
-                        }`}>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e6e9d5] text-[#4b5320]">
                           {record.overtimeType === 'regular' ? 'Regular' :
-                           record.overtimeType === 'night' ? 'Nocturno' :
-                           record.overtimeType === 'holiday' ? 'Feriado' : 'Domingo'}
+                           record.overtimeType === 'night' ? 'Night' :
+                           record.overtimeType === 'holiday' ? 'Holiday' : 'Sunday'}
                         </span>
-                        <div className="text-sm text-gray-500 mt-1">{record.totalHours.toFixed(1)} horas</div>
+                        <div className="text-sm text-gray-500 mt-1">{record.totalHours.toFixed(1)} hours</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -542,21 +537,24 @@ export default function OvertimePage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        record.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        record.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        record.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
+                        record.status === 'approved'
+                          ? 'bg-[#e6e9d5] text-[#4b5320]'
+                          : record.status === 'pending'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : record.status === 'rejected'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {record.status === 'pending' ? 'Pendiente' :
-                         record.status === 'approved' ? 'Aprobado' :
-                         record.status === 'rejected' ? 'Rechazado' : 'Pagado'}
+                        {record.status === 'pending' ? 'Pending' :
+                         record.status === 'approved' ? 'Approved' :
+                         record.status === 'rejected' ? 'Rejected' : 'Paid'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(record)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#4b5320] hover:text-[#3d431a]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -592,7 +590,7 @@ export default function OvertimePage() {
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-900">
-                    {editingRecord ? 'Editar Registro' : 'Registrar Horas Extras'}
+                    {editingRecord ? 'Edit Record' : 'Log Overtime'}
                   </h2>
                   <button
                     onClick={resetForm}
@@ -606,7 +604,7 @@ export default function OvertimePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Empleado *
+                        Employee *
                       </label>
                       <select
                         required
@@ -627,7 +625,7 @@ export default function OvertimePage() {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Seleccionar empleado...</option>
+                        <option value="">Select employee...</option>
                         {employees.map(emp => (
                           <option key={emp.id} value={emp.id}>
                             {emp.code ? `${emp.code} - ${emp.name}` : emp.name}
@@ -640,7 +638,7 @@ export default function OvertimePage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ID Empleado
+                        Employee ID
                       </label>
                       <input
                         type="text"
@@ -655,27 +653,27 @@ export default function OvertimePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Departamento
+                        Department
                       </label>
                       <input
                         type="text"
                         value={formData.department}
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Departamento"
+                        placeholder="Department"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Posición
+                        Position
                       </label>
                       <input
                         type="text"
                         value={formData.position}
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Cargo"
+                        placeholder="Position"
                       />
                     </div>
                   </div>
@@ -683,7 +681,7 @@ export default function OvertimePage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fecha *
+                        Date *
                       </label>
                       <input
                         type="date"
@@ -696,7 +694,7 @@ export default function OvertimePage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora Inicio *
+                        Start Time *
                       </label>
                       <input
                         type="time"
@@ -709,7 +707,7 @@ export default function OvertimePage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hora Fin *
+                        End Time *
                       </label>
                       <input
                         type="time"
@@ -724,7 +722,7 @@ export default function OvertimePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tipo de Hora Extra *
+                        Overtime Type *
                       </label>
                       <select
                         required
@@ -733,15 +731,15 @@ export default function OvertimePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
                       >
                         <option value="regular">Regular (1.5x)</option>
-                        <option value="night">Nocturno (2.0x)</option>
-                        <option value="holiday">Feriado (2.5x)</option>
-                        <option value="sunday">Domingo (2.0x)</option>
+                        <option value="night">Night (2.0x)</option>
+                        <option value="holiday">Holiday (2.5x)</option>
+                        <option value="sunday">Sunday (2.0x)</option>
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tarifa por Hora ($) *
+                        Hourly Rate ($) *
                       </label>
                       <input
                         type="number"
@@ -760,22 +758,16 @@ export default function OvertimePage() {
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-blue-800">Horas:</span>
+                          <span className="font-medium text-blue-800">Hours:</span>
                           <p className="text-blue-600">{calculateHours(formData.startTime, formData.endTime).toFixed(1)}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-blue-800">Multiplicador:</span>
+                          <span className="font-medium text-blue-800">Multiplier:</span>
                           <p className="text-blue-600">{getOvertimeRate(formData.overtimeType)}x</p>
                         </div>
                         <div>
-                          <span className="font-medium text-blue-800">Total:</span>
-                          <p className="text-blue-600">
-                            ${calculateAmount(
-                              calculateHours(formData.startTime, formData.endTime),
-                              formData.hourlyRate,
-                              getOvertimeRate(formData.overtimeType)
-                            ).toLocaleString()}
-                          </p>
+                          <span className="font-medium text-blue-800">Estimated Amount:</span>
+                          <p className="text-blue-600">${calculateAmount(calculateHours(formData.startTime, formData.endTime), formData.hourlyRate, getOvertimeRate(formData.overtimeType)).toFixed(2)}</p>
                         </div>
                       </div>
                     </div>
@@ -783,7 +775,7 @@ export default function OvertimePage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Motivo *
+                      Reason *
                     </label>
                     <textarea
                       required
@@ -791,7 +783,7 @@ export default function OvertimePage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Describe el motivo de las horas extras..."
+                      placeholder="Describe the overtime reason..."
                     />
                   </div>
 
@@ -801,13 +793,13 @@ export default function OvertimePage() {
                       onClick={resetForm}
                       className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
                     >
-                      {editingRecord ? 'Actualizar' : 'Registrar'} Horas
+                      {editingRecord ? 'Update' : 'Create'} Record
                     </button>
                   </div>
                 </form>

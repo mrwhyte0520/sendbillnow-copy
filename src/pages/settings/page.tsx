@@ -26,15 +26,15 @@ interface ChangeHistoryItem {
 const settingsSections: SettingsSection[] = [
   {
     id: 'company',
-    name: 'Información de la Empresa',
-    description: 'Configurar datos básicos de la empresa, logo y contacto',
+    name: 'Company Information',
+    description: 'Configure basic company data, logo, and contact details',
     icon: 'ri-building-line',
     href: '/settings/company'
   },
   {
     id: 'accounting',
-    name: 'Configuración Contable',
-    description: 'Configurar períodos fiscales, monedas y políticas contables',
+    name: 'Accounting Settings',
+    description: 'Configure fiscal periods, currencies, and accounting policies',
     icon: 'ri-calculator-line',
     href: '/settings/accounting'
   }
@@ -63,7 +63,7 @@ export default function SettingsPage() {
 
   const handleExportConfiguration = async () => {
     if (!user?.id) {
-      setMessage({ type: 'error', text: 'Usuario no autenticado. Inicia sesión para exportar la configuración.' });
+      setMessage({ type: 'error', text: 'User not authenticated. Sign in to export the configuration.' });
       return;
     }
     setLoading(true);
@@ -227,18 +227,18 @@ export default function SettingsPage() {
       // Generar y descargar el archivo Excel
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const fileName = `contabi-configuracion-${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = `contabi-configuration-${new Date().toISOString().split('T')[0]}.xlsx`;
       saveAs(blob, fileName);
 
       setMessage({ 
         type: 'success', 
-        text: 'Configuración exportada exitosamente en formato Excel. El archivo se ha descargado.' 
+        text: 'Configuration exported successfully to Excel. The file has been downloaded.' 
       });
     } catch (error) {
       console.error('Error exporting configuration:', error);
       setMessage({ 
         type: 'error', 
-        text: 'Error al exportar la configuración. Inténtalo de nuevo.' 
+        text: 'Error exporting configuration. Please try again.' 
       });
     } finally {
       setLoading(false);
@@ -358,7 +358,7 @@ export default function SettingsPage() {
 
   const handleResetConfiguration = async () => {
     if (!user?.id) {
-      setMessage({ type: 'error', text: 'Usuario no autenticado. Inicia sesión para restablecer la configuración.' });
+      setMessage({ type: 'error', text: 'User not authenticated. Sign in to reset configuration.' });
       return;
     }
     setLoading(true);
@@ -412,14 +412,14 @@ export default function SettingsPage() {
 
       setMessage({ 
         type: 'success', 
-        text: 'Configuración restablecida a valores por defecto de República Dominicana' 
+        text: 'Configuration reset to Dominican Republic defaults' 
       });
       setShowResetModal(false);
     } catch (error) {
       console.error('Error resetting configuration:', error);
       setMessage({ 
         type: 'error', 
-        text: 'Error al restablecer la configuración' 
+        text: 'Error resetting configuration' 
       });
     } finally {
       setLoading(false);
@@ -440,7 +440,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#F8F3E7] min-h-full p-6">
         {/* Message */}
         {message && (
           <div className={`p-4 rounded-lg ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -452,22 +452,22 @@ export default function SettingsPage() {
         )}
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-lg p-8">
+        <div className="bg-gradient-to-r from-[#3B4A2A] to-[#1F2616] rounded-2xl shadow-lg shadow-[#1F2616]/30 border border-[#2A351E] p-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Configuración del Sistema</h1>
-              <p className="text-blue-100 text-lg">
-                Administra la configuración general de tu sistema contable
+              <h1 className="text-3xl font-bold text-white mb-2">System Configuration</h1>
+              <p className="text-[#CFE6AB] text-lg">
+                Manage the overall configuration of your accounting system
               </p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="ri-search-line text-gray-400"></i>
+                  <i className="ri-search-line text-white/60"></i>
                 </div>
                 <input
                   type="text"
-                  placeholder="Buscar configuración..."
+                  placeholder="Search configuration..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-3 border-2 border-white/30 bg-white/10 text-white placeholder-white/60 rounded-lg focus:ring-2 focus:ring-white focus:border-white focus:bg-white/20 backdrop-blur-sm"
@@ -492,35 +492,35 @@ export default function SettingsPage() {
                     setRestrictedPlanName(requiredPlan);
                     setShowRestrictedModal(true);
                   }}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 hover:shadow-md transition-all cursor-pointer group opacity-75 min-h-[200px]"
+                  className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-8 hover:shadow-md transition-all cursor-pointer opacity-75 min-h-[200px]"
                 >
                   <div className="flex flex-col h-full">
                     <div className="flex items-start space-x-4 mb-4">
                       <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center">
-                          <i className={`${section.icon} text-gray-400 text-3xl`}></i>
+                        <div className="w-16 h-16 bg-[#F0E8D7] rounded-xl flex items-center justify-center">
+                          <i className={`${section.icon} text-[#A1A68B] text-3xl`}></i>
                         </div>
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-xl font-bold text-gray-500">
+                          <h3 className="text-xl font-bold text-[#7C8167]">
                             {section.name}
                           </h3>
-                          <i className="ri-lock-2-fill text-amber-500 text-xl"></i>
+                          <i className="ri-lock-2-fill text-[#C28A21] text-xl"></i>
                         </div>
-                        <p className="text-sm text-gray-400 leading-relaxed">
+                        <p className="text-sm text-gray-500 leading-relaxed">
                           {section.description}
                         </p>
                       </div>
                     </div>
-                    <div className="mt-auto pt-4 border-t border-gray-200">
+                    <div className="mt-auto pt-4 border-t border-[#E9E2D1]">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-amber-600 font-medium">
+                        <div className="flex items-center text-sm text-[#C28A21] font-medium">
                           <i className="ri-vip-crown-2-line mr-2 text-lg"></i>
-                          <span>Requiere {requiredPlan}</span>
+                          <span>Requires {requiredPlan}</span>
                         </div>
-                        <button className="px-4 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors">
-                          Ver Planes
+                        <button className="px-4 py-2 bg-[#F6E5C1] text-[#8A6514] rounded-lg text-sm font-medium hover:bg-[#EDDBB1] transition-colors">
+                          View Plans
                         </button>
                       </div>
                     </div>
@@ -533,29 +533,29 @@ export default function SettingsPage() {
               <div
                 key={section.id}
                 onClick={() => handleSectionClick(section.href)}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group min-h-[200px]"
+                className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-8 hover:shadow-lg hover:border-[#C6B383] transition-all cursor-pointer group min-h-[200px]"
               >
                 <div className="flex flex-col h-full">
                   <div className="flex items-start space-x-4 mb-4">
                     <div className="flex-shrink-0">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl flex items-center justify-center group-hover:from-blue-100 group-hover:to-blue-200 transition-all shadow-sm">
-                        <i className={`${section.icon} text-blue-600 text-3xl`}></i>
+                      <div className="w-16 h-16 bg-gradient-to-br from-[#F4F0E3] to-[#E8DFC7] rounded-xl flex items-center justify-center group-hover:from-[#ECE3CE] group-hover:to-[#E0D2B0] transition-all shadow-sm">
+                        <i className={`${section.icon} text-[#3B4A2A] text-3xl`}></i>
                       </div>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-2">
+                      <h3 className="text-xl font-bold text-[#1F2618] group-hover:text-[#3B4A2A] transition-colors mb-2">
                         {section.name}
                       </h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
+                      <p className="text-sm text-[#5B6844] leading-relaxed">
                         {section.description}
                       </p>
                     </div>
                   </div>
-                  <div className="mt-auto pt-4 border-t border-gray-100 group-hover:border-blue-100">
+                  <div className="mt-auto pt-4 border-t border-[#E9E2D1] group-hover:border-[#C6B383]/60">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500 font-medium uppercase tracking-wide">Módulo de configuración</span>
-                      <div className="flex items-center text-sm text-blue-600 group-hover:text-blue-700 font-medium">
-                        <span>Configurar</span>
+                      <span className="text-xs text-[#7C8167] font-medium uppercase tracking-wide">Configuration module</span>
+                      <div className="flex items-center text-sm text-[#566738] group-hover:text-[#384726] font-medium">
+                        <span>Configure</span>
                         <i className="ri-arrow-right-line ml-2 group-hover:translate-x-1 transition-transform"></i>
                       </div>
                     </div>

@@ -3,7 +3,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
-import { useLocation } from 'react-router-dom';
 import {
   apInvoicesService,
   apInvoiceLinesService,
@@ -64,7 +63,6 @@ interface LineFormRow {
 
 export default function APInvoicesPage() {
   const { user } = useAuth();
-  const location = useLocation();
 
   const [invoices, setInvoices] = useState<APInvoice[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -100,8 +98,6 @@ export default function APInvoicesPage() {
   const [documentPreviewRows, setDocumentPreviewRows] = useState<Array<Array<string | number>>>([]);
   const [documentPreviewSummary, setDocumentPreviewSummary] = useState<Array<{ label: string; value: string }>>([]);
   const documentPreviewIframeRef = useRef<HTMLIFrameElement | null>(null);
-
-  const didApplyPrefillRef = useRef(false);
 
   const formatTaxId = (raw: string) => {
     const digits = (raw || '').replace(/\D/g, '');
@@ -403,81 +399,6 @@ export default function APInvoicesPage() {
     loadTaxConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (didApplyPrefillRef.current) return;
-
-    const state: any = (location as any)?.state || null;
-    const prefillPurchaseOrderId = state?.prefillPurchaseOrderId ? String(state.prefillPurchaseOrderId) : '';
-    const prefillPurchaseOrderLines = Array.isArray(state?.prefillPurchaseOrderLines)
-      ? (state.prefillPurchaseOrderLines as any[])
-      : [];
-    if (!prefillPurchaseOrderId) return;
-
-    // Esperar a que las OCs estén cargadas para poder resolver suplidor y líneas
-    const po = (purchaseOrders || []).find((p: any) => String(p.id) === prefillPurchaseOrderId) || null;
-    if (!po) return;
-
-    const supplierId = po?.supplier_id ? String(po.supplier_id) : '';
-    if (!supplierId) return;
-
-    didApplyPrefillRef.current = true;
-
-    // Abrir modal y precargar OC
-    (async () => {
-      try {
-        resetForm();
-
-        // Usar la lógica existente para completar campos dependientes del suplidor
-        handleSupplierChange(supplierId);
-
-        // Re-aplicar OC porque handleSupplierChange limpia purchaseOrderId
-        setHeaderForm((prev) => ({
-          ...prev,
-          supplierId,
-          purchaseOrderId: prefillPurchaseOrderId,
-        }));
-
-        setShowModal(true);
-
-        // Si vienen líneas desde la pantalla de OC, usarlas directamente (no depende de RLS/consultas)
-        const incomingLines = (prefillPurchaseOrderLines || [])
-          .map((l: any) => {
-            const qty = Number(l?.quantity) || 0;
-            const price = Number(l?.unitPrice) || 0;
-            const invId = l?.inventoryItemId ? String(l.inventoryItemId) : '';
-            if (qty <= 0) return null;
-            return {
-              description: String(l?.description || ''),
-              expenseAccountId: '',
-              quantity: String(qty),
-              unitPrice: String(price),
-              inventoryItemId: invId,
-              discountPercentage: '0',
-              purchaseOrderItemId: l?.purchaseOrderItemId ? String(l.purchaseOrderItemId) : undefined,
-            } as LineFormRow;
-          })
-          .filter((x: any) => x !== null) as LineFormRow[];
-
-        if (incomingLines.length > 0) {
-          setLines(incomingLines);
-        } else {
-          // Mantener la lógica existente de carga de líneas desde OC
-          await handlePurchaseOrderChange(prefillPurchaseOrderId);
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error applying Purchase Order prefill to AP Invoice', error);
-        setShowModal(true);
-        setHeaderForm((prev) => ({
-          ...prev,
-          supplierId,
-          purchaseOrderId: prefillPurchaseOrderId,
-        }));
-      }
-    })();
-  }, [user?.id, location, purchaseOrders]);
 
   useEffect(() => {
     const loadCompanyInfo = async () => {
@@ -962,7 +883,7 @@ export default function APInvoicesPage() {
       const supplierEmail = String((supplier as any)?.email || '').trim();
       const supplierAddress = String((supplier as any)?.address || '').trim();
       const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
-      const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+      const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
       const companyPhone = (companyInfo as any)?.phone || '';
       const companyEmail = (companyInfo as any)?.email || '';
       const companyAddress = (companyInfo as any)?.address || '';
@@ -1562,38 +1483,43 @@ ${items
     }
   };
 
+  const inputBaseClass =
+    'w-full px-3 py-2 text-sm border border-[#d8cbb5] rounded-lg bg-[#fffdf6] focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]';
+  const subtleButtonClass =
+    'px-3 py-2 bg-[#f3ecda] text-[#2f3e1e] border border-[#d8cbb5] rounded-lg hover:bg-[#e3dcc8] text-sm font-medium transition-colors';
+
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 bg-[#f7f3e8] min-h-screen rounded-2xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Facturas de Suplidor</h1>
-            <p className="text-gray-600 text-sm max-w-2xl">
-              Registra facturas de proveedores para el módulo de CxP, utilizando los términos de pago y la
-              configuración fiscal del suplidor.
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Procurement</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Supplier Invoices</h1>
+            <p className="text-[#6b5c3b] text-sm max-w-2xl">
+              Register supplier invoices for the AP module, using payment terms and tax configuration per vendor.
             </p>
           </div>
           <button
             onClick={handleNewInvoice}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2913] transition-colors shadow-sm"
           >
             <i className="ri-add-line mr-2" />
-            Nueva Factura
+            New Invoice
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col md:flex-row gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-4 flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i className="ri-search-line text-gray-400" />
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#9b8a64]">
+                <i className="ri-search-line" />
               </span>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Buscar por suplidor o número de factura..."
+                className="w-full pl-10 pr-3 py-2 border border-[#d8cbb5] rounded-lg text-sm bg-[#fffdf6] focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
+                placeholder="Search by supplier or invoice number..."
               />
             </div>
           </div>
@@ -1601,57 +1527,57 @@ ${items
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg text-sm bg-[#fffdf6] focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
             >
-              <option value="all">Todos los estados</option>
-              <option value="pending">Pendiente</option>
-              <option value="approved">Aprobada</option>
-              <option value="paid">Pagada</option>
-              <option value="cancelled">Cancelada</option>
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="paid">Paid</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-            <h2 className="text-sm font-semibold text-gray-700">Facturas registradas</h2>
-            <span className="text-xs text-gray-500">Total: {filteredInvoices.length}</span>
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#e4d8c4] flex items-center justify-between bg-[#f7f3e8]">
+            <h2 className="text-sm font-semibold text-[#2f3e1e]">Registered invoices</h2>
+            <span className="text-xs text-[#6b5c3b]">Total: {filteredInvoices.length}</span>
           </div>
           {filteredInvoices.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 text-sm">
-              No hay facturas de suplidor registradas aún.
+            <div className="p-6 text-center text-[#6b5c3b] text-sm">
+              No supplier invoices have been recorded yet.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 text-sm">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[#e4d8c4] text-sm">
+                <thead className="bg-[#f7f3e8]">
                   <tr>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Factura</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Suplidor</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Fecha</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Vencimiento</th>
-                    <th className="px-4 py-2 text-right font-medium text-gray-600">Bruto</th>
-                    <th className="px-4 py-2 text-right font-medium text-gray-600">ITBIS</th>
-                    <th className="px-4 py-2 text-right font-medium text-gray-600">Total a Pagar</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Estado</th>
-                    <th className="px-4 py-2 text-left font-medium text-gray-600">Acciones</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Invoice</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Supplier</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Date</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Due Date</th>
+                    <th className="px-4 py-2 text-right font-semibold text-[#6b5c3b] uppercase text-xs">Gross</th>
+                    <th className="px-4 py-2 text-right font-semibold text-[#6b5c3b] uppercase text-xs">ITBIS</th>
+                    <th className="px-4 py-2 text-right font-semibold text-[#6b5c3b] uppercase text-xs">Total Payable</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Status</th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-[#f3ecda] bg-white">
                   {filteredInvoices.map(inv => (
-                    <tr key={inv.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-900">{inv.invoiceNumber}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-900">{inv.supplierName}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-900">{inv.invoiceDate}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-900">{inv.dueDate || '-'}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900">{inv.currency} {formatAmount(inv.totalGross)}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900">{inv.currency} {formatAmount(inv.totalItbis)}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900 font-semibold">
+                    <tr key={inv.id} className="hover:bg-[#fffdf6]">
+                      <td className="px-4 py-2 whitespace-nowrap text-[#2f3e1e]">{inv.invoiceNumber}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-[#2f3e1e]">{inv.supplierName}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-[#2f3e1e]">{inv.invoiceDate}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-[#2f3e1e]">{inv.dueDate || '-'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-right text-[#2f3e1e]">{inv.currency} {formatAmount(inv.totalGross)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-right text-[#2f3e1e]">{inv.currency} {formatAmount(inv.totalItbis)}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-right text-[#2f3e1e] font-semibold">
                         <div>
                           {inv.currency} {formatAmount(inv.totalToPay)}
                         </div>
                         {(inv as any).baseTotalToPay != null && inv.currency !== baseCurrencyCode && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-[#6b5c3b]">
                             ≈ {baseCurrencyCode}{' '}
                             {formatAmount((inv as any).baseTotalToPay)}
                           </div>
@@ -1666,29 +1592,29 @@ ${items
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleEditInvoice(inv)}
-                            className="text-blue-600 hover:text-blue-900"
-                            title="Editar"
+                            className="text-[#4b5c4b] hover:text-[#2f3e1e]"
+                            title="Edit"
                           >
                             <i className="ri-edit-line" />
                           </button>
                           <button
                             onClick={() => handlePrintInvoice(inv)}
-                            className="text-purple-600 hover:text-purple-900"
-                            title="Imprimir"
+                            className="text-[#7a2e1b] hover:text-[#5c1f12]"
+                            title="Print"
                           >
                             <i className="ri-printer-line" />
                           </button>
                           <button
                             onClick={() => handleExportInvoiceExcel(inv)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Exportar a Excel"
+                            className="text-[#2f3e1e] hover:text-[#1f2913]"
+                            title="Export to Excel"
                           >
                             <i className="ri-file-excel-2-line" />
                           </button>
                           <button
                             onClick={() => handleDeleteInvoice(inv.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Eliminar"
+                            className="text-[#b64736] hover:text-[#7a2e1b]"
+                            title="Delete"
                           >
                             <i className="ri-delete-bin-line" />
                           </button>
@@ -1704,64 +1630,65 @@ ${items
 
         {showDocumentPreviewModal && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
             onClick={handleCloseDocumentPreview}
           >
             <div
-              className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+              className="bg-[#fffdf6] border border-[#e4d8c4] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-[#e4d8c4] bg-[#f7f3e8]">
                 <div className="min-w-0">
-                  <h3 className="text-xl font-semibold text-gray-900 truncate">{documentPreviewTitle}</h3>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#6b5c3b] mb-1">Document preview</p>
+                  <h3 className="text-2xl font-semibold text-[#2f3e1e] truncate">{documentPreviewTitle}</h3>
                   {documentPreviewFilename ? (
-                    <p className="text-sm text-gray-500 truncate">{documentPreviewFilename}</p>
+                    <p className="text-sm text-[#6b5c3b] truncate">{documentPreviewFilename}</p>
                   ) : null}
                 </div>
                 <button
                   onClick={handleCloseDocumentPreview}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e] transition-colors"
                 >
-                  <i className="ri-close-line text-2xl"></i>
+                  <i className="ri-close-line text-2xl" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-auto border border-gray-200 rounded-lg bg-white">
+              <div className="flex-1 overflow-auto border-b border-[#e4d8c4] bg-white">
                 {documentPreviewType === 'table' ? (
-                  <div className="p-4 space-y-4">
+                  <div className="p-6 space-y-4">
                     {documentPreviewSummary.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {documentPreviewSummary.map((item, idx) => (
-                          <div key={idx} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                            <div className="text-xs text-gray-500">{item.label}</div>
-                            <div className="text-sm font-semibold text-gray-900">{item.value}</div>
+                          <div key={idx} className="bg-[#fffdf6] border border-[#e4d8c4] rounded-xl p-4">
+                            <div className="text-xs uppercase text-[#6b5c3b]">{item.label}</div>
+                            <div className="text-sm font-semibold text-[#2f3e1e]">{item.value}</div>
                           </div>
                         ))}
                       </div>
                     ) : null}
 
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="border border-[#e4d8c4] rounded-2xl overflow-hidden shadow-sm">
                       <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50 sticky top-0">
+                        <table className="min-w-full divide-y divide-[#e4d8c4]">
+                          <thead className="bg-[#f7f3e8] sticky top-0">
                             <tr>
                               {documentPreviewHeaders.map((header, idx) => (
                                 <th
                                   key={idx}
-                                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap"
+                                  className="px-4 py-3 text-left text-xs font-semibold text-[#6b5c3b] uppercase tracking-wide"
                                 >
                                   {header}
                                 </th>
                               ))}
                             </tr>
                           </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
+                          <tbody className="bg-white divide-y divide-[#f3ecda]">
                             {documentPreviewRows.map((row, rowIdx) => (
-                              <tr key={rowIdx} className="hover:bg-gray-50">
+                              <tr key={rowIdx} className="hover:bg-[#fffdf6]">
                                 {row.map((cell, cellIdx) => (
                                   <td
                                     key={cellIdx}
-                                    className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap"
+                                    className="px-4 py-3 text-sm text-[#2f3e1e] whitespace-nowrap"
                                   >
                                     {cell !== null && cell !== undefined ? String(cell) : ''}
                                   </td>
@@ -1781,31 +1708,31 @@ ${items
                     className="w-full h-[70vh]"
                   />
                 ) : (
-                  <div className="p-6 text-gray-600">No hay vista previa disponible.</div>
+                  <div className="p-6 text-[#6b5c3b]">No preview is available.</div>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-4">
+              <div className="flex flex-wrap justify-end gap-3 px-6 py-4 bg-[#fffdf6]">
                 {(documentPreviewType === 'pdf' || documentPreviewType === 'html') && documentPreviewUrl ? (
                   <button
                     onClick={handlePrintDocumentPreview}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    className="px-4 py-2 rounded-lg bg-[#2f3e1e] text-white text-sm font-medium hover:bg-[#1f2913] transition-colors"
                   >
-                    Imprimir
+                    Print
                   </button>
                 ) : null}
                 <button
                   onClick={handleCloseDocumentPreview}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-4 py-2 rounded-lg border border-[#d8cbb5] text-[#2f3e1e] text-sm font-medium hover:bg-[#f7f3e8] transition-colors"
                 >
-                  Cerrar
+                  Close
                 </button>
                 <button
                   onClick={handleDownloadDocumentPreview}
                   disabled={!documentPreviewBlob || !documentPreviewFilename}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-lg bg-[#6b5c3b] text-white text-sm font-medium hover:bg-[#4a3c24] transition-colors disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
                 >
-                  Descargar
+                  Download
                 </button>
               </div>
             </div>
@@ -1813,34 +1740,37 @@ ${items
         )}
 
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  {editingInvoice ? 'Editar Factura de Suplidor' : 'Nueva Factura de Suplidor'}
-                </h2>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+            <div className="bg-[#fffdf6] border border-[#e4d8c4] rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-5 border-b border-[#e4d8c4] flex items-center justify-between bg-[#f7f3e8] rounded-t-2xl">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#6b5c3b] mb-1">Supplier invoice</p>
+                  <h2 className="text-2xl font-semibold text-[#2f3e1e]">
+                    {editingInvoice ? 'Edit Supplier Invoice' : 'New Supplier Invoice'}
+                  </h2>
+                </div>
                 <button
                   onClick={() => {
                     setShowModal(false);
                     resetForm();
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e] transition-colors"
                 >
-                  <i className="ri-close-line text-xl" />
+                  <i className="ri-close-line text-2xl" />
                 </button>
               </div>
 
               <form onSubmit={handleSaveInvoice} className="px-6 py-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Suplidor *</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Supplier *</label>
                     <select
                       required
                       value={headerForm.supplierId}
                       onChange={(e) => handleSupplierChange(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
-                      <option value="">Seleccione un suplidor...</option>
+                      <option value="">Select a supplier...</option>
                       {suppliers.map((s: any) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
@@ -1859,12 +1789,12 @@ ${items
                         const address = String(s.address || '').trim();
                         if (!name && !taxId && !phone && !email && !address) return null;
                         return (
-                          <div className="p-3 bg-gray-50 rounded-lg text-xs md:text-sm text-gray-700">
-                            {name ? <p className="font-medium">{name}</p> : null}
+                          <div className="p-3 bg-[#fffdf6] border border-[#e4d8c4] rounded-xl text-xs md:text-sm text-[#2f3e1e] space-y-0.5">
+                            {name ? <p className="font-semibold">{name}</p> : null}
                             {taxId ? <p>RNC / Tax ID: {taxId}</p> : null}
-                            {phone ? <p>Teléfono: {phone}</p> : null}
+                            {phone ? <p>Phone: {phone}</p> : null}
                             {email ? <p>Email: {email}</p> : null}
-                            {address ? <p>Dirección: {address}</p> : null}
+                            {address ? <p>Address: {address}</p> : null}
                           </div>
                         );
                       })()}
@@ -1872,13 +1802,15 @@ ${items
                   ) : null}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Orden de Compra <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">
+                      Purchase Order <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={headerForm.purchaseOrderId || ''}
                       onChange={(e) => handlePurchaseOrderChange(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
-                      <option value="">Sin orden de compra</option>
+                      <option value="">No purchase order</option>
                       {purchaseOrders
                         .filter((po: any) => headerForm.supplierId && String(po.supplier_id) === String(headerForm.supplierId))
                         .filter((po: any) => po.status !== 'cancelled')
@@ -1888,36 +1820,38 @@ ${items
                           </option>
                         ))}
                     </select>
-                    <p className="mt-1 text-xs text-gray-500">Si seleccionas una orden, se cargarán sus líneas en esta factura. Luego puedes ajustar cantidades o eliminar líneas.</p>
+                    <p className="mt-1 text-xs text-[#6b5c3b]">
+                      Selecting a PO will load its lines into the invoice. You can still adjust quantities or remove rows.
+                    </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">NCF / Tipo Comprobante *</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">NCF / Vouchers *</label>
                     <input
                       type="text"
                       required
                       value={headerForm.documentType}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, documentType: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: B01, B02..."
+                      className={inputBaseClass}
+                      placeholder="Ex: B01, B02..."
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Número de Factura</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Invoice Number</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={headerForm.invoiceNumber}
                         onChange={(e) => setHeaderForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ej: FAC-0001"
+                        className={`${inputBaseClass} flex-1`}
+                        placeholder="Ex: FAC-0001"
                       />
                       <button
                         type="button"
                         onClick={generateInvoiceNumber}
-                        className="px-3 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-200 text-sm whitespace-nowrap"
-                        title="Generar código automático"
+                        className={subtleButtonClass}
+                        title="Generate automatically"
                       >
                         <i className="ri-refresh-line" />
                       </button>
@@ -1925,7 +1859,7 @@ ${items
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">RNC / Cédula</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">RNC / Tax ID</label>
                     <input
                       type="text"
                       value={headerForm.taxId}
@@ -1933,63 +1867,63 @@ ${items
                         const formatted = formatTaxId(e.target.value);
                         setHeaderForm(prev => ({ ...prev, taxId: formatted }));
                       }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                       placeholder="000-00000-0 / 000-0000000-0"
                     />
                   </div>
 
                   <div className="md:col-span-1 lg:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nombre Legal</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Legal Name</label>
                     <input
                       type="text"
                       value={headerForm.legalName}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, legalName: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Invoice Date</label>
                     <input
                       type="date"
                       value={headerForm.invoiceDate}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, invoiceDate: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Due Date</label>
                     <input
                       type="date"
                       value={headerForm.dueDate || ''}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, dueDate: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Términos de Pago</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Payment Terms</label>
                     <select
                       value={headerForm.paymentTermsId || ''}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, paymentTermsId: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
-                      <option value="">Sin término específico</option>
+                      <option value="">No specific terms</option>
                       {paymentTerms.map((t: any) => (
                         <option key={t.id} value={t.id}>
-                          {t.name} ({t.days} días)
+                          {t.name} ({t.days} days)
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Currency</label>
                     <select
                       value={headerForm.currency}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, currency: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
                       {currencies.length === 0 ? (
                         <>
@@ -2007,30 +1941,30 @@ ${items
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de gasto 606</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">606 Expense Type</label>
                     <select
                       value={headerForm.expenseType606}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, expenseType606: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
-                      <option value="">Sin especificar</option>
+                      <option value="">Not specified</option>
                       {expenseTypes606.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Recomendado para el formulario 606 de la DGII
+                    <p className="mt-1 text-xs text-[#6b5c3b]">
+                      Recommended for the DGII 606 filing
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tienda / Sucursal *</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Store / Branch *</label>
                     {stores.length > 0 ? (
                       <select
                         value={headerForm.storeName}
                         onChange={(e) => setHeaderForm(prev => ({ ...prev, storeName: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                        className={`${inputBaseClass} pr-8`}
                       >
-                        <option value="">Seleccionar tienda...</option>
+                        <option value="">Select a store...</option>
                         {stores.map((s) => (
                           <option key={s.id} value={s.name}>{s.name}</option>
                         ))}
@@ -2040,97 +1974,101 @@ ${items
                         type="text"
                         value={headerForm.storeName}
                         onChange={(e) => setHeaderForm(prev => ({ ...prev, storeName: e.target.value }))}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Ej: Tienda principal"
+                        className={inputBaseClass}
+                        placeholder="Ex: Main store"
                       />
                     )}
                   </div>
                   <div className="md:col-span-2 lg:col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Notes</label>
                     <textarea
                       value={headerForm.notes}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, notes: e.target.value }))}
                       rows={2}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Notas u observaciones de la factura"
+                      className={inputBaseClass}
+                      placeholder="Observations or comments about this invoice"
                     />
                   </div>
                 </div>
 
-                {/* Descuentos y opciones especiales */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+                {/* Discounts & special options */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[#e4d8c4]">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Descuento</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Discount type</label>
                     <select
                       value={headerForm.discountType}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, discountType: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={inputBaseClass}
                     >
-                      <option value="">Sin descuento global</option>
-                      <option value="percentage">Porcentaje (%)</option>
-                      <option value="fixed">Monto fijo</option>
+                      <option value="">No global discount</option>
+                      <option value="percentage">Percentage (%)</option>
+                      <option value="fixed">Fixed amount</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Valor del Descuento</label>
+                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Discount value</label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={headerForm.discountValue || ''}
                       onChange={(e) => setHeaderForm(prev => ({ ...prev, discountValue: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder={headerForm.discountType === 'percentage' ? 'Ej: 10' : 'Ej: 100.00'}
+                      className={inputBaseClass}
+                      placeholder={headerForm.discountType === 'percentage' ? 'Ex: 10' : 'Ex: 100.00'}
                       disabled={!headerForm.discountType}
                     />
                     {headerForm.discountType && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        {headerForm.discountType === 'percentage' ? 'Porcentaje aplicado a la factura completa' : 'Monto fijo a descontar del total'}
+                      <p className="mt-1 text-xs text-[#6b5c3b]">
+                        {headerForm.discountType === 'percentage'
+                          ? 'Percentage applied to the entire invoice'
+                          : 'Fixed amount deducted from the total'}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center">
-                    <label className="inline-flex items-center text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={headerForm.exentoItbis}
-                        onChange={(e) => setHeaderForm(prev => ({ ...prev, exentoItbis: e.target.checked, itbisToCost: e.target.checked ? false : prev.itbisToCost }))}
-                        className="mr-2 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                      />
-                      <span>
-                        Sin ITBIS (Exento)
-                        <span className="block text-xs text-gray-500">Activos fijos, bienes inmuebles u otros exentos</span>
-                      </span>
-                    </label>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={headerForm.exentoItbis}
+                      onChange={(e) =>
+                        setHeaderForm(prev => ({
+                          ...prev,
+                          exentoItbis: e.target.checked,
+                          itbisToCost: e.target.checked ? false : prev.itbisToCost,
+                        }))
+                      }
+                      className="mt-1 h-4 w-4 text-[#2f3e1e] focus:ring-[#2f3e1e] border-[#d8cbb5] rounded"
+                    />
+                    <span className="text-sm text-[#2f3e1e]">
+                      No ITBIS (Exempt)
+                      <span className="block text-xs text-[#6b5c3b]">Fixed assets, real estate, or other exempt expenses</span>
+                    </span>
                   </div>
-                  <div className="flex items-center">
-                    <label className="inline-flex items-center text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={headerForm.itbisToCost}
-                        onChange={(e) => setHeaderForm(prev => ({ ...prev, itbisToCost: e.target.checked }))}
-                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        disabled={headerForm.exentoItbis}
-                      />
-                      <span className={headerForm.exentoItbis ? 'text-gray-400' : ''}>
-                        ITBIS llevado al costo
-                        <span className="block text-xs text-gray-500">El ITBIS se suma al gasto en vez de crédito fiscal</span>
-                      </span>
-                    </label>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={headerForm.itbisToCost}
+                      onChange={(e) => setHeaderForm(prev => ({ ...prev, itbisToCost: e.target.checked }))}
+                      className="mt-1 h-4 w-4 text-[#2f3e1e] focus:ring-[#2f3e1e] border-[#d8cbb5] rounded"
+                      disabled={headerForm.exentoItbis}
+                    />
+                    <span className={`text-sm ${headerForm.exentoItbis ? 'text-gray-400' : 'text-[#2f3e1e]'}`}>
+                      Capitalize ITBIS
+                      <span className="block text-xs text-[#6b5c3b]">Adds ITBIS to the expense instead of crediting it</span>
+                    </span>
                   </div>
                 </div>
 
-                {/* Otros Impuestos */}
-                <div className="pt-4 border-t border-gray-200">
+                {/* Additional taxes */}
+                <div className="pt-4 border-t border-[#e4d8c4]">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-semibold text-gray-800">Otros Impuestos (Además de ITBIS)</h3>
+                    <h3 className="text-sm font-semibold text-[#2f3e1e]">Other taxes (besides ITBIS)</h3>
                     <button
                       type="button"
                       onClick={handleAddTax}
-                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                      className="text-xs text-[#2f3e1e] hover:text-[#1f2913] flex items-center"
                     >
                       <i className="ri-add-line mr-1" />
-                      Agregar impuesto
+                      Add tax
                     </button>
                   </div>
                   {otherTaxes.length > 0 && (
@@ -2141,8 +2079,8 @@ ${items
                             type="text"
                             value={tax.name || ''}
                             onChange={(e) => handleTaxChange(index, 'name', e.target.value)}
-                            placeholder="Ej: Impuesto Selectivo"
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Ex: Selective tax"
+                            className={`${inputBaseClass} flex-1`}
                           />
                           <div className="relative w-32">
                             <input
@@ -2153,14 +2091,14 @@ ${items
                               value={tax.rate || ''}
                               onChange={(e) => handleTaxChange(index, 'rate', e.target.value)}
                               placeholder="0"
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-3 py-2 pr-8 text-sm text-right border border-[#d8cbb5] rounded-lg bg-[#fffdf6] focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b]"
                             />
                             <span className="absolute right-3 top-2 text-gray-500 text-sm">%</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveTax(index)}
-                            className="text-red-600 hover:text-red-900 px-2"
+                            className="text-[#b64736] hover:text-[#7a2e1b] px-2"
                           >
                             <i className="ri-delete-bin-line" />
                           </button>
@@ -2169,21 +2107,21 @@ ${items
                     </div>
                   )}
                   {otherTaxes.length === 0 && (
-                    <p className="text-xs text-gray-500">No hay otros impuestos agregados</p>
+                    <p className="text-xs text-[#6b5c3b]">No additional taxes added</p>
                   )}
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Líneas de la Factura</h3>
+                  <h3 className="text-sm font-semibold text-[#2f3e1e] mb-2">Invoice lines</h3>
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="min-w-full text-xs md:text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Ítem/Descripción</th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Cuenta</th>
-                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Cant.</th>
-                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Precio</th>
-                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Desc.%</th>
+                          <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Item / Description</th>
+                          <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Account</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Qty.</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Price</th>
+                          <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Disc.%</th>
                           <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Total</th>
                           <th className="px-2 py-2 text-center font-medium text-gray-600 text-xs">-</th>
                         </tr>
@@ -2206,11 +2144,9 @@ ${items
                                     handleLineChange(index, 'inventoryItemId', selectedId);
                                     const item = inventoryItems.find((i: any) => String(i.id) === String(selectedId));
                                     if (item) {
-                                      // Si no hay descripción, usar el nombre del ítem
                                       if (!line.description) {
                                         handleLineChange(index, 'description', item.name || '');
                                       }
-                                      // Usar el costo de compra como precio por defecto
                                       const cost = Number(item.cost_price ?? item.purchase_cost ?? 0) || 0;
                                       if (cost > 0) {
                                         handleLineChange(index, 'unitPrice', String(cost));
@@ -2219,10 +2155,10 @@ ${items
                                   }}
                                   className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500 mb-1"
                                 >
-                                  <option value="">Sin ítem</option>
+                                  <option value="">No item</option>
                                   {inventoryItems.map((item: any) => (
                                     <option key={item.id} value={item.id}>
-                                      {item.name} ({item.sku || 'Sin SKU'})
+                                      {item.name} ({item.sku || 'No SKU'})
                                     </option>
                                   ))}
                                 </select>
@@ -2231,7 +2167,7 @@ ${items
                                   value={line.description || ''}
                                   onChange={(e) => handleLineChange(index, 'description', e.target.value)}
                                   className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="Descripción"
+                                  placeholder="Description"
                                 />
                               </td>
                               <td className="px-2 py-2">
@@ -2240,7 +2176,7 @@ ${items
                                   onChange={(e) => handleLineChange(index, 'expenseAccountId', e.target.value)}
                                   className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                  <option value="">Seleccione cuenta...</option>
+                                  <option value="">Select account...</option>
                                   {expenseAccounts.map((acc: any) => (
                                     <option key={acc.id} value={acc.id}>
                                       {acc.code} - {acc.name}
@@ -2253,9 +2189,9 @@ ${items
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  value={line.quantity || ''}
+                                  value={line.quantity}
                                   onChange={(e) => handleLineChange(index, 'quantity', e.target.value)}
-                                  className="w-16 border border-gray-300 rounded-md px-1 py-1 text-right text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-right focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 />
                               </td>
                               <td className="px-2 py-2">
@@ -2263,9 +2199,9 @@ ${items
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  value={line.unitPrice || ''}
+                                  value={line.unitPrice}
                                   onChange={(e) => handleLineChange(index, 'unitPrice', e.target.value)}
-                                  className="w-20 border border-gray-300 rounded-md px-1 py-1 text-right text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-right focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 />
                               </td>
                               <td className="px-2 py-2">
@@ -2274,24 +2210,22 @@ ${items
                                   min="0"
                                   max="100"
                                   step="0.01"
-                                  value={line.discountPercentage || ''}
+                                  value={line.discountPercentage}
                                   onChange={(e) => handleLineChange(index, 'discountPercentage', e.target.value)}
-                                  className="w-14 border border-gray-300 rounded-md px-1 py-1 text-right text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                  placeholder="0"
+                                  className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs text-right focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 />
                               </td>
-                              <td className="px-2 py-2 text-right text-gray-900 text-xs">
-                                <div>{formatAmount(totalAfterDiscount)}</div>
+                              <td className="px-2 py-2 text-right">
+                                <div>{headerForm.currency} {formatAmount(totalAfterDiscount)}</div>
                                 {discountAmt > 0 && (
-                                  <div className="text-red-600 text-xs">-{formatAmount(discountAmt)}</div>
+                                  <div className="text-[#b64736] text-xs">-{headerForm.currency} {formatAmount(discountAmt)}</div>
                                 )}
                               </td>
                               <td className="px-2 py-2 text-center">
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveLine(index)}
-                                  className="text-red-600 hover:text-red-900"
-                                  disabled={lines.length <= 1}
+                                  className="text-red-500 hover:text-red-700"
                                 >
                                   <i className="ri-delete-bin-line" />
                                 </button>
@@ -2306,34 +2240,36 @@ ${items
                     <button
                       type="button"
                       onClick={handleAddLine}
-                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                      className="text-sm text-[#2f3e1e] hover:text-[#1f2913] flex items-center"
                     >
                       <i className="ri-add-line mr-1" />
-                      Agregar línea
+                      Add line
                     </button>
-                    <div className="text-right text-sm text-gray-800 space-y-1">
+                    <div className="text-right text-sm text-[#2f3e1e] space-y-1">
                       {(() => {
                         const { gross, totalDiscount, grossAfterDiscount, itbis, otherTaxesDetail, itbisWithheld, isr, toPay } = calculateTotals();
                         return (
                           <>
-                            <div>Bruto: {headerForm.currency} {formatAmount(gross)}</div>
+                            <div>Gross: {headerForm.currency} {formatAmount(gross)}</div>
                             {totalDiscount > 0 && (
                               <>
-                                <div className="text-red-600">Descuentos: -{headerForm.currency} {formatAmount(totalDiscount)}</div>
-                                <div className="text-green-700">Subtotal: {headerForm.currency} {formatAmount(grossAfterDiscount)}</div>
+                                <div className="text-[#b64736]">Discounts: -{headerForm.currency} {formatAmount(totalDiscount)}</div>
+                                <div className="text-[#2f3e1e] font-semibold">Subtotal: {headerForm.currency} {formatAmount(grossAfterDiscount)}</div>
                               </>
                             )}
-                            <div>ITBIS (18%){headerForm.itbisToCost ? ' (al costo)' : ''}: {headerForm.currency} {formatAmount(itbis)}</div>
+                            <div>ITBIS (18%){headerForm.itbisToCost ? ' (capitalized)' : ''}: {headerForm.currency} {formatAmount(itbis)}</div>
                             {itbisWithheld > 0 && (
-                              <div className="text-yellow-700">ITBIS Retenido: -{headerForm.currency} {formatAmount(itbisWithheld)}</div>
+                              <div className="text-[#6b5c3b]">Withheld ITBIS: -{headerForm.currency} {formatAmount(itbisWithheld)}</div>
                             )}
                             {otherTaxesDetail.map((tax, idx) => (
-                              <div key={idx} className="text-purple-700">
+                              <div key={idx} className="text-[#6b5c3b]">
                                 {tax.name} ({tax.rate}%): {headerForm.currency} {formatAmount(tax.amount)}
                               </div>
                             ))}
-                            {isr > 0 && <div>Retenciones ISR: -{headerForm.currency} {formatAmount(isr)}</div>}
-                            <div className="font-semibold text-lg border-t pt-1">Total a Pagar: {headerForm.currency} {formatAmount(toPay)}</div>
+                            {isr > 0 && <div>Withheld ISR: -{headerForm.currency} {formatAmount(isr)}</div>}
+                            <div className="font-semibold text-lg border-t border-[#e4d8c4] pt-1 text-[#2f3e1e]">
+                              Total Payable: {headerForm.currency} {formatAmount(toPay)}
+                            </div>
                           </>
                         );
                       })()}
@@ -2348,15 +2284,15 @@ ${items
                       setShowModal(false);
                       resetForm();
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
+                    className="px-4 py-2 border border-[#d8cbb5] rounded-lg text-[#2f3e1e] hover:bg-[#f7f3e8] text-sm font-medium"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                    className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2913] text-sm font-semibold shadow-sm"
                   >
-                    {editingInvoice ? 'Guardar Cambios' : 'Registrar Factura'}
+                    {editingInvoice ? 'Save Changes' : 'Save Invoice'}
                   </button>
                 </div>
               </form>
@@ -2367,4 +2303,3 @@ ${items
     </DashboardLayout>
   );
 }
-

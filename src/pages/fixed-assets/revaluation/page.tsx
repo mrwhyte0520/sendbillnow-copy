@@ -84,7 +84,7 @@ export default function RevaluationPage() {
 
       const assetType = (assetTypes || []).find((t: any) => String(t.name || '') === category);
       if (!assetType) {
-        console.error('No se encontró el tipo de activo para la categoría', category);
+        console.error('Asset type not found for category', category);
         return;
       }
 
@@ -110,18 +110,18 @@ export default function RevaluationPage() {
       const lossAccountId = lossAccountCode ? accountsByCode.get(lossAccountCode) : undefined;
 
       if (!assetAccountId) {
-        console.error(`No se encontró en el catálogo la cuenta de activo para el tipo ${category}.`);
+        console.error(`Asset account not found in chart for type ${category}.`);
         return;
       }
 
       const lines: any[] = [];
       let lineNumber = 1;
-      const descriptionBase = `Revalorización activo ${assetCode} - ${assetName}`;
+      const descriptionBase = `Asset revaluation ${assetCode} - ${assetName}`;
       const absAmount = Math.abs(revaluationAmount);
 
       if (revaluationAmount > 0) {
         if (!gainAccountId) {
-          console.error('No se configuró la cuenta de ganancia por revalorización para este tipo de activo.');
+          console.error('Revaluation gain account is not configured for this asset type.');
           return;
         }
 
@@ -142,7 +142,7 @@ export default function RevaluationPage() {
         });
       } else if (revaluationAmount < 0) {
         if (!lossAccountId) {
-          console.error('No se configuró la cuenta de pérdida por revalorización para este tipo de activo.');
+          console.error('Revaluation loss account is not configured for this asset type.');
           return;
         }
 
@@ -174,7 +174,7 @@ export default function RevaluationPage() {
         entry_number: entryNumber,
         entry_date: entryDate,
         description: descriptionBase,
-        reference: `Revalorización - ${reason}`,
+        reference: `Revaluation - ${reason}`,
         status: 'posted' as const,
       };
 
@@ -230,21 +230,37 @@ export default function RevaluationPage() {
   }, [user]);
 
   const revaluationReasons = [
-    'Incremento del Mercado',
-    'Mejoras y Actualizaciones',
-    'Obsolescencia Tecnológica',
-    'Deterioro Físico',
-    'Cambios Regulatorios',
-    'Ajuste por Inflación'
+    { value: 'Incremento del Mercado', label: 'Market Increase' },
+    { value: 'Mejoras y Actualizaciones', label: 'Improvements and Upgrades' },
+    { value: 'Obsolescencia Tecnológica', label: 'Technological Obsolescence' },
+    { value: 'Deterioro Físico', label: 'Physical Deterioration' },
+    { value: 'Cambios Regulatorios', label: 'Regulatory Changes' },
+    { value: 'Ajuste por Inflación', label: 'Inflation Adjustment' },
   ];
 
   const revaluationMethods = [
-    'Avalúo Profesional',
-    'Valor de Mercado',
-    'Costo de Reposición',
-    'Valor Presente Neto',
-    'Comparación de Ventas'
+    { value: 'Avalúo Profesional', label: 'Professional Appraisal' },
+    { value: 'Valor de Mercado', label: 'Market Value' },
+    { value: 'Costo de Reposición', label: 'Replacement Cost' },
+    { value: 'Valor Presente Neto', label: 'Net Present Value' },
+    { value: 'Comparación de Ventas', label: 'Sales Comparison' },
   ];
+
+  const statusOptions = [
+    { value: 'Pendiente', label: 'Pending' },
+    { value: 'En Revisión', label: 'Under Review' },
+    { value: 'Aprobado', label: 'Approved' },
+    { value: 'Rechazado', label: 'Rejected' },
+  ];
+
+  const getReasonLabel = (value: string) =>
+    revaluationReasons.find((reason) => reason.value === value)?.label || value;
+
+  const getMethodLabel = (value: string) =>
+    revaluationMethods.find((method) => method.value === value)?.label || value;
+
+  const getStatusLabel = (value: string) =>
+    statusOptions.find((status) => status.value === value)?.label || value;
 
   const filteredRevaluations = revaluations.filter(rev => {
     const matchesSearch = rev.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -282,7 +298,7 @@ export default function RevaluationPage() {
     const assetId = selectedAssetId || String(formData.get('assetId') || '').trim();
     const asset = assets.find(a => a.id === assetId);
     if (!asset) {
-      alert('Debe seleccionar un activo válido');
+      alert('Please select a valid asset.');
       return;
     }
 
@@ -320,12 +336,12 @@ export default function RevaluationPage() {
       if (editingRevaluation) {
         const updated = await revaluationService.update(editingRevaluation.id, payload);
 
-        // Si se guarda como Aprobado desde el formulario, actualizar valor actual del activo
+        // If it is saved as Approved from the form, update the asset current value
         if (status === 'Aprobado') {
           await fixedAssetsService.update(asset.id, {
             current_value: newValue,
           });
-          // Actualizar también el estado local de assets para futuras revalorizaciones
+          // Update local asset state for future revaluations
           setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, currentValue: newValue } : a));
 
           if (editingRevaluation.status !== 'Aprobado') {
@@ -365,12 +381,12 @@ export default function RevaluationPage() {
       } else {
         const created = await revaluationService.create(user.id, payload);
 
-        // Si se crea directamente como Aprobado, actualizar valor actual del activo
+        // If it is saved as Approved from the form, update the asset current value
         if (status === 'Aprobado') {
           await fixedAssetsService.update(asset.id, {
             current_value: newValue,
           });
-          // Actualizar también el estado local de assets para futuras revalorizaciones
+          // Update local asset state for future revaluations
           setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, currentValue: newValue } : a));
 
           await createRevaluationJournalEntry({
@@ -414,7 +430,7 @@ export default function RevaluationPage() {
       form.reset();
     } catch (error) {
       console.error('Error saving revaluation:', error);
-      alert('Error al guardar la revalorización');
+      alert('Error saving the revaluation.');
     }
   };
 
@@ -423,10 +439,10 @@ export default function RevaluationPage() {
     const rev = revaluations.find(r => r.id === revaluationId);
     if (!rev) return;
     if (rev.status === 'Aprobado') return;
-    if (!confirm('¿Está seguro de que desea aprobar esta revalorización?')) return;
+    if (!confirm('Are you sure you want to approve this revaluation?')) return;
 
     try {
-      // Actualizar revalorización a Aprobado
+      // Update revaluation to Approved
       const payload: any = {
         asset_id: rev.assetId,
         asset_code: rev.assetCode,
@@ -446,12 +462,12 @@ export default function RevaluationPage() {
       };
       const updated = await revaluationService.update(revaluationId, payload);
 
-      // Actualizar el valor actual del activo en fixed_assets
+      // Update asset current value
       await fixedAssetsService.update(rev.assetId, {
         current_value: rev.newValue,
       });
 
-      // Sincronizar el estado local de assets para que la próxima revalorización use el nuevo valor
+      // Update local asset state for future revaluations
       setAssets(prev => prev.map(a => a.id === rev.assetId ? { ...a, currentValue: rev.newValue } : a));
 
       setRevaluations(prev => prev.map(r => r.id === revaluationId ? { ...r, status: updated.status || 'Aprobado' } : r));
@@ -469,7 +485,7 @@ export default function RevaluationPage() {
       });
     } catch (error) {
       console.error('Error approving revaluation:', error);
-      alert('Error al aprobar la revalorización');
+      alert('Error approving the revaluation.');
     }
   };
 
@@ -477,7 +493,7 @@ export default function RevaluationPage() {
     if (!user) return;
     const rev = revaluations.find(r => r.id === revaluationId);
     if (!rev) return;
-    if (!confirm('¿Está seguro de que desea rechazar esta revalorización?')) return;
+    if (!confirm('Are you sure you want to reject this revaluation?')) return;
 
     try {
       const payload: any = {
@@ -501,7 +517,7 @@ export default function RevaluationPage() {
       setRevaluations(prev => prev.map(r => r.id === revaluationId ? { ...r, status: updated.status || 'Rechazado' } : r));
     } catch (error) {
       console.error('Error rejecting revaluation:', error);
-      alert('Error al rechazar la revalorización');
+      alert('Error rejecting the revaluation.');
     }
   };
 
@@ -509,23 +525,23 @@ export default function RevaluationPage() {
     if (!user) return;
     const rev = revaluations.find(r => r.id === revaluationId);
     if (!rev) return;
-    if (!confirm('¿Está seguro de que desea eliminar esta revalorización?')) return;
+    if (!confirm('Are you sure you want to delete this revaluation?')) return;
 
     try {
       await revaluationService.delete(revaluationId);
       setRevaluations(prev => prev.filter(r => r.id !== revaluationId));
     } catch (error) {
       console.error('Error deleting revaluation:', error);
-      alert('Error al eliminar la revalorización');
+      alert('Error deleting the revaluation.');
     }
   };
 
   const exportToExcel = async () => {
-    // Preparar datos para Excel
+    // Prepare data for Excel
     const filteredData = filteredRevaluations;
 
     if (!filteredData || filteredData.length === 0) {
-      alert('No hay revalorizaciones para exportar.');
+      alert('There are no revaluations to export.');
       return;
     }
 
@@ -543,7 +559,7 @@ export default function RevaluationPage() {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de revalorizaciones:', error);
+      console.error('Error getting company info for revaluation Excel:', error);
     }
 
     const rows = filteredData.map((rev) => ({
@@ -555,40 +571,40 @@ export default function RevaluationPage() {
       newValue: rev.newValue,
       revaluationAmount: rev.revaluationAmount,
       revaluationDate: new Date(rev.revaluationDate).toLocaleDateString('es-DO'),
-      reason: rev.reason,
-      method: rev.method,
+      reason: getReasonLabel(rev.reason),
+      method: getMethodLabel(rev.method),
       appraiser: rev.appraiser,
-      status: rev.status,
+      status: getStatusLabel(rev.status),
       approvedBy: rev.approvedBy,
       notes: rev.notes,
     }));
 
     const headers = [
-      { key: 'assetCode', title: 'Código Activo' },
-      { key: 'assetName', title: 'Nombre del Activo' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'originalValue', title: 'Valor Original' },
-      { key: 'previousValue', title: 'Valor Anterior' },
-      { key: 'newValue', title: 'Nuevo Valor' },
-      { key: 'revaluationAmount', title: 'Monto Revalorización' },
-      { key: 'revaluationDate', title: 'Fecha Revalorización' },
-      { key: 'reason', title: 'Motivo' },
-      { key: 'method', title: 'Método Evaluación' },
-      { key: 'appraiser', title: 'Evaluador/Tasador' },
-      { key: 'status', title: 'Estado' },
-      { key: 'approvedBy', title: 'Aprobado Por' },
-      { key: 'notes', title: 'Notas' },
+      { key: 'assetCode', title: 'Asset Code' },
+      { key: 'assetName', title: 'Asset Name' },
+      { key: 'category', title: 'Category' },
+      { key: 'originalValue', title: 'Original Value' },
+      { key: 'previousValue', title: 'Previous Value' },
+      { key: 'newValue', title: 'New Value' },
+      { key: 'revaluationAmount', title: 'Revaluation Amount' },
+      { key: 'revaluationDate', title: 'Revaluation Date' },
+      { key: 'reason', title: 'Reason' },
+      { key: 'method', title: 'Method' },
+      { key: 'appraiser', title: 'Appraiser' },
+      { key: 'status', title: 'Status' },
+      { key: 'approvedBy', title: 'Approved By' },
+      { key: 'notes', title: 'Notes' },
     ];
 
-    const fileBase = `revalorizaciones_${new Date().toISOString().split('T')[0]}`;
-    const title = 'Revalorización de Activos Fijos';
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const fileBase = `revaluations_${new Date().toISOString().split('T')[0]}`;
+    const title = 'Asset Revaluation';
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
       headers,
       fileBase,
-      'Revalorizaciones',
+      'Revaluations',
       [16, 32, 22, 18, 18, 18, 20, 18, 24, 24, 24, 14, 20, 40],
       {
         title,
@@ -611,94 +627,94 @@ export default function RevaluationPage() {
           <div>
             <button
               onClick={() => navigate('/fixed-assets')}
-              className="flex items-center text-blue-600 hover:text-blue-700 mb-2"
+              className="flex items-center text-[#3B4A2A] hover:text-[#222D16] mb-2"
             >
               <i className="ri-arrow-left-line mr-1"></i>
-              Volver a Activos Fijos
+              Back to Fixed Assets
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Revalorización de Activos</h1>
-            <p className="text-gray-600">Gestión de revalorizaciones y ajustes de valor</p>
+            <h1 className="text-2xl font-bold text-[#1F2618]">Asset Revaluation</h1>
+            <p className="text-[#5B6844]">Manage revaluations and value adjustments</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#3E4D2C] text-white px-4 py-2 rounded-lg hover:bg-[#2D3A1C] transition-colors whitespace-nowrap shadow-md shadow-[#3E4D2C]/20"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleAddRevaluation}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#566738] text-white px-4 py-2 rounded-lg hover:bg-[#45532B] transition-colors whitespace-nowrap shadow-md shadow-[#566738]/20"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Revalorización
+              New Revaluation
             </button>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Revalorización Total</p>
-                <p className={`text-2xl font-bold ${totalRevaluationAmount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-sm font-medium text-[#5B6844]">Total Revaluation</p>
+                <p className={`text-2xl font-bold ${totalRevaluationAmount >= 0 ? 'text-[#2E4B1D]' : 'text-[#B54848]'}`}>
                   {formatCurrency(totalRevaluationAmount)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-trending-up-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#E1E9C8]">
+                <i className="ri-trending-up-line text-xl text-[#2E4B1D]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Incrementos</p>
-                <p className="text-2xl font-bold text-green-600">{positiveRevaluations.length}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Increases</p>
+                <p className="text-2xl font-bold text-[#2F5020]">{positiveRevaluations.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-arrow-up-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#D9E7B5]">
+                <i className="ri-arrow-up-line text-xl text-[#2F5020]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Decrementos</p>
-                <p className="text-2xl font-bold text-red-600">{negativeRevaluations.length}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Decreases</p>
+                <p className="text-2xl font-bold text-[#B54848]">{negativeRevaluations.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-red-100">
-                <i className="ri-arrow-down-line text-xl text-red-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#F7E0DF]">
+                <i className="ri-arrow-down-line text-xl text-[#B54848]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Revalorizaciones</p>
-                <p className="text-2xl font-bold text-purple-600">{filteredRevaluations.length}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Total Revaluations</p>
+                <p className="text-2xl font-bold text-[#51476F]">{filteredRevaluations.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
-                <i className="ri-refresh-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#ECE6F6]">
+                <i className="ri-refresh-line text-xl text-[#51476F]"></i>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[#E0E7C8] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
+                Search
               </label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar por activo o código..."
+                  placeholder="Search by asset or code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -707,32 +723,35 @@ export default function RevaluationPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
+                Status
               </label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Todos los estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="En Revisión">En Revisión</option>
-                <option value="Aprobado">Aprobado</option>
-                <option value="Rechazado">Rechazado</option>
+                <option value="">All statuses</option>
+                {statusOptions.map((status) => (
+                  <option key={status.value} value={status.value}>
+                    {status.label}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo
+                Reason
               </label>
               <select
                 value={filterReason}
                 onChange={(e) => setFilterReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Todos los motivos</option>
-                {revaluationReasons.map(reason => (
-                  <option key={reason} value={reason}>{reason}</option>
+                <option value="">All reasons</option>
+                {revaluationReasons.map((reason) => (
+                  <option key={reason.value} value={reason.value}>
+                    {reason.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -743,48 +762,48 @@ export default function RevaluationPage() {
                   setFilterStatus('');
                   setFilterReason('');
                 }}
-                className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4B5E32] text-white px-4 py-2 rounded-lg hover:bg-[#384726] transition-colors whitespace-nowrap shadow-sm shadow-[#4B5E32]/30"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Revaluations Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Revalorizaciones Registradas ({filteredRevaluations.length})
+        <div className="bg-white rounded-lg shadow-sm border border-[#E0E7C8]">
+          <div className="p-6 border-b border-[#E0E7C8]">
+            <h3 className="text-lg font-semibold text-[#1F2618]">
+              Registered Revaluations ({filteredRevaluations.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#EEF3DE]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activo
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Asset
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor Anterior
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Previous Value
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nuevo Valor
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    New Value
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Revalorización
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Revaluation
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Motivo
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Reason
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -804,24 +823,24 @@ export default function RevaluationPage() {
                       {formatCurrency(revaluation.newValue)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <span className={revaluation.revaluationAmount >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      <span className={revaluation.revaluationAmount >= 0 ? 'text-[#2F4A21]' : 'text-[#B54848]'}>
                         {revaluation.revaluationAmount >= 0 ? '+' : ''}{formatCurrency(revaluation.revaluationAmount)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {revaluation.reason}
+                      {getReasonLabel(revaluation.reason)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(revaluation.revaluationDate).toLocaleDateString('es-DO')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        revaluation.status === 'Aprobado' ? 'bg-green-100 text-green-800' :
-                        revaluation.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                        revaluation.status === 'En Revisión' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
+                        revaluation.status === 'Aprobado' ? 'bg-[#D7EBC1] text-[#2E471C]' :
+                        revaluation.status === 'Pendiente' ? 'bg-[#F5E7C1] text-[#8A6514]' :
+                        revaluation.status === 'En Revisión' ? 'bg-[#DFE7F3] text-[#2E4B6C]' :
+                        'bg-[#F7D8D6] text-[#9F2C2C]'
                       }`}>
-                        {revaluation.status}
+                        {getStatusLabel(revaluation.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -829,7 +848,7 @@ export default function RevaluationPage() {
                         <button
                           onClick={() => handleEditRevaluation(revaluation)}
                           className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
+                          title="Edit"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -838,14 +857,14 @@ export default function RevaluationPage() {
                             <button
                               onClick={() => handleApproveRevaluation(revaluation.id)}
                               className="text-green-600 hover:text-green-900"
-                              title="Aprobar"
+                              title="Approve"
                             >
                               <i className="ri-check-line"></i>
                             </button>
                             <button
                               onClick={() => handleRejectRevaluation(revaluation.id)}
                               className="text-red-600 hover:text-red-900"
-                              title="Rechazar"
+                              title="Reject"
                             >
                               <i className="ri-close-line"></i>
                             </button>
@@ -854,7 +873,7 @@ export default function RevaluationPage() {
                         <button
                           onClick={() => handleDeleteRevaluation(revaluation.id)}
                           className="text-red-600 hover:text-red-900"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -869,15 +888,15 @@ export default function RevaluationPage() {
 
         {/* Revaluation Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-[#FDF7EC] rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/20 border border-[#E8DFC9]">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingRevaluation ? 'Editar Revalorización' : 'Nueva Revalorización'}
+                <h3 className="text-lg font-semibold text-[#2B2A22]">
+                  {editingRevaluation ? 'Edit Revaluation' : 'New Revaluation'}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#918773] hover:text-[#6F6654]"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
@@ -886,8 +905,8 @@ export default function RevaluationPage() {
               <form onSubmit={handleSaveRevaluation} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Código del Activo *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Asset Code *
                     </label>
                     <select
                       required
@@ -903,9 +922,9 @@ export default function RevaluationPage() {
                           setPreviousValueInput('');
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar activo</option>
+                      <option value="">Select asset</option>
                       {assets.map(asset => (
                         <option key={asset.id} value={asset.id}>
                           {asset.code} - {asset.name}
@@ -914,8 +933,8 @@ export default function RevaluationPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Valor Anterior *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Previous Value *
                     </label>
                     <input
                       type="number" min="0"
@@ -924,13 +943,13 @@ export default function RevaluationPage() {
                       name="previousValue"
                       value={previousValueInput}
                       onChange={(e) => setPreviousValueInput(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                       placeholder="0.00"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nuevo Valor *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      New Value *
                     </label>
                     <input
                       type="number" min="0"
@@ -938,92 +957,97 @@ export default function RevaluationPage() {
                       step="0.01"
                       name="newValue"
                       defaultValue={editingRevaluation?.newValue || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                       placeholder="0.00"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Revalorización *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Revaluation Date *
                     </label>
                     <input
                       type="date"
                       required
                       name="revaluationDate"
                       defaultValue={editingRevaluation?.revaluationDate || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Motivo de Revalorización *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Revaluation Reason *
                     </label>
                     <select
                       required
                       name="reason"
                       defaultValue={editingRevaluation?.reason || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar motivo</option>
+                      <option value="">Select reason</option>
                       {revaluationReasons.map(reason => (
-                        <option key={reason} value={reason}>{reason}</option>
+                        <option key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Evaluación *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Valuation Method *
                     </label>
                     <select
                       required
                       name="method"
                       defaultValue={editingRevaluation?.method || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar método</option>
+                      <option value="">Select method</option>
                       {revaluationMethods.map(method => (
-                        <option key={method} value={method}>{method}</option>
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Evaluador/Tasador
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Appraiser
                     </label>
                     <input
                       type="text"
                       name="appraiser"
                       defaultValue={editingRevaluation?.appraiser || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nombre del evaluador"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
+                      placeholder="Appraiser name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Status
                     </label>
                     <select
                       name="status"
                       defaultValue={editingRevaluation?.status || 'Pendiente'}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="Pendiente">Pendiente</option>
-                      <option value="En Revisión">En Revisión</option>
-                      <option value="Aprobado">Aprobado</option>
-                      <option value="Rechazado">Rechazado</option>
+                      {statusOptions.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notas y Observaciones
+                  <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                    Notes and Comments
                   </label>
                   <textarea
                     rows={4}
                     name="notes"
                     defaultValue={editingRevaluation?.notes || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Detalles adicionales sobre la revalorización"
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
+                    placeholder="Additional revaluation details"
                   />
                 </div>
 
@@ -1031,15 +1055,15 @@ export default function RevaluationPage() {
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-[#675F4B] bg-[#ECE2CF] rounded-lg hover:bg-[#E0D2BA] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#927B4E] text-white rounded-lg hover:bg-[#7D683E] transition-colors whitespace-nowrap shadow-md shadow-[#927B4E]/30"
                   >
-                    {editingRevaluation ? 'Actualizar' : 'Registrar'} Revalorización
+                    {editingRevaluation ? 'Update' : 'Record'} Revaluation
                   </button>
                 </div>
               </form>

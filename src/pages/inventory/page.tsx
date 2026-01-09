@@ -1111,163 +1111,80 @@ export default function InventoryPage() {
     return matchesSearch && matchesType && matchesWarehouse && matchesSourceType && matchesStore && matchesFrom && matchesTo;
   });
 
+  const categories = Array.from(
+    new Set(
+      items
+        .map((item) => item.category)
+        .filter((category): category is string => Boolean(category && category.trim().length)),
+    ),
+  );
+
   const warehouseBalances: any = {};
-  const itemMap: any = {};
+  const totalProducts = items.length;
+  const activeProducts = items.filter(item => item.is_active).length;
+  const lowStockCount = items.filter(
+    item => item.item_type !== 'service' && item.minimum_stock != null && item.current_stock <= item.minimum_stock,
+  ).length;
+  const dashboardStats = [
+    {
+      label: 'Total Products',
+      value: totalProducts.toLocaleString('en-US'),
+      icon: 'ri-box-3-line',
+      iconBg: 'bg-[#d7e4c5]',
+      iconColor: 'text-[#2e3c21]',
+    },
+    {
+      label: 'Active Items',
+      value: activeProducts.toLocaleString('en-US'),
+      icon: 'ri-checkbox-circle-line',
+      iconBg: 'bg-[#e0e9cf]',
+      iconColor: 'text-[#4f5f33]',
+    },
+    {
+      label: 'Low Stock Alerts',
+      value: lowStockCount.toLocaleString('en-US'),
+      icon: 'ri-alert-line',
+      iconBg: 'bg-[#f7d8d0]',
+      iconColor: 'text-[#b7422a]',
+    },
+    {
+      label: 'Warehouses',
+      value: warehouses.length.toLocaleString('en-US'),
+      icon: 'ri-building-line',
+      iconBg: 'bg-[#f2e7ce]',
+      iconColor: 'text-[#6b562d]',
+    },
+  ];
 
-  items.forEach((it: any) => {
-    if (it && it.id) {
-      itemMap[String(it.id)] = it;
-    }
-  });
-
-  const adjustWarehouseBalance = (warehouseId: any, itemId: any, delta: number) => {
-    if (!warehouseId || !itemId || !Number.isFinite(delta)) return;
-    const wid = String(warehouseId);
-    const iid = String(itemId);
-    if (!warehouseBalances[wid]) {
-      warehouseBalances[wid] = {};
-    }
-    const prev = Number(warehouseBalances[wid][iid] ?? 0) || 0;
-    warehouseBalances[wid][iid] = prev + delta;
-  };
-
-  // Base: each product contributes its full current_stock to its assigned warehouse
-  items.forEach((it: any) => {
-    if (!it || !it.id || !it.warehouse_id) return;
-    const baseQty = Number(it.current_stock ?? 0) || 0;
-    if (!baseQty) return;
-    adjustWarehouseBalance(it.warehouse_id, it.id, baseQty);
-  });
-
-  // Adjustments: only transfers move stock between warehouses
-  movements.forEach((movement: any) => {
-    const qty = Number(movement.quantity) || 0;
-    if (!qty) return;
-
-    const itemId =
-      movement.item_id ||
-      movement.inventory_item_id ||
-      movement.inventory_items?.id;
-    if (!itemId) return;
-
-    const type = (movement.movement_type || '').toString();
-
-    if (type === 'transfer') {
-      const fromWarehouse = movement.from_warehouse_id;
-      const toWarehouse = movement.to_warehouse_id;
-      adjustWarehouseBalance(fromWarehouse, itemId, -qty);
-      adjustWarehouseBalance(toWarehouse, itemId, qty);
-    }
-  });
-
-  const getWarehouseStats = (warehouseId: any) => {
-    const wid = String(warehouseId);
-    const balances = warehouseBalances[wid] || {};
-    const itemIds = Object.keys(balances).filter(
-      (id) => (Number(balances[id]) || 0) > 0,
-    );
-
-    const stockTotal = itemIds.reduce(
-      (sum, id) => sum + (Number(balances[id]) || 0),
-      0,
-    );
-
-    const valueTotal = itemIds.reduce((sum, id) => {
-      const item = itemMap[id];
-      if (!item) return sum;
-      const cost =
-        item.average_cost != null && item.average_cost !== ''
-          ? Number(item.average_cost) || 0
-          : Number(item.cost_price) || 0;
-      const qty = Number(balances[id]) || 0;
-      return sum + qty * cost;
-    }, 0);
-
-    return {
-      products: itemIds.length,
-      stockTotal,
-      valueTotal,
-    };
-  };
-
-  const categories = [...new Set(items.map(item => item.category).filter(Boolean))];
+  const lowStockItems = items
+    .filter(item => item.item_type !== 'service' && item.minimum_stock != null && item.current_stock <= item.minimum_stock)
+    .slice(0, 5);
+  const recentMovements = movements.slice(0, 5);
 
   const renderDashboard = () => (
     <div className="space-y-6">
-      {/* Main statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-box-3-line text-blue-600"></i>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {dashboardStats.map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-[#eadfc6] bg-white/90 p-6 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.iconBg}`}>
+                <i className={`${stat.icon} ${stat.iconColor} text-xl`}></i>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[#6b7a40]">{stat.label}</p>
+                <p className="text-2xl font-semibold text-[#2e3c21]">{stat.value}</p>
               </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Products</p>
-              <p className="text-2xl font-semibold text-gray-900">{items.length}</p>
-            </div>
           </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-stock-line text-green-600"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Active Products</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {items.filter(item => item.is_active).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <i className="ri-alert-line text-red-600"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Low Stock</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-arrow-up-down-line text-purple-600"></i>
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Movements Today</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {movements.filter(m => 
-                  new Date(m.movement_date).toDateString() === new Date().toDateString()
-                ).length}
-              </p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Total inventory value */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial Summary</h3>
+      <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow p-6">
+        <h3 className="text-lg font-semibold text-[#2e3c21] mb-4">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Total Cost Value (Average)</p>
-            <p className="text-2xl font-bold text-blue-600">
+            <p className="text-sm font-medium text-[#7b6e4f]">Total Cost Value (Average)</p>
+            <p className="text-2xl font-bold text-[#4f5f33]">
               ${items
                 .filter(item => item.item_type !== 'service')
                 .reduce((sum, item) => {
@@ -1278,14 +1195,14 @@ export default function InventoryPage() {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Total Sale Value</p>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-sm font-medium text-[#7b6e4f]">Total Sale Value</p>
+            <p className="text-2xl font-bold text-[#6b7a40]">
               ${realSalesTotal.toLocaleString('es-DO')}
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Potential Profit</p>
-            <p className="text-2xl font-bold text-purple-600">
+            <p className="text-sm font-medium text-[#7b6e4f]">Potential Profit</p>
+            <p className="text-2xl font-bold text-[#7c8c45]">
               ${items
                 .filter(item => item.item_type !== 'service')
                 .reduce((sum, item) => {
@@ -1298,73 +1215,87 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Low stock products */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Low Stock Products</h3>
-        </div>
-        <div className="p-6">
-          {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No low stock products</p>
-          ) : (
-            <div className="space-y-3">
-              {items.filter(item => item.item_type !== 'service' && item.current_stock <= item.minimum_stock).slice(0, 5).map(item => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{item.name}</p>
-                    <p className="text-sm text-gray-500">SKU: {item.sku}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#e8ddc7] bg-[#fdf6e7]">
+            <h3 className="text-lg font-semibold text-[#3b4d2d]">Low Stock Products</h3>
+          </div>
+          <div className="p-6">
+            {lowStockItems.length === 0 ? (
+              <p className="text-[#7b6e4f] text-center py-4">No low stock products</p>
+            ) : (
+              <div className="space-y-3">
+                {lowStockItems.map(item => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-4 bg-[#fdeee9] border border-[#f3d4c8] rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-[#2e3c21]">{item.name}</p>
+                      <p className="text-sm text-[#7b6e4f]">SKU: {item.sku}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-[#b7422a]">
+                        Stock: {item.current_stock} {item.unit_of_measure}
+                      </p>
+                      <p className="text-xs text-[#7b6e4f]">Minimum: {item.minimum_stock}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-red-600">
-                      Stock: {item.current_stock} {item.unit_of_measure}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Minimum: {item.minimum_stock}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Recent movements */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Movements</h3>
-        </div>
-        <div className="p-6">
-          {movements.slice(0, 5).length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No recent movements</p>
-          ) : (
-            <div className="space-y-3">
-              {movements.slice(0, 5).map(movement => (
-                <div key={movement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{movement.inventory_items?.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(movement.movement_date).toLocaleDateString('es-DO')}
-                    </p>
+        <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#e8ddc7] bg-[#fdf6e7]">
+            <h3 className="text-lg font-semibold text-[#3b4d2d]">Recent Movements</h3>
+          </div>
+          <div className="p-6">
+            {recentMovements.length === 0 ? (
+              <p className="text-[#7b6e4f] text-center py-4">No recent movements</p>
+            ) : (
+              <div className="space-y-3">
+                {recentMovements.map(movement => (
+                  <div
+                    key={movement.id}
+                    className="flex items-center justify-between p-4 bg-[#f8f2e6] border border-[#e8ddc7] rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-[#2e3c21]">{movement.inventory_items?.name}</p>
+                      <p className="text-sm text-[#7b6e4f]">
+                        {movement.movement_date
+                          ? new Date(movement.movement_date).toLocaleDateString('en-US')
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          movement.movement_type === 'entry'
+                            ? 'bg-[#d7e4c5] text-[#4f5f33]'
+                            : movement.movement_type === 'exit'
+                              ? 'bg-[#f7d8d0] text-[#b7422a]'
+                              : movement.movement_type === 'transfer'
+                                ? 'bg-[#dfe7f7] text-[#37486b]'
+                                : 'bg-[#f5e7c5] text-[#6b562d]'
+                        }`}
+                      >
+                        {movement.movement_type === 'entry'
+                          ? 'Entry'
+                          : movement.movement_type === 'exit'
+                            ? 'Exit'
+                            : movement.movement_type === 'transfer'
+                              ? 'Transfer'
+                              : 'Adjustment'}
+                      </span>
+                      <p className="text-sm text-[#7b6e4f] mt-1">Quantity: {movement.quantity}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      movement.movement_type === 'entry' ? 'bg-green-100 text-green-800' :
-                      movement.movement_type === 'exit' ? 'bg-red-100 text-red-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {movement.movement_type === 'entry' ? 'Entry' :
-                       movement.movement_type === 'exit' ? 'Exit' :
-                       movement.movement_type === 'transfer' ? 'Transfer' : 'Adjustment'}
-                    </span>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Quantity: {movement.quantity}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1372,49 +1303,24 @@ export default function InventoryPage() {
 
   const renderItems = () => (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Inventory Products</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={exportToExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
-          >
-            <i className="ri-file-excel-line mr-2"></i>
-            Export Excel
-          </button>
-          <button
-            onClick={() => handleOpenModal('item')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-          >
-            <i className="ri-add-line mr-2"></i>
-            Add Product
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Search</label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name or SKU..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by product or reference..."
+              className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40] focus:border-[#6b7a40]"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category
-            </label>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Category</label>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+              className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40] pr-8"
             >
               <option value="">All categories</option>
               {categories.map(category => (
@@ -1423,13 +1329,11 @@ export default function InventoryPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+              className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40] pr-8"
             >
               <option value="">All statuses</option>
               <option value="active">Active</option>
@@ -1444,7 +1348,7 @@ export default function InventoryPage() {
                 setCategoryFilter('');
                 setStatusFilter('');
               }}
-              className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+              className="w-full bg-[#d9ccb2] text-[#2e3c21] px-4 py-2 rounded-lg border border-[#cbbd9e] hover:bg-[#cfbea1] transition-colors whitespace-nowrap"
             >
               <i className="ri-refresh-line mr-2"></i>
               Clear Filters
@@ -1453,62 +1357,62 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white/95 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#eadfc6]">
+            <thead className="bg-[#f1ead6]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sale Price</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                {['SKU', 'Name', 'Category', 'Stock', 'Cost Price', 'Sale Price', 'Status', 'Actions'].map((header) => (
+                  <th
+                    key={header}
+                    className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] tracking-wider uppercase"
+                  >
+                    {header}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-[#f1ead6]">
               {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <tr key={item.id} className="hover:bg-[#faf5e6]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2e3c21]">
                     {item.sku}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
                     {item.name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7b6e4f]">
                     {item.category || 'N/A'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className={`${item.current_stock <= item.minimum_stock ? 'text-red-600 font-semibold' : ''}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
+                    <span className={item.current_stock <= item.minimum_stock ? 'text-[#b7422a] font-semibold' : ''}>
                       {item.current_stock} {item.unit_of_measure}
                     </span>
                     {item.minimum_stock && (
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-[#7b6e4f]">
                         Min: {item.minimum_stock}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
                     {(() => {
                       const cost = item.average_cost ?? item.cost_price ?? 0;
                       return `$${cost.toLocaleString('es-DO')}`;
                     })()}
                     {item.last_purchase_price != null && (
-                      <div className="text-xs text-gray-500">
-                        Last purchase: ${item.last_purchase_price.toLocaleString('es-DO')}
+                      <div className="text-xs text-[#7b6e4f]">
+                        Last Purchase: ${item.last_purchase_price.toLocaleString('es-DO')}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
                     ${item.selling_price?.toLocaleString('es-DO') || '0'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       item.is_active 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-[#d7e4c5] text-[#4f5f33]' 
+                        : 'bg-[#f7d8d0] text-[#b7422a]'
                     }`}>
                       {item.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -1516,21 +1420,21 @@ export default function InventoryPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => handleOpenModal('item', item)}
-                      className="text-blue-600 hover:text-blue-900"
+                      className="text-[#4f5f33] hover:text-[#2e3c21]"
                       title="Edit"
                     >
                       <i className="ri-edit-line"></i>
                     </button>
                     <button
                       onClick={() => handleOpenModal('movement', { item_id: item.id, item_name: item.name })}
-                      className="text-green-600 hover:text-green-900"
+                      className="text-[#6b7a40] hover:text-[#4f5f33]"
                       title="New Movement"
                     >
                       <i className="ri-arrow-up-down-line"></i>
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-[#b7422a] hover:text-[#952f18]"
                       title="Delete"
                     >
                       <i className="ri-delete-bin-line"></i>
@@ -1542,7 +1446,7 @@ export default function InventoryPage() {
           </table>
           {filteredItems.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No products found</p>
+              <p className="text-[#7b6e4f]">No products found</p>
             </div>
           )}
         </div>
@@ -2114,6 +2018,7 @@ export default function InventoryPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-4">General Statistics</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
           <div className="text-center">
             <p className="text-sm font-medium text-gray-500">Total Products</p>
             <p className="text-2xl font-bold text-blue-600">{items.length}</p>
@@ -3268,13 +3173,14 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-[#f7f1e3] p-6">
+
       {/* Header with back button */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium shadow-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#c0b59f] bg-[#fdf6e7] text-[#3b4d2d] text-sm font-medium shadow-sm hover:bg-[#f4ead4] hover:border-[#b1a78f] transition-colors"
           >
             <i className="ri-arrow-left-line text-lg"></i>
             <span>Back to Home</span>
@@ -3285,7 +3191,7 @@ export default function InventoryPage() {
         </div>
         <button
           onClick={() => navigate('/inventory/delivery-notes')}
-          className="flex items-center gap-2 px-4 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors whitespace-nowrap"
+          className="flex items-center gap-2 px-4 py-2 text-white border border-transparent rounded-lg bg-[#6b7a40] hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
         >
           <i className="ri-truck-line text-lg"></i>
           <span>Delivery Notes</span>
@@ -3293,13 +3199,14 @@ export default function InventoryPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+      <div className="border-b border-[#d4c9b1] mb-6">
+        <nav className="-mb-px flex flex-wrap gap-4">
           {[
             { id: 'dashboard', label: 'Dashboard', icon: 'ri-dashboard-line' },
             { id: 'products', label: 'Products', icon: 'ri-box-3-line' },
             { id: 'movements', label: 'Movements', icon: 'ri-exchange-line' },
             { id: 'entries', label: 'Entries', icon: 'ri-download-line' },
+
             { id: 'transfers', label: 'Transfers', icon: 'ri-swap-line' },
             { id: 'warehouses', label: 'Warehouses', icon: 'ri-building-line' },
             { id: 'reports', label: 'Reports', icon: 'ri-file-chart-line' }
@@ -3307,16 +3214,17 @@ export default function InventoryPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+              className={`flex items-center gap-2 py-2 px-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-[#6b7a40] text-[#3b4d2d]'
+                  : 'border-transparent text-gray-500 hover:text-[#4f5f33] hover:border-[#c7bda7]'
               }`}
             >
               <i className={tab.icon}></i>
               {tab.label}
             </button>
           ))}
+
         </nav>
       </div>
 

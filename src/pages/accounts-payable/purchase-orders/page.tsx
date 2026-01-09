@@ -8,6 +8,43 @@ import { purchaseOrdersService, purchaseOrderItemsService, suppliersService, inv
 import { formatMoney } from '../../../utils/numberFormat';
 import { useNavigate } from 'react-router-dom';
 
+const palette = {
+  cream: '#F6F1E7',
+  green: '#2F4F30',
+  greenDark: '#1F2B1A',
+  greenMid: '#4B5E2F',
+  greenSoft: '#7E8F63',
+  badgeNeutral: '#E4E0C8',
+};
+
+type PurchaseOrderProduct = {
+  itemId: string | null;
+  name: string;
+  quantity: number;
+  price: number;
+};
+
+type PurchaseOrderFormData = {
+  supplierId: string;
+  startDate: string;
+  deliveryDate: string;
+  notes: string;
+  products: PurchaseOrderProduct[];
+  inventoryAccountId: string;
+};
+
+const statusBadgeStyles: Record<string, { bg: string; color: string }> = {
+  Approved: { bg: '#D9E2C2', color: '#1E2B17' },
+  Pending: { bg: '#F5DEB3', color: '#2F2A14' },
+  Received: { bg: '#E1E4D1', color: '#2B3720' },
+  Cancelled: { bg: '#F8CFCF', color: '#4A1E1E' },
+  default: { bg: '#E5E7EB', color: '#1F2937' },
+};
+
+const statusOptions = ['Pending', 'Approved', 'Received', 'Cancelled'] as const;
+
+const getStatusBadgeStyle = (status: string) => statusBadgeStyles[status] || statusBadgeStyles.default;
+
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
@@ -47,28 +84,35 @@ export default function PurchaseOrdersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PurchaseOrderFormData>({
     supplierId: '',
     startDate: '',
     deliveryDate: '',
     notes: '',
-    products: [{ itemId: null as string | null, name: '', quantity: 1, price: 0 }],
-    inventoryAccountId: '' as string | '',
+    products: [{ itemId: null, name: '', quantity: 1, price: 0 }],
+    inventoryAccountId: '',
   });
+
+  const updateField = <K extends keyof PurchaseOrderFormData>(field: K, value: PurchaseOrderFormData[K]) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const mapDbStatusToUi = (status: string | null | undefined): string => {
     switch (status) {
       case 'draft':
       case 'sent':
-        return 'Pendiente';
+        return 'Pending';
       case 'approved':
-        return 'Aprobada';
+        return 'Approved';
       case 'received':
-        return 'Recibida';
+        return 'Received';
       case 'cancelled':
-        return 'Cancelada';
+        return 'Cancelled';
       default:
-        return 'Pendiente';
+        return 'Pending';
     }
   };
 
@@ -105,13 +149,13 @@ export default function PurchaseOrdersPage() {
 
   const mapUiStatusToDb = (status: string): string => {
     switch (status) {
-      case 'Pendiente':
+      case 'Pending':
         return 'draft';
-      case 'Aprobada':
+      case 'Approved':
         return 'approved';
-      case 'Recibida':
+      case 'Received':
         return 'received';
-      case 'Cancelada':
+      case 'Cancelled':
         return 'cancelled';
       default:
         return 'pending';
@@ -127,13 +171,14 @@ export default function PurchaseOrdersPage() {
       const rows = await suppliersService.getAll(user.id);
       const mapped = (rows || []).map((s: any) => ({
         id: s.id,
-        name: s.name || 'Proveedor',
+        name: s.name || 'Supplier',
         taxId: s.tax_id || '',
         legalName: s.legal_name || s.name || '',
         phone: s.phone || s.contact_phone || '',
         email: s.email || s.contact_email || '',
         address: s.address || '',
       }));
+
       setSuppliers(mapped);
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -181,7 +226,7 @@ export default function PurchaseOrdersPage() {
           id: po.id,
           number: po.po_number,
           date: po.order_date,
-          supplier: (po.suppliers as any)?.name || 'Proveedor',
+          supplier: (po.suppliers as any)?.name || 'Supplier',
           supplierId: po.supplier_id,
           products: orderItems.map((it: any) => ({
             purchaseOrderItemId: it.id ? String(it.id) : undefined,
@@ -258,12 +303,12 @@ export default function PurchaseOrdersPage() {
     e.preventDefault();
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar órdenes de compra');
+      alert('You must sign in to record purchase orders');
       return;
     }
 
     if (!formData.supplierId) {
-      alert('Debes seleccionar un proveedor');
+      alert('Please select a supplier');
       return;
     }
     
@@ -281,14 +326,13 @@ export default function PurchaseOrdersPage() {
     const payload = {
       supplier_id: formData.supplierId,
       po_number: poNumber,
-      // Para no violar el constraint esperado (expected_date >= order_date),
-      // usamos como fecha de entrega al menos la misma fecha de la orden.
+      // Ensure expected_date is never earlier than order_date
       order_date: orderDate,
       expected_date: delivery < orderDate ? orderDate : delivery,
       subtotal,
       tax_amount: itbis,
       total_amount: total,
-      status: mapUiStatusToDb(editingOrder?.status || 'Pendiente'),
+      status: mapUiStatusToDb(editingOrder?.status || 'Pending'),
       notes: formData.notes,
       inventory_account_id: formData.inventoryAccountId || null,
     };
@@ -307,11 +351,11 @@ export default function PurchaseOrdersPage() {
       await purchaseOrderItemsService.createMany(user.id as string, orderId, formData.products);
       await loadOrders();
       resetForm();
-      alert(editingOrder ? 'Orden de compra actualizada exitosamente' : 'Orden de compra creada exitosamente');
+      alert(editingOrder ? 'Purchase order updated successfully' : 'Purchase order created successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving purchase order', error);
-      alert('Error al guardar la orden de compra');
+      alert('Unable to save the purchase order');
     }
   };
 
@@ -342,28 +386,28 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleApprove = async (id: string | number) => {
-    if (!confirm('¿Aprobar esta orden de compra?')) return;
+    if (!confirm('Approve this purchase order?')) return;
     try {
-      await purchaseOrdersService.updateStatus(String(id), mapUiStatusToDb('Aprobada'));
+      await purchaseOrdersService.updateStatus(String(id), mapUiStatusToDb('Approved'));
       await loadOrders();
-      alert('Orden de compra aprobada exitosamente');
+      alert('Purchase order approved successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error approving purchase order', error);
-      alert('No se pudo aprobar la orden');
+      alert('The order could not be approved');
     }
   };
 
   const handleCancel = async (id: string | number) => {
-    if (!confirm('¿Cancelar esta orden de compra?')) return;
+    if (!confirm('Cancel this purchase order?')) return;
     try {
-      await purchaseOrdersService.updateStatus(String(id), mapUiStatusToDb('Cancelada'));
+      await purchaseOrdersService.updateStatus(String(id), mapUiStatusToDb('Cancelled'));
       await loadOrders();
-      alert('Orden de compra cancelada');
+      alert('Purchase order cancelled');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error cancelling purchase order', error);
-      alert('No se pudo cancelar la orden');
+      alert('The order could not be cancelled');
     }
   };
 
@@ -383,7 +427,7 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const updateProduct = (index: number, field: string, value: any) => {
+  const updateProduct = <K extends keyof PurchaseOrderProduct>(index: number, field: K, value: PurchaseOrderProduct[K]) => {
     setFormData(prev => {
       const updatedProducts = prev.products.map((product, i) =>
         i === index ? { ...product, [field]: value } : product
@@ -402,11 +446,11 @@ export default function PurchaseOrdersPage() {
     const doc = new jsPDF();
 
     doc.setFontSize(20);
-    doc.text('Órdenes de Compra', 20, 20);
+    doc.text('Purchase Orders', 20, 20);
 
     doc.setFontSize(12);
-    doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-DO')}`, 20, 40);
-    doc.text(`Total de Órdenes: ${filteredOrders.length}`, 20, 50);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
+    doc.text(`Total Orders: ${filteredOrders.length}`, 20, 50);
 
     const tableData = filteredOrders.map((order) => [
       order.number,
@@ -418,7 +462,7 @@ export default function PurchaseOrdersPage() {
     ]);
 
     (doc as any).autoTable({
-      head: [['Número', 'Fecha', 'Proveedor', 'Total', 'Entrega', 'Estado']],
+      head: [['Number', 'Date', 'Supplier', 'Total', 'Delivery', 'Status']],
       body: tableData,
       startY: 70,
       theme: 'striped',
@@ -431,14 +475,14 @@ export default function PurchaseOrdersPage() {
     });
 
     const totalAmount = filteredOrders.reduce((sum, order) => sum + order.total, 0);
-    const pendingOrders = filteredOrders.filter((o) => o.status === 'Pendiente').length;
-    const approvedOrders = filteredOrders.filter((o) => o.status === 'Aprobada').length;
+    const pendingOrders = filteredOrders.filter((o) => o.status === 'Pending').length;
+    const approvedOrders = filteredOrders.filter((o) => o.status === 'Approved').length;
 
     (doc as any).autoTable({
       body: [
-        ['Total en Órdenes:', `${formatMoney(totalAmount, 'RD$')}`],
-        ['Órdenes Pendientes:', `${pendingOrders}`],
-        ['Órdenes Aprobadas:', `${approvedOrders}`],
+        ['Total Amount:', `${formatMoney(totalAmount, 'RD$')}`],
+        ['Pending Orders:', `${pendingOrders}`],
+        ['Approved Orders:', `${approvedOrders}`],
       ],
       startY: (((doc as any).lastAutoTable?.finalY) ?? 70) + 20,
       theme: 'plain',
@@ -449,11 +493,11 @@ export default function PurchaseOrdersPage() {
     for (let i = 1; i <= pageCount; i += 1) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
-      doc.text('Sistema Contable - Órdenes de Compra', 20, doc.internal.pageSize.height - 10);
+      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
+      doc.text('ContaBi · Purchase Orders', 20, doc.internal.pageSize.height - 10);
     }
 
-    doc.save(`ordenes-compra-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`purchase-orders-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
@@ -561,8 +605,8 @@ export default function PurchaseOrdersPage() {
     // Estadísticas
     currentRow++;
     const totalAmount = filteredOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
-    const pendingOrders = filteredOrders.filter((o) => o.status === 'Pendiente').length;
-    const approvedOrders = filteredOrders.filter((o) => o.status === 'Aprobada').length;
+    const pendingOrders = filteredOrders.filter((o) => o.status === 'Pending').length;
+    const approvedOrders = filteredOrders.filter((o) => o.status === 'Approved').length;
 
     wsOrders.getCell(currentRow, 1).value = 'Estadísticas';
     wsOrders.getCell(currentRow, 1).font = { bold: true };
@@ -914,80 +958,90 @@ export default function PurchaseOrdersPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div
+        className="space-y-6 min-h-screen rounded-3xl"
+        style={{ backgroundColor: palette.cream, padding: '24px' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Órdenes de Compra</h1>
-            <p className="text-gray-600">Gestiona órdenes de compra y seguimiento</p>
+            <h1 className="text-3xl font-bold text-[color:var(--greenDark)]" style={{ color: palette.greenDark }}>
+              Purchase Orders
+            </h1>
+            <p className="text-base" style={{ color: palette.greenSoft }}>
+              Manage purchasing, approvals, and vendor follow-ups
+            </p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
             <button 
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.greenDark }}
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button 
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.greenMid }}
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.green }}
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Orden
+              New Order
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-shopping-cart-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: palette.badgeNeutral }}>
+                <i className="ri-shopping-cart-line text-xl" style={{ color: palette.greenDark }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Órdenes</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Orders</p>
                 <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-time-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#FBEED7' }}>
+                <i className="ri-time-line text-xl" style={{ color: palette.greenMid }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Pendiente').length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Pending</p>
+                <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Pending').length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#E1EBD8' }}>
+                <i className="ri-check-line text-xl" style={{ color: palette.green }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprobadas</p>
-                <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Aprobada').length}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Approved</p>
+                <p className="text-2xl font-bold text-gray-900">{orders.filter(o => o.status === 'Approved').length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-money-dollar-circle-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#E7DFF1' }}>
+                <i className="ri-money-dollar-circle-line text-xl" style={{ color: palette.greenDark }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Valor Total</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Value</p>
                 <p className="text-2xl font-bold text-gray-900">{formatMoney(orders.reduce((sum, o) => sum + o.total, 0), 'RD$')}</p>
               </div>
             </div>
@@ -998,38 +1052,39 @@ export default function PurchaseOrdersPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado <span className="text-red-500">*</span></label>
-              <select 
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-green-600"
               >
-                <option value="all">Todos los Estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Aprobada">Aprobada</option>
-                <option value="Recibida">Recibida</option>
-                <option value="Cancelada">Cancelada</option>
+                <option value="all">All Statuses</option>
+                {statusOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
-              <select 
+              <label className="block text-sm font-medium text-gray-700 mb-2">Supplier</label>
+              <select
                 value={filterSupplier}
                 onChange={(e) => setFilterSupplier(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-green-600"
               >
-                <option value="all">Todos los Proveedores</option>
+                <option value="all">All Suppliers</option>
                 {suppliers.map((s: any) => (
                   <option key={s.id} value={s.name}>{s.name}</option>
                 ))}
               </select>
             </div>
             <div className="md:col-span-1 flex items-end">
-              <button 
+              <button
                 onClick={() => { setFilterStatus('all'); setFilterSupplier('all'); }}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="w-full bg-gray-700 text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-colors whitespace-nowrap"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
@@ -1038,25 +1093,25 @@ export default function PurchaseOrdersPage() {
         {/* Orders Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Órdenes de Compra</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Purchase Order List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Entrega</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Facturado / Pendiente</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Billed / Pending</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
+                {filteredOrders.map(order => (
+                  <tr key={order.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.number}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.date}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.supplier}</td>
@@ -1068,11 +1123,11 @@ export default function PurchaseOrdersPage() {
                       {order.orderedQtyTotal > 0 ? (
                         <div className="space-y-1">
                           <div>
-                            <span className="font-medium">Facturado:</span>{' '}
+                            <span className="font-medium">Billed:</span>{' '}
                             {order.invoicedQtyTotal.toLocaleString()} / {order.orderedQtyTotal.toLocaleString()}
                           </div>
                           <div className="text-xs text-gray-500">
-                            Pendiente: {order.remainingQtyTotal.toLocaleString()}
+                            Pending: {order.remainingQtyTotal.toLocaleString()}
                             {order.invoicedQtyTotal > 0 && (
                               <span className="ml-2">
                                 ({Math.round(order.invoicedPct)}%)
@@ -1081,22 +1136,23 @@ export default function PurchaseOrdersPage() {
                           </div>
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-500">Sin líneas</span>
+                        <span className="text-xs text-gray-500">No lines</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        order.status === 'Aprobada' ? 'bg-green-100 text-green-800' :
-                        order.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' :
-                        order.status === 'Recibida' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                        style={{
+                          backgroundColor: getStatusBadgeStyle(order.status).bg,
+                          color: getStatusBadgeStyle(order.status).color,
+                        }}
+                      >
                         {order.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button 
+                        <button
                           onClick={() => { void printOrder(order); }}
                           className="text-gray-600 hover:text-gray-900 whitespace-nowrap"
                         >
@@ -1108,31 +1164,31 @@ export default function PurchaseOrdersPage() {
                         >
                           <i className="ri-file-excel-2-line"></i>
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleEdit(order)}
                           className="text-indigo-600 hover:text-indigo-900 whitespace-nowrap"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
-                        {order.status === 'Pendiente' && (
-                          <button 
+                        {order.status === 'Pending' && (
+                          <button
                             onClick={() => handleApprove(order.id)}
                             className="text-green-600 hover:text-green-900 whitespace-nowrap"
                           >
                             <i className="ri-check-line"></i>
                           </button>
                         )}
-                        {order.status === 'Aprobada' && (
-                          <button 
+                        {order.status === 'Approved' && (
+                          <button
                             onClick={() => handleCreateSupplierInvoice(order)}
                             className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
-                            title="Crear Factura de Suplidor"
+                            title="Create supplier invoice"
                           >
                             <i className="ri-file-list-3-line"></i>
                           </button>
                         )}
-                        {(order.status === 'Pendiente' || order.status === 'Aprobada') && (
-                          <button 
+                        {(order.status === 'Pending' || order.status === 'Approved') && (
+                          <button
                             onClick={() => handleCancel(order.id)}
                             className="text-red-600 hover:text-red-900 whitespace-nowrap"
                           >
@@ -1154,98 +1210,51 @@ export default function PurchaseOrdersPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {editingOrder ? 'Editar Orden de Compra' : 'Nueva Orden de Compra'}
+                  {editingOrder ? 'Edit Purchase Order' : 'New Purchase Order'}
                 </h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor *</label>
-                    <select 
-                      required
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
+                    <select
                       value={formData.supplierId}
-                      onChange={(e) =>
-                        setFormData(prev => ({
-                          ...prev,
-                          supplierId: e.target.value,
-                        }))
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => updateField('supplierId', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     >
-                      <option value="">Seleccionar proveedor</option>
+                      <option value="">Select Supplier</option>
                       {suppliers.map((s: any) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
-                    {selectedSupplier && (
-                      <div className="mt-3 text-xs sm:text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-1">
-                        <p className="font-semibold">
-                          {selectedSupplier.legalName || selectedSupplier.name}
-                        </p>
-                        {selectedSupplier.taxId && (
-                          <p>
-                            <span className="font-medium">RNC / Tax ID: </span>
-                            {selectedSupplier.taxId}
-                          </p>
-                        )}
-                        {selectedSupplier.phone && (
-                          <p>
-                            <span className="font-medium">Teléfono: </span>
-                            {selectedSupplier.phone}
-                          </p>
-                        )}
-                        {selectedSupplier.email && (
-                          <p>
-                            <span className="font-medium">Email: </span>
-                            {selectedSupplier.email}
-                          </p>
-                        )}
-                        {selectedSupplier.address && (
-                          <p>
-                            <span className="font-medium">Dirección: </span>
-                            {selectedSupplier.address}
-                          </p>
-                        )}
-                      </div>
-                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de inicio *</label>
-                    <input 
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                    <input
                       type="date"
-                      required
                       value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => updateField('startDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Entrega *</label>
-                    <input 
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Date</label>
+                    <input
                       type="date"
-                      required
                       value={formData.deliveryDate}
-                      onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => updateField('deliveryDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuenta de Inventario</label>
-                    <select
-                      value={formData.inventoryAccountId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, inventoryAccountId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Sin cuenta específica</option>
-                      {accounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.code} - {acc.name}
-                        </option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => updateField('notes', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
                   </div>
                 </div>
 
@@ -1343,22 +1352,7 @@ export default function PurchaseOrdersPage() {
                       Total: {formatMoney(calculateTotal(), 'RD$')}
                     </p>
                   </div>
-                </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button 
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
-                  >
-                    {editingOrder ? 'Actualizar' : 'Crear'} Orden
-                  </button>
                 </div>
               </form>
             </div>

@@ -29,77 +29,91 @@ export default function AccountsPayablePage() {
 
   const modules = [
     {
-      title: 'Reportes CxP',
-      description: 'Reportes de cuentas por pagar con filtros avanzados',
+      title: 'AP Reports',
+      description: 'Accounts payable reports with advanced filters',
       icon: 'ri-file-chart-line',
       href: '/accounts-payable/reports',
-      color: 'blue'
+      accentBg: '#f3ecda',
+      accentText: '#2f3e1e',
     },
     {
-      title: 'Gestión de Proveedores',
-      description: 'Base de datos y mantenimiento de proveedores',
+      title: 'Supplier Management',
+      description: 'Database and maintenance of vendor profiles',
       icon: 'ri-truck-line',
       href: '/accounts-payable/suppliers',
-      color: 'green'
+      accentBg: '#e3dcc8',
+      accentText: '#4a3c24',
     },
     {
-      title: 'Procesamiento de Pagos',
-      description: 'Pagos por cheque, transferencia y efectivo',
+      title: 'Payment Processing',
+      description: 'Checks, transfers, and cash disbursements',
       icon: 'ri-bank-card-line',
       href: '/accounts-payable/payments',
-      color: 'purple'
+      accentBg: '#d8cbb5',
+      accentText: '#2f3e1e',
     },
     {
-      title: 'Órdenes de Compra',
-      description: 'Gestión y seguimiento de órdenes de compra',
+      title: 'Purchase Orders',
+      description: 'Creation and tracking of purchase orders',
       icon: 'ri-shopping-cart-line',
       href: '/accounts-payable/purchase-orders',
-      color: 'orange'
+      accentBg: '#f3ecda',
+      accentText: '#bc6c2b',
     },
     {
-      title: 'Solicitudes de Cotización',
-      description: 'Solicitudes de cotización y comparaciones',
+      title: 'Quote Requests',
+      description: 'RFQs, comparisons, and supplier bids',
       icon: 'ri-file-list-line',
       href: '/accounts-payable/quotes',
-      color: 'red'
+      accentBg: '#e3dcc8',
+      accentText: '#7a2e1b',
     },
     {
-      title: 'Anticipos CxP',
-      description: 'Pagos anticipados a proveedores',
+      title: 'AP Advances',
+      description: 'Advance payments to suppliers',
       icon: 'ri-money-dollar-circle-line',
       href: '/accounts-payable/advances',
-      color: 'indigo'
+      accentBg: '#d8cbb5',
+      accentText: '#2f3e1e',
     }
   ];
 
   const apStats = [
     {
-      title: 'Balance total CxP',
+      title: 'Total AP Balance',
       value: `RD$ ${summary.totalBalance.toLocaleString()}`,
       change: '0%',
+      changeLabel: 'vs last month',
       icon: 'ri-file-list-3-line',
-      color: 'red',
+      iconBg: '#f3ecda',
+      iconColor: '#2f3e1e',
     },
     {
-      title: 'Vence esta semana',
+      title: 'Due This Week',
       value: `RD$ ${summary.dueThisWeek.toLocaleString()}`,
       change: '0%',
+      changeLabel: 'vs last month',
       icon: 'ri-calendar-line',
-      color: 'orange',
+      iconBg: '#e3dcc8',
+      iconColor: '#4a3c24',
     },
     {
-      title: 'Pagos vencidos',
+      title: 'Overdue Payments',
       value: `RD$ ${summary.overdue.toLocaleString()}`,
       change: '0%',
+      changeLabel: 'vs last month',
       icon: 'ri-alert-line',
-      color: 'red',
+      iconBg: '#fde8df',
+      iconColor: '#7a2e1b',
     },
     {
-      title: 'Proveedores activos',
+      title: 'Active Suppliers',
       value: summary.activeSuppliers.toString(),
       change: '0',
+      changeLabel: 'Total registered',
       icon: 'ri-truck-line',
-      color: 'blue',
+      iconBg: '#f0f4ed',
+      iconColor: '#2f3e1e',
     },
   ];
 
@@ -282,20 +296,20 @@ export default function AccountsPayablePage() {
 
   // Approval Functions
   const handleApproveRequest = (type: string, supplier: string, amount: string) => {
-    if (confirm(`¿Aprobar ${type} para ${supplier} por ${amount}?`)) {
+    if (confirm(`Approve ${type} for ${supplier} totaling ${amount}?`)) {
       alert(`${type} approved successfully for ${supplier}`);
     }
   };
 
   const handleRejectRequest = (type: string, supplier: string, amount: string) => {
-    if (confirm(`¿Rechazar ${type} para ${supplier} por ${amount}?`)) {
+    if (confirm(`Reject ${type} for ${supplier} totaling ${amount}?`)) {
       alert(`${type} rejected for ${supplier}`);
     }
   };
 
   // Navigation Functions
   const handleViewAll = (section: string) => {
-    if (section === 'actividad reciente') {
+    if (section === 'recent activity') {
       navigate('/accounts-payable/invoices');
       return;
     }
@@ -305,31 +319,35 @@ export default function AccountsPayablePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f7f3e8] min-h-screen p-6 rounded-2xl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Módulo de Cuentas por Pagar</h1>
-          <p className="text-gray-600">Sistema completo de gestión de proveedores y pagos</p>
+          <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Operations</p>
+          <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Payable Command Center</h1>
+          <p className="text-[#6b5c3b]">End-to-end supplier and payment management</p>
         </div>
 
         {/* A/P Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {apStats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  <p className="text-sm font-medium text-[#6b5c3b]">{stat.title}</p>
+                  <p className="text-2xl font-bold text-[#2f3e1e] mt-1">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-${stat.color}-100`}>
-                  <i className={`${stat.icon} text-xl text-${stat.color}-600`}></i>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: stat.iconBg }}
+                >
+                  <i className={`${stat.icon} text-xl`} style={{ color: stat.iconColor }}></i>
                 </div>
               </div>
               <div className="mt-4">
-                <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                <span className="text-sm font-medium text-[#6b5c3b]">
                   {stat.change}
                 </span>
-                <span className="text-sm text-gray-500 ml-1">vs mes anterior</span>
+                <span className="text-sm text-[#9b8a64] ml-1">{stat.changeLabel}</span>
               </div>
             </div>
           ))}
@@ -340,8 +358,11 @@ export default function AccountsPayablePage() {
           {modules.map((module, index) => (
             <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer">
               <div className="flex items-center mb-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-${module.color}-100 mr-4`}>
-                  <i className={`${module.icon} text-xl text-${module.color}-600`}></i>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mr-4"
+                  style={{ backgroundColor: module.accentBg, color: module.accentText }}
+                >
+                  <i className={`${module.icon} text-xl`}></i>
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{module.title}</h3>
@@ -350,7 +371,7 @@ export default function AccountsPayablePage() {
                 onClick={() => handleAccessModule(module.href)}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
               >
-                Acceder
+                Enter
               </button>
             </div>
           ))}
@@ -360,25 +381,25 @@ export default function AccountsPayablePage() {
           {/* Top Suppliers */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Principales proveedores por balance</h3>
+              <h3 className="text-lg font-semibold text-[#2f3e1e]">Top suppliers by balance</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {topSuppliers.map((supplier, index) => (
                   <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-medium text-gray-900">{supplier.name}</p>
-                      <p className="text-sm text-gray-600">RNC: {supplier.rnc}</p>
-                      <p className="text-xs text-gray-500">Vence: {supplier.dueDate}</p>
+                      <p className="font-medium text-[#2f3e1e]">{supplier.name}</p>
+                      <p className="text-sm text-[#6b5c3b]">Tax ID: {supplier.rnc}</p>
+                      <p className="text-xs text-[#9b8a64]">Next due: {supplier.dueDate}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">{supplier.balance}</p>
+                      <p className="font-semibold text-[#2f3e1e]">{supplier.balance}</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                         supplier.status === 'Current' ? 'bg-green-100 text-green-800' :
                         supplier.status === 'Due Soon' ? 'bg-orange-100 text-orange-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {supplier.status === 'Current' ? 'Actual' : supplier.status === 'Due Soon' ? 'Próximo vencimiento' : 'Vencido'}
+                        {supplier.status === 'Current' ? 'Current' : supplier.status === 'Due Soon' ? 'Due soon' : 'Overdue'}
                       </span>
                     </div>
                   </div>
@@ -391,12 +412,12 @@ export default function AccountsPayablePage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Actividad reciente</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Recent activity</h3>
                 <button 
-                  onClick={() => handleViewAll('actividad reciente')}
+                  onClick={() => handleViewAll('recent activity')}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium whitespace-nowrap"
                 >
-                  Ver todo
+                  View all
                 </button>
               </div>
             </div>
@@ -438,31 +459,31 @@ export default function AccountsPayablePage() {
         {/* Pending Approvals */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Aprobaciones pendientes</h3>
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">Pending approvals</h3>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pendingApprovals.map((approval, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">{approval.type}</p>
-                    <p className="text-sm text-gray-600">{approval.supplier}</p>
-                    <p className="text-xs text-gray-500">Solicitado por: {approval.requestedBy}</p>
+                    <p className="font-medium text-[#2f3e1e]">{approval.type}</p>
+                    <p className="text-sm text-[#6b5c3b]">{approval.supplier}</p>
+                    <p className="text-xs text-[#9b8a64]">Requested by: {approval.requestedBy || 'N/A'}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">{approval.amount}</p>
+                    <p className="font-semibold text-[#2f3e1e]">{approval.amount}</p>
                     <div className="flex space-x-2 mt-2">
                       <button 
                         onClick={() => handleApproveRequest(approval.type, approval.supplier, approval.amount)}
                         className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 whitespace-nowrap"
                       >
-                        Aprobar
+                        Approve
                       </button>
                       <button 
                         onClick={() => handleRejectRequest(approval.type, approval.supplier, approval.amount)}
                         className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 whitespace-nowrap"
                       >
-                        Rechazar
+                        Reject
                       </button>
                     </div>
                   </div>

@@ -28,6 +28,25 @@ interface UiQuote {
   items: UiQuoteItem[];
 }
 
+const palette = {
+  cream: '#f7f0df',
+  creamLight: '#fdf8ec',
+  creamAccent: '#fff9ea',
+  green: '#3f4a2f',
+  greenDark: '#2d3520',
+  greenMuted: '#6d7751',
+  greenSoft: '#cbd3b0',
+  brown: '#7a5c3e',
+  warmCopper: '#b5561f',
+};
+
+const baseBorderColor = '#d8ccb0';
+const cardStyle = { backgroundColor: palette.creamLight, borderColor: baseBorderColor };
+const panelStyle = { backgroundColor: palette.creamAccent, borderColor: baseBorderColor };
+const primaryButtonStyle = { backgroundColor: palette.green, color: '#fff' };
+const secondaryButtonStyle = { backgroundColor: palette.brown, color: '#fff' };
+const ghostButtonStyle = { backgroundColor: palette.creamLight, color: palette.greenDark, borderColor: baseBorderColor };
+
 export default function PreInvoicingPage() {
   const { user } = useAuth();
   const [showNewQuoteModal, setShowNewQuoteModal] = useState(false);
@@ -67,15 +86,27 @@ export default function PreInvoicingPage() {
   const [validUntilError, setValidUntilError] = useState('');
   const [itemsError, setItemsError] = useState('');
 
-  const getStatusColor = (status: string) => {
+  const statusChipClasses: Record<UiQuote['status'], string> = {
+    pending: 'bg-[#f0e0ba] text-[#6b5b2e]',
+    under_review: 'bg-[#e2e4b7] text-[#3f4a2f]',
+    approved: 'bg-[#cbd3b0] text-[#2d3520]',
+    rejected: 'bg-[#f5d5cf] text-[#5e2c2c]',
+    expired: 'bg-[#ddd5c0] text-[#4f4b3f]',
+    invoiced: 'bg-[#9fb28a] text-white',
+  };
+
+  const getStatusColor = (status: UiQuote['status']) =>
+    statusChipClasses[status] ?? 'bg-[#ddd5c0] text-[#4f4b3f]';
+
+  const getStatusText = (status: UiQuote['status']) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'under_review': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'expired': return 'bg-gray-100 text-gray-800';
-      case 'invoiced': return 'bg-emerald-100 text-emerald-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'Pending';
+      case 'under_review': return 'Under Review';
+      case 'approved': return 'Approved';
+      case 'rejected': return 'Rejected';
+      case 'expired': return 'Expired';
+      case 'invoiced': return 'Invoiced';
+      default: return 'Unknown';
     }
   };
 
@@ -160,18 +191,6 @@ export default function PreInvoicingPage() {
     });
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'under_review': return 'En Revisión';
-      case 'approved': return 'Aprobada';
-      case 'rejected': return 'Rechazada';
-      case 'expired': return 'Expirada';
-      case 'invoiced': return 'Facturada';
-      default: return 'Desconocido';
-    }
-  };
-
   const loadQuotes = async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -235,7 +254,8 @@ export default function PreInvoicingPage() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading quotes:', error);
-      toast.error('Error al cargar las cotizaciones');
+      toast.error('Failed to load quotes');
+
     } finally {
       setLoading(false);
     }
@@ -258,6 +278,7 @@ export default function PreInvoicingPage() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading customers for quotes:', error);
+      toast.error('Failed to load customers');
     }
   };
 
@@ -274,6 +295,7 @@ export default function PreInvoicingPage() {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error loading payment terms for quotes:', error);
+      toast.error('Failed to load payment terms');
     }
   };
 
@@ -304,12 +326,29 @@ export default function PreInvoicingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch = quote.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.id.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredQuotes = quotes.filter((quote) => {
+    const matchesSearch =
+      quote.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quote.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center px-6" style={{ background: palette.cream }}>
+          <div className="text-center space-y-3">
+            <div
+              className="mx-auto h-14 w-14 rounded-full border-4 border-dashed animate-spin"
+              style={{ borderColor: palette.greenSoft, borderTopColor: palette.green }}
+            />
+            <p className="text-lg font-semibold text-gray-700">Loading quotes...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const handleCreateQuote = () => {
     // Resetear formulario de nueva cotización
@@ -331,7 +370,7 @@ export default function PreInvoicingPage() {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
     if (quote.status === 'invoiced') {
-      toast.error('Esta cotización ya fue facturada y no se puede modificar. Debes duplicarla para crear otra.');
+      toast.error('This quote has already been invoiced. Duplicate it to create a new one.');
       return;
     }
     populateFormFromQuote(quote);
@@ -342,7 +381,7 @@ export default function PreInvoicingPage() {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
     if (quote.status === 'invoiced') {
-      toast.error('Esta cotización ya fue facturada y no se puede modificar. Debes duplicarla para crear otra.');
+      toast.error('This quote has already been invoiced. Duplicate it to create a new one.');
       return;
     }
     populateFormFromQuote(quote);
@@ -353,39 +392,39 @@ export default function PreInvoicingPage() {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
     if (quote.status === 'invoiced') {
-      toast.error('Esta cotización ya fue facturada y no se puede eliminar. Debes duplicarla para crear otra.');
+      toast.error('This quote has already been invoiced and cannot be deleted.');
       return;
     }
-    if (!confirm(`¿Está seguro de eliminar la cotización ${quoteId}?`)) return;
+    if (!confirm(`Delete quote ${quoteId}?`)) return;
 
     try {
       await quotesService.delete(quote.dbId);
       await loadQuotes();
-      toast.success('Cotización eliminada correctamente');
+      toast.success('Quote deleted successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error deleting quote:', error);
-      toast.error('Error al eliminar la cotización');
+      toast.error('Failed to delete quote');
     }
   };
 
   const handleExportToPdf = () => {
-    const loadingToast = toast.loading('Generando PDF...');
+    const loadingToast = toast.loading('Generating PDF...');
 
     setTimeout(async () => {
       try {
         if (!quotes || quotes.length === 0) {
-          toast.warning('No hay cotizaciones para exportar', { id: loadingToast });
+          toast.warning('There are no quotes to export', { id: loadingToast });
           return;
         }
 
         const columns = [
-          { key: 'id', label: 'Número' },
-          { key: 'customer', label: 'Cliente' },
-          { key: 'date', label: 'Fecha' },
-          { key: 'validUntil', label: 'Válida Hasta' },
+          { key: 'id', label: 'Number' },
+          { key: 'customer', label: 'Customer' },
+          { key: 'date', label: 'Date' },
+          { key: 'validUntil', label: 'Valid Until' },
           { key: 'total', label: 'Total' },
-          { key: 'status', label: 'Estado' },
+          { key: 'status', label: 'Status' },
         ];
 
         const dataToExport = quotes.map((quote) => ({
@@ -399,23 +438,20 @@ export default function PreInvoicingPage() {
           status: getStatusText(quote.status),
         }));
 
-        await exportToPdf(dataToExport, columns, 'cotizaciones', 'Reporte de Cotizaciones');
-        toast.success('PDF generado correctamente', { id: loadingToast });
+        await exportToPdf(dataToExport, columns, 'quotes', 'Quotes Report');
+        toast.success('PDF generated successfully', { id: loadingToast });
       } catch (error) {
-        console.error('Error al generar el PDF:', error);
-        toast.error('Error al generar el PDF', { id: loadingToast });
+        console.error('Error generating PDF:', error);
+        toast.error('Failed to generate PDF', { id: loadingToast });
       }
     }, 100);
-  };
-
-  const handlePrintQuote = (quoteId: string) => {
-    alert(`Imprimiendo cotización: ${quoteId}`);
   };
 
   const handleConvertToInvoice = (quoteId: string) => {
     const quote = quotes.find(q => q.id === quoteId);
     if (!quote) return;
     if (!user?.id) {
+      toast.error('You must be logged in to convert to invoice');
       toast.error('Debes iniciar sesión para convertir en factura');
       return;
     }
@@ -639,126 +675,130 @@ export default function PreInvoicingPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="min-h-screen" style={{ background: palette.cream }}>
+        <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pre-facturación</h1>
-            <p className="text-gray-600">Gestión de cotizaciones y presupuestos</p>
+            <h1 className="text-2xl font-bold text-gray-900">Pre-billing</h1>
+            <p className="text-gray-600">Manage quotes and budgets before invoicing</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={handleExportToPdf}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center transition-colors"
-              title="Exportar a PDF"
+              className="px-4 py-2 rounded-lg flex items-center transition-colors font-semibold"
+              style={{ backgroundColor: palette.warmCopper, color: '#fff' }}
+              title="Export PDF"
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button
               onClick={handleCreateQuote}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+              className="px-4 py-2 rounded-lg flex items-center font-semibold"
+              style={primaryButtonStyle}
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Cotización
+              New Quote
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Cotizaciones</p>
+                <p className="text-sm font-medium text-gray-600">Total Quotes</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{quotes.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.creamAccent, color: palette.greenDark }}>
                 <i className="ri-file-list-line text-xl text-blue-600"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'pending').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-100">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.creamAccent, color: palette.greenMuted }}>
+                <i className="ri-time-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprobadas</p>
+                <p className="text-sm font-medium text-gray-600">Approved</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'approved').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.greenSoft, color: palette.greenDark }}>
+                <i className="ri-check-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">En Revisión</p>
+                <p className="text-sm font-medium text-gray-600">Under Review</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'under_review').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-search-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.creamAccent, color: palette.green }}>
+                <i className="ri-search-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expiradas</p>
+                <p className="text-sm font-medium text-gray-600">Expired</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'expired').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-gray-100">
-                <i className="ri-calendar-line text-xl text-gray-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.creamAccent, color: palette.brown }}>
+                <i className="ri-calendar-line text-xl"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-lg shadow-sm border p-6" style={cardStyle}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Facturadas</p>
+                <p className="text-sm font-medium text-gray-600">Invoiced</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'invoiced').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-emerald-100">
-                <i className="ri-file-transfer-line text-xl text-emerald-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: palette.greenSoft, color: palette.greenDark }}>
+                <i className="ri-file-transfer-line text-xl"></i>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-lg shadow-sm border p-6" style={panelStyle}>
+          <div className="grid grid-cols-1 md-grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por cliente o número de cotización..."
+                  placeholder="Search by customer or quote number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -767,19 +807,19 @@ export default function PreInvoicingPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
               >
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="under_review">En Revisión</option>
-                <option value="approved">Aprobadas</option>
-                <option value="invoiced">Facturadas</option>
-                <option value="rejected">Rechazadas</option>
-                <option value="expired">Expiradas</option>
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="under_review">Under Review</option>
+                <option value="approved">Approved</option>
+                <option value="invoiced">Invoiced</option>
+                <option value="rejected">Rejected</option>
+                <option value="expired">Expired</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -788,10 +828,11 @@ export default function PreInvoicingPage() {
                   setSearchTerm('');
                   setStatusFilter('all');
                 }}
-                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+                className="w-full px-4 py-2 rounded-lg transition-colors whitespace-nowrap font-semibold"
+                style={ghostButtonStyle}
               >
                 <i className="ri-refresh-line mr-2"></i>
-                Limpiar Filtros
+                Reset Filters
               </button>
             </div>
           </div>
@@ -801,7 +842,7 @@ export default function PreInvoicingPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
-              Cotizaciones ({filteredQuotes.length})
+              Quotes ({filteredQuotes.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -812,22 +853,22 @@ export default function PreInvoicingPage() {
                     #
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Válida Hasta
+                    Valid Until
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -869,7 +910,7 @@ export default function PreInvoicingPage() {
                             <button
                               onClick={() => handleViewQuote(quote.id)}
                               className="text-blue-600 hover:text-blue-900 p-1"
-                              title="Ver cotización"
+                              title="View quote"
                             >
                               <i className="ri-eye-line"></i>
                             </button>
@@ -878,7 +919,7 @@ export default function PreInvoicingPage() {
                             <button
                               onClick={() => handleEditQuote(quote.id)}
                               className="text-green-600 hover:text-green-900 p-1"
-                              title="Editar cotización"
+                              title="Edit quote"
                             >
                               <i className="ri-edit-line"></i>
                             </button>
@@ -887,7 +928,7 @@ export default function PreInvoicingPage() {
                             <button
                               onClick={() => handleConvertToInvoice(quote.id)}
                               className="text-green-600 hover:text-green-900 p-1"
-                              title="Convertir a factura"
+                              title="Convert to invoice"
                             >
                               <i className="ri-file-transfer-line"></i>
                             </button>
@@ -897,14 +938,14 @@ export default function PreInvoicingPage() {
                               <button
                                 onClick={() => handleApproveQuote(quote.id)}
                                 className="text-green-600 hover:text-green-900 p-1"
-                                title="Aprobar cotización"
+                                title="Approve quote"
                               >
                                 <i className="ri-check-line"></i>
                               </button>
                               <button
                                 onClick={() => handleRejectQuote(quote.id)}
                                 className="text-red-600 hover:text-red-900 p-1"
-                                title="Rechazar cotización"
+                                title="Reject quote"
                               >
                                 <i className="ri-close-line"></i>
                               </button>
@@ -913,7 +954,7 @@ export default function PreInvoicingPage() {
                           <button
                             onClick={() => handleDuplicateQuote(quote.id)}
                             className="text-orange-600 hover:text-orange-900 p-1"
-                            title="Duplicar cotización"
+                            title="Duplicate quote"
                           >
                             <i className="ri-file-copy-line"></i>
                           </button>
@@ -921,7 +962,7 @@ export default function PreInvoicingPage() {
                             <button
                               onClick={() => handleDeleteQuote(quote.id)}
                               className="text-red-600 hover:text-red-900 p-1"
-                              title="Eliminar cotización"
+                              title="Delete quote"
                             >
                               <i className="ri-delete-bin-line"></i>
                             </button>
@@ -942,7 +983,7 @@ export default function PreInvoicingPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Nueva Cotización</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">New Quote</h3>
                   <button
                     onClick={() => setShowNewQuoteModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -952,6 +993,7 @@ export default function PreInvoicingPage() {
                 </div>
               </div>
               <div className="p-6">
+
                 {(() => {
                   const selectedCustomer = customers.find((c) => String(c.id) === String(newQuoteCustomerId));
                   if (!selectedCustomer) return null;
@@ -960,10 +1002,11 @@ export default function PreInvoicingPage() {
                       <div className="font-medium text-gray-900">{selectedCustomer.name}</div>
                       <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
                         <div>{selectedCustomer.email ? `Email: ${selectedCustomer.email}` : 'Email: -'}</div>
-                        <div>{selectedCustomer.phone ? `Tel: ${selectedCustomer.phone}` : 'Tel: -'}</div>
-                        <div>{selectedCustomer.document ? `Documento/RNC: ${selectedCustomer.document}` : 'Documento/RNC: -'}</div>
-                        <div>{selectedCustomer.address ? `Dirección: ${selectedCustomer.address}` : 'Dirección: -'}</div>
-                        <div>{selectedCustomer.documentType ? `Tipo doc: ${selectedCustomer.documentType}` : 'Tipo doc: -'}</div>
+                        <div>{selectedCustomer.phone ? `Phone: ${selectedCustomer.phone}` : 'Phone: -'}</div>
+                        <div>{selectedCustomer.document ? `Document/RNC: ${selectedCustomer.document}` : 'Document/RNC: -'}</div>
+                        <div>{selectedCustomer.address ? `Address: ${selectedCustomer.address}` : 'Address: -'}</div>
+                        <div>{selectedCustomer.documentType ? `Document type: ${selectedCustomer.documentType}` : 'Document type: -'}</div>
+
                         <div>{selectedCustomer.ncfType ? `NCF: ${selectedCustomer.ncfType}` : 'NCF: -'}</div>
                       </div>
                     </div>
@@ -971,13 +1014,15 @@ export default function PreInvoicingPage() {
                 })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
+
                     <select
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                       value={newQuoteCustomerId}
                       onChange={(e) => setNewQuoteCustomerId(e.target.value)}
                     >
-                      <option value="">Seleccionar cliente...</option>
+                      <option value="">Select customer...</option>
+
                       {customers.map((customer) => (
                         <option key={customer.id} value={customer.id}>{customer.name}</option>
                       ))}
@@ -987,22 +1032,25 @@ export default function PreInvoicingPage() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Condición de pago</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment terms</label>
+
                     <select
                       value={newQuotePaymentTermId ?? ''}
                       onChange={(e) => setNewQuotePaymentTermId(e.target.value || null)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Sin condición específica</option>
+                      <option value="">No specific terms</option>
+
                       {paymentTerms.map(term => (
                         <option key={term.id} value={term.id}>
-                          {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                          {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Válida Hasta</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Valid until</label>
+
                     <input
                       type="date"
                       value={newQuoteValidUntil}
@@ -1014,18 +1062,21 @@ export default function PreInvoicingPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="mt-6">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Productos/Servicios</h4>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Products / Services</h4>
+
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+
                         </tr>
                       </thead>
                       <tbody>
@@ -1037,7 +1088,8 @@ export default function PreInvoicingPage() {
                                 value={item.productId ?? ''}
                                 onChange={(e) => handleItemChange(index, 'product', e.target.value)}
                               >
-                                <option value="">Seleccionar producto...</option>
+                                <option value="">Select product...</option>
+
                                 {products.map((product) => (
                                   <option key={product.id} value={product.id}>{product.name}</option>
                                 ))}
@@ -1083,7 +1135,7 @@ export default function PreInvoicingPage() {
                     className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
                   >
                     <i className="ri-add-line mr-2"></i>
-                    Agregar Producto
+                    Add product
                   </button>
                   {itemsError && (
                     <p className="mt-2 text-xs text-red-600">{itemsError}</p>
@@ -1092,13 +1144,14 @@ export default function PreInvoicingPage() {
 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Términos y Condiciones</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Terms and conditions</label>
+
                     <textarea
                       rows={4}
                       value={newQuoteTerms}
                       onChange={(e) => setNewQuoteTerms(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Términos y condiciones de la cotización..."
+                      placeholder="Add payment instructions, delivery dates, or general reminders..."
                     ></textarea>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
@@ -1108,12 +1161,14 @@ export default function PreInvoicingPage() {
                         <span className="text-sm font-medium">RD$ {quoteSubtotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">ITBIS (18%):</span>
+                        <span className="text-sm text-gray-600">Tax (18%):</span>
+
                         <span className="text-sm font-medium">RD$ {quoteTax.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2">
                         <div className="flex justify-between">
                           <span className="text-base font-semibold">Total:</span>
+
                           <span className="text-base font-semibold">RD$ {quoteTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         </div>
                       </div>
@@ -1126,8 +1181,9 @@ export default function PreInvoicingPage() {
                   onClick={() => setShowNewQuoteModal(false)}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                 >
-                  Cancelar
+                  Cancel
                 </button>
+
                 <button
                   type="button"
                   onClick={() => handleSaveNewQuote('draft')}
@@ -1138,8 +1194,9 @@ export default function PreInvoicingPage() {
                       : 'bg-yellow-300 cursor-not-allowed'
                   }`}
                 >
-                  Guardar Borrador
+                  Save draft
                 </button>
+
                 <button
                   type="button"
                   onClick={() => handleSaveNewQuote('final')}
@@ -1150,13 +1207,15 @@ export default function PreInvoicingPage() {
                       : 'bg-blue-300 cursor-not-allowed'
                   }`}
                 >
-                  Crear Cotización
+                  Create quote
                 </button>
+
               </div>
             </div>
           </div>
         )}
       </div>
-    </DashboardLayout>
-  );
+    </div>
+  </DashboardLayout>
+);
 }

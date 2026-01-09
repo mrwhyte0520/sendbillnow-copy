@@ -190,33 +190,33 @@ export default function AccountingSettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#F8F3E7] min-h-full p-6">
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-r from-[#3B4A2A] to-[#1F2616] rounded-2xl shadow-lg shadow-[#1F2616]/30 border border-[#2A351E] p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Configuración Contable</h1>
-              <p className="text-gray-600 mt-1">
-                Configura períodos fiscales, monedas y políticas contables
+              <h1 className="text-2xl font-bold text-white">Accounting Settings</h1>
+              <p className="text-[#CFE6AB] mt-1">
+                Configure fiscal periods, currencies, and accounting policies
               </p>
             </div>
             <button
               onClick={() => window.REACT_APP_NAVIGATE('/settings')}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center space-x-2 text-white hover:text-[#D7E5C1]"
             >
               <i className="ri-arrow-left-line"></i>
-              <span>Volver</span>
+              <span>Back</span>
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Acciones rápidas</h2>
-              <p className="text-gray-600 text-sm mt-1">
-                Repara asientos faltantes para que CxC/CxP coincidan con contabilidad.
+              <h2 className="text-lg font-semibold text-[#1F2618]">Quick actions</h2>
+              <p className="text-[#5B6844] text-sm mt-1">
+                Fix missing entries so AR/AP match your accounting.
               </p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
@@ -224,25 +224,25 @@ export default function AccountingSettingsPage() {
                 type="button"
                 onClick={handleReconcileAuxiliaries}
                 disabled={reconcilingAuxiliaries}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="bg-[#3E4D2C] text-white px-4 py-2 rounded-lg hover:bg-[#2D3A1C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow shadow-[#3E4D2C]/30"
               >
-                {reconcilingAuxiliaries ? 'Reconciliando...' : 'Reconciliar auxiliares CxC/CxP'}
+                {reconcilingAuxiliaries ? 'Reconciling…' : 'Reconcile AR/AP ledgers'}
               </button>
               <button
                 type="button"
                 onClick={handleRecalculateBalances}
                 disabled={recalculatingBalances}
-                className="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="bg-[#1F2616] text-white px-4 py-2 rounded-lg hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow shadow-black/30"
               >
-                {recalculatingBalances ? 'Recalculando...' : 'Recalcular saldos auxiliares'}
+                {recalculatingBalances ? 'Recalculating…' : 'Recalculate auxiliary balances'}
               </button>
               <button
                 type="button"
                 onClick={handleRegenerateInventoryMovements}
                 disabled={regeneratingMovements}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="bg-[#566738] text-white px-4 py-2 rounded-lg hover:bg-[#45532B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow shadow-[#566738]/30"
               >
-                {regeneratingMovements ? 'Regenerando...' : 'Regenerar salidas de inventario'}
+                {regeneratingMovements ? 'Regenerating…' : 'Regenerate inventory movements'}
               </button>
             </div>
           </div>
@@ -259,13 +259,14 @@ export default function AccountingSettingsPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Fiscal Year Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Período Fiscal</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+            <h2 className="text-lg font-semibold text-[#1F2618] mb-4">Fiscal Period</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Inicio del Año Fiscal *
+                  Fiscal Year Start *
                 </label>
+
                 <input
                   type="date"
                   required
@@ -276,8 +277,9 @@ export default function AccountingSettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fin del Año Fiscal *
+                  Fiscal Year End *
                 </label>
+
                 <input
                   type="date"
                   required
@@ -290,23 +292,25 @@ export default function AccountingSettingsPage() {
           </div>
 
           {/* Default Accounts Settings */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Cuentas Contables por Defecto</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+            <h2 className="text-lg font-semibold text-[#1F2618] mb-4">Default Accounting Accounts</h2>
             {loadingAccounts ? (
-              <p className="text-gray-500 text-sm">Cargando plan de cuentas...</p>
+              <p className="text-gray-500 text-sm">Loading chart of accounts…</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Cuentas por Cobrar (Clientes)
+                    Accounts Receivable (Customers)
                   </label>
+
                   <select
                     value={settings.ar_account_id || ''}
                     onChange={(e) => handleInputChange('ar_account_id', e.target.value || null)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383]"
                   >
-                    <option value="">Seleccionar cuenta</option>
+                    <option value="">Select account</option>
                     {accounts.map((acc) => (
+
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
                       </option>
@@ -316,8 +320,9 @@ export default function AccountingSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Ventas
+                    Sales Account
                   </label>
+
                   <select
                     value={settings.sales_account_id || ''}
                     onChange={(e) => handleInputChange('sales_account_id', e.target.value || null)}
@@ -334,8 +339,9 @@ export default function AccountingSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de ITBIS por Pagar
+                    Sales Tax Payable
                   </label>
+
                   <select
                     value={settings.sales_tax_account_id || ''}
                     onChange={(e) => handleInputChange('sales_tax_account_id', e.target.value || null)}
@@ -352,8 +358,9 @@ export default function AccountingSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de ITBIS por Compra
+                    Purchase Tax Receivable
                   </label>
+
                   <select
                     value={settings.purchase_tax_account_id || ''}
                     onChange={(e) => handleInputChange('purchase_tax_account_id', e.target.value || null)}
@@ -370,8 +377,9 @@ export default function AccountingSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Cuentas por Pagar (Proveedores)
+                    Accounts Payable (Vendors)
                   </label>
+
                   <select
                     value={settings.ap_account_id || ''}
                     onChange={(e) => handleInputChange('ap_account_id', e.target.value || null)}
@@ -388,8 +396,9 @@ export default function AccountingSettingsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta de Banco por Defecto para Pagos a Proveedores
+                    Default Bank Account for Vendor Payments
                   </label>
+
                   <select
                     value={settings.ap_bank_account_id || ''}
                     onChange={(e) => handleInputChange('ap_bank_account_id', e.target.value || null)}
@@ -411,19 +420,20 @@ export default function AccountingSettingsPage() {
             <button
               type="button"
               onClick={() => window.REACT_APP_NAVIGATE('/settings')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-6 py-2 border border-[#E2D6BD] text-[#675F4B] rounded-lg hover:bg-[#F0E8D7]"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-6 py-2 bg-[#927B4E] text-white rounded-lg hover:bg-[#7D683E] disabled:opacity-50 shadow shadow-[#927B4E]/30"
             >
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
+              {loading ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
         </form>
+
       </div>
     </DashboardLayout>
   );

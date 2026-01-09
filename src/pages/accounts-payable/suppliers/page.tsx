@@ -530,7 +530,8 @@ export default function SuppliersPage() {
     await import('jspdf-autotable');
     const doc = new jsPDF();
 
-    // Encabezado: nombre de la empresa
+    // Company header
+
     let companyName = 'ContaBi';
     try {
       const info = await settingsService.getCompanyInfo();
@@ -550,20 +551,22 @@ export default function SuppliersPage() {
 
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Nombre de empresa centrado
+    // Company name centered
+
     doc.setFontSize(14);
     doc.text(companyName, pageWidth / 2, 15, { align: 'center' as any });
 
-    // Título
+    // Title
     doc.setFontSize(18);
-    doc.text('Lista de Proveedores', pageWidth / 2, 25, { align: 'center' as any });
-    
-    // Información del reporte
-    doc.setFontSize(12);
-    doc.text(`Fecha de Generación: ${new Date().toLocaleDateString('es-DO')}`, 20, 40);
-    doc.text(`Total de Proveedores: ${filteredSuppliers.length}`, 20, 48);
+    doc.text('Supplier Directory', pageWidth / 2, 25, { align: 'center' as any });
 
-    // Preparar datos para la tabla
+    // Report metadata
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
+    doc.text(`Suppliers in report: ${filteredSuppliers.length}`, 20, 48);
+
+    // Table data
+
     const tableData = filteredSuppliers.map((supplier) => [
       supplier.name,
       supplier.rnc,
@@ -574,13 +577,14 @@ export default function SuppliersPage() {
       supplier.status
     ]);
 
-    // Crear la tabla
+    // Table rendering
     doc.autoTable({
-      head: [['Nombre', 'RNC', 'Teléfono', 'Categoría', 'Límite Crédito', 'Balance', 'Estado']],
+      head: [['Supplier', 'Tax ID', 'Phone', 'Category', 'Credit Limit', 'Balance', 'Status']],
       body: tableData,
       startY: 70,
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [63, 77, 44], textColor: 255, fontStyle: 'bold' },
+
       styles: { fontSize: 9 },
       columnStyles: {
         0: { cellWidth: 40 },
@@ -593,19 +597,20 @@ export default function SuppliersPage() {
       },
     });
 
-    // Estadísticas adicionales
+    // Summary stats
     const totalCreditLimit = filteredSuppliers.reduce((sum, s) => sum + s.creditLimit, 0);
     const totalBalance = filteredSuppliers.reduce((sum, s) => sum + s.balance, 0);
-    const activeSuppliers = filteredSuppliers.filter((s) => s.status === 'Activo').length;
+    const activeSuppliers = filteredSuppliers.filter((s) => s.status === 'Activo' || s.status === 'Active').length;
 
     doc.autoTable({
       body: [
-        ['Total Límite de Crédito:', `RD$ ${totalCreditLimit.toLocaleString()}`],
-        ['Total Balance Actual:', `RD$ ${totalBalance.toLocaleString()}`],
-        ['Proveedores Activos:', `${activeSuppliers} de ${filteredSuppliers.length}`]
+        ['Total Credit Limit:', `RD$ ${totalCreditLimit.toLocaleString()}`],
+        ['Current Balance Total:', `RD$ ${totalBalance.toLocaleString()}`],
+        ['Active Suppliers:', `${activeSuppliers} of ${filteredSuppliers.length}`]
       ],
       startY: ((doc as any).lastAutoTable?.finalY ?? 70) + 20,
       theme: 'plain',
+
       styles: { fontStyle: 'bold' }
     });
 
@@ -614,11 +619,11 @@ export default function SuppliersPage() {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
-      doc.text('Sistema Contable - Gestión de Proveedores', 20, doc.internal.pageSize.height - 10);
+      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
+      doc.text('Accounting System · Supplier Management', 20, doc.internal.pageSize.height - 10);
     }
 
-    doc.save(`proveedores-${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`suppliers-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const exportToExcel = async () => {
@@ -648,36 +653,36 @@ export default function SuppliersPage() {
       category: supplier.category,
       creditLimit: supplier.creditLimit,
       balance: supplier.balance,
-      status: supplier.status,
+      status: resolveStatusLabel(supplier.status),
       paymentTerms: supplier.paymentTerms,
       contact: supplier.contact,
     }));
 
     const headers = [
-      { key: 'name', title: 'Nombre' },
-      { key: 'rnc', title: 'RNC' },
-      { key: 'phone', title: 'Teléfono' },
+      { key: 'name', title: 'Supplier' },
+      { key: 'rnc', title: 'Tax ID' },
+      { key: 'phone', title: 'Phone' },
       { key: 'email', title: 'Email' },
-      { key: 'address', title: 'Dirección' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'creditLimit', title: 'Límite Crédito' },
-      { key: 'balance', title: 'Balance Actual' },
-      { key: 'status', title: 'Estado' },
-      { key: 'paymentTerms', title: 'Términos de Pago' },
-      { key: 'contact', title: 'Contacto' },
+      { key: 'address', title: 'Address' },
+      { key: 'category', title: 'Category' },
+      { key: 'creditLimit', title: 'Credit Limit' },
+      { key: 'balance', title: 'Current Balance' },
+      { key: 'status', title: 'Status' },
+      { key: 'paymentTerms', title: 'Payment Terms' },
+      { key: 'contact', title: 'Contact' },
     ];
 
     const today = new Date().toISOString().split('T')[0];
-    const fileBase = `proveedores_${today}`;
+    const fileBase = `suppliers_${today}`;
 
     exportToExcelWithHeaders(
       rows,
       headers,
       fileBase,
-      'Proveedores',
+      'Suppliers',
       [24, 14, 16, 26, 32, 18, 18, 18, 14, 18, 20],
       {
-        title: 'Lista de Proveedores',
+        title: 'Supplier Directory',
         companyName,
       },
     );
@@ -688,112 +693,132 @@ export default function SuppliersPage() {
     setShowDetailsModal(true);
   };
 
+  const resolveStatusLabel = (statusValue: string) => {
+    if (statusValue === 'Activo') return 'Active';
+    if (statusValue === 'Inactivo') return 'Inactive';
+    return statusValue || 'Unknown';
+  };
+
+  const statusCircleClasses = (statusValue: string) =>
+    statusValue === 'Activo' || statusValue === 'Active'
+      ? 'bg-[#d7e2b0] text-[#2f3c24]'
+      : 'bg-[#f5c2b0] text-[#5b2a1c]';
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f8f4ec] min-h-screen p-6 rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Supplier Management</h1>
-            <p className="text-gray-600">Supplier and vendor database</p>
+            <h1 className="text-2xl font-bold text-[#2f3c24]">Supplier Management</h1>
+            <p className="text-[#5c6b42]">Supplier and vendor database</p>
           </div>
           <div className="flex space-x-3">
             <button 
               onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+              className="bg-[#5e6b3c] text-white px-4 py-2 rounded-lg hover:bg-[#4c582e] transition-colors whitespace-nowrap shadow"
             >
               <i className="ri-file-pdf-line mr-2"></i>
               Export PDF
             </button>
             <button 
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#7a8b4a] text-white px-4 py-2 rounded-lg hover:bg-[#67753b] transition-colors whitespace-nowrap shadow"
             >
               <i className="ri-file-excel-line mr-2"></i>
               Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#3f4d2c] text-white px-4 py-2 rounded-lg hover:bg-[#2f3a1f] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-add-line mr-2"></i>
               New Supplier
             </button>
           </div>
+
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-truck-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#dfe9c1] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-truck-line text-xl text-[#3f4d2c]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
-                <p className="text-2xl font-bold text-gray-900">{suppliers.length}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Total Suppliers</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">{suppliers.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 bg-[#e4eed0] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-check-line text-xl text-[#4f5e35]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-bold text-gray-900">{suppliers.filter(s => s.status === 'Activo').length}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Active</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  {suppliers.filter((s) => s.status === 'Activo' || s.status === 'Active').length}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-money-dollar-circle-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 bg-[#f3e2c0] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-money-dollar-circle-line text-xl text-[#b3682f]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Balance</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Total Balance</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  RD$ {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-credit-card-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 bg-[#eadfee] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-credit-card-line text-xl text-[#6a4c5c]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Available Credit</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Available Credit</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  RD$ {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">
+                Search <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <input 
                   type="text"
                   placeholder="Search by name, Tax ID or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
                 />
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-[#b7a98a]"></i>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Category</label>
               <input
                 type="text"
                 list="supplier-category-options"
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               />
               <datalist id="supplier-category-options">
                 {categoryOptions.map((category) => (
@@ -802,11 +827,11 @@ export default function SuppliersPage() {
               </datalist>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Status</label>
               <select 
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
                 <option value="all">All Statuses</option>
                 <option value="Activo">Active</option>
@@ -814,11 +839,11 @@ export default function SuppliersPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Payment Terms</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Payment Terms</label>
               <select 
                 value={filterPaymentTerms}
                 onChange={(e) => setFilterPaymentTerms(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
                 <option value="all">All</option>
                 <option value="Sin especificar">Unspecified</option>
@@ -832,7 +857,7 @@ export default function SuppliersPage() {
             <div className="flex items-end">
               <button 
                 onClick={() => {setSearchTerm(''); setFilterStatus('all'); setFilterCategory('all'); setFilterPaymentTerms('all');}}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#5a5c55] text-white py-2 px-4 rounded-lg hover:bg-[#43443f] transition-colors whitespace-nowrap shadow-sm"
               >
                 Clear Filters
               </button>
@@ -841,71 +866,70 @@ export default function SuppliersPage() {
         </div>
 
         {/* Suppliers Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Supplier List</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5]">
+          <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+            <h3 className="text-lg font-semibold text-[#2f3c24]">Supplier List</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#eadfca]">
+              <thead className="bg-[#f5ebd6]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tax ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Credit Limit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Tax ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Balance</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Credit Limit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f0e4cd]">
                 {filteredSuppliers.map((supplier) => (
-                  <tr key={supplier.id} className="hover:bg-gray-50">
+                  <tr key={supplier.id} className="hover:bg-[#f9f3e3] transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                        <div className="text-sm text-gray-500">{supplier.email}</div>
+                        <div className="text-sm font-medium text-[#2f3c24]">{supplier.name}</div>
+                        <div className="text-sm text-[#5c6b42]">{supplier.email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.rnc}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{supplier.rnc}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[#d7e2b0] text-[#2f3c24]">
                         {supplier.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
                       RD$ {supplier.balance.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
                       RD$ {supplier.creditLimit.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        supplier.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {supplier.status}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(supplier.status)}`}>
+                        {resolveStatusLabel(supplier.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => handleViewDetails(supplier)}
-                          className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
+                          className="text-[#3f4d2c] hover:text-[#2f3a1f] whitespace-nowrap"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         <button 
                           onClick={() => handleEdit(supplier)}
-                          className="text-indigo-600 hover:text-indigo-900 whitespace-nowrap"
+                          className="text-[#4f6131] hover:text-[#374422] whitespace-nowrap"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button 
                           onClick={() => handleDelete(supplier.id)}
-                          className="text-red-600 hover:text-red-900 whitespace-nowrap"
+                          className="text-[#9c3d25] hover:text-[#6c1f12] whitespace-nowrap"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
+
                       </div>
                     </td>
                   </tr>
@@ -919,12 +943,12 @@ export default function SuppliersPage() {
         {showDetailsModal && selectedSupplier && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Supplier Details</h3>
+                  <h3 className="text-lg font-semibold text-[#2f3c24]">Supplier Details</h3>
                   <button 
                     onClick={() => setShowDetailsModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-[#8c7f62] hover:text-[#5c5139]"
                   >
                     <i className="ri-close-line text-xl"></i>
                   </button>
@@ -933,74 +957,72 @@ export default function SuppliersPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Name</h4>
-                    <p className="text-gray-900">{selectedSupplier.name}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Name</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.name}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">RNC</h4>
-                    <p className="text-gray-900">{selectedSupplier.rnc}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Tax ID</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.rnc}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Email</h4>
-                    <p className="text-gray-900">{selectedSupplier.email}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Email</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.email}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Phone</h4>
-                    <p className="text-gray-900">{selectedSupplier.phone}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Phone</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.phone}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Address</h4>
-                    <p className="text-gray-900">{selectedSupplier.address}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Address</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.address}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Category</h4>
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Category</h4>
+                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[#d7e2b0] text-[#2f3c24]">
                       {selectedSupplier.category}
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Status</h4>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedSupplier.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedSupplier.status}
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Status</h4>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(selectedSupplier.status)}`}>
+                      {resolveStatusLabel(selectedSupplier.status)}
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Credit Limit</h4>
-                    <p className="text-gray-900">RD$ {selectedSupplier.creditLimit.toLocaleString()}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Credit Limit</h4>
+                    <p className="text-[#2f3c24]">RD$ {selectedSupplier.creditLimit.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Current Balance</h4>
-                    <p className="text-gray-900">RD$ {selectedSupplier.balance.toLocaleString()}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Current Balance</h4>
+                    <p className="text-[#2f3c24]">RD$ {selectedSupplier.balance.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Payment Terms</h4>
-                    <p className="text-gray-900">{selectedSupplier.paymentTerms}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Payment Terms</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.paymentTerms}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact</h4>
-                    <p className="text-gray-900">{selectedSupplier.contact}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.contact}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Person</h4>
-                    <p className="text-gray-900">{selectedSupplier.contactName || '-'}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Person</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.contactName || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Phone</h4>
-                    <p className="text-gray-900">{selectedSupplier.contactPhone || '-'}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Phone</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.contactPhone || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Contact Email</h4>
-                    <p className="text-gray-900">{selectedSupplier.contactEmail || '-'}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Email</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.contactEmail || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Fax</h4>
-                    <p className="text-gray-900">{selectedSupplier.fax || '-'}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Fax</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.fax || '-'}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Website</h4>
-                    <p className="text-gray-900">{selectedSupplier.website || '-'}</p>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Website</h4>
+                    <p className="text-[#2f3c24]">{selectedSupplier.website || '-'}</p>
                   </div>
                 </div>
                 <div className="flex justify-end space-x-3 mt-6">
@@ -1009,18 +1031,19 @@ export default function SuppliersPage() {
                       setShowDetailsModal(false);
                       handleEdit(selectedSupplier);
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                    className="px-4 py-2 bg-[#3f4d2c] text-white rounded-lg hover:bg-[#2f3a1f] whitespace-nowrap shadow-sm"
                   >
                     Edit
                   </button>
                   <button 
                     onClick={() => setShowDetailsModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    className="px-4 py-2 border border-[#d7ccb5] rounded-lg text-[#4c5b36] hover:bg-[#fefaf1] whitespace-nowrap"
                   >
                     Close
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         )}
@@ -1029,11 +1052,12 @@ export default function SuppliersPage() {
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
+              <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+                <h3 className="text-lg font-semibold text-[#2f3c24]">
                   {editingSupplier ? 'Edit Supplier' : 'New Supplier'}
                 </h3>
               </div>
+
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

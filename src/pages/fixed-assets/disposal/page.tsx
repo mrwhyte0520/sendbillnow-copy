@@ -96,20 +96,20 @@ export default function AssetDisposalPage() {
   }, [user]);
 
   const disposalMethods = [
-    'Venta',
-    'Donación',
-    'Desecho',
-    'Intercambio',
-    'Transferencia'
+    'Sale',
+    'Donation',
+    'Discard',
+    'Exchange',
+    'Transfer'
   ];
 
   const disposalReasons = [
-    'Obsolescencia Tecnológica',
-    'Fin de Vida Útil',
-    'Daño Irreparable',
-    'Renovación de Equipos',
-    'Falta de Uso',
-    'Cambio de Operaciones'
+    'Technological Obsolescence',
+    'End of Useful Life',
+    'Irreparable Damage',
+    'Equipment Refresh',
+    'Lack of Use',
+    'Operational Change'
   ];
 
   const filteredDisposals = disposals.filter(disposal => {
@@ -141,13 +141,13 @@ export default function AssetDisposalPage() {
 
   const handleDeleteDisposal = async (disposalId: string) => {
     if (!user) return;
-    if (!confirm('¿Está seguro de que desea eliminar este registro de baja?')) return;
+    if (!confirm('Are you sure you want to delete this disposal record?')) return;
     try {
       await assetDisposalService.delete(disposalId);
       setDisposals(prev => prev.filter(d => d.id !== disposalId));
     } catch (error) {
       console.error('Error deleting disposal:', error);
-      alert('Error al eliminar la baja de activo');
+      alert('Error deleting asset disposal');
     }
   };
 
@@ -155,7 +155,7 @@ export default function AssetDisposalPage() {
     if (!user) return;
     const disposal = disposals.find(d => d.id === disposalId);
     if (!disposal) return;
-    if (!confirm('¿Está seguro de que desea aprobar esta baja de activo? Se generará el asiento contable correspondiente.')) return;
+    if (!confirm('Are you sure you want to approve this asset disposal? The related journal entry will be generated.')) return;
 
     try {
       // Usar el nuevo método que genera el asiento contable automáticamente
@@ -164,7 +164,7 @@ export default function AssetDisposalPage() {
       // Actualizar la lista con los nuevos valores calculados
       setDisposals(prev => prev.map(d => d.id === disposalId ? {
         ...d,
-        status: 'Completado',
+        status: 'Completed',
         gainLoss: result.disposal?.gain_loss ?? d.gainLoss,
         originalCost: result.disposal?.original_cost ?? d.originalCost,
         accumulatedDepreciation: result.disposal?.accumulated_depreciation ?? d.accumulatedDepreciation,
@@ -177,7 +177,7 @@ export default function AssetDisposalPage() {
       }
     } catch (error: any) {
       console.error('Error approving disposal:', error);
-      const msg = error?.message || 'Error al aprobar la baja de activo';
+      const msg = error?.message || 'Error approving asset disposal';
       alert(msg);
     }
   };
@@ -191,7 +191,7 @@ export default function AssetDisposalPage() {
     const assetId = selectedAssetId || String(formData.get('assetId') || '').trim();
     const asset = assets.find(a => a.id === assetId);
     if (!asset) {
-      alert('Debe seleccionar un activo válido');
+      alert('You must select a valid asset');
       return;
     }
 
@@ -201,9 +201,11 @@ export default function AssetDisposalPage() {
     const disposalDate = String(formData.get('disposalDate') || '').trim() || new Date().toISOString().split('T')[0];
     const disposalMethod = String(formData.get('disposalMethod') || '').trim();
     const disposalReason = String(formData.get('disposalReason') || '').trim();
+
     const buyer = String(formData.get('buyer') || '').trim() || null;
     const authorizedBy = String(formData.get('authorizedBy') || '').trim() || null;
-    const status = String(formData.get('status') || 'Pendiente');
+    const status = String(formData.get('status') || 'Pending');
+
     const notes = String(formData.get('notes') || '').trim() || null;
 
     const payload: any = {
@@ -279,7 +281,7 @@ export default function AssetDisposalPage() {
       form.reset();
     } catch (error) {
       console.error('Error saving disposal:', error);
-      alert('Error al guardar la baja de activo');
+      alert('Error saving asset disposal');
     }
   };
 
@@ -287,7 +289,7 @@ export default function AssetDisposalPage() {
     const filteredData = filteredDisposals;
 
     if (!filteredData || filteredData.length === 0) {
-      alert('No hay bajas de activos para exportar.');
+      alert('There are no asset disposals to export.');
       return;
     }
 
@@ -304,7 +306,7 @@ export default function AssetDisposalPage() {
         }
       }
     } catch (error) {
-      console.error('Error obteniendo información de la empresa para Excel de retiro de activos:', error);
+      console.error('Error obtaining company information for Excel export:', error);
     }
 
     const rows = filteredData.map((disposal) => ({
@@ -314,7 +316,7 @@ export default function AssetDisposalPage() {
       originalCost: disposal.originalCost,
       accumulatedDepreciation: disposal.accumulatedDepreciation,
       bookValue: disposal.bookValue,
-      disposalDate: new Date(disposal.disposalDate).toLocaleDateString('es-DO'),
+      disposalDate: new Date(disposal.disposalDate).toLocaleDateString('en-US'),
       disposalMethod: disposal.disposalMethod,
       disposalReason: disposal.disposalReason,
       salePrice: disposal.salePrice,
@@ -326,32 +328,32 @@ export default function AssetDisposalPage() {
     }));
 
     const headers = [
-      { key: 'assetCode', title: 'Código Activo' },
-      { key: 'assetName', title: 'Nombre del Activo' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'originalCost', title: 'Costo Original' },
-      { key: 'accumulatedDepreciation', title: 'Depreciación Acumulada' },
-      { key: 'bookValue', title: 'Valor en Libros' },
-      { key: 'disposalDate', title: 'Fecha de Disposición' },
-      { key: 'disposalMethod', title: 'Método de Disposición' },
-      { key: 'disposalReason', title: 'Motivo de Disposición' },
-      { key: 'salePrice', title: 'Precio de Venta' },
-      { key: 'gainLoss', title: 'Ganancia/Pérdida' },
-      { key: 'buyer', title: 'Comprador/Receptor' },
-      { key: 'authorizedBy', title: 'Autorizado Por' },
-      { key: 'status', title: 'Estado' },
-      { key: 'notes', title: 'Notas' },
+      { key: 'assetCode', title: 'Asset Code' },
+      { key: 'assetName', title: 'Asset Name' },
+      { key: 'category', title: 'Category' },
+      { key: 'originalCost', title: 'Original Cost' },
+      { key: 'accumulatedDepreciation', title: 'Accumulated Depreciation' },
+      { key: 'bookValue', title: 'Book Value' },
+      { key: 'disposalDate', title: 'Disposal Date' },
+      { key: 'disposalMethod', title: 'Disposal Method' },
+      { key: 'disposalReason', title: 'Disposal Reason' },
+      { key: 'salePrice', title: 'Sale Price' },
+      { key: 'gainLoss', title: 'Gain/Loss' },
+      { key: 'buyer', title: 'Buyer/Recipient' },
+      { key: 'authorizedBy', title: 'Authorized By' },
+      { key: 'status', title: 'Status' },
+      { key: 'notes', title: 'Notes' },
     ];
 
-    const fileBase = `retiro_activos_${new Date().toISOString().split('T')[0]}`;
-    const title = 'Retiro de Activos Fijos';
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const fileBase = `asset_disposals_${new Date().toISOString().split('T')[0]}`;
+    const title = 'Fixed Asset Disposals';
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
       headers,
       fileBase,
-      'Retiros',
+      'Disposals',
       [16, 32, 22, 18, 22, 18, 18, 22, 26, 18, 18, 26, 22, 14, 40],
       {
         title,
@@ -363,7 +365,7 @@ export default function AssetDisposalPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return formatMoney(amount, 'RD$');
+    return formatMoney(amount, 'USD');
   };
 
   return (
@@ -374,94 +376,94 @@ export default function AssetDisposalPage() {
           <div>
             <button
               onClick={() => navigate('/fixed-assets')}
-              className="flex items-center text-blue-600 hover:text-blue-700 mb-2"
+              className="flex items-center text-[#3B4A2A] hover:text-[#222D16] mb-2"
             >
               <i className="ri-arrow-left-line mr-1"></i>
-              Volver a Activos Fijos
+              Back to Fixed Assets
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Retiro de Activos</h1>
-            <p className="text-gray-600">Gestión de bajas y disposición de activos fijos</p>
+            <h1 className="text-2xl font-bold text-[#1F2618]">Asset Disposals</h1>
+            <p className="text-[#5B6844]">Manage fixed asset disposals and write-offs</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#3E4D2C] text-white px-4 py-2 rounded-lg hover:bg-[#2D3A1C] transition-colors whitespace-nowrap shadow-md shadow-[#3E4D2C]/20"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleAddDisposal}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#566738] text-white px-4 py-2 rounded-lg hover:bg-[#45532B] transition-colors whitespace-nowrap shadow-md shadow-[#566738]/20"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Baja
+              New Disposal
             </button>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Ganancia/Pérdida Total</p>
-                <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-sm font-medium text-[#5B6844]">Total Gain/Loss</p>
+                <p className={`text-2xl font-bold ${totalGainLoss >= 0 ? 'text-[#2E4B1D]' : 'text-[#B54848]'}`}>
                   {formatCurrency(totalGainLoss)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-exchange-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#E1E9C8]">
+                <i className="ri-exchange-line text-xl text-[#2E4B1D]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Valor de Venta Total</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalSaleValue)}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Total Sale Value</p>
+                <p className="text-2xl font-bold text-[#2F5020]">{formatCurrency(totalSaleValue)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#D9E7B5]">
+                <i className="ri-money-dollar-circle-line text-xl text-[#2F5020]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Valor en Libros</p>
-                <p className="text-2xl font-bold text-orange-600">{formatCurrency(totalBookValue)}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Book Value</p>
+                <p className="text-2xl font-bold text-[#C26127]">{formatCurrency(totalBookValue)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100">
-                <i className="ri-book-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#F6E0CC]">
+                <i className="ri-book-line text-xl text-[#C26127]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[#F6F8ED] rounded-xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Activos Dados de Baja</p>
-                <p className="text-2xl font-bold text-purple-600">{filteredDisposals.length}</p>
+                <p className="text-sm font-medium text-[#5B6844]">Disposed Assets</p>
+                <p className="text-2xl font-bold text-[#51476F]">{filteredDisposals.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
-                <i className="ri-delete-bin-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#ECE6F6]">
+                <i className="ri-delete-bin-line text-xl text-[#51476F]"></i>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[#E0E7C8] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
+                Search
               </label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar por activo o código..."
+                  placeholder="Search by asset or code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -470,30 +472,30 @@ export default function AssetDisposalPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
+                Status
               </label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Todos los estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="En Proceso">En Proceso</option>
-                <option value="Completado">Completado</option>
-                <option value="Cancelado">Cancelado</option>
+                <option value="">All statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Método de Disposición
+                Disposal Method
               </label>
               <select
                 value={filterMethod}
                 onChange={(e) => setFilterMethod(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Todos los métodos</option>
+                <option value="">All methods</option>
                 {disposalMethods.map(method => (
                   <option key={method} value={method}>{method}</option>
                 ))}
@@ -506,48 +508,48 @@ export default function AssetDisposalPage() {
                   setFilterStatus('');
                   setFilterMethod('');
                 }}
-                className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4B5E32] text-white px-4 py-2 rounded-lg hover:bg-[#384726] transition-colors whitespace-nowrap shadow-sm shadow-[#4B5E32]/30"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Disposals Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Bajas de Activos Registradas ({filteredDisposals.length})
+        <div className="bg-white rounded-lg shadow-sm border border-[#E0E7C8]">
+          <div className="p-6 border-b border-[#E0E7C8]">
+            <h3 className="text-lg font-semibold text-[#1F2618]">
+              Registered Asset Disposals ({filteredDisposals.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#EEF3DE]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activo
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Asset
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valor en Libros
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Book Value
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Precio de Venta
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Sale Price
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ganancia/Pérdida
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Gain/Loss
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Método
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Method
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Date
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#4F5C39] uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -567,7 +569,7 @@ export default function AssetDisposalPage() {
                       {formatCurrency(disposal.salePrice)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <span className={disposal.gainLoss >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      <span className={disposal.gainLoss >= 0 ? 'text-[#2F4A21]' : 'text-[#B54848]'}>
                         {disposal.gainLoss >= 0 ? '+' : ''}{formatCurrency(disposal.gainLoss)}
                       </span>
                     </td>
@@ -575,14 +577,14 @@ export default function AssetDisposalPage() {
                       {disposal.disposalMethod}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(disposal.disposalDate).toLocaleDateString('es-DO')}
+                      {new Date(disposal.disposalDate).toLocaleDateString('en-US')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        disposal.status === 'Completado' ? 'bg-green-100 text-green-800' :
-                        disposal.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                        disposal.status === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                        'bg-red-100 text-red-800'
+                        disposal.status === 'Completed' ? 'bg-[#D7EBC1] text-[#2E471C]' :
+                        disposal.status === 'Pending' ? 'bg-[#F5E7C1] text-[#8A6514]' :
+                        disposal.status === 'In Progress' ? 'bg-[#DFE7F3] text-[#2E4B6C]' :
+                        'bg-[#F7D8D6] text-[#9F2C2C]'
                       }`}>
                         {disposal.status}
                       </span>
@@ -592,15 +594,15 @@ export default function AssetDisposalPage() {
                         <button
                           onClick={() => handleEditDisposal(disposal)}
                           className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
+                          title="Edit"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
-                        {disposal.status === 'Pendiente' && (
+                        {disposal.status === 'Pending' && (
                           <button
                             onClick={() => handleApproveDisposal(disposal.id)}
                             className="text-green-600 hover:text-green-900"
-                            title="Aprobar"
+                            title="Approve"
                           >
                             <i className="ri-check-line"></i>
                           </button>
@@ -608,7 +610,7 @@ export default function AssetDisposalPage() {
                         <button
                           onClick={() => handleDeleteDisposal(disposal.id)}
                           className="text-red-600 hover:text-red-900"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -623,25 +625,25 @@ export default function AssetDisposalPage() {
 
         {/* Disposal Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-[#FDF7EC] rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/20 border border-[#E8DFC9]">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingDisposal ? 'Editar Baja de Activo' : 'Nueva Baja de Activo'}
+                <h3 className="text-lg font-semibold text-[#2B2A22]">
+                  {editingDisposal ? 'Edit Asset Disposal' : 'New Asset Disposal'}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#918773] hover:text-[#6F6654]"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
               </div>
 
               <form onSubmit={handleSaveDisposal} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md-grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Código del Activo *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Asset Code *
                     </label>
                     <select
                       required
@@ -657,9 +659,9 @@ export default function AssetDisposalPage() {
                           setBookValueInput('');
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar activo</option>
+                      <option value="">Select asset</option>
                       {assets.map(asset => (
                         <option key={asset.id} value={asset.id}>
                           {asset.code} - {asset.name}
@@ -668,8 +670,8 @@ export default function AssetDisposalPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Valor en Libros *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Book Value *
                     </label>
                     <input
                       type="number" min="0"
@@ -678,97 +680,97 @@ export default function AssetDisposalPage() {
                       name="bookValue"
                       value={bookValueInput}
                       onChange={(e) => setBookValueInput(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                       placeholder="0.00"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Precio de Venta
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Sale Price
                     </label>
                     <input
                       type="number" min="0"
                       step="0.01"
                       name="salePrice"
                       defaultValue={editingDisposal?.salePrice || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                       placeholder="0.00"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Disposición *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Disposal Date *
                     </label>
                     <input
                       type="date"
                       required
                       defaultValue={editingDisposal?.disposalDate || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Disposición *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Disposal Method *
                     </label>
                     <select
                       required
                       defaultValue={editingDisposal?.disposalMethod || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar método</option>
+                      <option value="">Select method</option>
                       {disposalMethods.map(method => (
                         <option key={method} value={method}>{method}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Motivo de Disposición *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Disposal Reason *
                     </label>
                     <select
                       required
                       defaultValue={editingDisposal?.disposalReason || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
                     >
-                      <option value="">Seleccionar motivo</option>
+                      <option value="">Select reason</option>
                       {disposalReasons.map(reason => (
                         <option key={reason} value={reason}>{reason}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Comprador/Receptor
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Buyer/Recipient
                     </label>
                     <input
                       type="text"
                       defaultValue={editingDisposal?.buyer || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nombre del comprador o receptor"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
+                      placeholder="Buyer or recipient name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Autorizado por *
+                    <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                      Authorized by *
                     </label>
                     <input
                       type="text"
                       required
                       defaultValue={editingDisposal?.authorizedBy || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nombre del autorizador"
+                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
+                      placeholder="Authorizer name"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notas y Observaciones
+                  <label className="block text-sm font-medium text-[#4A4434] mb-2">
+                    Notes and Observations
                   </label>
                   <textarea
                     rows={4}
                     defaultValue={editingDisposal?.notes || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Detalles adicionales sobre la disposición del activo"
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white text-[#2B2A22]"
+                    placeholder="Additional details about the asset disposal"
                   />
                 </div>
 
@@ -776,15 +778,15 @@ export default function AssetDisposalPage() {
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-[#675F4B] bg-[#ECE2CF] rounded-lg hover:bg-[#E0D2BA] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#927B4E] text-white rounded-lg hover:bg-[#7D683E] transition-colors whitespace-nowrap shadow-md shadow-[#927B4E]/30"
                   >
-                    {editingDisposal ? 'Actualizar' : 'Registrar'} Baja
+                    {editingDisposal ? 'Update' : 'Record'} Disposal
                   </button>
                 </div>
               </form>

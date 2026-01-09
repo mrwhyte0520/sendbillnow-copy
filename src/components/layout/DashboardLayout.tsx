@@ -677,7 +677,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#F7F1E3] flex">
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex h-full flex-col">
@@ -1193,31 +1193,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-5 text-center">
-              <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#2f3e1e] to-[#4b5f36] p-5 text-center">
+              <div className="w-16 h-16 mx-auto bg-white/15 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm border border-white/30">
                 <i className="ri-settings-3-line text-3xl text-white"></i>
               </div>
               <h3 className="text-xl font-bold text-white">Setup Required</h3>
-              <p className="text-blue-100 text-sm mt-1">Your plan includes advanced accounting features</p>
+              <p className="text-green-100 text-sm mt-1">Your plan includes advanced accounting features</p>
             </div>
             <div className="p-5">
               <div className="text-center mb-5">
-                <p className="text-gray-600 text-sm mb-4">
+                <p className="text-[#504737] text-sm mb-4">
                   To take advantage of all your plan features, you need to set up:
                 </p>
                 <div className="space-y-3">
-                  <div className="flex items-center bg-amber-50 rounded-lg p-3 border border-amber-200">
-                    <i className="ri-calendar-check-line text-amber-600 text-xl mr-3"></i>
-                    <div className="text-left">
-                      <p className="font-medium text-gray-900 text-sm">Accounting Periods</p>
-                      <p className="text-xs text-gray-500">Define your fiscal year and monthly periods</p>
+                  <div className="flex items-center bg-[#f7f3e8] rounded-lg p-3 border border-[#d9ceb5]">
+                    <i className="ri-calendar-check-line text-[#4b5f36] text-xl mr-3"></i>
+                    <div className="text-left text-[#3c3526]">
+                      <p className="font-medium text-sm text-[#2f3e1e]">Accounting Periods</p>
+                      <p className="text-xs text-[#6b5c3b]">Define your fiscal year and monthly periods</p>
                     </div>
                   </div>
-                  <div className="flex items-center bg-blue-50 rounded-lg p-3 border border-blue-200">
-                    <i className="ri-file-list-3-line text-blue-600 text-xl mr-3"></i>
-                    <div className="text-left">
-                      <p className="font-medium text-gray-900 text-sm">NCF Sequences</p>
-                      <p className="text-xs text-gray-500">Configure your fiscal vouchers</p>
+                  <div className="flex items-center bg-[#eef2ea] rounded-lg p-3 border border-[#c7d1c0]">
+                    <i className="ri-file-list-3-line text-[#4b5f36] text-xl mr-3"></i>
+                    <div className="text-left text-[#3c3526]">
+                      <p className="font-medium text-sm text-[#2f3e1e]">NCF Sequences</p>
+                      <p className="text-xs text-[#6b5c3b]">Configure your fiscal vouchers</p>
                     </div>
                   </div>
                 </div>
@@ -1225,7 +1225,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowAccountingSetupModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2.5 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg font-medium text-sm hover:bg-[#f3e7cf] transition-colors"
                 >
                   Later
                 </button>
@@ -1234,7 +1234,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     setShowAccountingSetupModal(false);
                     navigate('/settings/accounting');
                   }}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center"
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#4b5f36] to-[#2f3e1e] text-white rounded-lg font-medium text-sm hover:from-[#3f4f2d] hover:to-[#1f2a15] transition-all flex items-center justify-center shadow-md"
                 >
                   <i className="ri-settings-3-line mr-2"></i>
                   Set Up Now

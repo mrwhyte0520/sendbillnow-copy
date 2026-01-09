@@ -38,20 +38,20 @@ export default function PlansPage() {
   } = usePlans();
 
   const plans: Plan[] = [
-    // Nuevos planes económicos
+    // New affordable plans
     {
       id: 'pyme',
       name: 'PYME',
       priceMonthly: 39.99,
       priceAnnual: 239.88,
-      description: 'Ideal para pequeñas empresas que inician',
+      description: 'Ideal for small businesses getting started',
       features: [
-        'Una empresa',
-        'Facturación básica',
-        'Dashboard básico',
-        'Inventario limitado (500)',
-        'Soporte por email',
-        'Prueba gratis 7 días'
+        'One company',
+        'Basic invoicing',
+        'Basic dashboard',
+        'Limited inventory (500)',
+        'Email support',
+        '7-day free trial'
       ],
       popular: false,
       color: 'from-sky-500 to-sky-600',
@@ -63,16 +63,16 @@ export default function PlansPage() {
       name: 'PRO',
       priceMonthly: 99.99,
       priceAnnual: 719.88,
-      description: 'Para empresas en crecimiento',
+      description: 'Built for growing companies',
       features: [
-        'Hasta 3 empresas',
-        'Contabilidad completa',
-        'Dashboard básico',
-        'Inventario limitado (2,000)',
-        'Gestión bancaria básica',
-        'Nómina básica (10 empleados)',
-        'Soporte prioritario',
-        'Prueba gratis 7 días'
+        'Up to 3 companies',
+        'Full accounting suite',
+        'Basic dashboard',
+        'Limited inventory (2,000)',
+        'Basic banking management',
+        'Basic payroll (10 employees)',
+        'Priority support',
+        '7-day free trial'
       ],
       popular: true,
       color: 'from-blue-500 to-blue-600',
@@ -84,38 +84,38 @@ export default function PlansPage() {
       name: 'PLUS',
       priceMonthly: 199.99,
       priceAnnual: 1559.88,
-      description: 'Solución completa para empresas establecidas',
+      description: 'Complete solution for established companies',
       features: [
-        'Empresas ilimitadas',
-        'Todas las funciones',
-        'Dashboard KPI avanzado',
-        'Inventario ilimitado',
-        'Nómina completa',
-        'Análisis financiero avanzado',
-        'Reportes personalizados',
-        'Soporte técnico especializado',
-        'Soporte 24/7',
-        'Prueba gratis 7 días'
+        'Unlimited companies',
+        'All Sendbillnow features',
+        'Advanced KPI dashboard',
+        'Unlimited inventory',
+        'Full payroll',
+        'Advanced financial analytics',
+        'Custom reports',
+        'Specialized technical support',
+        '24/7 support',
+        '7-day free trial'
       ],
       popular: false,
       color: 'from-purple-500 to-purple-600',
       icon: 'ri-vip-diamond-line',
       category: 'contabilidad'
     },
-    // Planes existentes
+    // Existing plans
     {
       id: 'facturacion-simple',
-      name: 'Facturación Simple',
+      name: 'Simple Invoicing',
       priceMonthly: 19.99,
       priceAnnual: 107.88,
-      description: 'Ideal para negocios que inician con facturación básica',
+      description: 'Ideal for businesses starting with basic invoicing',
       features: [
-        '1 Usuario',
-        '100 Facturas al mes',
-        'Cotizaciones',
-        '2 Plantillas de factura',
-        'Notas de crédito/débito',
-        'Reportes básicos'
+        '1 user',
+        '100 invoices per month',
+        'Quotations',
+        '2 invoice templates',
+        'Credit/debit notes',
+        'Basic reports'
       ],
       popular: false,
       color: 'from-teal-500 to-teal-600',
@@ -124,18 +124,18 @@ export default function PlansPage() {
     },
     {
       id: 'facturacion-premium',
-      name: 'Facturación Premium',
+      name: 'Premium Invoicing',
       priceMonthly: 49.99,
       priceAnnual: 239.88,
-      description: 'Para empresas que necesitan más capacidad de facturación',
+      description: 'For companies that need higher invoicing capacity',
       features: [
-        '8 Usuarios',
-        '500 Facturas al mes',
-        'Cotizaciones',
-        '2 Plantillas de factura',
-        '1 Almacén de inventario',
-        'Notas de crédito/débito',
-        'Reportes completos'
+        '8 users',
+        '500 invoices per month',
+        'Quotations',
+        '2 invoice templates',
+        '1 inventory warehouse',
+        'Credit/debit notes',
+        'Comprehensive reports'
       ],
       popular: false,
       color: 'from-indigo-500 to-indigo-600',
@@ -147,27 +147,27 @@ export default function PlansPage() {
       name: 'POS Premium',
       priceMonthly: 129.99,
       priceAnnual: 719.88,
-      description: 'Solución completa para puntos de venta y gestión empresarial',
+      description: 'Complete solution for retail points of sale and business management',
       features: [
-        'Dashboard completo',
-        'Sistema POS',
-        '30 Usuarios',
-        'Productos ilimitados',
-        '2 Almacenes de inventario',
-        'Gestión de clientes',
-        '2,000 Facturas electrónicas',
-        'Backup cada 48 horas',
-        'Caja chica',
-        'Cálculo de comisiones',
-        'Compras y gastos',
-        'Proveedores',
-        'Cuentas por cobrar',
-        'Cuentas por pagar',
-        'Nómina completa',
-        'Multisucursal',
-        'Servicio de reparaciones',
-        'Cotizaciones',
-        'Devoluciones'
+        'Full dashboard',
+        'POS system',
+        '30 users',
+        'Unlimited products',
+        '2 inventory warehouses',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours',
+        'Petty cash',
+        'Commission calculation',
+        'Purchases and expenses',
+        'Vendors',
+        'Accounts receivable',
+        'Accounts payable',
+        'Full payroll',
+        'Multi-branch',
+        'Repair service',
+        'Quotations',
+        'Returns'
       ],
       popular: false,
       color: 'from-emerald-500 to-emerald-600',
@@ -189,7 +189,7 @@ export default function PlansPage() {
   };
 
   const getPeriodLabel = () => {
-    return billingPeriod === 'monthly' ? '/mes' : '/año';
+    return billingPeriod === 'monthly' ? '/month' : '/year';
   };
 
   const getSavingsPercent = (plan: Plan) => {
@@ -251,30 +251,30 @@ export default function PlansPage() {
 
   const formatTimeLeft = () => {
     if (trialInfo.daysLeft > 0) {
-      return `${trialInfo.daysLeft} días`;
+      return `${trialInfo.daysLeft} days`;
     } else if (trialInfo.hoursLeft > 0) {
-      return `${trialInfo.hoursLeft} horas`;
+      return `${trialInfo.hoursLeft} hours`;
     } else if (trialInfo.minutesLeft > 0) {
-      return `${trialInfo.minutesLeft} minutos`;
+      return `${trialInfo.minutesLeft} minutes`;
     } else {
-      return 'Expirado';
+      return 'Expired';
     }
   };
 
   const formatMoney = (amount: number) => {
-    return amount.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   const renderPlanCard = (plan: Plan) => (
     <div
       key={plan.id}
-      className={`relative bg-white rounded-xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-xl ${
-        plan.popular ? 'border-purple-500 scale-105 z-10' : 'border-gray-200 hover:border-navy-300'
+      className={`relative bg-[#FDFBF3] rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-xl ${
+        plan.popular ? 'border-[#9376C8] scale-105 z-10' : 'border-[#E0D8C2] hover:border-[#C6B383]'
       } ${!canSelectPlan() ? 'opacity-75' : ''}`}
     >
       {plan.popular && (
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-center py-2 text-sm font-semibold">
-          <i className="ri-star-fill mr-1"></i> Más Popular
+        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white text-center py-2 text-sm font-semibold">
+          <i className="ri-star-fill mr-1"></i> Most Popular
         </div>
       )}
 
@@ -289,7 +289,7 @@ export default function PlansPage() {
           </div>
           {billingPeriod === 'annual' && getSavingsPercent(plan) > 0 && (
             <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block">
-              Ahorra {getSavingsPercent(plan)}%
+              Save {getSavingsPercent(plan)}%
             </div>
           )}
         </div>
@@ -316,11 +316,11 @@ export default function PlansPage() {
             !canSelectPlan()
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
-              ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700'
-              : 'bg-gradient-to-r from-navy-600 to-navy-700 text-white hover:from-navy-700 hover:to-navy-800'
+              ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
+              : 'bg-gradient-to-r from-[#566738] to-[#3E4D2C] text-white hover:from-[#455532] hover:to-[#2F3C21]'
           }`}
         >
-          {!canSelectPlan() ? 'Pago Requerido' : currentPlan?.active ? 'Cambiar Plan' : 'Seleccionar Plan'}
+          {!canSelectPlan() ? 'Payment Required' : currentPlan?.active ? 'Change Plan' : 'Select Plan'}
         </button>
       </div>
     </div>
@@ -330,37 +330,37 @@ export default function PlansPage() {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-navy-700 to-navy-800 rounded-lg p-6 text-white">
+        <div className="bg-gradient-to-r from-[#3B4A2A] to-[#1F2616] rounded-2xl p-6 text-white shadow-lg shadow-[#1F2616]/30 border border-[#2A351E]">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Planes y Suscripciones</h1>
-              <p className="text-navy-200">Elige el plan perfecto para tu empresa</p>
+              <h1 className="text-3xl font-bold mb-2">Plans & Subscriptions</h1>
+              <p className="text-[#D7E5C1]">Choose the perfect plan for your business</p>
             </div>
             <div className="text-right">
               {currentPlan?.active ? (
-                <div className="bg-green-500/20 rounded-lg p-4 border border-green-400">
-                  <div className="text-sm text-green-200">Plan Activo</div>
-                  <div className="text-2xl font-bold text-green-100">{currentPlan.name}</div>
-                  <div className="text-sm text-green-200">Suscripción activa</div>
+                <div className="bg-[#314021] border border-[#5B7A3D] rounded-xl p-4 shadow-inner shadow-black/20">
+                  <div className="text-sm text-[#CFE6AB]">Active Plan</div>
+                  <div className="text-2xl font-bold text-white">{currentPlan.name}</div>
+                  <div className="text-sm text-[#CFE6AB]">Subscription active</div>
                 </div>
               ) : (
                 <div className={`rounded-lg p-4 border ${
                   trialStatus === 'expired' 
-                    ? 'bg-red-500/20 border-red-400' 
+                    ? 'bg-[#663030]/30 border-[#B85C5C]' 
                     : trialStatus === 'warning'
-                    ? 'bg-orange-500/20 border-orange-400'
-                    : 'bg-white/10 border-white/20'
+                    ? 'bg-[#7C6026]/25 border-[#CDA463]'
+                    : 'bg-white/10 border-white/30'
                 }`}>
-                  <div className="text-sm text-navy-200">
-                    {trialStatus === 'expired' ? 'Prueba Expirada' : 'Prueba gratuita'}
+                  <div className="text-sm text-[#D7E5C1]">
+                    {trialStatus === 'expired' ? 'Trial expired' : 'Free trial'}
                   </div>
                   <div className={`text-2xl font-bold ${
-                    trialStatus === 'expired' ? 'text-red-200' : 'text-white'
+                    trialStatus === 'expired' ? 'text-[#F8C1C1]' : 'text-white'
                   }`}>
                     {formatTimeLeft()}
                   </div>
-                  <div className="text-sm text-navy-200">
-                    {trialStatus === 'expired' ? 'Suscríbete para continuar' : 'restantes'}
+                  <div className="text-sm text-[#D7E5C1]">
+                    {trialStatus === 'expired' ? 'Subscribe to continue' : 'remaining'}
                   </div>
                 </div>
               )}
@@ -370,28 +370,28 @@ export default function PlansPage() {
 
         {/* Billing Toggle */}
         <div className="flex justify-center">
-          <div className="bg-white rounded-lg p-1 shadow-lg inline-flex">
+          <div className="bg-[#F6F8ED] border border-[#E0E7C8] rounded-2xl p-1 shadow-md inline-flex">
             <button
               onClick={() => setBillingPeriod('monthly')}
-              className={`px-6 py-2 rounded-md font-medium transition-all ${
+              className={`px-6 py-2 rounded-xl font-medium transition-all ${
                 billingPeriod === 'monthly'
-                  ? 'bg-navy-600 text-white'
-                  : 'text-gray-600 hover:text-navy-600'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/40'
+                  : 'text-[#5B6844] hover:text-[#384726]'
               }`}
             >
-              Mensual
+              Monthly
             </button>
             <button
               onClick={() => setBillingPeriod('annual')}
-              className={`px-6 py-2 rounded-md font-medium transition-all flex items-center ${
+              className={`px-6 py-2 rounded-xl font-medium transition-all flex items-center ${
                 billingPeriod === 'annual'
-                  ? 'bg-navy-600 text-white'
-                  : 'text-gray-600 hover:text-navy-600'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/40'
+                  : 'text-[#5B6844] hover:text-[#384726]'
               }`}
             >
-              Anual
-              <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-                Ahorra más
+              Annual
+              <span className="ml-2 text-xs bg-[#3E4D2C] text-white px-2 py-0.5 rounded-full">
+                Save more
               </span>
             </button>
           </div>
@@ -399,13 +399,13 @@ export default function PlansPage() {
 
         {/* Trial Status Alerts */}
         {trialStatus === 'warning' && (
-          <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-4 text-white">
+          <div className="rounded-2xl p-4 text-[#2B2A22] bg-[#F8E1B8] border border-[#F0C988] shadow">
             <div className="flex items-center">
-              <i className="ri-alarm-warning-line text-2xl mr-3"></i>
+              <i className="ri-alarm-warning-line text-2xl mr-3 text-[#8A5A1F]"></i>
               <div>
-                <h3 className="font-semibold">¡Tu prueba gratuita está por vencer!</h3>
+                <h3 className="font-semibold">Your free trial is almost over!</h3>
                 <p className="text-sm opacity-90">
-                  Te quedan {formatTimeLeft()}. Selecciona un plan para continuar usando Sendbillnow.
+                  You have {formatTimeLeft()} left. Choose a plan to keep using Sendbillnow.
                 </p>
               </div>
             </div>
@@ -413,24 +413,23 @@ export default function PlansPage() {
         )}
 
         {trialStatus === 'expired' && (
-          <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-6 text-white text-center">
-            <i className="ri-lock-line text-4xl mb-3"></i>
-            <h3 className="text-xl font-bold mb-2">Prueba gratuita expirada</h3>
+          <div className="rounded-2xl p-6 text-center text-[#3D1F1F] bg-[#F9D9D9] border border-[#D28A8A] shadow">
+            <i className="ri-lock-line text-4xl mb-3 text-[#8F3D3D]"></i>
+            <h3 className="text-xl font-bold mb-2">Free trial expired</h3>
             <p className="mb-4">
-              Tu período de prueba ha terminado. Para continuar usando Sendbillnow, 
-              selecciona un plan de suscripción y completa el pago.
+              Your trial period has ended. To continue using Sendbillnow, choose a subscription plan and complete payment.
             </p>
           </div>
         )}
 
         {currentPlan?.active && (
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-4 text-white">
+          <div className="bg-[#E1F3C9] border border-[#C4E09D] rounded-2xl p-4 text-[#1F2616] shadow">
             <div className="flex items-center">
-              <i className="ri-check-line text-2xl mr-3"></i>
+              <i className="ri-check-line text-2xl mr-3 text-[#3B4A2A]"></i>
               <div>
-                <h3 className="font-semibold">¡Suscripción Activa!</h3>
+                <h3 className="font-semibold">Subscription Active!</h3>
                 <p className="text-sm opacity-90">
-                  Tienes acceso completo a todas las funciones del plan {currentPlan.name}.
+                  You have full access to every feature in the {currentPlan.name} plan.
                 </p>
               </div>
             </div>
@@ -438,13 +437,13 @@ export default function PlansPage() {
         )}
 
         {/* Contabilidad Plans Section */}
-        <div>
+        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               <i className="ri-calculator-line mr-2 text-sky-600"></i>
-              Planes de Contabilidad
+              Accounting Plans
             </h2>
-            <p className="text-gray-600">Soluciones integrales de contabilidad para tu empresa</p>
+            <p className="text-gray-600">End-to-end accounting solutions for your business</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {contabilidadPlans.map(renderPlanCard)}
@@ -452,13 +451,13 @@ export default function PlansPage() {
         </div>
 
         {/* Facturación Plans Section */}
-        <div>
+        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               <i className="ri-file-text-line mr-2 text-blue-600"></i>
-              Planes de Facturación
+              Invoicing Plans
             </h2>
-            <p className="text-gray-600">Soluciones para facturación y cotizaciones</p>
+            <p className="text-gray-600">Quoting and invoicing solutions</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {facturacionPlans.map(renderPlanCard)}
@@ -466,13 +465,13 @@ export default function PlansPage() {
         </div>
 
         {/* POS Plans Section */}
-        <div>
+        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               <i className="ri-store-2-line mr-2 text-purple-600"></i>
-              Planes POS Empresarial
+              POS Plans for Businesses
             </h2>
-            <p className="text-gray-600">Solución completa para puntos de venta y gestión empresarial</p>
+            <p className="text-gray-600">Complete solution for retail points of sale and business management</p>
           </div>
           <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
             {posPlans.map(renderPlanCard)}
@@ -486,7 +485,7 @@ export default function PlansPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Confirmar Suscripción</h3>
+                <h3 className="text-xl font-bold text-gray-900">Confirm Subscription</h3>
                 <button
                   onClick={() => setShowPaymentModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -504,15 +503,15 @@ export default function PlansPage() {
                   </div>
                   {billingPeriod === 'annual' && getSavingsPercent(selectedPlanData) > 0 && (
                     <div className="text-sm mt-1 bg-white/20 px-3 py-1 rounded-full inline-block">
-                      Ahorra {getSavingsPercent(selectedPlanData)}% anual
+                      Save {getSavingsPercent(selectedPlanData)}% annually
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Features del plan seleccionado */}
+              {/* Selected plan features */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h5 className="font-semibold text-gray-900 mb-3">Tu plan incluye:</h5>
+                <h5 className="font-semibold text-gray-900 mb-3">Your plan includes:</h5>
                 <div className="max-h-40 overflow-y-auto">
                   <ul className="space-y-2">
                     {selectedPlanData.features.map((feature, index) => (
@@ -529,10 +528,10 @@ export default function PlansPage() {
                 <div className="bg-red-50 rounded-lg p-4 mb-4">
                   <div className="flex items-center text-red-800">
                     <i className="ri-alarm-warning-line mr-2"></i>
-                    <span className="font-semibold">Período de prueba expirado</span>
+                    <span className="font-semibold">Trial period expired</span>
                   </div>
                   <p className="text-sm text-red-600 mt-1">
-                    Debes completar el pago para reactivar tu acceso a Sendbillnow.
+                    Complete the payment to reactivate your Sendbillnow access.
                   </p>
                 </div>
               )}
@@ -552,7 +551,7 @@ export default function PlansPage() {
           </div>
         )}
 
-        {/* Modal de éxito */}
+        {/* Success modal */}
         {showSuccessModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Overlay */}
@@ -565,8 +564,8 @@ export default function PlansPage() {
                 <div className="w-14 h-14 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-2 backdrop-blur-sm">
                   <i className="ri-check-line text-3xl text-white"></i>
                 </div>
-                <h3 className="text-lg font-bold text-white">¡Pago Exitoso!</h3>
-                <p className="text-green-100 text-sm">Tu suscripción ha sido activada</p>
+                <h3 className="text-lg font-bold text-white">Payment Successful!</h3>
+                <p className="text-green-100 text-sm">Your subscription has been activated</p>
               </div>
 
               {/* Contenido - más compacto */}
@@ -576,30 +575,30 @@ export default function PlansPage() {
                     <i className="ri-vip-crown-2-fill text-xl text-white"></i>
                   </div>
                   <h4 className="text-base font-bold text-gray-900">
-                    Bienvenido a {successPlanName}
+                    Welcome to {successPlanName}
                   </h4>
                   <p className="text-gray-600 text-sm">
-                    Acceso completo a tu nuevo plan.
+                    You now have full access to your new plan.
                   </p>
                 </div>
 
-                {/* Mensaje de refresh */}
+                {/* Refresh message */}
                 <div className="bg-amber-50 rounded-lg p-3 border border-amber-200 mb-3">
                   <div className="flex items-center">
                     <i className="ri-refresh-line text-amber-600 mr-2 animate-spin text-sm"></i>
                     <p className="text-xs text-amber-800">
-                      El sistema se actualizará en unos segundos...
+                      The system will refresh in a few seconds...
                     </p>
                   </div>
                 </div>
 
-                {/* Botón */}
+                {/* Button */}
                 <button
                   onClick={() => window.location.reload()}
                   className="w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center"
                 >
                   <i className="ri-refresh-line mr-2"></i>
-                  Actualizar Ahora
+                  Refresh Now
                 </button>
               </div>
             </div>

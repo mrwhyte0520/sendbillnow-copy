@@ -68,7 +68,7 @@ export default function DepartmentsPage() {
       setDepartments(mapped);
     } catch (error) {
       console.error('Error loading departments:', error);
-      alert('Error al cargar departamentos');
+      alert('Error loading departments');
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,7 @@ export default function DepartmentsPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving department:', error);
-      alert('Error al guardar el departamento');
+      alert('Error saving the department');
     }
   };
 
@@ -148,13 +148,13 @@ export default function DepartmentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar este departamento?')) return;
+    if (!confirm('Are you sure you want to delete this department?')) return;
     try {
       await departmentsService.delete(id);
       await loadDepartments();
     } catch (error) {
       console.error('Error deleting department:', error);
-      alert('Error al eliminar el departamento');
+      alert('Error deleting the department');
     }
   };
 
@@ -167,7 +167,7 @@ export default function DepartmentsPage() {
       await loadDepartments();
     } catch (error) {
       console.error('Error actualizando estado del departamento:', error);
-      alert('Error al actualizar el estado');
+      alert('Error updating status');
     }
   };
 
@@ -181,27 +181,27 @@ export default function DepartmentsPage() {
         employees: dept.employeeCount,
         budget: dept.budget || 0,
         location: dept.location,
-        status: dept.status === 'active' ? 'Activo' : 'Inactivo',
+        status: dept.status === 'active' ? 'Active' : 'Inactive',
         createdAt: dept.createdAt,
       }));
       await exportToExcelStyled(
         rows,
         [
-          { key: 'name', title: 'Nombre', width: 22 },
-          { key: 'description', title: 'Descripción', width: 40 },
-          { key: 'manager', title: 'Gerente', width: 22 },
-          { key: 'employees', title: 'Empleados', width: 12 },
-          { key: 'budget', title: 'Presupuesto', width: 16, numFmt: '#,##0.00' },
-          { key: 'location', title: 'Ubicación', width: 24 },
-          { key: 'status', title: 'Estado', width: 12 },
-          { key: 'createdAt', title: 'Creado', width: 14 },
+          { key: 'name', title: 'Department', width: 22 },
+          { key: 'description', title: 'Description', width: 40 },
+          { key: 'manager', title: 'Manager', width: 22 },
+          { key: 'employees', title: 'Employees', width: 12 },
+          { key: 'budget', title: 'Budget', width: 16, numFmt: '#,##0.00' },
+          { key: 'location', title: 'Location', width: 24 },
+          { key: 'status', title: 'Status', width: 12 },
+          { key: 'createdAt', title: 'Created', width: 14 },
         ],
-        `departamentos_${today}`,
-        'Departamentos'
+        `departments_${today}`,
+        'Departments'
       );
     } catch (error) {
       console.error('Error exporting departments:', error);
-      alert('Error al exportar a Excel');
+      alert('Error exporting to Excel.');
     }
   };
 
@@ -211,36 +211,84 @@ export default function DepartmentsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Departamentos</h1>
-            <p className="text-gray-600">Gestiona los departamentos de la empresa</p>
+            <h1 className="text-2xl font-bold text-gray-900">Departments</h1>
+            <p className="text-gray-700">Manage company departments</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={downloadExcel}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-download-line"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-add-line"></i>
-              Nuevo Departamento
+              New Department
             </button>
           </div>
         </div>
 
-        {/* Filtros */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Departments</p>
+                <p className="text-2xl font-bold text-gray-900">{departments.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-[#e5ead7] rounded-lg flex items-center justify-center">
+                <i className="ri-building-4-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Employees</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]">{totalEmployees}</p>
+              </div>
+              <div className="w-12 h-12 bg-[#dbe8c0] rounded-lg flex items-center justify-center">
+                <i className="ri-team-line text-[#3d451b] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Budget</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]">RD$ {totalBudget.toLocaleString('en-US')}</p>
+              </div>
+              <div className="w-12 h-12 bg-[#f1e4c2] rounded-lg flex items-center justify-center">
+                <i className="ri-money-dollar-circle-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Average Employees</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]">{avgEmployees}</p>
+              </div>
+              <div className="w-12 h-12 bg-[#e0e5d0] rounded-lg flex items-center justify-center">
+                <i className="ri-user-3-line text-[#4b5320] text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
+                Search
               </label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
@@ -248,23 +296,23 @@ export default function DepartmentsPage() {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por nombre, gerente o ubicación..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search by name, manager, or location..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
+                Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="all">Todos los estados</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -273,89 +321,37 @@ export default function DepartmentsPage() {
                   setSearchTerm('');
                   setStatusFilter('all');
                 }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-[#4b5320] hover:text-[#2f3a1f] transition-colors"
               >
-                Limpiar filtros
+                Clear filters
               </button>
             </div>
           </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Departamentos</p>
-                <p className="text-2xl font-bold text-gray-900">{departments.length}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-building-line text-blue-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Empleados</p>
-                <p className="text-2xl font-bold text-green-600">{totalEmployees}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-team-line text-green-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Presupuesto Total</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  ${totalBudget.toLocaleString()}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-money-dollar-circle-line text-purple-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Promedio Empleados</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {avgEmployees}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-user-line text-orange-600 text-xl"></i>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabla */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        {/* Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Departamento
+                    Department
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Gerente
+                    Manager
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empleados
+                    Employees
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Presupuesto
+                    Budget
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -389,18 +385,18 @@ export default function DepartmentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         department.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#dbe8c0] text-[#2f3a1f]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {department.status === 'active' ? 'Activo' : 'Inactivo'}
+                        {department.status === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(department)}
-                          className="text-blue-600 hover:text-blue-900 transition-colors"
-                          title="Editar"
+                          className="text-[#4b5320] hover:text-[#2f3a1f] transition-colors"
+                          title="Edit"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -409,16 +405,16 @@ export default function DepartmentsPage() {
                           className={`transition-colors ${
                             department.status === 'active' 
                               ? 'text-red-600 hover:text-red-900' 
-                              : 'text-green-600 hover:text-green-900'
+                              : 'text-[#4b5320] hover:text-[#2f3a1f]'
                           }`}
-                          title={department.status === 'active' ? 'Desactivar' : 'Activar'}
+                          title={department.status === 'active' ? 'Deactivate' : 'Activate'}
                         >
                           <i className={department.status === 'active' ? 'ri-pause-line' : 'ri-play-line'}></i>
                         </button>
                         <button
                           onClick={() => handleDelete(department.id)}
                           className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -431,13 +427,13 @@ export default function DepartmentsPage() {
           </div>
         </div>
 
-        {/* Modal de formulario */}
+        {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editingDepartment ? 'Editar Departamento' : 'Nuevo Departamento'}
+                  {editingDepartment ? 'Edit Department' : 'New Department'}
                 </h2>
                 <button
                   onClick={resetForm}
@@ -451,40 +447,53 @@ export default function DepartmentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Departamento *
+                      Department Name *
                     </label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Estado
+                      Status
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     >
-                      <option value="active">Activo</option>
-                      <option value="inactive">Inactivo</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción *
+                    Description *
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Location *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     required
                   />
                 </div>
@@ -492,57 +501,43 @@ export default function DepartmentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Gerente/Responsable *
+                      Manager *
                     </label>
                     <input
                       type="text"
                       value={formData.manager}
                       onChange={(e) => setFormData({...formData, manager: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Presupuesto Anual
+                      Annual Budget
                     </label>
                     <input
                       type="number"
                       value={formData.budget}
                       onChange={(e) => setFormData({...formData, budget: parseFloat(e.target.value) || 0})}
                       step="1000"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ubicación *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    placeholder="Ej: Piso 2, Oficina 201"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-6">
+                <div className="flex justify-end gap-3 pt-4">
                   <button
                     type="button"
                     onClick={resetForm}
                     className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
-                    {editingDepartment ? 'Actualizar' : 'Crear'} Departamento
+                    {editingDepartment ? 'Update' : 'Create'} Department
                   </button>
                 </div>
               </form>

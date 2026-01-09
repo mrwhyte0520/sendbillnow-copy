@@ -140,15 +140,15 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
   const save = async () => {
     try {
       if (!userId) {
-        toast.error('Debes iniciar sesión para crear una cotización');
+        toast.error('You must sign in to create a quotation');
         return;
       }
       if (!customerId) {
-        toast.error('Seleccione un cliente');
+        toast.error('Select a valid customer');
         return;
       }
       if (items.length === 0 || items.every(it => !it.description || !it.quantity || !it.price)) {
-        toast.error('Agregue al menos una línea válida');
+        toast.error('Add at least one valid line item');
         return;
       }
 
@@ -179,11 +179,11 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         .map(it => ({ description: it.description, quantity: it.quantity, price: it.price, total: it.total }));
 
       await quotesService.create(userId, quotePayload, linePayloads);
-      toast.success('Cotización creada exitosamente');
+      toast.success('Quotation created successfully');
       onSaved();
     } catch (e) {
       console.error(e);
-      toast.error('No se pudo crear la cotización');
+      toast.error('The quotation could not be created');
     }
   };
 
@@ -191,13 +191,13 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
     <div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Cliente</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
           <select
             value={customerId}
             onChange={e => setCustomerId(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
           >
-            <option value="">Seleccionar cliente...</option>
+            <option value="">Select customer...</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -208,17 +208,17 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               <div className="font-medium text-gray-900">{selectedCustomer.name}</div>
               <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
                 <div>{selectedCustomer.email ? `Email: ${selectedCustomer.email}` : 'Email: -'}</div>
-                <div>{selectedCustomer.phone ? `Tel: ${selectedCustomer.phone}` : 'Tel: -'}</div>
-                <div>{selectedCustomer.document ? `Documento/RNC: ${selectedCustomer.document}` : 'Documento/RNC: -'}</div>
-                <div>{selectedCustomer.address ? `Dirección: ${selectedCustomer.address}` : 'Dirección: -'}</div>
-                <div>{selectedCustomer.documentType ? `Tipo doc: ${selectedCustomer.documentType}` : 'Tipo doc: -'}</div>
+                <div>{selectedCustomer.phone ? `Phone: ${selectedCustomer.phone}` : 'Phone: -'}</div>
+                <div>{selectedCustomer.document ? `Document/RNC: ${selectedCustomer.document}` : 'Document/RNC: -'}</div>
+                <div>{selectedCustomer.address ? `Address: ${selectedCustomer.address}` : 'Address: -'}</div>
+                <div>{selectedCustomer.documentType ? `Document type: ${selectedCustomer.documentType}` : 'Document type: -'}</div>
                 <div>{selectedCustomer.ncfType ? `NCF: ${selectedCustomer.ncfType}` : 'NCF: -'}</div>
               </div>
             </div>
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
           <select
             value={currencyCode}
             onChange={e => setCurrencyCode(e.target.value)}
@@ -235,32 +235,32 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de Cotización</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Quotation Name</label>
           <input
             type="text"
             value={project}
             onChange={e => setProject(e.target.value)}
-            placeholder="Nombre descriptivo de la cotización"
+            placeholder="Descriptive name for the quotation"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Condición de pago</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Payment terms</label>
           <select
             value={paymentTermId ?? ''}
             onChange={e => setPaymentTermId(e.target.value || null)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
           >
-            <option value="">Sin condición específica</option>
+            <option value="">No specific terms</option>
             {paymentTerms.map(term => (
               <option key={term.id} value={term.id}>
-                {term.name}{typeof term.days === 'number' ? ` (${term.days} días)` : ''}
+                {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Válida Hasta</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Valid Until</label>
           <input
             type="date"
             value={validUntil}
@@ -269,7 +269,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Probabilidad de Cierre (%)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Closing probability (%)</label>
           <input
             type="number"
             min={0}
@@ -280,14 +280,14 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Tienda / Sucursal</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Store / Branch</label>
           {stores.length > 0 ? (
             <select
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
             >
-              <option value="">Seleccionar tienda...</option>
+              <option value="">Select store...</option>
               {stores.map((s) => (
                 <option key={s.id} value={s.name}>{s.name}</option>
               ))}
@@ -297,37 +297,37 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               type="text"
               value={storeName}
               onChange={e => setStoreName(e.target.value)}
-              placeholder="Ej: Tienda principal"
+              placeholder="Ex: Main store"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Vendedor (opcional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Sales rep (optional)</label>
           <select
             value={salesRepId ?? ''}
             onChange={e => setSalesRepId(e.target.value || null)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
           >
-            <option value="">Sin vendedor asignado</option>
+            <option value="">No sales rep assigned</option>
             {salesReps.map((rep) => (
               <option key={rep.id} value={rep.id}>{rep.name}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de descuento global</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Global discount type</label>
           <select
             value={discountType}
             onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
           >
-            <option value="percentage">Porcentaje (%)</option>
-            <option value="fixed">Monto fijo</option>
+            <option value="percentage">Percentage (%)</option>
+            <option value="fixed">Fixed amount</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Valor del descuento</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Discount value</label>
           <div className="flex items-center space-x-2">
             <input
               type="number"
@@ -345,16 +345,16 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
       </div>
 
       <div className="mt-6">
-        <h4 className="text-md font-medium text-gray-900 mb-4">Productos/Servicios</h4>
+        <h4 className="text-md font-medium text-gray-900 mb-4">Products/Services</h4>
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acción</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -366,7 +366,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
                       onChange={(e) => handleProductSelect(idx, e.target.value)}
                       className="w-full mb-2 px-2 py-1 border border-gray-300 rounded text-sm bg-white"
                     >
-                      <option value="">-- Seleccionar ítem de inventario (opcional) --</option>
+                      <option value="">-- Select inventory item (optional) --</option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -377,7 +377,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
                       type="text"
                       value={row.description}
                       onChange={e => handleDescriptionChange(idx, e.target.value)}
-                      placeholder="Descripción del producto/servicio"
+                      placeholder="Product/service description"
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                     />
                   </td>
@@ -412,21 +412,21 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
             </tbody>
           </table>
         </div>
-        <button onClick={addRow} className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap">
+        <button onClick={addRow} className="mt-4 px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap">
           <i className="ri-add-line mr-2"></i>
-          Agregar Línea
+          Add Line
         </button>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="mt-6 grid grid-cols-1 md-grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Términos y Condiciones</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Terms & Conditions</label>
           <textarea
             rows={4}
             value={notes}
             onChange={e => setNotes(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Términos y condiciones de la propuesta..."
+            placeholder="Proposal terms and conditions..."
           ></textarea>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg">
@@ -436,7 +436,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               <span className="text-sm font-medium">{money(grossSubtotal, { forTotals: true })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Descuento:</span>
+              <span className="text-sm text-gray-600">Discount:</span>
               <span className="text-sm font-medium">- {money(totalDiscount)}</span>
             </div>
             <div className="flex justify-between">
@@ -454,8 +454,8 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
       </div>
 
       <div className="p-6 border-t border-gray-200 flex justify-end space-x-3 mt-6">
-        <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">Cancelar</button>
-        <button onClick={save} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">Crear Cotización</button>
+        <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">Cancel</button>
+        <button onClick={save} className="px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap">Create Quote</button>
       </div>
     </div>
   );
@@ -1298,23 +1298,23 @@ export default function QuotesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Cotizaciones de Ventas</h1>
-            <p className="text-gray-600">Gestión de propuestas comerciales y seguimiento de oportunidades</p>
+            <h1 className="text-2xl font-bold text-gray-900">Sales Quotations</h1>
+            <p className="text-gray-600">Manage commercial proposals and track opportunities</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={handleExportToPdf}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap flex items-center"
+              className="px-4 py-2 bg-[#4f5f33] text-white rounded-lg hover:bg-[#3b4d2d] transition-colors whitespace-nowrap flex items-center"
             >
               <i className="ri-file-pdf-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button
               onClick={handleCreateQuote}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Cotización
+              New Quote
             </button>
           </div>
         </div>
@@ -1324,66 +1324,78 @@ export default function QuotesPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Cotizaciones</p>
+                <p className="text-sm font-medium text-gray-600">Total Quotations</p>
+
                 <p className="text-2xl font-bold text-gray-900 mt-1">{quotes.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-file-list-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#e2ead4]">
+                <i className="ri-file-list-line text-xl text-[#4f5f33]"></i>
+
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500">Valor Total (suma nominal): {formatAmount(quotes.reduce((sum, quote) => sum + quote.total, 0))}</p>
+              <p className="text-sm text-gray-500">Total value (nominal sum): {formatAmount(quotes.reduce((sum, quote) => sum + quote.total, 0))}</p>
+
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprobadas</p>
+                <p className="text-sm font-medium text-gray-600">Approved</p>
+
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'approved').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#d7e0c1]">
+                <i className="ri-check-line text-xl text-[#4f5f33]"></i>
+
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500">Valor (nominal): {formatAmount(quotes.filter(q => q.status === 'approved').reduce((sum, quote) => sum + quote.total, 0))}</p>
+              <p className="text-sm text-gray-500">Nominal value: {formatAmount(quotes.filter(q => q.status === 'approved').reduce((sum, quote) => sum + quote.total, 0))}</p>
+
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">En Proceso</p>
+                <p className="text-sm font-medium text-gray-600">In Progress</p>
+
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {quotes.filter(q => q.status === 'pending' || q.status === 'under_review').length}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-100">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#f1f3e2]">
+                <i className="ri-time-line text-xl text-[#7c8c45]"></i>
+
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500">Valor (nominal): {formatAmount(quotes.filter(q => q.status === 'pending' || q.status === 'under_review').reduce((sum, quote) => sum + quote.total, 0))}</p>
+              <p className="text-sm text-gray-500">Nominal value: {formatAmount(quotes.filter(q => q.status === 'pending' || q.status === 'under_review').reduce((sum, quote) => sum + quote.total, 0))}</p>
+
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Tasa de Conversión</p>
+                <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
+
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {((quotes.filter(q => q.status === 'approved').length / quotes.length) * 100).toFixed(1)}%
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
-                <i className="ri-line-chart-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-[#e8edd6]">
+                <i className="ri-line-chart-line text-xl text-[#4f5f33]"></i>
+
               </div>
             </div>
             <div className="mt-4">
-              <p className="text-sm text-gray-500">Promedio del mes</p>
+              <p className="text-sm text-gray-500">Monthly average</p>
+
             </div>
           </div>
         </div>
@@ -1392,11 +1404,13 @@ export default function QuotesPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Buscar por cliente, nombre o ID..."
+                  placeholder="Search by customer, name, or ID..."
+
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -1405,19 +1419,21 @@ export default function QuotesPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
               >
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="under_review">En Revisión</option>
-                <option value="approved">Aprobadas</option>
-                <option value="invoiced">Facturadas</option>
-                <option value="rejected">Rechazadas</option>
-                <option value="expired">Expiradas</option>
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="under_review">Under review</option>
+                <option value="approved">Approved</option>
+                <option value="invoiced">Invoiced</option>
+                <option value="rejected">Rejected</option>
+                <option value="expired">Expired</option>
+
               </select>
             </div>
             <div className="flex items-end">
@@ -1429,7 +1445,8 @@ export default function QuotesPage() {
                 className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
               >
                 <i className="ri-refresh-line mr-2"></i>
-                Limpiar Filtros
+                Clear filters
+
               </button>
             </div>
           </div>
@@ -1439,8 +1456,9 @@ export default function QuotesPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
-              Cotizaciones ({filteredQuotes.length})
+              Quotes ({filteredQuotes.length})
             </h3>
+
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -1450,29 +1468,30 @@ export default function QuotesPage() {
                     #
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nombre
+                    Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Válida Hasta
+                    Valid Until
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Probabilidad
+                    Probability
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
+
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1482,17 +1501,20 @@ export default function QuotesPage() {
                       <div className="text-sm font-medium text-gray-900">{index + 1}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{quote.project || 'Sin nombre'}</div>
+                      <div className="text-sm font-medium text-gray-900">{quote.project || 'Untitled'}</div>
+
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{quote.customer}</div>
                       <div className="text-sm text-gray-500">{quote.customerEmail}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(quote.date).toLocaleDateString('es-DO')}
+                      {new Date(quote.date).toLocaleDateString('en-US')}
+
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(quote.validUntil).toLocaleDateString('es-DO')}
+                      {new Date(quote.validUntil).toLocaleDateString('en-US')}
+
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {`${getCurrencyPrefix(quote.currency, { forTotals: true }) ? `${getCurrencyPrefix(quote.currency, { forTotals: true })} ` : ''}${formatAmount(quote.total)}`}
@@ -1512,21 +1534,24 @@ export default function QuotesPage() {
                         <button
                           onClick={() => handleViewQuote(quote.id)}
                           className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Ver cotización"
+                          title="View quote"
+
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         <button
                           onClick={() => handleEditQuote(quote.id)}
                           className="text-green-600 hover:text-green-900 p-1"
-                          title="Editar cotización"
+                          title="Edit quote"
+
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => { void handlePrintQuote(quote.id); }}
                           className="text-gray-600 hover:text-gray-900 p-1"
-                          title="Imprimir cotización"
+                          title="Print quote"
+
                         >
                           <i className="ri-printer-line"></i>
                         </button>
@@ -1534,7 +1559,8 @@ export default function QuotesPage() {
                           onClick={() => handleApproveQuote(quote.id)}
                           disabled={quote.status === 'approved' || quote.status === 'invoiced'}
                           className={`p-1 ${(quote.status === 'approved' || quote.status === 'invoiced') ? 'text-green-300 cursor-not-allowed' : 'text-green-600 hover:text-green-900'}`}
-                          title="Aprobar cotización"
+                          title="Approve quote"
+
                         >
                           <i className="ri-check-line"></i>
                         </button>
@@ -1542,7 +1568,8 @@ export default function QuotesPage() {
                           onClick={() => handleRejectQuote(quote.id)}
                           disabled={quote.status === 'rejected' || quote.status === 'invoiced'}
                           className={`p-1 ${(quote.status === 'rejected' || quote.status === 'invoiced') ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
-                          title="Rechazar cotización"
+                          title="Reject quote"
+
                         >
                           <i className="ri-close-circle-line"></i>
                         </button>
@@ -1550,7 +1577,8 @@ export default function QuotesPage() {
                           <button
                             onClick={() => handleConvertToInvoice(quote.id)}
                             className="text-green-600 hover:text-green-900 p-1"
-                            title="Convertir a factura"
+                            title="Convert to invoice"
+
                           >
                             <i className="ri-file-transfer-line"></i>
                           </button>
@@ -1558,7 +1586,8 @@ export default function QuotesPage() {
                         <button
                           onClick={() => handleDuplicateQuote(quote.id)}
                           className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Duplicar cotización"
+                          title="Duplicate quote"
+
                         >
                           <i className="ri-file-copy-line"></i>
                         </button>
@@ -1566,7 +1595,8 @@ export default function QuotesPage() {
                           onClick={() => handleDeleteQuote(quote.id)}
                           disabled={quote.status === 'invoiced'}
                           className={`p-1 ${quote.status === 'invoiced' ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
-                          title="Eliminar cotización"
+                          title="Delete quote"
+
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>

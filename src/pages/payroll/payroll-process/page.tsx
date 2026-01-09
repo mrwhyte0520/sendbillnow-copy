@@ -70,7 +70,7 @@ export default function PayrollProcessPage() {
   };
 
   const processPeriod = async (periodId: string) => {
-    if (!confirm('¿Desea procesar esta nómina? Esta acción calculará los salarios de todos los empleados activos incluyendo deducciones y ausencias.')) return;
+    if (!confirm('Process this payroll? This will calculate salaries for all active employees including deductions and absences.')) return;
     
     setLoading(true);
     let tenantId: string | null = null;
@@ -79,14 +79,14 @@ export default function PayrollProcessPage() {
 
       tenantId = await resolveTenantId(user.id);
       if (!tenantId) {
-        alert('No se pudo determinar la empresa del usuario.');
+        alert('Could not determine the user company.');
         return;
       }
 
       // Obtener el período
       const period = periods.find(p => p.id === periodId);
       if (!period) {
-        alert('Período no encontrado');
+        alert('Payroll period not found');
         return;
       }
 
@@ -107,7 +107,7 @@ export default function PayrollProcessPage() {
       });
 
       if (activeEmployees.length === 0) {
-        alert('No hay empleados activos para procesar');
+        alert('There are no active employees to process.');
         return;
       }
 
@@ -135,10 +135,10 @@ export default function PayrollProcessPage() {
 
       if (budgetViolations.length > 0) {
         const details = budgetViolations
-          .map(v => `${v.departmentName}: nómina RD$ ${v.payroll.toLocaleString('es-DO')} vs presupuesto RD$ ${v.budget.toLocaleString('es-DO')}`)
+          .map(v => `${v.departmentName}: payroll RD$ ${v.payroll.toLocaleString('en-US')} vs budget RD$ ${v.budget.toLocaleString('en-US')}`)
           .join('\n');
         throw new Error(
-          `La nómina calculada supera el presupuesto de uno o más departamentos:\n\n${details}\n\nAjuste salarios o presupuestos antes de procesar.`
+          `Calculated payroll exceeds the budget for one or more departments:\n\n${details}\n\nAdjust salaries or budgets before processing.`
         );
       }
 
@@ -191,11 +191,11 @@ export default function PayrollProcessPage() {
 
       if (totalsError) throw totalsError;
       
-      alert(`Nómina procesada exitosamente:\n\n${activeEmployees.length} empleados\nSalario bruto total: RD$ ${totalGross.toLocaleString('es-DO')}\nDeducciones totales: RD$ ${totalDeductions.toLocaleString('es-DO')}\nSalario neto total: RD$ ${totalNet.toLocaleString('es-DO')}`);
+      alert(`Payroll processed successfully:\n\n${activeEmployees.length} employees\nTotal gross: RD$ ${totalGross.toLocaleString('en-US')}\nTotal deductions: RD$ ${totalDeductions.toLocaleString('en-US')}\nTotal net: RD$ ${totalNet.toLocaleString('en-US')}`);
       await loadPeriods();
     } catch (error) {
       console.error('Error processing payroll:', error);
-      alert('Error al procesar la nómina: ' + (error as Error).message);
+      alert('Error processing payroll: ' + (error as Error).message);
       
       // Revertir estado a open si hubo error (mejor esfuerzo)
       try {
@@ -215,7 +215,7 @@ export default function PayrollProcessPage() {
   };
 
   const closePeriod = async (periodId: string) => {
-    if (!confirm('¿Está seguro de cerrar este período de nómina? No podrá realizar cambios después.')) return;
+    if (!confirm('Close this payroll period? You will not be able to make changes after closing.')) return;
     
     try {
       if (!user) return;
@@ -231,16 +231,16 @@ export default function PayrollProcessPage() {
         .eq('id', periodId)
         .eq('user_id', tenantId);
       
-      alert('Período cerrado correctamente');
+      alert('Payroll period closed successfully');
       await loadPeriods();
     } catch (error) {
       console.error('Error closing period:', error);
-      alert('Error al cerrar el período');
+      alert('Error closing the payroll period');
     }
   };
 
   const markAsPaid = async (periodId: string) => {
-    if (!confirm('¿Confirmar que se ha realizado el pago de esta nómina?')) return;
+    if (!confirm('Confirm that this payroll has been paid?')) return;
     
     try {
       if (!user) return;
@@ -256,20 +256,20 @@ export default function PayrollProcessPage() {
         .eq('id', periodId)
         .eq('user_id', tenantId);
       
-      alert('Nómina marcada como pagada');
+      alert('Payroll marked as paid');
       await loadPeriods();
     } catch (error) {
       console.error('Error marking as paid:', error);
-      alert('Error al marcar como pagada');
+      alert('Error marking payroll as paid');
     }
   };
 
   const getStatusColor = (status: string) => {
     const normalized = normalizeStatus(status);
     const colors: Record<PayrollPeriod['status'], string> = {
-      open: 'bg-blue-100 text-blue-800',
-      processing: 'bg-yellow-100 text-yellow-800',
-      closed: 'bg-purple-100 text-purple-800',
+      open: 'bg-[#dbe8c0] text-[#2f3a1f]',
+      processing: 'bg-[#f1e4c2] text-[#3d451b]',
+      closed: 'bg-[#e0e5d0] text-[#2f3a1f]',
       paid: 'bg-green-100 text-green-800'
     };
     return colors[normalized] || 'bg-gray-100 text-gray-800';
@@ -279,13 +279,13 @@ export default function PayrollProcessPage() {
     const normalized = normalizeStatus(status);
     switch (normalized) {
       case 'open':
-        return 'Abierto';
+        return 'Open';
       case 'processing':
-        return 'Procesando';
+        return 'Processing';
       case 'closed':
-        return 'Cerrado';
+        return 'Closed';
       case 'paid':
-        return 'Pagado';
+        return 'Paid';
       default:
         return status;
     }
@@ -293,48 +293,48 @@ export default function PayrollProcessPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Proceso de Pago de Nómina</h1>
-            <p className="text-gray-600">Procesamiento y gestión de períodos de nómina</p>
+            <h1 className="text-2xl font-bold text-gray-900">Payroll Processing</h1>
+            <p className="text-gray-700">Manage and process payroll periods</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/payroll/periods')}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
             >
-              <i className="ri-calendar-line mr-2"></i>
-              Nuevo Período
+              <i className="ri-calendar-line"></i>
+              New Period
             </button>
             <button
               onClick={() => navigate('/payroll')}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
             >
-              <i className="ri-arrow-left-line mr-2"></i>
-              Volver
+              <i className="ri-arrow-left-line"></i>
+              Back
             </button>
           </div>
         </div>
 
         {loading && (
           <div className="text-center py-8">
-            <i className="ri-loader-4-line animate-spin text-3xl text-blue-600"></i>
-            <p className="text-gray-600 mt-2">Cargando...</p>
+            <i className="ri-loader-4-line animate-spin text-3xl text-[#4b5320]"></i>
+            <p className="text-gray-700 mt-2">Loading...</p>
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-6">
           {periods.map((period) => (
-            <div key={period.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div key={period.id} className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">{period.period_name}</h3>
                   <p className="text-sm text-gray-600">
-                    Del {new Date(period.start_date).toLocaleDateString('es-DO')} al {new Date(period.end_date).toLocaleDateString('es-DO')}
+                    From {new Date(period.start_date).toLocaleDateString('en-US')} to {new Date(period.end_date).toLocaleDateString('en-US')}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Fecha de pago: {new Date(period.pay_date).toLocaleDateString('es-DO')}
+                    Pay date: {new Date(period.pay_date).toLocaleDateString('en-US')}
                   </p>
                 </div>
                 <span className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(period.status)}`}>
@@ -343,26 +343,26 @@ export default function PayrollProcessPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">Empleados</p>
+                <div className="bg-[#f8f5ec] p-4 rounded-lg border border-[#e7decd]">
+                  <p className="text-xs text-gray-600 mb-1">Employees</p>
                   <p className="text-xl font-bold text-gray-900">{period.employee_count || 0}</p>
                 </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">Salario Bruto</p>
-                  <p className="text-xl font-bold text-blue-600">
-                    RD$ {(period.total_gross || 0).toLocaleString('es-DO')}
+                <div className="bg-[#e5ead7] p-4 rounded-lg border border-[#dfe5cf]">
+                  <p className="text-xs text-gray-600 mb-1">Total Gross</p>
+                  <p className="text-xl font-bold text-[#2f3a1f]">
+                    RD$ {(period.total_gross || 0).toLocaleString('en-US')}
                   </p>
                 </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">Deducciones</p>
-                  <p className="text-xl font-bold text-red-600">
-                    RD$ {(period.total_deductions || 0).toLocaleString('es-DO')}
+                <div className="bg-[#f1e4c2] p-4 rounded-lg border border-[#e7decd]">
+                  <p className="text-xs text-gray-600 mb-1">Deductions</p>
+                  <p className="text-xl font-bold text-[#3d451b]">
+                    RD$ {(period.total_deductions || 0).toLocaleString('en-US')}
                   </p>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">Salario Neto</p>
-                  <p className="text-xl font-bold text-green-600">
-                    RD$ {(period.total_net || 0).toLocaleString('es-DO')}
+                <div className="bg-[#dbe8c0] p-4 rounded-lg border border-[#dfe5cf]">
+                  <p className="text-xs text-gray-600 mb-1">Net Pay</p>
+                  <p className="text-xl font-bold text-[#2f3a1f]">
+                    RD$ {(period.total_net || 0).toLocaleString('en-US')}
                   </p>
                 </div>
               </div>
@@ -371,29 +371,29 @@ export default function PayrollProcessPage() {
                 {period.status === 'open' && (
                   <button
                     onClick={() => processPeriod(period.id)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
                     <i className="ri-play-line mr-2"></i>
-                    Procesar Nómina
+                    Process Payroll
                   </button>
                 )}
                 {period.status === 'processing' && (
                   <button
                     onClick={() => closePeriod(period.id)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
                     <i className="ri-lock-line mr-2"></i>
-                    Cerrar Período
+                    Close Period
                   </button>
                 )}
                 {period.status === 'closed' && (
                   <button
                     type="button"
                     disabled
-                    className="bg-purple-100 text-purple-700 px-4 py-2 rounded-lg cursor-default"
+                    className="bg-[#e0e5d0] text-[#2f3a1f] px-4 py-2 rounded-lg cursor-default"
                   >
                     <i className="ri-lock-line mr-2"></i>
-                    Cerrado
+                    Closed
                   </button>
                 )}
               </div>
@@ -401,14 +401,14 @@ export default function PayrollProcessPage() {
           ))}
 
           {periods.length === 0 && !loading && (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            <div className="text-center py-12 bg-white rounded-xl border border-[#dfe5cf]">
               <i className="ri-calendar-line text-5xl text-gray-400 mb-4"></i>
-              <p className="text-gray-600">No hay períodos de nómina registrados</p>
+              <p className="text-gray-700">No payroll periods found</p>
               <button
                 onClick={() => navigate('/payroll/periods')}
-                className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                className="mt-4 px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
               >
-                Crear Período de Nómina
+                Create Payroll Period
               </button>
             </div>
           )}

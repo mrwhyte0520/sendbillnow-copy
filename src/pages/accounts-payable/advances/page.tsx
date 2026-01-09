@@ -7,6 +7,15 @@ import { useAuth } from '../../../hooks/useAuth';
 import { apSupplierAdvancesService, suppliersService, bankAccountsService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
+const palette = {
+  cream: '#F6F1E7',
+  green: '#2F4F30',
+  greenDark: '#1F2B1A',
+  greenMid: '#4B5E2F',
+  greenSoft: '#7E8F63',
+  badgeNeutral: '#E5DCC3',
+};
+
 interface SupplierAdvance {
   id: string;
   number: string;
@@ -15,7 +24,7 @@ interface SupplierAdvance {
   supplierName: string;
   amount: number;
   reason: string;
-  status: 'Pendiente' | 'Aprobado' | 'Aplicado' | 'Rechazado';
+  status: 'Pending' | 'Approved' | 'Applied' | 'Rejected';
   dueDate: string | null;
   remainingBalance: number;
   appliedAmount: number;
@@ -92,23 +101,23 @@ export default function AdvancesPage() {
   const mapDbStatusToUi = (status: string | null | undefined): SupplierAdvance['status'] => {
     switch (status) {
       case 'approved':
-        return 'Aprobado';
+        return 'Approved';
       case 'applied':
-        return 'Aplicado';
+        return 'Applied';
       case 'cancelled':
-        return 'Rechazado';
+        return 'Rejected';
       default:
-        return 'Pendiente';
+        return 'Pending';
     }
   };
 
   const mapUiStatusToDb = (status: SupplierAdvance['status']): string => {
     switch (status) {
-      case 'Aprobado':
+      case 'Approved':
         return 'approved';
-      case 'Aplicado':
+      case 'Applied':
         return 'applied';
-      case 'Rechazado':
+      case 'Rejected':
         return 'cancelled';
       default:
         return 'pending';
@@ -131,7 +140,8 @@ export default function AdvancesPage() {
           number: a.advance_number || '',
           date: a.advance_date || (a.created_at ? String(a.created_at).slice(0, 10) : ''),
           supplierId: String(a.supplier_id),
-          supplierName: (a.suppliers as any)?.name || 'Proveedor',
+          supplierName: (a.suppliers as any)?.name || 'Supplier',
+
           amount,
           reason: a.description || '',
           status: mapDbStatusToUi(a.status),
@@ -163,38 +173,38 @@ export default function AdvancesPage() {
     e.preventDefault();
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar anticipos');
+      alert('You must sign in to record supplier advances.');
       return;
     }
 
     const amountNumber = Number(formData.amount);
     if (!formData.supplierId || !formData.reason.trim() || isNaN(amountNumber) || amountNumber <= 0) {
-      alert('Proveedor, motivo y monto válido son obligatorios');
+      alert('Supplier, reason, and a valid amount are required.');
       return;
     }
 
     if (!formData.transactionDate) {
-      alert('La fecha de la transacción es obligatoria');
+      alert('Transaction date is required.');
       return;
     }
 
     if (!formData.paymentMethod) {
-      alert('Debes seleccionar el tipo de pago del anticipo');
+      alert('Select a payment method for the advance.');
       return;
     }
 
     if (!formData.bankId) {
-      alert('Debes seleccionar el banco/cuenta desde donde se egresa el anticipo');
+      alert('Select the bank account used to disburse the advance.');
       return;
     }
 
     if (!formData.accountId) {
-      alert('Debes seleccionar la cuenta contable de anticipo a proveedores');
+      alert('Select the accounting ledger for supplier advances.');
       return;
     }
 
     if ((formData.paymentMethod === 'check' || formData.paymentMethod === 'transfer') && !formData.documentNumber.trim()) {
-      alert('Para cheques o transferencias, el número de documento es obligatorio');
+      alert('Document number is required for checks or transfers.');
       return;
     }
 
@@ -236,11 +246,11 @@ export default function AdvancesPage() {
 
       await loadAdvances();
       resetForm();
-      alert(editingAdvance ? 'Anticipo actualizado exitosamente' : 'Anticipo creado exitosamente');
+      alert(editingAdvance ? 'Advance updated successfully.' : 'Advance created successfully.');
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error guardando anticipo de suplidor', error);
-      alert(error?.message || 'Error al guardar el anticipo');
+      alert(error?.message || 'Could not save the advance.');
     }
   };
 
@@ -281,36 +291,36 @@ export default function AdvancesPage() {
   const handleApprove = async (id: string) => {
     const advance = advances.find(a => a.id === id);
     if (!advance) return;
-    if (!confirm('¿Aprobar este anticipo?')) return;
+    if (!confirm('Approve this advance?')) return;
     try {
       await apSupplierAdvancesService.updateStatus(id, 'approved', {
         appliedAmount: advance.appliedAmount,
         balanceAmount: advance.remainingBalance,
       });
       await loadAdvances();
-      alert('Anticipo aprobado exitosamente');
+      alert('Advance approved.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error aprobando anticipo de suplidor', error);
-      alert('No se pudo aprobar el anticipo');
+      alert('The advance could not be approved.');
     }
   };
 
   const handleReject = async (id: string) => {
     const advance = advances.find(a => a.id === id);
     if (!advance) return;
-    if (!confirm('¿Rechazar este anticipo?')) return;
+    if (!confirm('Reject this advance?')) return;
     try {
       await apSupplierAdvancesService.updateStatus(id, 'cancelled', {
         appliedAmount: advance.appliedAmount,
         balanceAmount: advance.remainingBalance,
       });
       await loadAdvances();
-      alert('Anticipo rechazado');
+      alert('Advance rejected.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error rechazando anticipo de suplidor', error);
-      alert('No se pudo rechazar el anticipo');
+      alert('The advance could not be rejected.');
     }
   };
 
@@ -440,7 +450,7 @@ export default function AdvancesPage() {
   const handleApply = async (id: string) => {
     const advance = advances.find(a => a.id === id);
     if (!advance) return;
-    if (!confirm(`¿Aplicar anticipo de RD$ ${advance.remainingBalance.toLocaleString()}?`)) return;
+    if (!confirm(`Apply the remaining RD$ ${advance.remainingBalance.toLocaleString()} for this advance?`)) return;
     try {
       const newApplied = advance.appliedAmount + advance.remainingBalance;
       const newBalance = 0;
@@ -449,17 +459,17 @@ export default function AdvancesPage() {
         balanceAmount: newBalance,
       });
       await loadAdvances();
-      alert('Anticipo aplicado exitosamente');
+      alert('Advance applied successfully.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error aplicando anticipo de suplidor', error);
-      alert('No se pudo aplicar el anticipo');
+      alert('The advance could not be applied.');
     }
   };
 
   const exportToExcel = async () => {
     if (!filteredAdvances.length) {
-      alert('No hay anticipos para exportar.');
+      alert('There are no advances to export.');
       return;
     }
 
@@ -474,17 +484,17 @@ export default function AdvancesPage() {
     }
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Anticipos');
+    const ws = wb.addWorksheet('Supplier Advances');
 
     const headers = [
-      { title: 'Número', width: 18 },
-      { title: 'Fecha', width: 14 },
-      { title: 'Proveedor', width: 30 },
-      { title: 'Monto', width: 16 },
-      { title: 'Aplicado', width: 16 },
-      { title: 'Saldo', width: 16 },
-      { title: 'Motivo', width: 30 },
-      { title: 'Estado', width: 14 },
+      { title: 'Number', width: 18 },
+      { title: 'Date', width: 14 },
+      { title: 'Supplier', width: 30 },
+      { title: 'Amount', width: 16 },
+      { title: 'Applied', width: 16 },
+      { title: 'Balance', width: 16 },
+      { title: 'Reason', width: 30 },
+      { title: 'Status', width: 14 },
     ];
 
     let currentRow = 1;
@@ -494,12 +504,14 @@ export default function AdvancesPage() {
     currentRow++;
 
     ws.mergeCells(currentRow, 1, currentRow, headers.length);
-    ws.getCell(currentRow, 1).value = 'Anticipos a Proveedores';
+    ws.getCell(currentRow, 1).value = 'Supplier Advances';
+
     ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
     currentRow++;
 
     ws.mergeCells(currentRow, 1, currentRow, headers.length);
-    ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
+    ws.getCell(currentRow, 1).value = `Generated: ${new Date().toLocaleDateString('en-US')}`;
+
     currentRow++;
     currentRow++;
 
@@ -540,18 +552,21 @@ export default function AdvancesPage() {
     const totalApplied = filteredAdvances.reduce((s, a) => s + a.appliedAmount, 0);
     const totalBalance = filteredAdvances.reduce((s, a) => s + a.remainingBalance, 0);
 
-    ws.getCell(currentRow, 1).value = 'Resumen';
+    ws.getCell(currentRow, 1).value = 'Summary';
     ws.getCell(currentRow, 1).font = { bold: true };
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Total Anticipos';
+    ws.getCell(currentRow, 1).value = 'Total Advances';
+
     ws.getCell(currentRow, 2).value = totalAmount;
     ws.getCell(currentRow, 2).numFmt = '#,##0.00';
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Total Aplicado';
+    ws.getCell(currentRow, 1).value = 'Total Applied';
+
     ws.getCell(currentRow, 2).value = totalApplied;
     ws.getCell(currentRow, 2).numFmt = '#,##0.00';
     currentRow++;
-    ws.getCell(currentRow, 1).value = 'Saldo Pendiente';
+    ws.getCell(currentRow, 1).value = 'Remaining Balance';
+
     ws.getCell(currentRow, 2).value = totalBalance;
     ws.getCell(currentRow, 2).numFmt = '#,##0.00';
 
@@ -559,129 +574,151 @@ export default function AdvancesPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    saveAs(blob, `anticipos-proveedores-${new Date().toISOString().split('T')[0]}.xlsx`);
+    saveAs(blob, `supplier-advances-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div
+        className="space-y-6 rounded-3xl"
+        style={{ backgroundColor: palette.cream, minHeight: '100vh', padding: '24px' }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Anticipos a Proveedores</h1>
-            <p className="text-gray-600">Gestiona anticipos y pagos adelantados</p>
+            <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: palette.greenSoft }}>
+              Accounts Payable · Advances
+            </p>
+            <h1 className="text-3xl font-bold" style={{ color: palette.greenDark }}>Supplier Advances</h1>
+            <p className="text-base" style={{ color: palette.greenSoft }}>
+              Manage supplier prepayments, approvals, and outstanding balances.
+            </p>
           </div>
           <div className="flex space-x-3">
             <button 
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.greenMid }}
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+              style={{ backgroundColor: palette.green }}
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Anticipo
+              New Advance
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: palette.badgeNeutral }}>
+                <i className="ri-money-dollar-circle-line text-xl" style={{ color: palette.greenDark }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Anticipos</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {advances.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Advances</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
+                  RD$ {advances.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-time-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#F2E3C1' }}>
+                <i className="ri-time-line text-xl" style={{ color: palette.green }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {advances.filter(a => a.status === 'Pendiente').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Pending</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
+                  RD$ {advances.filter(a => a.status === 'Pending').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#D3E0CF' }}>
+                <i className="ri-check-line text-xl" style={{ color: palette.green }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Aprobados</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {advances.filter(a => a.status === 'Aprobado').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Approved</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
+                  RD$ {advances.filter(a => a.status === 'Approved').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-wallet-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#E5D7F0' }}>
+                <i className="ri-wallet-line text-xl" style={{ color: palette.greenMid }}></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Saldo Pendiente</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {advances.reduce((sum, a) => sum + a.remainingBalance, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Outstanding Balance</p>
+                <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
+                  RD$ {advances.reduce((sum, a) => sum + a.remainingBalance, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium mb-2" style={{ color: palette.greenDark }}>
+                Status <span className="text-red-500">*</span>
+              </label>
               <select 
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2"
+                style={{ borderColor: palette.badgeNeutral, color: palette.greenDark }}
               >
-                <option value="all">Todos los Estados</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Aprobado">Aprobado</option>
-                <option value="Aplicado">Aplicado</option>
-                <option value="Rechazado">Rechazado</option>
+                <option value="all">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Applied">Applied</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
             <div className="md:col-span-2 flex items-end">
               <button 
                 onClick={() => setFilterStatus('all')}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="w-full text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap shadow"
+                style={{ backgroundColor: palette.greenDark }}
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Advances Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)]">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Anticipos</h3>
+            <h3 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Advance List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimiento</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -704,9 +741,9 @@ export default function AdvancesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advance.dueDate}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        advance.status === 'Aprobado' ? 'bg-green-100 text-green-800' :
-                        advance.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' :
-                        advance.status === 'Aplicado' ? 'bg-blue-100 text-blue-800' :
+                        advance.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                        advance.status === 'Pending' ? 'bg-orange-100 text-orange-800' :
+                        advance.status === 'Applied' ? 'bg-blue-100 text-blue-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {advance.status}
@@ -726,7 +763,7 @@ export default function AdvancesPage() {
                         >
                           <i className="ri-edit-line"></i>
                         </button>
-                        {advance.status === 'Pendiente' && (
+                        {advance.status === 'Pending' && (
                           <>
                             <button 
                               onClick={() => handleApprove(advance.id)}
@@ -742,7 +779,7 @@ export default function AdvancesPage() {
                             </button>
                           </>
                         )}
-                        {advance.status === 'Aprobado' && advance.remainingBalance > 0 && (
+                        {advance.status === 'Approved' && advance.remainingBalance > 0 && (
                           <button 
                             onClick={() => handleApply(advance.id)}
                             className="text-blue-600 hover:text-blue-900 whitespace-nowrap"

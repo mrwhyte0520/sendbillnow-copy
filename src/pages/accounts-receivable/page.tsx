@@ -209,142 +209,160 @@ export default function AccountsReceivablePage() {
       description: 'Manage outstanding invoices',
       icon: 'ri-file-list-3-line',
       path: '/accounts-receivable/invoices',
-      stats: ''
+      accentBg: '#f3ecda',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Customer Management',
       description: 'Maintain client records and limits',
       icon: 'ri-user-line',
       path: '/accounts-receivable/customers',
-      stats: ''
+      accentBg: '#e3dcc8',
+      accentText: '#4a3c24',
     },
     {
       title: 'Customer Types',
       description: 'Configure customer tiers, discounts, limits',
       icon: 'ri-user-settings-line',
       path: '/accounts-receivable/customer-types',
-      stats: ''
+      accentBg: '#d8cbb5',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Payment Terms',
       description: 'Catalog of customer payment conditions',
       icon: 'ri-time-line',
       path: '/accounts-receivable/payment-terms',
-      stats: ''
+      accentBg: '#f3ecda',
+      accentText: '#6b5c3b',
     },
     {
       title: 'Payments Received',
       description: 'Register and track incoming payments',
       icon: 'ri-money-dollar-circle-line',
       path: '/accounts-receivable/payments',
-      stats: ''
+      accentBg: '#e3dcc8',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Receipts',
       description: 'Issue and track receipts',
       icon: 'ri-receipt-line',
       path: '/accounts-receivable/receipts',
-      stats: ''
+      accentBg: '#d8cbb5',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Customer Advances',
       description: 'Manage advance payments',
       icon: 'ri-wallet-line',
       path: '/accounts-receivable/advances',
-      stats: ''
+      accentBg: '#f3ecda',
+      accentText: '#7a2e1b',
     },
     {
       title: 'Sales Discounts',
       description: 'Reclassify revenue to discounts',
       icon: 'ri-percent-line',
       path: '/accounts-receivable/discounts',
-      stats: ''
+      accentBg: '#e3dcc8',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Credit Notes',
       description: 'Manage credit notes',
       icon: 'ri-file-reduce-line',
       path: '/accounts-receivable/credit-notes',
-      stats: ''
+      accentBg: '#d8cbb5',
+      accentText: '#2f3e1e',
     },
     {
       title: 'Debit Notes',
       description: 'Manage debit notes',
       icon: 'ri-file-add-line',
       path: '/accounts-receivable/debit-notes',
-      stats: ''
+      accentBg: '#f3ecda',
+      accentText: '#2f3e1e',
     },
     {
       title: 'AR Reports',
       description: 'Analyze receivables performance',
       icon: 'ri-bar-chart-line',
       path: '/accounts-receivable/reports',
-      stats: ''
+      accentBg: '#e3dcc8',
+      accentText: '#4a3c24',
     }
+  ];
+
+  const summaryCards = [
+    {
+      label: 'Total Receivables',
+      value: `RD$ ${formatAmount(summary.totalReceivables)}`,
+      valueColor: '#2f3e1e',
+      icon: 'ri-money-dollar-circle-line',
+      iconBg: '#e3dcc8',
+      iconColor: '#2f3e1e',
+    },
+    {
+      label: 'Overdue',
+      value: `RD$ ${formatAmount(summary.overdueAmount)}`,
+      valueColor: '#7a2e1b',
+      icon: 'ri-alarm-warning-line',
+      iconBg: '#f4d9d4',
+      iconColor: '#7a2e1b',
+    },
+    {
+      label: 'Current',
+      value: `RD$ ${formatAmount(summary.currentAmount)}`,
+      valueColor: '#2f3e1e',
+      icon: 'ri-time-line',
+      iconBg: '#d7e4c0',
+      iconColor: '#2f3e1e',
+    },
+    {
+      label: 'Active Customers',
+      value: summary.activeCustomers.toString(),
+      valueColor: '#2f3e1e',
+      icon: 'ri-user-line',
+      iconBg: '#e6ddf5',
+      iconColor: '#4a3c24',
+    },
   ];
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-[#f7f3e8] min-h-screen space-y-6 rounded-2xl">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Accounts Receivable</h1>
-            <p className="text-gray-600 mt-1">Full receivables and customer management</p>
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Collections</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Receivable</h1>
+            <p className="text-[#6b5c3b] mt-1">Full receivables and customer management</p>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div
-            className="p-6 rounded-lg shadow-sm border"
-            style={{ backgroundColor: theme.muted, borderColor: theme.softBorder }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Receivables</p>
-                <p className="text-2xl font-bold text-gray-900">RD${formatAmount(summary.totalReceivables)}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: theme.badgeBg }}>
-                <i className="ri-money-dollar-circle-line text-2xl" style={{ color: theme.primary }}></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Overdue</p>
-                <p className="text-2xl font-bold text-red-600">RD${formatAmount(summary.overdueAmount)}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <i className="ri-alarm-warning-line text-2xl text-red-600"></i>
+          {summaryCards.map((card, index) => (
+            <div
+              key={index}
+              className="p-6 rounded-2xl shadow-sm border border-[#e4d8c4] bg-white"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#6b5c3b]">{card.label}</p>
+                  <p className="text-2xl font-bold mt-1" style={{ color: card.valueColor }}>
+                    {card.value}
+                  </p>
+                </div>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ backgroundColor: card.iconBg }}
+                >
+                  <i className={`${card.icon} text-2xl`} style={{ color: card.iconColor }}></i>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Current</p>
-                <p className="text-2xl font-bold text-green-600">RD${formatAmount(summary.currentAmount)}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-time-line text-2xl text-green-600"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Customers</p>
-                <p className="text-2xl font-bold text-gray-900">{summary.activeCustomers}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-user-line text-2xl text-purple-600"></i>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Modules Grid */}
@@ -353,130 +371,122 @@ export default function AccountsReceivablePage() {
             <Link
               key={index}
               to={module.path}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 group"
+              className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6 hover:shadow-md transition-shadow duration-200 group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div
-                  className="w-12 h-12 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200"
-                  style={{ backgroundColor: theme.muted }}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200"
+                  style={{ backgroundColor: module.accentBg, color: module.accentText }}
                 >
-                  <i className={`${module.icon} text-2xl`} style={{ color: theme.primary }}></i>
+                  <i className={`${module.icon} text-2xl`}></i>
                 </div>
-                <span className="text-sm font-medium text-gray-500">{module.stats}</span>
               </div>
               
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-lg font-semibold text-[#2f3e1e] mb-2 group-hover:text-[#2f3e1e] transition-colors">
                 {module.title}
               </h3>
               
-              <p className="text-gray-600 text-sm">
+              <p className="text-[#6b5c3b] text-sm">
                 {module.description}
               </p>
               
-              <div className="mt-4 flex items-center text-sm font-medium" style={{ color: theme.primary }}>
+              <div className="mt-4 flex items-center text-sm font-medium text-[#2f3e1e]">
                 <span>Open</span>
-                <i className="ri-arrow-right-line ml-2 group-hover:translate-x-1 transition-transform duration-200"></i>
+                <i className="ri-arrow-right-line ml-2 group-hover:translate-x-1 transition-transform duration-200 text-[#2f3e1e]"></i>
               </div>
             </Link>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+          <div className="flex items-center gap-2 mb-4 text-[#6b5c3b]">
+            <i className="ri-flashlight-line"></i>
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">Quick Actions</h3>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Link
               to="/accounts-receivable/invoices"
-              className="flex items-center p-4 rounded-lg shadow-sm transition-colors"
-              style={{ backgroundColor: theme.muted }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#dfe4db'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = theme.muted; }}
+              className="flex items-center p-4 rounded-xl border border-[#e4d8c4] bg-[#fffdf6] hover:bg-[#f3ecda] transition-colors shadow-sm"
             >
-              <i className="ri-add-line text-2xl mr-3" style={{ color: theme.primary }}></i>
+              <i className="ri-add-line text-2xl mr-3 text-[#2f3e1e]"></i>
               <div>
-                <p className="font-medium text-gray-900">New Invoice</p>
-                <p className="text-sm text-gray-600">Create receivable invoice</p>
+                <p className="font-medium text-[#2f3e1e]">New Invoice</p>
+                <p className="text-sm text-[#6b5c3b]">Create receivable invoice</p>
               </div>
             </Link>
             
             <Link
               to="/accounts-receivable/payments"
-              className="flex items-center p-4 rounded-lg shadow-sm transition-colors"
-              style={{ backgroundColor: theme.muted }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#dfe4db'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = theme.muted; }}
+              className="flex items-center p-4 rounded-xl border border-[#e4d8c4] bg-[#fffdf6] hover:bg-[#f3ecda] transition-colors shadow-sm"
             >
-              <i className="ri-money-dollar-circle-line text-2xl mr-3" style={{ color: theme.accent }}></i>
+              <i className="ri-money-dollar-circle-line text-2xl mr-3 text-[#4b5c4b]"></i>
               <div>
-                <p className="font-medium text-gray-900">Record Payment</p>
-                <p className="text-sm text-gray-600">Register customer payment</p>
+                <p className="font-medium text-[#2f3e1e]">Record Payment</p>
+                <p className="text-sm text-[#6b5c3b]">Register customer payment</p>
               </div>
             </Link>
             
             <Link
               to="/accounts-receivable/customers"
-              className="flex items-center p-4 rounded-lg shadow-sm transition-colors"
-              style={{ backgroundColor: theme.muted }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#dfe4db'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = theme.muted; }}
+              className="flex items-center p-4 rounded-xl border border-[#e4d8c4] bg-[#fffdf6] hover:bg-[#f3ecda] transition-colors shadow-sm"
             >
-              <i className="ri-user-add-line text-2xl mr-3" style={{ color: theme.softText }}></i>
+              <i className="ri-user-add-line text-2xl mr-3 text-[#6b5c3b]"></i>
               <div>
-                <p className="font-medium text-gray-900">New Customer</p>
-                <p className="text-sm text-gray-600">Add customer record</p>
+                <p className="font-medium text-[#2f3e1e]">New Customer</p>
+                <p className="text-sm text-[#6b5c3b]">Add customer record</p>
               </div>
             </Link>
           </div>
         </div>
 
         {/* Recent AR Journal Entries */}
-        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              <i className="ri-book-2-line mr-2" style={{ color: theme.primary }}></i>
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">
+              <i className="ri-book-2-line mr-2 text-[#2f3e1e]"></i>
               Recent Accounting Entries (AR)
             </h3>
             <Link
               to="/accounting/general-journal"
-              className="text-sm font-medium"
-              style={{ color: theme.primary }}
+              className="text-sm font-medium text-[#2f3e1e]"
             >
               View all <i className="ri-arrow-right-line ml-1"></i>
             </Link>
           </div>
           
           {recentEntries.length === 0 ? (
-            <p className="text-gray-500 text-sm py-4 text-center">No recent accounting entries related to AR.</p>
+            <p className="text-[#6b5c3b] text-sm py-4 text-center">No recent accounting entries related to AR.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[#e4d8c4]">
+                <thead className="bg-[#f7f3e8]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entry No.</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debit</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credit</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#6b5c3b] uppercase">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#6b5c3b] uppercase">Entry No.</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-[#6b5c3b] uppercase">Description</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[#6b5c3b] uppercase">Debit</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-[#6b5c3b] uppercase">Credit</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-[#6b5c3b] uppercase">Status</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-[#6b5c3b] uppercase">Action</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#f3ecda]">
                   {recentEntries.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    <tr key={entry.id} className="hover:bg-[#fffdf6]">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2f3e1e]">
                         {formatDate(entry.entry_date)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium" style={{ color: theme.primary }}>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2f3e1e]">
                         {entry.entry_number}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={entry.description}>
+                      <td className="px-4 py-3 text-sm text-[#6b5c3b] max-w-xs truncate" title={entry.description}>
                         {entry.description}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-[#2f3e1e]">
                         RD$ {formatAmount(entry.total_debit)}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-[#2f3e1e]">
                         RD$ {formatAmount(entry.total_credit)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">

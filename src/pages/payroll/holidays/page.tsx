@@ -125,7 +125,7 @@ export default function HolidaysPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving holiday:', error);
-      alert('Error al guardar el día feriado');
+      alert('Error saving the holiday.');
     }
   };
 
@@ -158,14 +158,14 @@ export default function HolidaysPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea eliminar este día feriado?')) return;
+    if (!confirm('Are you sure you want to delete this holiday?')) return;
 
     try {
       await holidaysService.delete(id);
       setHolidays(prev => prev.filter(holiday => holiday.id !== id));
     } catch (error) {
       console.error('Error deleting holiday:', error);
-      alert('Error al eliminar el día feriado');
+      alert('Error deleting the holiday.');
     }
   };
 
@@ -184,7 +184,7 @@ export default function HolidaysPage() {
       ));
     } catch (error) {
       console.error('Error updating holiday status:', error);
-      alert('Error al actualizar el estado del día feriado');
+      alert('Error updating the holiday status.');
     }
   };
 
@@ -195,51 +195,41 @@ export default function HolidaysPage() {
       name: holiday.name,
       date: holiday.date,
       type: getTypeLabel(holiday.type),
-      isPaid: holiday.isPaid ? 'Sí' : 'No',
+      isPaid: holiday.isPaid ? 'Yes' : 'No',
       multiplier: holiday.multiplier,
       description: holiday.description,
-      isRecurring: holiday.isRecurring ? 'Sí' : 'No',
-      status: holiday.status === 'activo' ? 'Activo' : 'Inactivo',
+      isRecurring: holiday.isRecurring ? 'Yes' : 'No',
+      status: holiday.status === 'activo' ? 'Active' : 'Inactive',
     }));
 
     if (!rows.length) {
-      alert('No hay días feriados para exportar.');
+      alert('No holidays to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'name', title: 'Nombre', width: 24 },
-        { key: 'date', title: 'Fecha', width: 18 },
-        { key: 'type', title: 'Tipo', width: 16 },
-        { key: 'isPaid', title: 'Pagado', width: 10 },
-        { key: 'multiplier', title: 'Multiplicador', width: 14, numFmt: '0.0' },
-        { key: 'description', title: 'Descripción', width: 40 },
-        { key: 'isRecurring', title: 'Recurrente', width: 12 },
-        { key: 'status', title: 'Estado', width: 12 },
+        { key: 'name', title: 'Holiday', width: 24 },
+        { key: 'date', title: 'Date', width: 18 },
+        { key: 'type', title: 'Type', width: 16 },
+        { key: 'isPaid', title: 'Paid', width: 10 },
+        { key: 'multiplier', title: 'Multiplier', width: 14, numFmt: '0.0' },
+        { key: 'description', title: 'Description', width: 40 },
+        { key: 'isRecurring', title: 'Recurring', width: 12 },
+        { key: 'status', title: 'Status', width: 12 },
       ],
-      `dias_feriados_${today}`,
-      'Días Feriados'
+      `holidays_${today}`,
+      'Holidays'
     );
-  };
-
-  const getTypeColor = (type: Holiday['type']) => {
-    switch (type) {
-      case 'nacional': return 'bg-blue-100 text-blue-800';
-      case 'religioso': return 'bg-purple-100 text-purple-800';
-      case 'local': return 'bg-green-100 text-green-800';
-      case 'empresa': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   };
 
   const getTypeLabel = (type: Holiday['type']) => {
     switch (type) {
-      case 'nacional': return 'Nacional';
-      case 'religioso': return 'Religioso';
+      case 'nacional': return 'National';
+      case 'religioso': return 'Religious';
       case 'local': return 'Local';
-      case 'empresa': return 'Empresa';
+      case 'empresa': return 'Company';
       default: return type;
     }
   };
@@ -257,34 +247,34 @@ export default function HolidaysPage() {
       <div className="p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Días Feriados</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Holidays</h1>
           <div className="flex gap-3">
             <button
               onClick={() => navigate('/payroll')}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
             >
               <i className="ri-home-line"></i>
-              Volver al Inicio
+              Back to Home
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-add-line"></i>
-              Nuevo Feriado
+              New Holiday
             </button>
           </div>
         </div>
 
-        {/* Estadísticas */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-calendar-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-calendar-line text-xl text-[#4b5320]"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Feriados</p>
+                <p className="text-sm font-medium text-gray-600">Total Holidays</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
@@ -292,11 +282,11 @@ export default function HolidaysPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-flag-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-flag-line text-xl text-[#4b5320]"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Nacionales</p>
+                <p className="text-sm font-medium text-gray-600">National</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.nacional}</p>
               </div>
             </div>
@@ -304,11 +294,11 @@ export default function HolidaysPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-church-line text-xl text-purple-600"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-church-line text-xl text-[#4b5320]"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Religiosos</p>
+                <p className="text-sm font-medium text-gray-600">Religious</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.religioso}</p>
               </div>
             </div>
@@ -316,11 +306,11 @@ export default function HolidaysPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-building-line text-xl text-orange-600"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-building-line text-xl text-[#4b5320]"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Empresa</p>
+                <p className="text-sm font-medium text-gray-600">Company</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.empresa}</p>
               </div>
             </div>
@@ -328,18 +318,18 @@ export default function HolidaysPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-money-dollar-circle-line text-xl text-[#4b5320]"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pagados</p>
+                <p className="text-sm font-medium text-gray-600">Paid</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.pagados}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Controles */}
+        {/* Filters */}
         <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -347,55 +337,55 @@ export default function HolidaysPage() {
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar feriados..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search holidays..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
 
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
-                <option value="todos">Todos los tipos</option>
-                <option value="nacional">Nacional</option>
-                <option value="religioso">Religioso</option>
+                <option value="todos">All types</option>
+                <option value="nacional">National</option>
+                <option value="religioso">Religious</option>
                 <option value="local">Local</option>
-                <option value="empresa">Empresa</option>
+                <option value="empresa">Company</option>
               </select>
 
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="todos">Todos los estados</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
+                <option value="todos">All statuses</option>
+                <option value="activo">Active</option>
+                <option value="inactivo">Inactive</option>
               </select>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={exportToCSV}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
               >
                 <i className="ri-download-line mr-2"></i>
-                Exportar
+                Export
               </button>
             </div>
           </div>
         </div>
 
-        {/* Formulario */}
+        {/* Form */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {editingHoliday ? 'Editar Día Feriado' : 'Nuevo Día Feriado'}
+                  {editingHoliday ? 'Edit Holiday' : 'New Holiday'}
                 </h2>
               </div>
 
@@ -403,7 +393,7 @@ export default function HolidaysPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Feriado *
+                      Holiday Name *
                     </label>
                     <input
                       type="text"
@@ -416,7 +406,7 @@ export default function HolidaysPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha *
+                      Date *
                     </label>
                     <input
                       type="date"
@@ -429,7 +419,7 @@ export default function HolidaysPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo *
+                      Type *
                     </label>
                     <select
                       required
@@ -437,16 +427,16 @@ export default function HolidaysPage() {
                       value={formData.type}
                       onChange={(e) => setFormData({ ...formData, type: e.target.value as Holiday['type'] })}
                     >
-                      <option value="nacional">Nacional</option>
-                      <option value="religioso">Religioso</option>
+                      <option value="nacional">National</option>
+                      <option value="religioso">Religious</option>
                       <option value="local">Local</option>
-                      <option value="empresa">Empresa</option>
+                      <option value="empresa">Company</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Multiplicador de Pago
+                      Pay Multiplier
                     </label>
                     <input
                       type="number"
@@ -462,7 +452,7 @@ export default function HolidaysPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
+                    Description
                   </label>
                   <textarea
                     rows={3}
@@ -480,7 +470,7 @@ export default function HolidaysPage() {
                       checked={formData.isPaid}
                       onChange={(e) => setFormData({ ...formData, isPaid: e.target.checked })}
                     />
-                    <span className="ml-2 text-sm text-gray-700">Es día pagado</span>
+                    <span className="ml-2 text-sm text-gray-700">Paid day</span>
                   </label>
 
                   <label className="flex items-center">
@@ -490,7 +480,7 @@ export default function HolidaysPage() {
                       checked={formData.isRecurring}
                       onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
                     />
-                    <span className="ml-2 text-sm text-gray-700">Se repite anualmente</span>
+                    <span className="ml-2 text-sm text-gray-700">Repeats annually</span>
                   </label>
                 </div>
 
@@ -500,13 +490,13 @@ export default function HolidaysPage() {
                     onClick={resetForm}
                     className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors shadow-sm"
                   >
-                    {editingHoliday ? 'Actualizar' : 'Crear'} Feriado
+                    {editingHoliday ? 'Update' : 'Create'} Holiday
                   </button>
                 </div>
               </form>
@@ -514,29 +504,29 @@ export default function HolidaysPage() {
           </div>
         )}
 
-        {/* Lista de Feriados */}
+        {/* Holidays List */}
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Feriado
+                    Holiday
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
+                    Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Multiplicador
+                    Multiplier
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -551,13 +541,13 @@ export default function HolidaysPage() {
                           {holiday.isPaid && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               <i className="ri-money-dollar-circle-line mr-1"></i>
-                              Pagado
+                              Paid
                             </span>
                           )}
                           {holiday.isRecurring && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                               <i className="ri-repeat-line mr-1"></i>
-                              Recurrente
+                              Recurring
                             </span>
                           )}
                         </div>
@@ -565,7 +555,7 @@ export default function HolidaysPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {holiday.date && new Date(holiday.date).toLocaleDateString('es-DO', {
+                        {holiday.date && new Date(holiday.date).toLocaleDateString('en-US', {
                           weekday: 'long',
                           year: 'numeric',
                           month: 'long',
@@ -574,7 +564,7 @@ export default function HolidaysPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(holiday.type)}`}>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e6e9d5] text-[#4b5320]">
                         {getTypeLabel(holiday.type)}
                       </span>
                     </td>
@@ -584,32 +574,32 @@ export default function HolidaysPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         holiday.status === 'activo' 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#e6e9d5] text-[#4b5320]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {holiday.status === 'activo' ? 'Activo' : 'Inactivo'}
+                        {holiday.status === 'activo' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(holiday)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Editar"
+                          className="text-[#4b5320] hover:text-[#3d431a]"
+                          title="Edit"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => toggleStatus(holiday.id)}
                           className={`${holiday.status === 'activo' ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
-                          title={holiday.status === 'activo' ? 'Desactivar' : 'Activar'}
+                          title={holiday.status === 'activo' ? 'Deactivate' : 'Activate'}
                         >
                           <i className={`${holiday.status === 'activo' ? 'ri-pause-circle-line' : 'ri-play-circle-line'}`}></i>
                         </button>
                         <button
                           onClick={() => handleDelete(holiday.id)}
                           className="text-red-600 hover:text-red-900"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -624,13 +614,13 @@ export default function HolidaysPage() {
           {filteredHolidays.length === 0 && (
             <div className="text-center py-12">
               <i className="ri-calendar-line text-4xl text-gray-400 mb-4"></i>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No hay días feriados</h3>
-              <p className="text-gray-500 mb-4">No se encontraron días feriados con los filtros aplicados.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No holidays</h3>
+              <p className="text-gray-500 mb-4">No holidays found with the current filters.</p>
               <button
                 onClick={() => setShowForm(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors"
               >
-                Crear Primer Feriado
+                Create First Holiday
               </button>
             </div>
           )}

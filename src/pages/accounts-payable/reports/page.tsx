@@ -134,7 +134,7 @@ export default function ReportsPage() {
 
   const generateReport = async () => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para generar reportes');
+      alert('You must be signed in to generate reports');
       return;
     }
 
@@ -176,7 +176,7 @@ export default function ReportsPage() {
         if (outstanding <= 0) continue; // factura totalmente pagada
 
         const supplierId = inv.supplier_id as string;
-        const supplierName = (inv.suppliers as any)?.name || 'Proveedor';
+        const supplierName = (inv.suppliers as any)?.name || 'Supplier';
         if (!bySupplier[supplierId]) {
           bySupplier[supplierId] = {
             supplierId,
@@ -243,7 +243,7 @@ export default function ReportsPage() {
 
       const rows = filteredPayments.map((p: any) => ({
         date: p.payment_date,
-        supplier: (p.suppliers as any)?.name || 'Proveedor',
+        supplier: (p.suppliers as any)?.name || 'Supplier',
         reference: p.reference,
         method: p.method,
         amount: Number(p.amount) || 0,
@@ -252,7 +252,7 @@ export default function ReportsPage() {
     }
 
     setShowReport(true);
-    alert('Reporte generado exitosamente');
+    alert('Report generated successfully');
     } finally {
       setIsGenerating(false);
     }
@@ -270,17 +270,17 @@ export default function ReportsPage() {
     }
 
     doc.setFontSize(14);
-    doc.text('Reporte de Cuentas por Pagar', 20, 30);
+    doc.text('Accounts Payable Reports', 20, 30);
     
     // Información del reporte
     doc.setFontSize(12);
     doc.text(
-      `Tipo de Reporte: ${reportType === 'aging' ? 'Antigüedad de Saldos' : 'Reporte de Pagos'}`,
+      `Report Type: ${reportType === 'aging' ? 'Aging Summary' : 'Payments Report'}`,
       20,
       46,
     );
-    doc.text(`Período: ${startDate} - ${endDate}`, 20, 54);
-    doc.text(`Fecha de Generación: ${new Date().toLocaleDateString()}`, 20, 62);
+    doc.text(`Period: ${startDate} - ${endDate}`, 20, 54);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 62);
 
     if (reportType === 'aging') {
       // Reporte de Antigüedad de Saldos
@@ -295,7 +295,7 @@ export default function ReportsPage() {
       ]);
 
       doc.autoTable({
-        head: [['Proveedor', 'Total', 'Corriente', '1-30 días', '31-60 días', '61-90 días', '+90 días']],
+        head: [['Supplier', 'Total', 'Current', '1-30 days', '31-60 days', '61-90 days', '+90 days']],
         body: agingTableData,
         startY: 80,
         theme: 'striped',
@@ -314,9 +314,9 @@ export default function ReportsPage() {
       }), { total: 0, current: 0, days1_30: 0, days31_60: 0, days61_90: 0, over90: 0 });
 
       doc.autoTable({
-        head: [['', 'Total General', 'Corriente', '1-30 días', '31-60 días', '61-90 días', '+90 días']],
+        head: [['', 'Grand Total', 'Current', '1-30 days', '31-60 days', '61-90 days', '+90 days']],
         body: [[
-          'TOTALES',
+          'TOTALS',
           formatMoney(totals.total),
           formatMoney(totals.current),
           formatMoney(totals.days1_30),
@@ -339,7 +339,7 @@ export default function ReportsPage() {
       ]);
 
       doc.autoTable({
-        head: [['Fecha', 'Proveedor', 'Referencia', 'Método', 'Monto']],
+        head: [['Date', 'Supplier', 'Reference', 'Method', 'Amount']],
         body: paymentsTableData,
         startY: 80,
         theme: 'striped',
@@ -350,7 +350,7 @@ export default function ReportsPage() {
       // Total de pagos
       const totalPayments = paymentsData.reduce((sum, payment) => sum + payment.amount, 0);
       doc.autoTable({
-        body: [['TOTAL DE PAGOS', formatMoney(totalPayments)]],
+        body: [['TOTAL PAYMENTS', formatMoney(totalPayments)]],
         startY: ((((doc as any).lastAutoTable?.finalY) ?? 80) + 10),
         theme: 'plain',
         styles: { fontStyle: 'bold', fillColor: [240, 240, 240] }
@@ -362,8 +362,8 @@ export default function ReportsPage() {
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(10);
-      doc.text(`Página ${i} de ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
-      doc.text('Sistema Contable - Cuentas por Pagar', 20, doc.internal.pageSize.height - 10);
+      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
+      doc.text('Accounting System - Accounts Payable', 20, doc.internal.pageSize.height - 10);
     }
 
     doc.save(`reporte-cuentas-por-pagar-${reportType}-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -372,11 +372,11 @@ export default function ReportsPage() {
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const isAging = reportType === 'aging';
-    const sheetName = isAging ? 'Antigüedad' : 'Pagos';
+    const sheetName = isAging ? 'Aging' : 'Payments';
     const worksheet = workbook.addWorksheet(sheetName);
 
     const headerCompanyName = companyName || 'ContaBi';
-    const today = new Date().toLocaleDateString('es-DO');
+    const today = new Date().toLocaleDateString('en-US');
     const periodLabel = `${startDate} - ${endDate}`;
 
     // Encabezado principal
@@ -389,19 +389,19 @@ export default function ReportsPage() {
     currentRow += 1;
     worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
     worksheet.getCell(`A${currentRow}`).value = isAging
-      ? 'Reporte de Antigüedad de Saldos - Cuentas por Pagar'
-      : 'Reporte de Pagos a Proveedores';
+      ? 'Accounts Payable Aging Report'
+      : 'Supplier Payments Report';
     worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 13 };
     worksheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center' } as any;
 
     currentRow += 1;
     worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
-    worksheet.getCell(`A${currentRow}`).value = `Período: ${periodLabel}`;
+    worksheet.getCell(`A${currentRow}`).value = `Period: ${periodLabel}`;
     worksheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center' } as any;
 
     currentRow += 1;
     worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
-    worksheet.getCell(`A${currentRow}`).value = `Fecha de generación: ${today}`;
+    worksheet.getCell(`A${currentRow}`).value = `Generated on: ${today}`;
     worksheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center' } as any;
 
     currentRow += 2; // línea en blanco
@@ -409,13 +409,13 @@ export default function ReportsPage() {
     if (isAging) {
       // Encabezados de columnas para Antigüedad
       const headerRow = worksheet.addRow([
-        'Proveedor',
+        'Supplier',
         'Total',
-        'Corriente',
-        '1-30 días',
-        '31-60 días',
-        '61-90 días',
-        '+90 días',
+        'Current',
+        '1-30 days',
+        '31-60 days',
+        '61-90 days',
+        '+90 days',
       ]);
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
@@ -482,11 +482,11 @@ export default function ReportsPage() {
     } else {
       // Encabezados de columnas para Pagos
       const headerRow = worksheet.addRow([
-        'Fecha',
-        'Proveedor',
-        'Referencia',
-        'Método',
-        'Monto',
+        'Date',
+        'Supplier',
+        'Reference',
+        'Method',
+        'Amount',
       ]);
       headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       headerRow.fill = {
@@ -518,7 +518,7 @@ export default function ReportsPage() {
       );
 
       const totalRow = worksheet.addRow([
-        'TOTAL DE PAGOS',
+        'TOTAL PAYMENTS',
         '',
         '',
         '',
@@ -544,7 +544,7 @@ export default function ReportsPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    const safeType = isAging ? 'antiguedad' : 'pagos';
+    const safeType = isAging ? 'aging' : 'payments';
     const fileName = `reporte_cxp_${safeType}_${new Date()
       .toISOString()
       .split('T')[0]}.xlsx`;
@@ -553,57 +553,57 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f8f4ec] min-h-screen p-6 rounded-xl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reportes de Cuentas por Pagar</h1>
+          <h1 className="text-2xl font-bold text-[#2f3c24]">Accounts Payable Reports</h1>
           {companyName && (
-            <p className="text-sm font-medium text-gray-700">{companyName}</p>
+            <p className="text-sm font-medium text-[#4c5b36]">{companyName}</p>
           )}
-          <p className="text-gray-600">Genera reportes detallados de proveedores y pagos</p>
+          <p className="text-[#5c6b42]">Generate detailed supplier and payment reports</p>
         </div>
 
         {/* Report Configuration */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuración del Reporte</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <h3 className="text-lg font-semibold text-[#2f3c24] mb-4">Report Configuration</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Report Type</label>
               <select 
                 value={reportType}
                 onChange={(e) => setReportType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
-                <option value="aging">Antigüedad de Saldos</option>
-                <option value="payments">Reporte de Pagos</option>
+                <option value="aging">Aging Summary</option>
+                <option value="payments">Payments Report</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Inicio</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Start Date</label>
               <input 
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Fin</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">End Date</label>
               <input 
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Supplier</label>
               <select 
                 value={supplier}
                 onChange={(e) => setSupplier(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
-                <option value="all">Todos los Proveedores</option>
+                <option value="all">All Suppliers</option>
                 {suppliers.map((sup: any) => (
                   <option key={sup.id} value={sup.id}>{sup.name}</option>
                 ))}
@@ -613,11 +613,11 @@ export default function ReportsPage() {
               <button 
                 onClick={generateReport}
                 disabled={isGenerating}
-                className={`w-full bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap ${
-                  isGenerating ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
+                className={`w-full bg-[#3f4d2c] text-white py-2 px-4 rounded-lg transition-colors whitespace-nowrap shadow-sm ${
+                  isGenerating ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#2f3a1f]'
                 }`}
               >
-                {isGenerating ? 'Generando...' : 'Generar Reporte'}
+                {isGenerating ? 'Generating...' : 'Generate Report'}
               </button>
             </div>
           </div>
@@ -630,72 +630,72 @@ export default function ReportsPage() {
             <div className="flex justify-end space-x-3">
               <button 
                 onClick={exportToPDF}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
+                className="bg-[#5e6b3c] text-white px-4 py-2 rounded-lg hover:bg-[#4c582e] transition-colors whitespace-nowrap shadow"
               >
                 <i className="ri-file-pdf-line mr-2"></i>
-                Exportar PDF
+                Export PDF
               </button>
               <button 
                 onClick={exportToExcel}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+                className="bg-[#7a8b4a] text-white px-4 py-2 rounded-lg hover:bg-[#67753b] transition-colors whitespace-nowrap shadow"
               >
                 <i className="ri-file-excel-line mr-2"></i>
-                Exportar Excel
+                Export Excel
               </button>
             </div>
 
             {reportType === 'aging' ? (
               /* Aging Report */
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Reporte de Antigüedad de Saldos</h3>
-                  <p className="text-gray-600">Período: {startDate} - {endDate}</p>
+              <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5]">
+                <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+                  <h3 className="text-lg font-semibold text-[#2f3c24]">Aging Report</h3>
+                  <p className="text-[#5c6b42]">Period: {startDate} - {endDate}</p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-[#eadfca]">
+                    <thead className="bg-[#f5ebd6]">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Corriente</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">1-30 días</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">31-60 días</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">61-90 días</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">+90 días</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Total</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Current</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">1-30 days</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">31-60 days</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">61-90 days</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">+90 days</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white divide-y divide-[#f0e4cd]">
                       {agingData.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.supplier}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">{formatMoney(item.total)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600">{formatMoney(item.current)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-yellow-600">{formatMoney(item.days1_30)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-orange-600">{formatMoney(item.days31_60)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600">{formatMoney(item.days61_90)}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-800">{formatMoney(item.over90)}</td>
+                        <tr key={index} className="hover:bg-[#f9f3e3] transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2f3c24]">{item.supplier}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-[#2f3c24]">{formatMoney(item.total)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#4f5e35]">{formatMoney(item.current)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#7c8b4a]">{formatMoney(item.days1_30)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#9fa868]">{formatMoney(item.days31_60)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#b5b378]">{formatMoney(item.days61_90)}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#c28449]">{formatMoney(item.over90)}</td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50">
+                    <tfoot className="bg-[#f5ebd6]">
                       <tr>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">TOTALES</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#2f3c24]">TOTALS</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#2f3c24]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.total, 0))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#4f5e35]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.current, 0))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-yellow-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#7c8b4a]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.days1_30, 0))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-orange-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#9fa868]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.days31_60, 0))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-red-600">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#b5b378]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.days61_90, 0))}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-red-800">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#c28449]">
                           {formatMoney(agingData.reduce((sum, item) => sum + item.over90, 0))}
                         </td>
                       </tr>
@@ -705,47 +705,49 @@ export default function ReportsPage() {
               </div>
             ) : (
               /* Payments Report */
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900">Reporte de Pagos</h3>
-                  <p className="text-gray-600">Período: {startDate} - {endDate}</p>
+              <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5]">
+                <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+                  <h3 className="text-lg font-semibold text-[#2f3c24]">Payments Report</h3>
+                  <p className="text-[#5c6b42]">Period: {startDate} - {endDate}</p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-[#eadfca]">
+                    <thead className="bg-[#f5ebd6]">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Reference</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Method</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Amount</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white divide-y divide-[#f0e4cd]">
                       {paymentsData.map((payment, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.date}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{payment.supplier}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.reference}</td>
+                        <tr key={index} className="hover:bg-[#f9f3e3] transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{payment.date}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2f3c24]">{payment.supplier}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{payment.reference}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              payment.method === 'Transferencia' ? 'bg-blue-100 text-blue-800' :
-                              payment.method === 'Cheque' ? 'bg-green-100 text-green-800' :
-                              'bg-orange-100 text-orange-800'
+                              payment.method === 'Transferencia' ? 'bg-[#d7e2b0] text-[#2f3c24]' :
+                              payment.method === 'Cheque' ? 'bg-[#b5c38a] text-[#2f3c24]' :
+                              'bg-[#f3d8b6] text-[#2f3c24]'
                             }`}>
-                              {payment.method}
+                              {payment.method === 'Transferencia' ? 'Transfer' :
+                                payment.method === 'Cheque' ? 'Check' :
+                                payment.method}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-[#2f3c24]">
                             {formatMoney(payment.amount)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="bg-gray-50">
+                    <tfoot className="bg-[#f5ebd6]">
                       <tr>
-                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">TOTAL DE PAGOS</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
+                        <td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#2f3c24]">TOTAL PAYMENTS</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-[#2f3c24]">
                           {formatMoney(paymentsData.reduce((sum, payment) => sum + payment.amount, 0))}
                         </td>
                       </tr>

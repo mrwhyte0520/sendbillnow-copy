@@ -9,6 +9,14 @@ import { invoicesService, receiptsService } from '../../../services/database';
 import { formatDateEsDO } from '../../../utils/date';
 import DocumentPreviewModal from '../../../components/common/DocumentPreviewModal';
 
+const BASE_CARD_CLASSES =
+  'bg-[#FBF7EF] border border-[#D9C8A9] rounded-2xl shadow-[0_18px_38px_rgba(55,74,58,0.12)]';
+const ICON_WRAPPER_BASE = 'w-12 h-12 rounded-xl flex items-center justify-center';
+const PRIMARY_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#3C4F3C] text-white rounded-lg hover:bg-[#2D3B2E] transition-colors whitespace-nowrap shadow-[0_10px_25px_rgba(60,79,60,0.35)]';
+const SECONDARY_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#EBDAC0] text-[#2F3D2E] rounded-lg hover:bg-[#DEC6A0] transition-colors whitespace-nowrap shadow-[0_8px_18px_rgba(235,218,192,0.6)]';
+
 export default function SalesReportsPage() {
   const { user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('today');
@@ -55,6 +63,54 @@ export default function SalesReportsPage() {
     percentage: string;
     transactions: number;
   }[]>([]);
+
+  const summaryCards = [
+    {
+      id: 'total-sales',
+      title: 'Total Sales (with VAT)',
+      value: salesSummary.totalSales,
+      helper: 'Sum of invoice totals',
+      icon: 'ri-money-dollar-circle-line',
+      accentBg: 'bg-[#DDE7D0]',
+      iconColor: 'text-[#2F3D2E]',
+    },
+    {
+      id: 'sales-without-tax',
+      title: 'Sales without VAT',
+      value: salesSummary.salesWithoutTax,
+      helper: 'Subtotal before taxes',
+      icon: 'ri-receipt-line',
+      accentBg: 'bg-[#E1EFE3]',
+      iconColor: 'text-[#2F3D2E]',
+    },
+    {
+      id: 'issued-invoices',
+      title: 'Invoices Issued',
+      value: salesSummary.totalInvoices.toString(),
+      helper: 'Excludes voided invoices',
+      icon: 'ri-file-text-line',
+      accentBg: 'bg-[#E7DFC9]',
+      iconColor: 'text-[#324532]',
+    },
+    {
+      id: 'average-ticket',
+      title: 'Average Ticket',
+      value: salesSummary.averageTicket,
+      helper: 'Average per invoice',
+      icon: 'ri-calculator-line',
+      accentBg: 'bg-[#E5E2D9]',
+      iconColor: 'text-[#2F3D2E]',
+    },
+    {
+      id: 'profit-margin',
+      title: 'Profit Margin',
+      value: salesSummary.profitMargin,
+      helper: 'Estimated (30% of net sales)',
+      icon: 'ri-line-chart-line',
+      accentBg: 'bg-[#F1E0C7]',
+      iconColor: 'text-[#3E432E]',
+    },
+  ];
 
   // Cargar datos iniciales y al cambiar el período
   useEffect(() => {
@@ -106,23 +162,23 @@ export default function SalesReportsPage() {
   };
 
   const reportTypes = [
-    { id: 'sales-summary', name: 'Resumen de Ventas', icon: 'ri-bar-chart-line' },
-    { id: 'product-sales', name: 'Ventas por Producto', icon: 'ri-shopping-bag-line' },
-    { id: 'customer-sales', name: 'Ventas por Cliente', icon: 'ri-user-line' },
-    { id: 'payment-methods', name: 'Métodos de Pago', icon: 'ri-bank-card-line' },
-    { id: 'tax-summary', name: 'Resumen de Impuestos', icon: 'ri-file-text-line' },
-    { id: 'profit-analysis', name: 'Análisis de Rentabilidad', icon: 'ri-line-chart-line' }
+    { id: 'sales-summary', name: 'Sales Summary', icon: 'ri-bar-chart-line' },
+    { id: 'product-sales', name: 'Sales by Product', icon: 'ri-shopping-bag-line' },
+    { id: 'customer-sales', name: 'Sales by Customer', icon: 'ri-user-line' },
+    { id: 'payment-methods', name: 'Payment Methods', icon: 'ri-bank-card-line' },
+    { id: 'tax-summary', name: 'Tax Summary', icon: 'ri-file-text-line' },
+    { id: 'profit-analysis', name: 'Profitability Analysis', icon: 'ri-line-chart-line' }
   ];
 
   const periods = [
-    { id: 'today', name: 'Hoy' },
-    { id: 'yesterday', name: 'Ayer' },
-    { id: 'this-week', name: 'Esta Semana' },
-    { id: 'last-week', name: 'Semana Pasada' },
-    { id: 'this-month', name: 'Este Mes' },
-    { id: 'last-month', name: 'Mes Pasado' },
-    { id: 'this-year', name: 'Este Año' },
-    { id: 'custom', name: 'Personalizado' }
+    { id: 'today', name: 'Today' },
+    { id: 'yesterday', name: 'Yesterday' },
+    { id: 'this-week', name: 'This Week' },
+    { id: 'last-week', name: 'Last Week' },
+    { id: 'this-month', name: 'This Month' },
+    { id: 'last-month', name: 'Last Month' },
+    { id: 'this-year', name: 'This Year' },
+    { id: 'custom', name: 'Custom' }
   ];
 
   const parseSelectedPeriod = () => {
@@ -181,7 +237,8 @@ export default function SalesReportsPage() {
 
   const handleGenerateReport = async () => {
     if (!user) {
-      alert('Debe iniciar sesión para generar reportes.');
+      alert('You must be signed in to generate reports.');
+
       return;
     }
 
@@ -216,7 +273,7 @@ export default function SalesReportsPage() {
           totalTax: 'RD$ 0',
           netSales: 'RD$ 0',
           grossProfit: 'RD$ 0',
-          profitMargin: '0.0%',
+          profitMargin: '0.0%'
         });
         setTopProducts([]);
         setTopCustomers([]);
@@ -315,7 +372,8 @@ export default function SalesReportsPage() {
 
       const methodMap = new Map<string, { amount: number; count: number }>();
       filteredReceipts.forEach((r: any) => {
-        const method = r.payment_method || 'Otro';
+        const method = r.payment_method || 'Other';
+
         const amount = Number(r.amount) || 0;
         const current = methodMap.get(method) || { amount: 0, count: 0 };
         current.amount += amount;
@@ -643,48 +701,51 @@ export default function SalesReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 bg-[#F4ECDC] min-h-screen rounded-[32px] p-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Reportes de Ventas</h1>
-            <p className="text-gray-600">Análisis detallado de ventas y rendimiento</p>
+            <span className="inline-flex items-center text-xs font-semibold tracking-[0.2em] uppercase text-[#7A705A]">
+              Performance
+            </span>
+            <h1 className="text-3xl font-semibold text-[#2F3D2E] mt-1">Sales Reports</h1>
+            <p className="text-[#5F6652]">Comprehensive insights across sales, customers, and payments.</p>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {loading && (
-              <span className="text-sm text-gray-500 flex items-center">
-                <span className="inline-block w-3 h-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mr-2" />
-                Actualizando...
+              <span className="text-sm text-[#7A705A] flex items-center">
+                <span className="inline-block w-3 h-3 rounded-full border-2 border-[#3C4F3C] border-t-transparent animate-spin mr-2" />
+                Updating...
               </span>
             )}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+              className={SECONDARY_BUTTON_CLASSES}
             >
               <i className="ri-filter-line mr-2"></i>
-              Filtros
+              Filters
             </button>
             <button
               onClick={handleGenerateReport}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className={PRIMARY_BUTTON_CLASSES}
             >
               <i className="ri-refresh-line mr-2"></i>
-              Generar Reporte
+              Generate Report
             </button>
           </div>
         </div>
 
         {/* Filters */}
         {showFilters && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className={`${BASE_CARD_CLASSES} p-6`}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Reporte</label>
+                <label className="block text-sm font-medium text-[#5F6652] mb-2">Report Type</label>
                 <select
                   value={selectedReport}
                   onChange={(e) => setSelectedReport(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                  className="w-full px-3 py-2 border border-[#D9C8A9] rounded-lg focus:ring-2 focus:ring-[#3C4F3C] focus:border-[#3C4F3C] pr-8 bg-white text-[#2F3D2E]"
                 >
                   {reportTypes.map((type) => (
                     <option key={type.id} value={type.id}>{type.name}</option>
@@ -692,11 +753,11 @@ export default function SalesReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
+                <label className="block text-sm font-medium text-[#5F6652] mb-2">Period</label>
                 <select
                   value={selectedPeriod}
                   onChange={(e) => setSelectedPeriod(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                  className="w-full px-3 py-2 border border-[#D9C8A9] rounded-lg focus:ring-2 focus:ring-[#3C4F3C] focus:border-[#3C4F3C] pr-8 bg-white text-[#2F3D2E]"
                 >
                   {periods.map((period) => (
                     <option key={period.id} value={period.id}>{period.name}</option>
@@ -704,28 +765,28 @@ export default function SalesReportsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Acciones</label>
+                <label className="block text-sm font-medium text-[#5F6652] mb-2">Quick Actions</label>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleExportReport('pdf')}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
+                    className="flex-1 px-3 py-2 bg-[#B9583C] text-white rounded-lg hover:bg-[#a24b31] transition-colors text-sm whitespace-nowrap shadow-[0_10px_20px_rgba(185,88,60,0.35)]"
                   >
                     <i className="ri-file-pdf-line mr-1"></i>
                     PDF
                   </button>
                   <button
                     onClick={() => handleExportReport('excel')}
-                    className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                    className="flex-1 px-3 py-2 bg-[#3C4F3C] text-white rounded-lg hover:bg-[#2D3B2E] transition-colors text-sm whitespace-nowrap shadow-[0_10px_20px_rgba(60,79,60,0.35)]"
                   >
                     <i className="ri-file-excel-line mr-1"></i>
                     Excel
                   </button>
                   <button
                     onClick={handlePrintReport}
-                    className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm whitespace-nowrap"
+                    className="flex-1 px-3 py-2 bg-[#7C6D5E] text-white rounded-lg hover:bg-[#6A5F53] transition-colors text-sm whitespace-nowrap shadow-[0_10px_20px_rgba(124,109,94,0.35)]"
                   >
                     <i className="ri-printer-line mr-1"></i>
-                    Imprimir
+                    Print
                   </button>
                 </div>
               </div>
@@ -735,158 +796,112 @@ export default function SalesReportsPage() {
 
         {/* Sales Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ventas Totales (con ITBIS)</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.totalSales}</p>
+          {summaryCards.map((card) => (
+            <div key={card.id} className={`${BASE_CARD_CLASSES} p-6`}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#5F6652]">{card.title}</p>
+                  <p className="text-2xl font-semibold text-[#2F3D2E] mt-1">{card.value}</p>
+                </div>
+                <div className={`${ICON_WRAPPER_BASE} ${card.accentBg}`}>
+                  <i className={`${card.icon} text-xl ${card.iconColor}`}></i>
+                </div>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500">Suma de totales de facturas</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ventas sin ITBIS</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.salesWithoutTax}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-teal-100">
-                <i className="ri-receipt-line text-xl text-teal-600"></i>
+              <div className="mt-4">
+                <span className="text-xs text-[#7A705A]">{card.helper}</span>
               </div>
             </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500">Subtotal antes de impuestos</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Facturas Emitidas</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.totalInvoices}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-file-text-line text-xl text-green-600"></i>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500">No incluye anuladas</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ticket Promedio</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.averageTicket}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
-                <i className="ri-calculator-line text-xl text-purple-600"></i>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500">Promedio por factura</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Margen de Ganancia</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{salesSummary.profitMargin}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-orange-100">
-                <i className="ri-line-chart-line text-xl text-orange-600"></i>
-              </div>
-            </div>
-            <div className="mt-4">
-              <span className="text-xs text-gray-500">Estimado (30% de ventas netas)</span>
-            </div>
-          </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Products */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Productos Más Vendidos</h3>
+          <div className={`${BASE_CARD_CLASSES}`}>
+            <div className="p-6 border-b border-[#D9C8A9]">
+              <h3 className="text-lg font-semibold text-[#2F3D2E]">Top Products</h3>
+              <p className="text-sm text-[#7A705A] mt-1">Leaders by revenue and volume</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {topProducts.map((product, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 rounded-2xl bg-[#FFF9EE] border border-[#EADDC4]">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                        <span className="text-sm font-bold text-blue-600">{index + 1}</span>
+                      <div className="w-10 h-10 rounded-full bg-[#DDE7D0] flex items-center justify-center mr-3 text-[#2F3D2E] font-semibold">
+                        {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-600">Vendidos: {product.quantity} unidades</p>
+                        <p className="font-medium text-[#2F3D2E]">{product.name}</p>
+                        <p className="text-sm text-[#7A705A]">Units sold: {product.quantity}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">{product.revenue}</p>
-                      <p className="text-sm text-gray-500">Margen: {product.margin}</p>
+                      <p className="font-semibold text-[#3C4F3C]">{product.revenue}</p>
+                      <p className="text-sm text-[#7A705A]">Margin: {product.margin}</p>
                     </div>
                   </div>
                 ))}
+                {!topProducts.length && (
+                  <p className="text-sm text-[#7A705A] text-center">No product performance data for this period.</p>
+                )}
               </div>
             </div>
           </div>
 
           {/* Top Customers */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Mejores Clientes</h3>
+          <div className={`${BASE_CARD_CLASSES}`}>
+            <div className="p-6 border-b border-[#D9C8A9]">
+              <h3 className="text-lg font-semibold text-[#2F3D2E]">Top Customers</h3>
+              <p className="text-sm text-[#7A705A] mt-1">Most valuable client relationships</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {topCustomers.map((customer, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 rounded-2xl bg-[#FFF9EE] border border-[#EADDC4]">
                     <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                        <span className="text-sm font-bold text-green-600">{index + 1}</span>
+                      <div className="w-10 h-10 rounded-full bg-[#E7DFC9] flex items-center justify-center mr-3 text-[#2F3D2E] font-semibold">
+                        {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-sm text-gray-600">{customer.invoices} facturas</p>
+                        <p className="font-medium text-[#2F3D2E]">{customer.name}</p>
+                        <p className="text-sm text-[#7A705A]">{customer.invoices} invoices</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">{customer.revenue}</p>
-                      <p className="text-sm text-gray-500">{customer.lastPurchase}</p>
+                      <p className="font-semibold text-[#3C4F3C]">{customer.revenue}</p>
+                      <p className="text-sm text-[#7A705A]">Last purchase: {customer.lastPurchase}</p>
                     </div>
                   </div>
                 ))}
+                {!topCustomers.length && (
+                  <p className="text-sm text-[#7A705A] text-center">No customer insights available.</p>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Métodos de Pago</h3>
+        <div className={`${BASE_CARD_CLASSES}`}>
+          <div className="p-6 border-b border-[#D9C8A9]">
+            <h3 className="text-lg font-semibold text-[#2F3D2E]">Payment Methods</h3>
+            <p className="text-sm text-[#7A705A] mt-1">Breakdown of collected payments</p>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {paymentMethods.map((method, index) => (
-                <div key={index} className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-                    <i className="ri-bank-card-line text-2xl text-blue-600"></i>
+                <div key={index} className="text-center rounded-2xl border border-[#EADDC4] p-4 bg-white shadow-[0_10px_25px_rgba(55,74,58,0.08)]">
+                  <div className="w-16 h-16 rounded-2xl bg-[#DDE7D0] flex items-center justify-center mx-auto mb-4">
+                    <i className="ri-bank-card-line text-2xl text-[#2F3D2E]"></i>
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">{method.method}</h4>
-                  <p className="text-2xl font-bold text-green-600 mb-1">{method.amount}</p>
-                  <p className="text-sm text-gray-600 mb-1">{method.percentage} del total</p>
-                  <p className="text-xs text-gray-500">{method.transactions} transacciones</p>
+                  <h4 className="font-semibold text-[#2F3D2E] mb-1">{method.method}</h4>
+                  <p className="text-2xl font-bold text-[#3C4F3C] mb-1">{method.amount}</p>
+                  <p className="text-sm text-[#7A705A] mb-1">{method.percentage} of total</p>
+                  <p className="text-xs text-[#7A705A]">{method.transactions} transactions</p>
                 </div>
               ))}
+              {!paymentMethods.length && (
+                <p className="text-sm text-[#7A705A] text-center col-span-full">No payment activity for the selected period.</p>
+              )}
             </div>
           </div>
         </div>

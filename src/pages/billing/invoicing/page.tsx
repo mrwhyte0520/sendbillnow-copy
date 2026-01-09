@@ -29,6 +29,16 @@ import {
   taxService,
 } from '../../../services/database';
 
+const BASE_CARD_CLASSES =
+  'bg-[#FBF7EF] border border-[#D9C8A9] rounded-2xl shadow-[0_18px_38px_rgba(55,74,58,0.12)]';
+const ICON_WRAPPER_BASE = 'w-12 h-12 rounded-xl flex items-center justify-center';
+const PRIMARY_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#3C4F3C] text-white rounded-lg hover:bg-[#2D3B2E] transition font-semibold flex items-center gap-2 shadow-[0_10px_25px_rgba(60,79,60,0.35)]';
+const ACCENT_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#B9583C] text-white rounded-lg hover:bg-[#a24b31] transition font-semibold flex items-center gap-2 shadow-[0_10px_20px_rgba(185,88,60,0.35)]';
+const SECONDARY_BUTTON_CLASSES =
+  'px-4 py-2 bg-[#EBDAC0] text-[#2F3D2E] rounded-lg hover:bg-[#DEC6A0] transition font-semibold flex items-center gap-2';
+
 interface UiInvoiceItem {
   itemId?: string;
   description: string;
@@ -411,16 +421,16 @@ export default function InvoicingPage() {
     loadCompanyInfo();
   }, [user?.id]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-gray-200 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const STATUS_BADGE_CLASSES: Record<UiInvoice['status'], string> = {
+    paid: 'bg-[#DDE7D0] text-[#2F3D2E]',
+    pending: 'bg-[#F3E9C8] text-[#7A705A]',
+    overdue: 'bg-[#F7D8CF] text-[#7C392C]',
+    draft: 'bg-[#E5E2D9] text-[#7A705A]',
+    cancelled: 'bg-[#E0D8C5] text-[#7A705A]',
   };
+
+  const getStatusBadgeClasses = (status: UiInvoice['status']) =>
+    STATUS_BADGE_CLASSES[status] || 'bg-[#E5E2D9] text-[#7A705A]';
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -1428,117 +1438,98 @@ export default function InvoicingPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 bg-[#F4ECDC] min-h-screen rounded-[32px] p-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Invoicing</h1>
-            <p className="text-gray-600">Complete invoice and fiscal document management</p>
+            <span className="inline-flex text-xs font-semibold tracking-[0.2em] uppercase text-[#7A705A]">
+              Billing
+            </span>
+            <h1 className="text-3xl font-semibold text-[#2F3D2E] mt-1">Invoicing Hub</h1>
+            <p className="text-[#5F6652]">
+              Generate invoices, manage fiscal documents, and monitor payment performance.
+            </p>
           </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={() => handleExportInvoices('pdf')}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
-            >
-              <i className="ri-file-pdf-line mr-2"></i>
-              Export PDF
+          <div className="flex flex-wrap gap-3">
+            <button onClick={() => handleExportInvoices('pdf')} className={ACCENT_BUTTON_CLASSES}>
+              <i className="ri-file-pdf-line" />
+              <span>Export PDF</span>
             </button>
-            <button
-              onClick={() => handleExportInvoices('excel')}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
-            >
-              <i className="ri-file-excel-line mr-2"></i>
-              Export Excel
+            <button onClick={() => handleExportInvoices('excel')} className={PRIMARY_BUTTON_CLASSES}>
+              <i className="ri-file-excel-line" />
+              <span>Export Excel</span>
             </button>
-            <button
-              onClick={handleCreateInvoice}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-            >
-              <i className="ri-add-line mr-2"></i>
-              New Invoice
+            <button onClick={handleCreateInvoice} className={SECONDARY_BUTTON_CLASSES}>
+              <i className="ri-add-line" />
+              <span>New Invoice</span>
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{invoices.length}</p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-file-text-line text-xl text-blue-600"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Paid Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {invoices.filter(inv => inv.status === 'paid').length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-check-line text-xl text-green-600"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {invoices.filter(inv => inv.status === 'pending').length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-yellow-100">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Overdue Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {invoices.filter(inv => inv.status === 'overdue').length}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-red-100">
-                <i className="ri-alert-line text-xl text-red-600"></i>
+          {[
+            {
+              label: 'Total Invoices',
+              value: invoices.length,
+              icon: 'ri-file-text-line',
+              accent: 'bg-[#DDE7D0]',
+            },
+            {
+              label: 'Paid Invoices',
+              value: invoices.filter((inv) => inv.status === 'paid').length,
+              icon: 'ri-check-line',
+              accent: 'bg-[#E1EFE3]',
+            },
+            {
+              label: 'Pending Invoices',
+              value: invoices.filter((inv) => inv.status === 'pending').length,
+              icon: 'ri-time-line',
+              accent: 'bg-[#F3E9C8]',
+            },
+            {
+              label: 'Overdue Invoices',
+              value: invoices.filter((inv) => inv.status === 'overdue').length,
+              icon: 'ri-alert-line',
+              accent: 'bg-[#F7D8CF]',
+            },
+          ].map((card) => (
+            <div key={card.label} className={`${BASE_CARD_CLASSES} p-6`}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-[#5F6652]">{card.label}</p>
+                  <p className="text-2xl font-semibold text-[#2F3D2E] mt-1">{card.value}</p>
+                </div>
+                <div className={`${ICON_WRAPPER_BASE} ${card.accent}`}>
+                  <i className={`${card.icon} text-xl text-[#2F3D2E]`}></i>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className={`${BASE_CARD_CLASSES} p-6`}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-2">Search</label>
               <div className="relative">
                 <input
                   type="text"
                   placeholder="Search by customer or invoice number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-[#D9C8A9] rounded-lg focus:ring-2 focus:ring-[#3C4F3C] focus:border-[#3C4F3C] text-sm bg-white"
                 />
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-[#7A705A]"></i>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <label className="block text-sm font-medium text-[#5F6652] mb-2">Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
+                className="w-full px-3 py-2 border border-[#D9C8A9] rounded-lg focus:ring-2 focus:ring-[#3C4F3C] focus:border-[#3C4F3C] text-sm pr-8 bg-white"
               >
                 <option value="all">All statuses</option>
                 <option value="paid">Paid</option>
@@ -1554,10 +1545,10 @@ export default function InvoicingPage() {
                   setSearchTerm('');
                   setStatusFilter('all');
                 }}
-                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+                className={`${SECONDARY_BUTTON_CLASSES} w-full justify-center`}
               >
-                <i className="ri-refresh-line mr-2"></i>
-                Clear Filters
+                <i className="ri-refresh-line" />
+                <span>Clear Filters</span>
               </button>
             </div>
           </div>
@@ -1618,7 +1609,7 @@ export default function InvoicingPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(invoice.status)}`}>
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClasses(invoice.status)}`}>
                           {getStatusText(invoice.status)}
                         </span>
                       </td>
@@ -1767,27 +1758,14 @@ export default function InvoicingPage() {
                           items,
                           amount: newAmount,
                           tax: newTax,
-                          total: newTotal
+                          total: newTotal,
                         };
-                      })
+                      }),
                     );
                   };
 
-                  return (
+                  const renderInvoiceDetail = () => (
                     <div className="space-y-6">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                          <div className="text-xs text-gray-500">INVOICE #</div>
-                          <div className="text-lg font-semibold text-gray-900">{invoice.id}</div>
-                        </div>
-                        <div className="text-right space-y-1">
-                          <div className="text-xs text-gray-500">Status</div>
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(invoice.status)}`}>
-                            {getStatusText(invoice.status)}
-                          </span>
-                        </div>
-                      </div>
-
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                           <div className="text-xs font-medium text-gray-500">Customer</div>
@@ -1859,15 +1837,13 @@ export default function InvoicingPage() {
                           </thead>
                           <tbody className="divide-y divide-gray-200">
                             {invoice.items.map((item, index) => (
-                              <tr key={index}>
+                              <tr key={item.description ?? index}>
                                 <td className="px-4 py-2 text-sm text-gray-900">
                                   {isEditingInvoice ? (
                                     <input
                                       type="text"
                                       value={item.description}
-                                      onChange={(e) =>
-                                        handleItemChange(index, 'description', e.target.value)
-                                      }
+                                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                                     />
                                   ) : (
@@ -1880,9 +1856,7 @@ export default function InvoicingPage() {
                                       type="number"
                                       min={0}
                                       value={item.quantity}
-                                      onChange={(e) =>
-                                        handleItemChange(index, 'quantity', e.target.value)
-                                      }
+                                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                                       className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right"
                                     />
                                   ) : (
@@ -1895,9 +1869,7 @@ export default function InvoicingPage() {
                                       type="number"
                                       min={0}
                                       value={item.price}
-                                      onChange={(e) =>
-                                        handleItemChange(index, 'price', e.target.value)
-                                      }
+                                      onChange={(e) => handleItemChange(index, 'price', e.target.value)}
                                       className="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
                                     />
                                   ) : (
@@ -1924,6 +1896,79 @@ export default function InvoicingPage() {
                               <td className="px-4 py-2 text-right text-base font-bold text-gray-900">{formatMoney(invoice.total)}</td>
                             </tr>
                           </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  );
+
+                  return (
+                    <div className="space-y-6">
+                      {renderInvoiceDetail()}
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                Description
+                              </th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                Quantity
+                              </th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                Price
+                              </th>
+                              <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">
+                                Total
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {invoice.items.map((item, index) => (
+                              <tr key={item.description ?? index}>
+                                <td className="px-4 py-2 text-sm text-gray-900">
+                                  {isEditingInvoice ? (
+                                    <input
+                                      type="text"
+                                      value={item.description}
+                                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                    />
+                                  ) : (
+                                    item.description
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                  {isEditingInvoice ? (
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={item.quantity}
+                                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                      className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+                                    />
+                                  ) : (
+                                    item.quantity
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                  {isEditingInvoice ? (
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={item.price}
+                                      onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                                      className="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+                                    />
+                                  ) : (
+                                    <>{formatMoney(item.price)}</>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 text-right">
+                                  {formatMoney(item.total)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
                         </table>
                       </div>
                     </div>

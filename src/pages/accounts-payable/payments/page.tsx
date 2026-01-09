@@ -30,6 +30,35 @@ export default function PaymentsPage() {
 
   const paymentMethods = ['Transferencia', 'Cheque', 'Efectivo', 'Tarjeta de Crédito'];
 
+  const paymentMethodLabels: Record<string, string> = {
+    Transferencia: 'Transfer',
+    Cheque: 'Check',
+    Efectivo: 'Cash',
+    'Tarjeta de Crédito': 'Credit Card',
+  };
+
+  const paymentStatusLabels: Record<string, string> = {
+    Completado: 'Completed',
+    Pendiente: 'Pending',
+    Rechazado: 'Rejected',
+  };
+
+  const getMethodLabel = (method: string) => paymentMethodLabels[method] || method;
+  const getStatusLabel = (status: string) => paymentStatusLabels[status] || status || 'Unknown';
+
+  const methodPillClasses = (method: string) => {
+    if (method === 'Transferencia') return 'bg-[#d7e2b0] text-[#2f3c24]';
+    if (method === 'Cheque') return 'bg-[#b5c38a] text-[#2f3c24]';
+    if (method === 'Efectivo') return 'bg-[#f3d8b6] text-[#2f3c24]';
+    return 'bg-[#d7d4e3] text-[#2f3c24]';
+  };
+
+  const statusBadgeClasses = (status: string) => {
+    if (status === 'Completado') return 'bg-[#d7e2b0] text-[#2f3c24]';
+    if (status === 'Pendiente') return 'bg-[#f3d8b6] text-[#5b441d]';
+    return 'bg-[#f5c2b0] text-[#5b2a1c]';
+  };
+
   const resolveApInvoiceBalance = (inv: any) => {
     const totalToPay = Number(inv?.total_to_pay ?? inv?.total_gross ?? 0) || 0;
     const paidAmount = Number(inv?.paid_amount ?? 0) || 0;
@@ -146,18 +175,18 @@ export default function PaymentsPage() {
     e.preventDefault();
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar pagos');
+      alert('You must be signed in to record payments');
       return;
     }
 
     if (!formData.supplierId) {
-      alert('Debes seleccionar un proveedor');
+      alert('Please select a supplier');
       return;
     }
 
     const amount = parseFloat(formData.amount || '0');
     if (!amount || amount <= 0) {
-      alert('El monto debe ser mayor que cero');
+      alert('Amount must be greater than zero');
       return;
     }
 
@@ -166,7 +195,7 @@ export default function PaymentsPage() {
     // Resolver banco seleccionado
     const selectedBank = bankAccounts.find((b: any) => String(b.id) === String(formData.bankAccount));
     if (!selectedBank) {
-      alert('Debes seleccionar una cuenta bancaria válida');
+      alert('Please choose a valid bank account');
       return;
     }
     const bankLabel = `${selectedBank.bank_name} - ${selectedBank.account_number}`;
@@ -186,11 +215,11 @@ export default function PaymentsPage() {
       });
       await loadPayments();
       resetForm();
-      alert('Pago registrado exitosamente');
+      alert('Payment recorded successfully');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving supplier payment', error);
-      alert('Error al registrar el pago');
+      alert('Unable to record payment');
     }
   };
 
@@ -208,29 +237,30 @@ export default function PaymentsPage() {
   };
 
   const handleApprovePayment = async (id: string | number) => {
-    if (!confirm('¿Confirmar este pago?')) return;
+    if (!confirm('Confirm this payment?')) return;
+
     try {
       await supplierPaymentsService.updateStatus(String(id), 'Completado');
       await loadPayments();
       await loadApInvoices();
-      alert('Pago aprobado exitosamente');
+      alert('Payment approved');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error approving supplier payment', error);
-      alert('No se pudo aprobar el pago');
+      alert('Payment could not be approved');
     }
   };
 
   const handleRejectPayment = async (id: string | number) => {
-    if (!confirm('¿Rechazar este pago?')) return;
+    if (!confirm('Reject this payment?')) return;
     try {
       await supplierPaymentsService.updateStatus(String(id), 'Rechazado');
       await loadPayments();
-      alert('Pago rechazado');
+      alert('Payment rejected');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error rejecting supplier payment', error);
-      alert('No se pudo rechazar el pago');
+      alert('Payment could not be rejected');
     }
   };
 
@@ -240,7 +270,7 @@ export default function PaymentsPage() {
 
   const handleExportExcel = async () => {
     if (!filteredPayments.length) {
-      alert('No hay pagos para exportar');
+      alert('There are no payments to export');
       return;
     }
 
@@ -262,195 +292,197 @@ export default function PaymentsPage() {
       await exportToExcelStyled(
         rows,
         [
-          { key: 'date', title: 'Fecha', width: 14 },
-          { key: 'supplier', title: 'Proveedor', width: 30 },
-          { key: 'reference', title: 'Referencia', width: 18 },
-          { key: 'invoice', title: 'Factura', width: 18 },
-          { key: 'method', title: 'Método', width: 16 },
-          { key: 'amount', title: 'Monto', width: 16, numFmt: '#,##0.00' },
-          { key: 'status', title: 'Estado', width: 14 },
-          { key: 'description', title: 'Descripción', width: 40 },
-          { key: 'bankAccount', title: 'Cuenta Bancaria', width: 30 },
+          { key: 'date', title: 'Date', width: 14 },
+          { key: 'supplier', title: 'Supplier', width: 30 },
+          { key: 'reference', title: 'Reference', width: 18 },
+          { key: 'invoice', title: 'Invoice', width: 18 },
+          { key: 'method', title: 'Method', width: 16 },
+          { key: 'amount', title: 'Amount', width: 16, numFmt: '#,##0.00' },
+          { key: 'status', title: 'Status', width: 14 },
+          { key: 'description', title: 'Description', width: 40 },
+          { key: 'bankAccount', title: 'Bank Account', width: 30 },
         ],
-        `pagos_proveedores_${today}`,
-        'Pagos'
+        `supplier_payments_${today}`,
+        'Payments'
       );
     } catch (error) {
-      alert('No se pudo exportar el archivo de Excel');
+      alert('Unable to export spreadsheet');
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f8f4ec] min-h-screen p-6 rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Procesamiento de Pagos</h1>
-            <p className="text-gray-600">Gestiona pagos a proveedores</p>
+            <h1 className="text-2xl font-bold text-[#2f3c24]">Payment Processing</h1>
+            <p className="text-[#5c6b42]">Manage supplier disbursements and approvals</p>
           </div>
           <div className="flex space-x-3">
             <button 
               onClick={handleExportExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#7a8b4a] text-white px-4 py-2 rounded-lg hover:bg-[#67753b] transition-colors whitespace-nowrap shadow"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#3f4d2c] text-white px-4 py-2 rounded-lg hover:bg-[#2f3a1f] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Pago
+              New Payment
             </button>
           </div>
+
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#dfe9c1] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-money-dollar-circle-line text-xl text-[#3f4d2c]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Pagado</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {payments.filter(p => p.status === 'Completado').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Total Paid</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  RD$ {payments.filter(p => p.status === 'Completado').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-time-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 bg-[#f3e2c0] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-time-line text-xl text-[#b3682f]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                <p className="text-2xl font-bold text-gray-900">RD$ {payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Pending Amount</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  RD$ {payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 bg-[#e4eed0] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-check-line text-xl text-[#4f5e35]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Pagos Completados</p>
-                <p className="text-2xl font-bold text-gray-900">{payments.filter(p => p.status === 'Completado').length}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Completed Payments</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  {payments.filter(p => p.status === 'Completado').length}
+                </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-close-line text-xl text-red-600"></i>
+              <div className="w-12 h-12 bg-[#f5c2b0] rounded-lg flex items-center justify-center mr-4">
+                <i className="ri-close-line text-xl text-[#7a2e1b]"></i>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-600">Rechazados</p>
-                <p className="text-2xl font-bold text-gray-900">{payments.filter(p => p.status === 'Rechazado').length}</p>
+                <p className="text-sm font-medium text-[#4c5b36]">Rejected</p>
+                <p className="text-2xl font-bold text-[#2f3c24]">
+                  {payments.filter(p => p.status === 'Rechazado').length}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">
+                Status <span className="text-red-500">*</span>
+              </label>
               <select 
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
-                <option value="all">Todos los Estados</option>
-                <option value="Completado">Completado</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Rechazado">Rechazado</option>
+                <option value="all">All Statuses</option>
+                <option value="Completado">Completed</option>
+                <option value="Pendiente">Pending</option>
+                <option value="Rechazado">Rejected</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago</label>
+              <label className="block text-sm font-medium text-[#4c5b36] mb-2">Payment Method</label>
               <select 
                 value={filterMethod}
                 onChange={(e) => setFilterMethod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
-                <option value="all">Todos los Métodos</option>
+                <option value="all">All Methods</option>
                 {paymentMethods.map(method => (
-                  <option key={method} value={method}>{method}</option>
+                  <option key={method} value={method}>{getMethodLabel(method)}</option>
                 ))}
               </select>
             </div>
             <div className="flex items-end">
               <button 
                 onClick={() => {setFilterStatus('all'); setFilterMethod('all');}}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#5a5c55] text-white py-2 px-4 rounded-lg hover:bg-[#43443f] transition-colors whitespace-nowrap shadow-sm"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Payments Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Pagos</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5]">
+          <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+            <h3 className="text-lg font-semibold text-[#2f3c24]">Payment List</h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#eadfca]">
+              <thead className="bg-[#f5ebd6]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proveedor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referencia</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Reference</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Method</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f0e4cd]">
                 {filteredPayments.map((payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.date}</td>
+                  <tr key={payment.id} className="hover:bg-[#f9f3e3] transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{payment.date}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{payment.supplier}</div>
-                        <div className="text-sm text-gray-500">{payment.invoice}</div>
+                        <div className="text-sm font-medium text-[#2f3c24]">{payment.supplier}</div>
+                        <div className="text-sm text-[#5c6b42]">{payment.invoice}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{payment.reference}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{payment.reference}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        payment.method === 'Transferencia' ? 'bg-blue-100 text-blue-800' :
-                        payment.method === 'Cheque' ? 'bg-green-100 text-green-800' :
-                        payment.method === 'Efectivo' ? 'bg-orange-100 text-orange-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {payment.method}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${methodPillClasses(payment.method)}`}>
+                        {getMethodLabel(payment.method)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-[#2f3c24]">
                       RD$ {payment.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        payment.status === 'Completado' ? 'bg-green-100 text-green-800' :
-                        payment.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {payment.status}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClasses(payment.status)}`}>
+                        {getStatusLabel(payment.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => handleViewDetails(payment)}
-                          className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
+                          className="text-[#3f4d2c] hover:text-[#2f3a1f] whitespace-nowrap"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
@@ -458,16 +490,17 @@ export default function PaymentsPage() {
                           <>
                             <button 
                               onClick={() => handleApprovePayment(payment.id)}
-                              className="text-green-600 hover:text-green-900 whitespace-nowrap"
+                              className="text-[#4f6131] hover:text-[#2f3c24] whitespace-nowrap"
                             >
                               <i className="ri-check-line"></i>
                             </button>
                             <button 
                               onClick={() => handleRejectPayment(payment.id)}
-                              className="text-red-600 hover:text-red-900 whitespace-nowrap"
+                              className="text-[#9c3d25] hover:text-[#6c1f12] whitespace-nowrap"
                             >
                               <i className="ri-close-line"></i>
                             </button>
+
                           </>
                         )}
                       </div>
@@ -483,16 +516,17 @@ export default function PaymentsPage() {
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Nuevo Pago</h3>
+              <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+                <h3 className="text-lg font-semibold text-[#2f3c24]">New Payment</h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor *</label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Supplier *</label>
                     <select 
                       required
                       value={formData.supplierId}
+
                       onChange={(e) => {
                         const supplierId = e.target.value;
                         setFormData({
@@ -504,16 +538,17 @@ export default function PaymentsPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Seleccionar proveedor</option>
+                      <option value="">Select supplier</option>
                       {suppliers.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Factura (CxP) <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">AP Invoice <span className="text-red-500">*</span></label>
                     <select
                       required
+
                       value={formData.invoice}
                       onChange={(e) => {
                         const invoiceNumber = e.target.value;
@@ -528,9 +563,10 @@ export default function PaymentsPage() {
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Sin factura seleccionada</option>
+                      <option value="">No invoice selected</option>
                       {apInvoices
                         .filter((inv: any) => String(inv.supplier_id) === String(formData.supplierId) && inv.status !== 'paid')
+
                         .map((inv: any) => (
                           <option key={inv.id} value={inv.invoice_number || ''}>
                             {(inv.invoice_number || 'SIN-NUM').toString()} - {(inv.currency || 'DOP')} {Number(inv.balance_amount ?? inv.total_to_pay ?? inv.total_gross ?? 0).toLocaleString()}
@@ -539,10 +575,11 @@ export default function PaymentsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pago *</label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Payment Method *</label>
                     <select 
                       required
                       value={formData.method}
+
                       onChange={(e) => setFormData({...formData, method: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
@@ -552,9 +589,10 @@ export default function PaymentsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monto *</label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Amount *</label>
                     <input 
                       type="number" min="0"
+
                       required
                       step="0.01"
                       value={formData.amount}
@@ -564,25 +602,28 @@ export default function PaymentsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuenta Bancaria <span className="text-red-500">*</span></label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Bank Account <span className="text-red-500">*</span></label>
                     <select 
                       value={formData.bankAccount}
+
                       onChange={(e) => setFormData({...formData, bankAccount: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Seleccionar cuenta</option>
+                      <option value="">Select account</option>
                       {bankAccounts.map((account: any) => {
                         const label = `${account.bank_name} - ${account.account_number}`;
                         return (
+
                           <option key={account.id} value={account.id}>{label}</option>
                         );
                       })}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha *</label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Date *</label>
                     <input 
                       type="date"
+
                       required
                       value={formData.date}
                       onChange={(e) => setFormData({...formData, date: e.target.value})}
@@ -590,9 +631,10 @@ export default function PaymentsPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                    <label className="block text-sm font-medium text-[#4c5b36] mb-2">Description</label>
                     <textarea 
                       value={formData.description}
+
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -604,15 +646,15 @@ export default function PaymentsPage() {
                   <button 
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                    className="px-4 py-2 border border-[#d7ccb5] rounded-lg text-[#4c5b36] hover:bg-[#fefaf1] whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                    className="px-4 py-2 bg-[#3f4d2c] text-white rounded-lg hover:bg-[#2f3a1f] whitespace-nowrap shadow-sm"
                   >
-                    Registrar Pago
+                    Save Payment
                   </button>
                 </div>
               </form>
@@ -624,12 +666,12 @@ export default function PaymentsPage() {
         {selectedPayment && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Detalles del Pago</h3>
+                  <h3 className="text-lg font-semibold text-[#2f3c24]">Payment Details</h3>
                   <button 
                     onClick={() => setSelectedPayment(null)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-[#8c7f62] hover:text-[#5c5139]"
                   >
                     <i className="ri-close-line text-xl"></i>
                   </button>
@@ -638,52 +680,49 @@ export default function PaymentsPage() {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Referencia</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.reference}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Reference</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.reference}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Fecha</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.date}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Date</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.date}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm font-medium text-gray-600">Proveedor</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.supplier}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Supplier</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.supplier}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Factura</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.invoice}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Invoice</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.invoice}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Método</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.method}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Method</p>
+                    <p className="text-sm text-[#2f3c24]">{getMethodLabel(selectedPayment.method)}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Monto</p>
-                    <p className="text-lg font-bold text-gray-900">RD$ {selectedPayment.amount.toLocaleString()}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Amount</p>
+                    <p className="text-lg font-bold text-[#2f3c24]">RD$ {selectedPayment.amount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Estado</p>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      selectedPayment.status === 'Completado' ? 'bg-green-100 text-green-800' :
-                      selectedPayment.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedPayment.status}
+                    <p className="text-sm font-medium text-[#5c6b42]">Status</p>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClasses(selectedPayment.status)}`}>
+                      {getStatusLabel(selectedPayment.status)}
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm font-medium text-gray-600">Cuenta Bancaria</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.bankAccount}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Bank Account</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.bankAccount}</p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm font-medium text-gray-600">Descripción</p>
-                    <p className="text-sm text-gray-900">{selectedPayment.description}</p>
+                    <p className="text-sm font-medium text-[#5c6b42]">Description</p>
+                    <p className="text-sm text-[#2f3c24]">{selectedPayment.description}</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

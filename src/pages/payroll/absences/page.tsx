@@ -78,10 +78,10 @@ export default function AbsencesPage() {
       }
       await loadData();
       resetForm();
-      alert('Ausencia registrada correctamente');
+      alert('Absence saved successfully');
     } catch (error) {
       console.error('Error saving absence:', error);
-      alert('Error al guardar la ausencia');
+      alert('Error saving absence');
     }
   };
 
@@ -100,7 +100,7 @@ export default function AbsencesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta ausencia?')) return;
+    if (!confirm('Are you sure you want to delete this absence?')) return;
     try {
       await supabase.from('employee_absences').delete().eq('id', id);
       await loadData();
@@ -139,21 +139,21 @@ export default function AbsencesPage() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      enfermedad: 'Enfermedad',
-      permiso_personal: 'Permiso Personal',
-      licencia_maternidad: 'Licencia de Maternidad',
-      licencia_paternidad: 'Licencia de Paternidad',
-      vacaciones: 'Vacaciones',
-      suspension: 'Suspensión',
-      otro: 'Otro'
+      enfermedad: 'Sickness',
+      permiso_personal: 'Personal Leave',
+      licencia_maternidad: 'Maternity Leave',
+      licencia_paternidad: 'Paternity Leave',
+      vacaciones: 'Vacation',
+      suspension: 'Suspension',
+      otro: 'Other'
     };
     return labels[type] || type;
   };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      pendiente: 'bg-yellow-100 text-yellow-800',
-      aprobada: 'bg-green-100 text-green-800',
+      pendiente: 'bg-[#f1e4c2] text-[#3d451b]',
+      aprobada: 'bg-[#dbe8c0] text-[#2f3a1f]',
       rechazada: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
@@ -166,45 +166,53 @@ export default function AbsencesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Registro de Ausencias</h1>
-            <p className="text-gray-600">Control de ausencias y permisos de empleados</p>
+            <h1 className="text-2xl font-bold text-gray-900">Absence Log</h1>
+            <p className="text-gray-700">Manage employee absences and leaves</p>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => navigate('/payroll')} className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
-              <i className="ri-arrow-left-line mr-2"></i>Volver
+            <button
+              onClick={() => navigate('/payroll')}
+              className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <i className="ri-arrow-left-line"></i>
+              Back
             </button>
-            <button onClick={() => setShowForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-              <i className="ri-add-line mr-2"></i>Nueva Ausencia
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
+            >
+              <i className="ri-add-line"></i>
+              New Absence
             </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-4">
           <input
             type="text"
-            placeholder="Buscar por empleado o motivo..."
+            placeholder="Search by employee or reason..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
           />
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Empleado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Fin</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Días</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pagado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">End Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Paid</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -212,31 +220,31 @@ export default function AbsencesPage() {
                   <tr key={absence.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">{getEmployeeName(absence.employee_id)}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{getTypeLabel(absence.absence_type)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{new Date(absence.start_date).toLocaleDateString('es-DO')}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{new Date(absence.end_date).toLocaleDateString('es-DO')}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{new Date(absence.start_date).toLocaleDateString('en-US')}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{new Date(absence.end_date).toLocaleDateString('en-US')}</td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{absence.days_count}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{absence.is_paid ? 'Sí' : 'No'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{absence.is_paid ? 'Yes' : 'No'}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(absence.status)}`}>
-                        {absence.status}
+                        {absence.status === 'pendiente' ? 'Pending' : absence.status === 'aprobada' ? 'Approved' : 'Rejected'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <div className="flex gap-2">
                         {absence.status === 'pendiente' && (
                           <>
-                            <button onClick={() => changeStatus(absence.id, 'aprobada')} className="text-green-600 hover:text-green-800" title="Aprobar">
+                            <button onClick={() => changeStatus(absence.id, 'aprobada')} className="text-[#4b5320] hover:text-[#2f3a1f]" title="Approve">
                               <i className="ri-check-line"></i>
                             </button>
-                            <button onClick={() => changeStatus(absence.id, 'rechazada')} className="text-red-600 hover:text-red-800" title="Rechazar">
+                            <button onClick={() => changeStatus(absence.id, 'rechazada')} className="text-red-600 hover:text-red-800" title="Reject">
                               <i className="ri-close-line"></i>
                             </button>
                           </>
                         )}
-                        <button onClick={() => handleEdit(absence)} className="text-blue-600 hover:text-blue-800">
+                        <button onClick={() => handleEdit(absence)} className="text-[#4b5320] hover:text-[#2f3a1f]" title="Edit">
                           <i className="ri-edit-line"></i>
                         </button>
-                        <button onClick={() => handleDelete(absence.id)} className="text-red-600 hover:text-red-800">
+                        <button onClick={() => handleDelete(absence.id)} className="text-red-600 hover:text-red-800" title="Delete">
                           <i className="ri-delete-bin-line"></i>
                         </button>
                       </div>
@@ -244,7 +252,7 @@ export default function AbsencesPage() {
                   </tr>
                 ))}
                 {filteredAbsences.length === 0 && (
-                  <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-500">No se encontraron ausencias</td></tr>
+                  <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-500">No absences found</td></tr>
                 )}
               </tbody>
             </table>
@@ -253,55 +261,55 @@ export default function AbsencesPage() {
 
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{editingAbsence ? 'Editar Ausencia' : 'Nueva Ausencia'}</h2>
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{editingAbsence ? 'Edit Absence' : 'New Absence'}</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Empleado *</label>
-                    <select value={formData.employee_id} onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
-                      <option value="">Seleccionar empleado</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee *</label>
+                    <select value={formData.employee_id} onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" required>
+                      <option value="">Select employee</option>
                       {employees.map(emp => (<option key={emp.id} value={emp.id}>{emp.employee_code} - {emp.first_name} {emp.last_name}</option>))}
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Ausencia *</label>
-                    <select value={formData.absence_type} onChange={(e) => setFormData({ ...formData, absence_type: e.target.value as any })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required>
-                      <option value="enfermedad">Enfermedad</option>
-                      <option value="permiso_personal">Permiso Personal</option>
-                      <option value="licencia_maternidad">Licencia de Maternidad</option>
-                      <option value="licencia_paternidad">Licencia de Paternidad</option>
-                      <option value="vacaciones">Vacaciones</option>
-                      <option value="suspension">Suspensión</option>
-                      <option value="otro">Otro</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Absence type *</label>
+                    <select value={formData.absence_type} onChange={(e) => setFormData({ ...formData, absence_type: e.target.value as any })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" required>
+                      <option value="enfermedad">Sickness</option>
+                      <option value="permiso_personal">Personal Leave</option>
+                      <option value="licencia_maternidad">Maternity Leave</option>
+                      <option value="licencia_paternidad">Paternity Leave</option>
+                      <option value="vacaciones">Vacation</option>
+                      <option value="suspension">Suspension</option>
+                      <option value="otro">Other</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Inicio *</label>
-                    <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start date *</label>
+                    <input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de Fin *</label>
-                    <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End date *</label>
+                    <input type="date" value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" required />
                   </div>
                   <div className="col-span-2">
                     <label className="flex items-center">
-                      <input type="checkbox" checked={formData.is_paid} onChange={(e) => setFormData({ ...formData, is_paid: e.target.checked })} className="mr-2" />
-                      <span className="text-sm font-medium text-gray-700">Ausencia Pagada</span>
+                      <input type="checkbox" checked={formData.is_paid} onChange={(e) => setFormData({ ...formData, is_paid: e.target.checked })} className="mr-2 rounded border-gray-300 text-[#4b5320] focus:ring-[#4b5320]" />
+                      <span className="text-sm font-medium text-gray-700">Paid absence</span>
                     </label>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo *</label>
-                    <textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+                    <textarea value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" rows={2} required />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notas Adicionales</label>
-                    <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional notes</label>
+                    <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent" rows={2} />
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-6">
-                  <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Cancelar</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editingAbsence ? 'Actualizar' : 'Registrar'} Ausencia</button>
+                  <button type="button" onClick={resetForm} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm">{editingAbsence ? 'Update' : 'Create'} Absence</button>
                 </div>
               </form>
             </div>

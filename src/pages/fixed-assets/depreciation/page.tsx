@@ -108,7 +108,7 @@ export default function DepreciationPage() {
     const period = String(formData.get('period') || '').trim();
     const processDate = String(formData.get('processDate') || '').trim() || new Date().toISOString().split('T')[0];
     if (!period) {
-      alert('Debe seleccionar un período de depreciación');
+      alert('You must select a depreciation period');
       return;
     }
 
@@ -146,7 +146,7 @@ export default function DepreciationPage() {
       }
     } catch (error: any) {
       console.error('Error calculating depreciation:', error);
-      const msg = error?.message || String(error) || 'Error al calcular y registrar la depreciación';
+      const msg = error?.message || String(error) || 'Error calculating and recording depreciation';
       alert(msg);
     }
   };
@@ -165,7 +165,8 @@ export default function DepreciationPage() {
     if (!dep) return;
 
     const newStatus = dep.status === 'Reversado' ? 'Calculado' : 'Reversado';
-    if (!confirm(`¿Está seguro de que desea marcar esta depreciación como "${newStatus}"?`)) return;
+    const newStatusLabel = statusLabelMap[newStatus] || newStatus;
+    if (!confirm(`Are you sure you want to mark this depreciation as "${newStatusLabel}"?`)) return;
 
     try {
       const payload: any = {
@@ -189,7 +190,7 @@ export default function DepreciationPage() {
       } : d));
     } catch (error) {
       console.error('Error updating depreciation status:', error);
-      alert('Error al actualizar el estado de la depreciación');
+      alert('Error updating the depreciation status');
     }
   };
 
@@ -202,13 +203,15 @@ export default function DepreciationPage() {
       return formatMoney(amount, 'RD$');
     };
 
+    const locale = 'en-US';
+
     // Generar contenido HTML para el PDF
     const htmlContent = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>Depreciación de Activos Fijos</title>
+        <title>Fixed Asset Depreciation</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           .header { text-align: center; margin-bottom: 30px; }
@@ -230,27 +233,27 @@ export default function DepreciationPage() {
       </head>
       <body>
         <div class="header">
-          <h1>Depreciación de Activos Fijos</h1>
-          <p>Reporte generado el ${new Date().toLocaleDateString('es-DO')} a las ${new Date().toLocaleTimeString('es-DO')}</p>
+          <h1>Fixed Asset Depreciation</h1>
+          <p>Report generated on ${new Date().toLocaleDateString(locale)} at ${new Date().toLocaleTimeString(locale)}</p>
         </div>
         
         <div class="summary">
-          <h3>Resumen de Depreciaciones</h3>
+          <h3>Depreciation Summary</h3>
           <div class="summary-grid">
             <div class="summary-item">
-              <div>Depreciación del Mes</div>
+              <div>Depreciation This Month</div>
               <div class="summary-value">${formatCurrency(totalDepreciationMonth)}</div>
             </div>
             <div class="summary-item">
-              <div>Depreciación Acumulada</div>
+              <div>Accumulated Depreciation</div>
               <div class="summary-value">${formatCurrency(totalAccumulated)}</div>
             </div>
             <div class="summary-item">
-              <div>Valor Remanente</div>
+              <div>Remaining Value</div>
               <div class="summary-value">${formatCurrency(totalRemainingValue)}</div>
             </div>
             <div class="summary-item">
-              <div>Activos Depreciados</div>
+              <div>Assets Depreciated</div>
               <div class="summary-value">${filteredData.length}</div>
             </div>
           </div>
@@ -259,16 +262,16 @@ export default function DepreciationPage() {
         <table>
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Activo</th>
-              <th>Categoría</th>
-              <th>Costo Adquisición</th>
-              <th>Depreciación Mensual</th>
-              <th>Depreciación Acumulada</th>
-              <th>Valor Remanente</th>
-              <th>Período</th>
-              <th>Método</th>
-              <th>Estado</th>
+              <th>Code</th>
+              <th>Asset</th>
+              <th>Category</th>
+              <th>Acquisition Cost</th>
+              <th>Monthly Depreciation</th>
+              <th>Accumulated Depreciation</th>
+              <th>Remaining Value</th>
+              <th>Period</th>
+              <th>Method</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -283,15 +286,15 @@ export default function DepreciationPage() {
                 <td class="currency positive">${formatCurrency(dep.remainingValue)}</td>
                 <td>${dep.period}</td>
                 <td>${dep.method}</td>
-                <td class="status-${dep.status.toLowerCase()}">${dep.status}</td>
+                <td class="status-${dep.status.toLowerCase()}">${statusLabelMap[dep.status] || dep.status}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
 
         <div class="footer">
-          <p>Sistema de Gestión de Activos Fijos - Depreciaciones</p>
-          <p>Filtros aplicados: ${searchTerm ? `Búsqueda: "${searchTerm}"` : ''} ${filterPeriod ? `Período: "${filterPeriod}"` : ''} ${filterStatus ? `Estado: "${filterStatus}"` : ''}</p>
+          <p>Fixed Asset Management - Depreciations</p>
+          <p>Filters applied: ${searchTerm ? `Search: "${searchTerm}"` : ''} ${filterPeriod ? `Period: "${filterPeriod}"` : ''} ${filterStatus ? `Status: "${filterStatus}"` : ''}</p>
         </div>
       </body>
       </html>
@@ -307,7 +310,7 @@ export default function DepreciationPage() {
         printWindow.print();
       }, 500);
     } else {
-      alert('No se pudo abrir la ventana de impresión. Verifique que no esté bloqueada por el navegador.');
+      alert('Could not open the print window. Please check your browser popup blocker.');
     }
   };
 
@@ -316,7 +319,7 @@ export default function DepreciationPage() {
     const filteredData = filteredDepreciations;
 
     if (!filteredData || filteredData.length === 0) {
-      alert('No hay depreciaciones para exportar.');
+      alert('There are no depreciations to export.');
       return;
     }
 
@@ -330,8 +333,7 @@ export default function DepreciationPage() {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de depreciaciones:', error);
+      console.error('Error fetching company info for depreciation Excel export:', error);
     }
 
     const rows = filteredData.map(dep => ({
@@ -342,36 +344,37 @@ export default function DepreciationPage() {
       monthlyDepreciation: dep.monthlyDepreciation,
       accumulatedDepreciation: dep.accumulatedDepreciation,
       remainingValue: dep.remainingValue,
-      depreciationDate: new Date(dep.depreciationDate).toLocaleDateString('es-DO'),
+      depreciationDate: new Date(dep.depreciationDate).toLocaleDateString('en-US'),
       period: dep.period,
       method: dep.method,
-      status: dep.status,
+      status: statusLabelMap[dep.status] || dep.status,
     }));
 
     const headers = [
-      { key: 'assetCode', title: 'Código Activo' },
-      { key: 'assetName', title: 'Nombre del Activo' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'acquisitionCost', title: 'Costo Adquisición' },
-      { key: 'monthlyDepreciation', title: 'Depreciación Mensual' },
-      { key: 'accumulatedDepreciation', title: 'Depreciación Acumulada' },
-      { key: 'remainingValue', title: 'Valor Remanente' },
-      { key: 'depreciationDate', title: 'Fecha Depreciación' },
-      { key: 'period', title: 'Período' },
-      { key: 'method', title: 'Método Depreciación' },
-      { key: 'status', title: 'Estado' },
+      { key: 'assetCode', title: 'Asset Code' },
+      { key: 'assetName', title: 'Asset Name' },
+      { key: 'category', title: 'Category' },
+      { key: 'acquisitionCost', title: 'Acquisition Cost' },
+      { key: 'monthlyDepreciation', title: 'Monthly Depreciation' },
+      { key: 'accumulatedDepreciation', title: 'Accumulated Depreciation' },
+      { key: 'remainingValue', title: 'Remaining Value' },
+      { key: 'depreciationDate', title: 'Depreciation Date' },
+      { key: 'period', title: 'Period' },
+      { key: 'method', title: 'Method' },
+      { key: 'status', title: 'Status' },
     ];
 
-    const fileBase = `depreciaciones_${new Date().toISOString().split('T')[0]}`;
-    const title = 'Depreciación de Activos Fijos';
+    const fileBase = `depreciations_${new Date().toISOString().split('T')[0]}`;
 
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const title = 'Fixed Asset Depreciation';
+
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
     exportToExcelWithHeaders(
       rows,
       headers,
       fileBase,
-      'Depreciaciones',
+      'Depreciations',
       [16, 32, 22, 18, 20, 22, 20, 18, 12, 22, 14],
       {
         title,
@@ -395,104 +398,110 @@ export default function DepreciationPage() {
     return `DEP-${period}`;
   };
 
+  const statusLabelMap: Record<string, string> = {
+    Calculado: 'Posted',
+    Pendiente: 'Pending',
+    Reversado: 'Reversed',
+  };
+
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <button
               onClick={() => navigate('/fixed-assets')}
-              className="flex items-center text-blue-600 hover:text-blue-700 mb-2"
+              className="flex items-center text-[#2f3e1e] hover:text-[#1f2913] mb-2 transition-colors"
             >
               <i className="ri-arrow-left-line mr-1"></i>
-              Volver a Activos Fijos
+              Back to Fixed Assets
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Depreciación de Activos</h1>
-            <p className="text-gray-600">Cálculo y registro de depreciaciones mensuales</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Asset Depreciation</h1>
+            <p className="text-[#6b5c3b]">Monthly depreciation tracking and automated postings.</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={exportToPDF}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors whitespace-nowrap"
+              className="bg-[#4a3c24] text-white px-4 py-2 rounded-lg hover:bg-[#362b17] transition-colors whitespace-nowrap shadow-sm border border-[#362b17]"
             >
               <i className="ri-printer-line mr-2"></i>
-              Exportar PDF
+              Export PDF
             </button>
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#3f5d2a] text-white px-4 py-2 rounded-lg hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm border border-[#2d451f]"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleCalculateDepreciation}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm border border-[#1f2913]"
             >
               <i className="ri-calculator-line mr-2"></i>
-              Calcular Depreciación
+              Calculate Depreciation
             </button>
           </div>
         </div>
 
         {lastJournalEntryNumber && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="bg-[#e9f3dd] border border-[#c7dfaa] text-[#2f3e1e] rounded-lg px-4 py-3 flex items-center justify-between">
             <div className="text-sm">
-              Asiento generado: <span className="font-semibold">{lastJournalEntryNumber}</span>
+              Journal entry generated: <span className="font-semibold">{lastJournalEntryNumber}</span>
             </div>
 
             <button
               onClick={() => navigate(`/accounting/general-journal?entry=${encodeURIComponent(lastJournalEntryNumber)}`)}
-              className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-3 py-2 rounded-lg hover:bg-[#1f2913] transition-colors text-sm whitespace-nowrap shadow-sm border border-[#1f2913]"
             >
-              Ver en Diario
+              View in Journal
             </button>
           </div>
         )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Depreciación del Mes</p>
-                <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalDepreciationMonth)}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Depreciation This Month</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{formatCurrency(totalDepreciationMonth)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-blue-100">
-                <i className="ri-calendar-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#f0ead7]">
+                <i className="ri-calendar-line text-xl text-[#2f3e1e]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Depreciación Acumulada</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(totalAccumulated)}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Accumulated Depreciation</p>
+                <p className="text-2xl font-bold text-[#7a2e1b]">{formatCurrency(totalAccumulated)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-red-100">
-                <i className="ri-line-chart-line text-xl text-red-600"></i>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#f9e3dc]">
+                <i className="ri-line-chart-line text-xl text-[#7a2e1b]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Valor Remanente</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalRemainingValue)}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Remaining Value</p>
+                <p className="text-2xl font-bold text-[#245c39]">{formatCurrency(totalRemainingValue)}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#e2f1e5]">
+                <i className="ri-money-dollar-circle-line text-xl text-[#245c39]"></i>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Activos Depreciados</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Assets Depreciated</p>
                 <p className="text-2xl font-bold text-purple-600">{filteredDepreciations.length}</p>
               </div>
-              <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#f1e8ff]">
                 <i className="ri-archive-line text-xl text-purple-600"></i>
               </div>
             </div>
@@ -500,45 +509,45 @@ export default function DepreciationPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Search</label>
               <div className="relative">
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-[#b29a71]"></i>
                 <input
                   type="text"
-                  placeholder="Buscar por activo o código..."
+                  placeholder="Search by asset or code..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Period</label>
               <select
                 value={filterPeriod}
                 onChange={(e) => setFilterPeriod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
               >
-                <option value="">Todos los períodos</option>
+                <option value="">All periods</option>
                 {periods.map((period) => (
                   <option key={period} value={period}>{period}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
               >
-                <option value="">Todos los estados</option>
-                <option value="Calculado">Calculado</option>
-                <option value="Pendiente">Pendiente</option>
-                <option value="Reversado">Reversado</option>
+                <option value="">All statuses</option>
+                <option value="Calculado">Posted</option>
+                <option value="Pendiente">Pending</option>
+                <option value="Reversado">Reversed</option>
               </select>
             </div>
             <div className="flex items-end">
@@ -548,78 +557,78 @@ export default function DepreciationPage() {
                   setFilterPeriod('');
                   setFilterStatus('');
                 }}
-                className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4a3c24] text-white px-4 py-2 rounded-lg hover:bg-[#2f3e1e] transition-colors whitespace-nowrap shadow-sm border border-[#2f3e1e]"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Depreciation Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Depreciaciones Registradas ({filteredDepreciations.length})
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="p-6 border-b border-[#e4d8c4]">
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">
+              Recorded Depreciations ({filteredDepreciations.length})
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#ede7d7]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costo Adquisición</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación Mensual</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciación Acumulada</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Remanente</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Depreciación</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Período</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Asset</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Acquisition Cost</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Monthly Depreciation</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Accumulated Depreciation</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Remaining Value</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Depreciation Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Period</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f3ecda]">
                 {filteredDepreciations.map((depreciation) => (
-                  <tr key={depreciation.id} className="hover:bg-gray-50">
+                  <tr key={depreciation.id} className="hover:bg-[#fffdf6]">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{depreciation.assetName}</div>
-                        <div className="text-sm text-gray-500">{depreciation.assetCode} - {depreciation.category}</div>
+                        <div className="text-sm font-semibold text-[#2f3e1e]">{depreciation.assetName}</div>
+                        <div className="text-sm text-[#6b5c3b]">{depreciation.assetCode} - {depreciation.category}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
                       {formatCurrency(depreciation.acquisitionCost)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7a2e1b] font-semibold">
                       -{formatCurrency(depreciation.monthlyDepreciation)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7a2e1b]">
                       -{formatCurrency(depreciation.accumulatedDepreciation)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#245c39] font-semibold">
                       {formatCurrency(depreciation.remainingValue)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {depreciation.depreciationDate ? new Date(depreciation.depreciationDate).toLocaleDateString('es-DO') : '-'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
+                      {depreciation.depreciationDate ? new Date(depreciation.depreciationDate).toLocaleDateString('en-US') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
                       {depreciation.period}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        depreciation.status === 'Calculado' ? 'bg-green-100 text-green-800' :
-                        depreciation.status === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                        depreciation.status === 'Calculado' ? 'bg-[#d7e4c0] text-[#1f2913]' :
+                        depreciation.status === 'Pendiente' ? 'bg-[#fbe4b9] text-[#5c3a04]' :
+                        'bg-[#f4d9d4] text-[#7a2e1b]'
                       }`}>
-                        {depreciation.status}
+                        {statusLabelMap[depreciation.status] || depreciation.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleViewDetails(depreciation.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Ver detalles"
+                          className="text-[#2f3e1e] hover:text-[#1f2913]"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
@@ -633,8 +642,8 @@ export default function DepreciationPage() {
                                 )}`,
                               )
                             }
-                            className="text-indigo-600 hover:text-indigo-900"
-                            title="Ver en Diario"
+                            className="text-[#3f5d2a] hover:text-[#2d451f]"
+                            title="View in journal"
                           >
                             <i className="ri-book-open-line"></i>
                           </button>
@@ -643,8 +652,8 @@ export default function DepreciationPage() {
                         {(depreciation.status === 'Calculado' || depreciation.status === 'Reversado') && (
                           <button
                             onClick={() => handleReverseDepreciation(depreciation.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title={depreciation.status === 'Reversado' ? 'Marcar como calculado' : 'Reversar depreciación'}
+                            className="text-[#7a2e1b] hover:text-[#5c1f12]"
+                            title={depreciation.status === 'Reversado' ? 'Mark as posted' : 'Reverse depreciation'}
                           >
                             <i className="ri-arrow-go-back-line"></i>
                           </button>
@@ -658,11 +667,12 @@ export default function DepreciationPage() {
           </div>
         </div>
 
+        {/* Detail Modal */}
         {showModal && selectedDepreciation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="bg-[#fffaf1] rounded-2xl p-6 w-full max-w-2xl border border-[#e4d8c4] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Detalle de Depreciación</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Depreciation Details</h3>
                 <div className="flex items-center space-x-2">
                   {getDepreciationJournalEntryNumber(selectedDepreciation) && (
                     <button
@@ -673,9 +683,9 @@ export default function DepreciationPage() {
                           )}`,
                         )
                       }
-                      className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm whitespace-nowrap"
+                      className="px-3 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2913] transition-colors text-sm whitespace-nowrap shadow-sm border border-[#1f2913]"
                     >
-                      Ver en Diario
+                      View in Journal
                     </button>
                   )}
 
@@ -684,7 +694,7 @@ export default function DepreciationPage() {
                       setSelectedDepreciation(null);
                       setShowModal(false);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-[#6b5c3b] hover:text-[#2f3e1e]"
                   >
                     <i className="ri-close-line text-xl"></i>
                   </button>
@@ -694,49 +704,49 @@ export default function DepreciationPage() {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Activo</label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.assetName}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Asset</label>
+                    <p className="text-sm text-[#2f3e1e]">{selectedDepreciation.assetName}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Código</label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.assetCode}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Code</label>
+                    <p className="text-sm text-[#2f3e1e]">{selectedDepreciation.assetCode}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Costo Adquisición</label>
-                    <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.acquisitionCost)}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Acquisition Cost</label>
+                    <p className="text-sm text-[#2f3e1e]">{formatCurrency(selectedDepreciation.acquisitionCost)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Depreciación Mensual</label>
-                    <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.monthlyDepreciation)}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Monthly Depreciation</label>
+                    <p className="text-sm text-[#2f3e1e]">{formatCurrency(selectedDepreciation.monthlyDepreciation)}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Depreciación</label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.depreciationDate ? new Date(selectedDepreciation.depreciationDate).toLocaleDateString('es-DO') : '-'}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Depreciation Date</label>
+                    <p className="text-sm text-[#2f3e1e]">{selectedDepreciation.depreciationDate ? new Date(selectedDepreciation.depreciationDate).toLocaleDateString('en-US') : '-'}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Período</label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.period}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Period</label>
+                    <p className="text-sm text-[#2f3e1e]">{selectedDepreciation.period}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                    <p className="text-sm text-gray-900">{selectedDepreciation.status}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Status</label>
+                    <p className="text-sm text-[#2f3e1e]">{statusLabelMap[selectedDepreciation.status] || selectedDepreciation.status}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Depreciación Acumulada</label>
-                    <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.accumulatedDepreciation)}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Accumulated Depreciation</label>
+                    <p className="text-sm text-[#2f3e1e]">{formatCurrency(selectedDepreciation.accumulatedDepreciation)}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Valor Remanente</label>
-                    <p className="text-sm text-gray-900">{formatCurrency(selectedDepreciation.remainingValue)}</p>
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">Remaining Value</label>
+                    <p className="text-sm text-[#2f3e1e]">{formatCurrency(selectedDepreciation.remainingValue)}</p>
                   </div>
                 </div>
               </div>
@@ -744,17 +754,17 @@ export default function DepreciationPage() {
           </div>
         )}
 
-        {/* Calculate Depreciation Modal */}
+        {/* Calculate Modal */}
         {showCalculateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="bg-[#fffaf1] rounded-2xl p-6 w-full max-w-2xl border border-[#e4d8c4] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Calcular Depreciación Mensual
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">
+                  Run Monthly Depreciation
                 </h3>
                 <button
                   onClick={() => setShowCalculateModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e]"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
@@ -763,8 +773,8 @@ export default function DepreciationPage() {
               <form onSubmit={handleProcessDepreciation} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Período de Depreciación *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Depreciation Period *
                     </label>
                     <input
                       type="month"
@@ -772,33 +782,35 @@ export default function DepreciationPage() {
                       name="period"
                       value={calculationPeriod}
                       onChange={(e) => setCalculationPeriod(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      lang="en"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fecha de Proceso *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Process Date *
                     </label>
                     <input
                       type="date"
                       required
                       name="processDate"
                       defaultValue={new Date().toISOString().split('T')[0]}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      lang="en"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categorías a Incluir
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Categories to Include
                   </label>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {availableCategories.map(category => (
-                      <label key={category} className="flex items-center">
+                      <label key={category} className="flex items-center text-sm text-[#2f3e1e]">
                         <input
                           type="checkbox"
-                          className="mr-2 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="mr-2 h-4 w-4 text-[#2f3e1e] border-[#d8cbb5] rounded focus:ring-[#2f3e1e]"
                           checked={selectedCategories.includes(category)}
                           onChange={(e) => {
                             if (e.target.checked) {
@@ -808,68 +820,63 @@ export default function DepreciationPage() {
                             }
                           }}
                         />
-                        <span className="text-sm">{category}</span>
+                        {category}
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">Resumen del Cálculo</h4>
-                  <div className="text-sm text-blue-800 space-y-1">
+                <div className="bg-[#f0ead7] p-4 rounded-2xl border border-[#e4d8c4]">
+                  <h4 className="font-medium text-[#2f3e1e] mb-2">Calculation Summary</h4>
+                  <div className="text-sm text-[#4a3c24] space-y-1">
                     {(() => {
-                      // Filtrar activos depreciables según las categorías seleccionadas
-                      // Debe tener status activo, categoría seleccionada, y valor depreciable
                       const depreciableAssets = assets.filter((a: any) => {
                         const cat = a.category || '';
                         const status = String(a.status || '').toLowerCase();
                         const isActive = status === 'active' || status === 'activo';
                         const inCategory = selectedCategories.includes(cat);
-                        
-                        // Calcular si tiene valor depreciable
+
                         const purchaseValue = Number(a.purchase_value ?? a.purchase_cost ?? 0) || 0;
                         const salvageValue = Number(a.salvage_value ?? 0) || 0;
                         const depreciableAmount = purchaseValue - salvageValue;
                         const accumulatedDepr = Number(a.accumulated_depreciation ?? 0) || 0;
                         const remainingValue = depreciableAmount - accumulatedDepr;
-                        
+
                         return isActive && inCategory && depreciableAmount > 0 && remainingValue > 0;
                       });
-                      
-                      // Calcular depreciación mensual estimada (igual que el servicio)
+
                       const totalEstimatedDepr = depreciableAssets.reduce((sum: number, a: any) => {
                         const purchaseValue = Number(a.purchase_value ?? a.purchase_cost ?? 0) || 0;
                         const salvageValue = Number(a.salvage_value ?? 0) || 0;
                         const depreciableAmount = purchaseValue - salvageValue;
                         const usefulLifeYears = Number(a.useful_life ?? 0) || 0;
                         const accumulatedDepr = Number(a.accumulated_depreciation ?? 0) || 0;
-                        
+
                         let monthlyDepr = 0;
                         if (usefulLifeYears > 0) {
                           monthlyDepr = depreciableAmount / (usefulLifeYears * 12);
                         } else {
                           const depreciationRate = Number(a.depreciation_rate ?? 0) || 0;
                           if (depreciationRate > 0) {
-                            const usefulLifeMonths = Math.round(100 / depreciationRate * 12);
+                            const usefulLifeMonths = Math.round((100 / depreciationRate) * 12);
                             monthlyDepr = depreciableAmount / usefulLifeMonths;
                           }
                         }
-                        
-                        // No exceder el valor remanente
+
                         const remainingValue = depreciableAmount - accumulatedDepr;
                         const finalDepr = Math.min(monthlyDepr, remainingValue);
-                        
+
                         return sum + (finalDepr > 0 ? finalDepr : 0);
                       }, 0);
-                      
+
                       const periodDate = new Date(calculationPeriod + '-01');
-                      const periodLabel = periodDate.toLocaleDateString('es-DO', { month: 'long', year: 'numeric' });
-                      
+                      const periodLabel = periodDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
                       return (
                         <>
-                          <p>• Activos a depreciar: {depreciableAssets.length}</p>
-                          <p>• Depreciación total estimada: {formatCurrency(totalEstimatedDepr)}</p>
-                          <p>• Período: {periodLabel}</p>
+                          <p>• Assets to depreciate: {depreciableAssets.length}</p>
+                          <p>• Estimated monthly depreciation: {formatCurrency(totalEstimatedDepr)}</p>
+                          <p>• Period: {periodLabel}</p>
                         </>
                       );
                     })()}
@@ -880,15 +887,15 @@ export default function DepreciationPage() {
                   <button
                     type="button"
                     onClick={() => setShowCalculateModal(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 text-[#2f3e1e] bg-[#f0ead7] rounded-lg hover:bg-[#e1d5ba] border border-[#d8cbb5] transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm border border-[#1f2913]"
                   >
-                    Procesar Depreciación
+                    Process Depreciation
                   </button>
                 </div>
               </form>

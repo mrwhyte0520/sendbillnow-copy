@@ -4,7 +4,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { assetDepreciationTypesService, assetTypesService, chartAccountsService, settingsService } from '../../../services/database';
-import { formatMoney } from '../../../utils/numberFormat';
 
 interface AssetType {
   id: string;
@@ -191,13 +190,13 @@ export default function AssetTypesPage() {
 
   const handleDeleteType = async (typeId: string) => {
     if (!user) return;
-    if (!confirm('¿Está seguro de que desea eliminar este tipo de activo?')) return;
+    if (!confirm('Are you sure you want to delete this asset type?')) return;
     try {
       await assetTypesService.delete(typeId);
       setAssetTypes(prev => prev.filter(type => type.id !== typeId));
     } catch (error) {
       console.error('Error deleting asset type:', error);
-      alert('Error al eliminar el tipo de activo');
+      alert('Error deleting the asset type');
     }
   };
 
@@ -228,7 +227,7 @@ export default function AssetTypesPage() {
       } : t));
     } catch (error) {
       console.error('Error toggling asset type status:', error);
-      alert('Error al cambiar el estado del tipo de activo');
+      alert('Error toggling the asset type status');
     }
   };
 
@@ -318,135 +317,21 @@ export default function AssetTypesPage() {
       form.reset();
     } catch (error) {
       console.error('Error saving asset type:', error);
-      alert('Error al guardar el tipo de activo');
+      alert('Error saving the asset type');
     }
   };
 
   const depreciationMethods = [
-    'Línea Recta',
-    'Saldo Decreciente',
-    'Suma de Dígitos',
-    'Unidades de Producción'
+    'Straight Line',
+    'Declining Balance',
+    'Sum of the Years',
+    'Units of Production'
   ];
 
   const filteredTypes = assetTypes.filter(type =>
     type.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     type.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const exportToPDF = () => {
-    // Crear contenido del PDF
-    const filteredData = filteredTypes;
-    const totalTypes = filteredData.length;
-    const activeTypes = filteredData.filter(type => type.isActive).length;
-    const inactiveTypes = filteredData.filter(type => !type.isActive).length;
-    const avgDepreciationRate = filteredData.length > 0 ? filteredData.reduce((sum, type) => sum + type.depreciationRate, 0) / filteredData.length : 0;
-
-    // Función auxiliar para formatear moneda
-    const formatCurrency = (amount: number) => {
-      return formatMoney(amount, 'RD$');
-    };
-
-    // Generar contenido HTML para el PDF
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Tipos de Activos Fijos</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 20px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .summary { background: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
-          .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-          .summary-item { text-align: center; }
-          .summary-value { font-size: 18px; font-weight: bold; color: #2563eb; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f8f9fa; font-weight: bold; }
-          .status-active { color: #059669; font-weight: bold; }
-          .status-inactive { color: #dc2626; font-weight: bold; }
-          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Tipos de Activos Fijos</h1>
-          <p>Reporte generado el ${new Date().toLocaleDateString('es-DO')} a las ${new Date().toLocaleTimeString('es-DO')}</p>
-        </div>
-        
-        <div class="summary">
-          <h3>Resumen de Configuración</h3>
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div>Total de Tipos</div>
-              <div class="summary-value">${totalTypes}</div>
-            </div>
-            <div class="summary-item">
-              <div>Tipos Activos</div>
-              <div class="summary-value">${activeTypes}</div>
-            </div>
-            <div class="summary-item">
-              <div>Tipos Inactivos</div>
-              <div class="summary-value">${inactiveTypes}</div>
-            </div>
-            <div class="summary-item">
-              <div>Tasa Promedio</div>
-              <div class="summary-value">${avgDepreciationRate.toFixed(2)}%</div>
-            </div>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Tipo de Activo</th>
-              <th>Descripción</th>
-              <th>Tasa Depreciación</th>
-              <th>Vida Útil</th>
-              <th>Método</th>
-              <th>Cuenta Contable</th>
-              <th>Cuenta Depreciación</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filteredData.map(type => `
-              <tr>
-                <td>${type.name}</td>
-                <td>${type.description}</td>
-                <td>${type.depreciationRate}% anual</td>
-                <td>${type.usefulLife} años</td>
-                <td>${type.depreciationMethod}</td>
-                <td>${type.account}</td>
-                <td>${type.depreciationAccount}</td>
-                <td class="${type.isActive ? 'status-active' : 'status-inactive'}">${type.isActive ? 'Activo' : 'Inactivo'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div class="footer">
-          <p>Sistema de Gestión de Activos Fijos - Configuración de Tipos</p>
-          <p>Filtros aplicados: ${searchTerm ? `Búsqueda: "${searchTerm}"` : 'Ninguno'}</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Crear y abrir ventana para imprimir
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      printWindow.focus();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    } else {
-      alert('No se pudo abrir la ventana de impresión. Verifique que no esté bloqueada por el navegador.');
-    }
-  };
 
   const exportToExcel = async () => {
     const filteredData = filteredTypes;
@@ -524,145 +409,150 @@ export default function AssetTypesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <button
               onClick={() => navigate('/fixed-assets')}
-              className="flex items-center text-blue-600 hover:text-blue-700 mb-2"
+              className="flex items-center text-[#2f3e1e] hover:text-[#1f2913] transition-colors mb-2"
             >
               <i className="ri-arrow-left-line mr-1"></i>
-              Volver a Activos Fijos
+              Back to Fixed Assets
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Activos</h1>
-            <p className="text-gray-600">Configuración de categorías y tipos de activos fijos</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e]">Fixed Asset Types</h1>
+            <p className="text-[#6b5c3b]">Configure categories, depreciation methods, and accounting links.</p>
           </div>
           <div className="flex space-x-3">
             <button
               onClick={exportToExcel}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="bg-[#3f5d2a] text-white px-4 py-2 rounded-lg hover:bg-[#2d451f] transition-colors whitespace-nowrap shadow-sm border border-[#2d451f]"
             >
               <i className="ri-file-excel-line mr-2"></i>
-              Exportar Excel
+              Export Excel
             </button>
             <button
               onClick={handleAddType}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm border border-[#1f2913]"
             >
               <i className="ri-add-line mr-2"></i>
-              Nuevo Tipo
+              New Type
             </button>
           </div>
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6">
           <div className="flex items-center space-x-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar Tipos de Activos
+              <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                Search Asset Types
               </label>
               <div className="relative">
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-[#9b8a64]"></i>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o descripción..."
+                  placeholder="Search by name or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] text-gray-800 placeholder:text-[#9b8a64]"
                 />
               </div>
             </div>
             <div className="flex items-end">
               <button
                 onClick={() => setSearchTerm('')}
-                className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors whitespace-nowrap"
+                className="bg-[#6b5c3b] text-white px-4 py-2 rounded-lg hover:bg-[#4a3c24] transition-colors whitespace-nowrap shadow-sm"
               >
-                Limpiar
+                Clear
               </button>
             </div>
           </div>
         </div>
 
         {/* Asset Types Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Tipos de Activos Configurados ({filteredTypes.length})
+        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="p-6 border-b border-[#e4d8c4] flex items-center justify-between flex-wrap gap-3">
+            <h3 className="text-lg font-semibold text-[#2f3e1e]">
+              Configured Asset Types ({filteredTypes.length})
             </h3>
+            <p className="text-sm text-[#6b5c3b]">
+              Track rates, useful lives, and linked accounts per category.
+            </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-[#ede7d7]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo de Activo
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Asset Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tasa Depreciación
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Depreciation Rate
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vida Útil
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Useful Life
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Método
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Method
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cuenta Contable
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Account
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-[#4a3c24] uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#f3ecda]">
                 {filteredTypes.map((type) => (
-                  <tr key={type.id} className="hover:bg-gray-50">
+                  <tr key={type.id} className="hover:bg-[#fffdf6]">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{type.name}</div>
-                        <div className="text-sm text-gray-500">{type.description}</div>
+                        <div className="text-sm font-semibold text-[#2f3e1e]">{type.name}</div>
+                        <div className="text-sm text-[#6b5c3b]">{type.description || 'No description'}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {type.depreciationRate}% anual
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
+                      {type.depreciationRate}% annual
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {type.usefulLife} años
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
+                      {type.usefulLife} years
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {type.depreciationMethod}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
+                      {type.depreciationMethod || '—'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {type.account}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3e1e]">
+                      {type.account || '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => handleToggleStatus(type.id)}
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full cursor-pointer ${
-                          type.isActive 
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full cursor-pointer transition-colors ${
+                          type.isActive
+                            ? 'bg-[#d7e4c0] text-[#1f2913] hover:bg-[#c5d5ab]'
+                            : 'bg-[#f4d9d4] text-[#7a2e1b] hover:bg-[#edc6be]'
                         }`}
                       >
-                        {type.isActive ? 'Activo' : 'Inactivo'}
+                        {type.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEditType(type)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#2f3e1e] hover:text-[#1f2913] transition-colors"
+                          aria-label="Edit asset type"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => handleDeleteType(type.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-[#7a2e1b] hover:text-[#5c1f12] transition-colors"
+                          aria-label="Delete asset type"
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
@@ -678,14 +568,15 @@ export default function AssetTypesPage() {
         {/* Type Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#fffaf1] rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-[#e4d8c4] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {editingType ? 'Editar Tipo de Activo' : 'Nuevo Tipo de Activo'}
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">
+                  {editingType ? 'Edit Asset Type' : 'New Asset Type'}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e]"
+                  aria-label="Close"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
@@ -694,94 +585,45 @@ export default function AssetTypesPage() {
               <form onSubmit={handleSaveType} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Tipo *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Type Name *
                     </label>
                     <input
                       type="text"
                       required
                       name="name"
                       defaultValue={editingType?.name || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Ej: Maquinaria y Equipo"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                      placeholder="e.g., Machinery and Equipment"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Depreciación
-                    </label>
-                    <select
-                      name="depreciationTypeId"
-                      value={formDepreciationTypeId}
-                      onChange={(e) => applyDepreciationTypeToForm(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Seleccionar tipo...</option>
-                      {depreciationTypes.map((dt) => (
-                        <option key={dt.id} value={dt.id}>
-                          {dt.code} - {dt.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tasa de Depreciación (%) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      step="0.01"
-                      min="0"
-                      name="depreciationRate"
-                      value={formDepreciationRate}
-                      onChange={(e) => setFormDepreciationRate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="10.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Vida Útil (años) *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      name="usefulLife"
-                      value={formUsefulLifeYears}
-                      onChange={(e) => setFormUsefulLifeYears(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="10"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Depreciación
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Depreciation Method
                     </label>
                     <select
                       name="depreciationMethod"
                       value={formDepreciationMethod}
                       onChange={(e) => setFormDepreciationMethod(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                     >
-                      <option value="">Seleccionar método</option>
+                      <option value="">Select method</option>
                       {depreciationMethods.map(method => (
                         <option key={method} value={method}>{method}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Activo *
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Asset Account *
                     </label>
                     <select
                       required
                       name="account"
                       defaultValue={editingType?.account || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">Seleccionar cuenta...</option>
+                      <option value="">Select account...</option>
                       {getOptions(assetAccounts).map((acc) => (
                         <option
                           key={acc.id}
@@ -793,15 +635,15 @@ export default function AssetTypesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Depreciación
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Depreciation Account
                     </label>
                     <select
                       name="depreciationAccount"
                       defaultValue={editingType?.depreciationAccount || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">Seleccionar cuenta...</option>
+                      <option value="">Select account...</option>
                       {getOptions(expenseAccounts).map((acc) => (
                         <option
                           key={acc.id}
@@ -813,15 +655,15 @@ export default function AssetTypesPage() {
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Depreciación Acumulada
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Accumulated Depreciation Account
                     </label>
                     <select
                       name="accumulatedDepreciationAccount"
                       defaultValue={editingType?.accumulatedDepreciationAccount || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">Seleccionar cuenta...</option>
+                      <option value="">Select account...</option>
                       {getOptions(assetAccounts).map((acc) => (
                         <option
                           key={acc.id}
@@ -833,15 +675,15 @@ export default function AssetTypesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Ganancia por Revalorización
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Revaluation Gain Account
                     </label>
                     <select
                       name="revaluationGainAccount"
                       defaultValue={editingType?.revaluationGainAccount || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">Seleccionar cuenta...</option>
+                      <option value="">Select account...</option>
                       {getOptions(gainAccounts).map((acc) => (
                         <option
                           key={acc.id}
@@ -853,15 +695,15 @@ export default function AssetTypesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cuenta de Pérdida por Revalorización
+                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                      Revaluation Loss Account
                     </label>
                     <select
                       name="revaluationLossAccount"
                       defaultValue={editingType?.revaluationLossAccount || ''}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                      className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
                     >
-                      <option value="">Seleccionar cuenta...</option>
+                      <option value="">Select account...</option>
                       {getOptions(lossAccounts).map((acc) => (
                         <option
                           key={acc.id}
@@ -874,15 +716,15 @@ export default function AssetTypesPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
+                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
+                    Description
                   </label>
                   <textarea
                     rows={3}
                     name="description"
                     defaultValue={editingType?.description || ''}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Descripción detallada del tipo de activo"
+                    className="w-full px-3 py-2 border border-[#d8cbb5] rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                    placeholder="Detailed description of the asset type"
                   />
                 </div>
 
@@ -892,13 +734,13 @@ export default function AssetTypesPage() {
                     onClick={() => setShowModal(false)}
                     className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm border border-[#1f2913]"
                   >
-                    {editingType ? 'Actualizar' : 'Crear'} Tipo
+                    {editingType ? 'Update' : 'Create'} Type
                   </button>
                 </div>
               </form>

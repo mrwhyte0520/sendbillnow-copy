@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
-import { chartAccountsService, journalEntriesService, resolveTenantId, settingsService } from '../../../services/database';
+import { chartAccountsService, journalEntriesService, resolveTenantId, payrollSettingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface PayrollPeriod {
@@ -77,7 +77,7 @@ export default function PayrollJournalEntryPage() {
 
       // Cargar configuración de nómina y catálogo de cuentas
       const [settings, accounts] = await Promise.all([
-        settingsService.getPayrollSettings(),
+        payrollSettingsService.getPayrollSettings(),
         chartAccountsService.getAll(user.id),
       ]);
 
@@ -229,22 +229,22 @@ export default function PayrollJournalEntryPage() {
 
   const postToGeneralLedger = async () => {
     if (!selectedPeriod || journalEntries.length === 0) {
-      alert('No hay asientos para contabilizar');
+      alert('No journal entries to post.');
       return;
     }
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para contabilizar la nómina');
+      alert('You must be signed in to post payroll.');
       return;
     }
 
-    if (!confirm('¿Desea contabilizar estos asientos en el libro mayor?')) return;
+    if (!confirm('Post these journal entries to the general ledger?')) return;
 
     setLoading(true);
     try {
       const period = periods.find(p => p.id === selectedPeriod);
       if (!period) {
-        alert('No se encontró el período de nómina seleccionado');
+        alert('Selected payroll period not found.');
         return;
       }
 
@@ -252,7 +252,7 @@ export default function PayrollJournalEntryPage() {
       const totalCredit = journalEntries.reduce((sum, e) => sum + e.credit, 0);
 
       if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-        alert('El asiento de nómina no está balanceado. Verifique los montos.');
+        alert('The payroll journal entry is not balanced. Please review the amounts.');
         return;
       }
 
@@ -271,7 +271,7 @@ export default function PayrollJournalEntryPage() {
         const accountId = accountsByCode.get(code);
 
         if (!accountId) {
-          throw new Error(`No se encontró en el catálogo la cuenta contable con código ${code} para la nómina.`);
+          throw new Error(`Could not find chart of account with code ${code} for payroll.`);
         }
 
         return {
@@ -289,8 +289,8 @@ export default function PayrollJournalEntryPage() {
       const createdEntry = await journalEntriesService.createWithLines(user.id, {
         entry_number: entryNumber,
         entry_date: today,
-        description: `Asiento de nómina del período ${period.period_name}`,
-        reference: `Nómina - ${period.period_name}`,
+        description: `Payroll journal entry - ${period.period_name}`,
+        reference: `Payroll - ${period.period_name}`,
         status: 'posted',
       }, lines);
 
@@ -308,12 +308,12 @@ export default function PayrollJournalEntryPage() {
         }
       }
 
-      alert('Asientos de nómina contabilizados correctamente en el libro mayor');
+      alert('Payroll journal entries posted to the general ledger.');
       setJournalEntries([]);
       setSelectedPeriod('');
     } catch (error) {
       console.error('Error posting to general ledger:', error);
-      alert('Error al contabilizar los asientos');
+      alert('Error posting journal entries.');
     } finally {
       setLoading(false);
     }
@@ -325,32 +325,32 @@ export default function PayrollJournalEntryPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Entrada al Diario de Nómina</h1>
-            <p className="text-gray-600">Contabilización de nómina en el libro mayor</p>
+            <h1 className="text-2xl font-bold text-gray-900">Payroll Journal Entry</h1>
+            <p className="text-gray-700">Post payroll to the general ledger</p>
           </div>
           <button
             onClick={() => navigate('/payroll')}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+            className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
           >
-            <i className="ri-arrow-left-line mr-2"></i>
-            Volver
+            <i className="ri-arrow-left-line"></i>
+            Back
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Seleccionar Período de Nómina
+              Select Payroll Period
             </label>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
             >
-              <option value="">-- Seleccionar período --</option>
+              <option value="">-- Select period --</option>
               {periods.map(period => (
                 <option key={period.id} value={period.id}>
                   {period.period_name} - {period.status}
@@ -360,10 +360,10 @@ export default function PayrollJournalEntryPage() {
           </div>
 
           {selectedPeriod && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <i className="ri-information-line mr-2"></i>
-                Se generarán los asientos contables para contabilizar esta nómina en el libro mayor
+            <div className="bg-[#e5ead7] border border-[#dfe5cf] rounded-lg p-4 mb-4 text-[#2f3a1f] flex items-start gap-2">
+              <i className="ri-information-line text-xl mt-0.5"></i>
+              <p className="text-sm">
+                The system will generate journal entries to post this payroll period to the general ledger.
               </p>
             </div>
           )}
@@ -371,18 +371,18 @@ export default function PayrollJournalEntryPage() {
 
         {journalEntries.length > 0 && (
           <>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Asientos Contables Generados</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf]">
+              <div className="p-6 border-b border-[#dfe5cf]">
+                <h3 className="text-lg font-semibold text-gray-900">Generated Journal Entries</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cuenta</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Débito</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crédito</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debit</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -399,7 +399,7 @@ export default function PayrollJournalEntryPage() {
                       </tr>
                     ))}
                     <tr className="bg-gray-100 font-bold">
-                      <td colSpan={2} className="px-6 py-4 text-sm text-gray-900 text-right">TOTALES</td>
+                      <td colSpan={2} className="px-6 py-4 text-sm text-gray-900 text-right">TOTALS</td>
                       <td className="px-6 py-4 text-sm text-right text-gray-900">
                         {formatMoney(totalDebit)}
                       </td>
@@ -412,33 +412,33 @@ export default function PayrollJournalEntryPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     {isBalanced ? (
-                      <div className="flex items-center text-green-600">
+                      <div className="flex items-center text-[#2f3a1f]">
                         <i className="ri-checkbox-circle-fill text-xl mr-2"></i>
-                        <span className="font-semibold">Asiento Balanceado</span>
+                        <span className="font-semibold">Balanced entry</span>
                       </div>
                     ) : (
                       <div className="flex items-center text-red-600">
                         <i className="ri-error-warning-fill text-xl mr-2"></i>
-                        <span className="font-semibold">Asiento Desbalanceado</span>
+                        <span className="font-semibold">Unbalanced entry</span>
                       </div>
                     )}
                   </div>
                   <p className="text-sm text-gray-600">
-                    Diferencia: {formatMoney(Math.abs(totalDebit - totalCredit))}
+                    Difference: {formatMoney(Math.abs(totalDebit - totalCredit))}
                   </p>
                 </div>
                 <button
                   onClick={postToGeneralLedger}
                   disabled={!isBalanced || loading}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
                 >
                   <i className="ri-send-plane-line mr-2"></i>
-                  Contabilizar en Libro Mayor
+                  Post to General Ledger
                 </button>
               </div>
             </div>
@@ -446,9 +446,9 @@ export default function PayrollJournalEntryPage() {
         )}
 
         {selectedPeriod && journalEntries.length === 0 && !loading && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] p-12 text-center">
             <i className="ri-file-list-line text-5xl text-gray-400 mb-4"></i>
-            <p className="text-gray-600">Generando asientos contables...</p>
+            <p className="text-gray-700">Generating journal entries...</p>
           </div>
         )}
       </div>

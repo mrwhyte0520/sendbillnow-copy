@@ -3,6 +3,35 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { supplierTypesService } from '../../../services/database';
 
+const palette = {
+  cream: '#F6F1E7',
+  green: '#2F4F30',
+  greenDark: '#1F2B1A',
+  greenMid: '#4B5E2F',
+  greenSoft: '#7E8F63',
+  badgeNeutral: '#E5DCC3',
+};
+
+const translateSupplierTypeName = (value: string) => {
+  const normalized = String(value || '').toLowerCase();
+  switch (normalized) {
+    case 'persona física':
+    case 'persona fisica':
+      return 'Individual';
+    case 'persona jurídica':
+    case 'persona juridica':
+      return 'Corporate';
+    case 'prestador de servicios':
+      return 'Service Provider';
+    case 'proveedor informal':
+      return 'Informal Supplier';
+    case 'sin especificar':
+      return 'Unspecified';
+    default:
+      return value || 'Supplier';
+  }
+};
+
 export default function SupplierTypesPage() {
   const { user } = useAuth();
   const [types, setTypes] = useState<any[]>([]);
@@ -85,7 +114,7 @@ export default function SupplierTypesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para gestionar tipos de suplidor');
+      alert('You must sign in to manage supplier types.');
       return;
     }
 
@@ -112,11 +141,11 @@ export default function SupplierTypesPage() {
       }
       await loadTypes();
       resetForm();
-      alert(editingType ? 'Tipo de suplidor actualizado' : 'Tipo de suplidor creado');
+      alert(editingType ? 'Supplier type updated successfully.' : 'Supplier type created successfully.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving supplier type', error);
-      alert('Error al guardar el tipo de suplidor');
+      alert('The supplier type could not be saved.');
     }
   };
 
@@ -142,65 +171,76 @@ export default function SupplierTypesPage() {
 
   const handleDelete = async (id: string) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para eliminar tipos de suplidor');
+      alert('You must sign in to delete supplier types.');
       return;
     }
-    if (!confirm('¿Eliminar este tipo de suplidor?')) return;
+    if (!confirm('Delete this supplier type?')) return;
 
     try {
       await supplierTypesService.delete(id);
       await loadTypes();
-      alert('Tipo de suplidor eliminado');
+      alert('Supplier type deleted.');
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error deleting supplier type', error);
-      alert('No se pudo eliminar el tipo de suplidor');
+      alert('The supplier type could not be removed.');
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div
+        className="space-y-6 rounded-3xl"
+        style={{ backgroundColor: palette.cream, minHeight: '100vh', padding: '24px' }}
+      >
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Suplidor</h1>
-            <p className="text-gray-600">Catálogo de tipos de proveedores para configuración fiscal y contable</p>
+            <p className="text-sm uppercase tracking-wide font-semibold" style={{ color: palette.greenSoft }}>
+              Purchasing · Tax Profiles
+            </p>
+            <h1 className="text-3xl font-bold" style={{ color: palette.greenDark }}>Supplier Types</h1>
+            <p className="text-base" style={{ color: palette.greenSoft }}>
+              Catalog of supplier profiles for fiscal and accounting setup
+            </p>
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="px-4 py-2 rounded-lg font-semibold text-white transition-colors whitespace-nowrap shadow"
+            style={{ backgroundColor: palette.green }}
           >
             <i className="ri-add-line mr-2" />
-            Nuevo Tipo
+            New Type
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)]">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Lista de Tipos de Suplidor</h3>
+            <h3 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Supplier Type List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descripción</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Configuración</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Configuration</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {types.map((t) => (
                   <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{t.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {translateSupplierTypeName(t.name)}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-700 max-w-md truncate">{t.description}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       <div className="flex flex-wrap gap-1">
                         {t.affects_itbis && (
-                          <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700">Afecta ITBIS</span>
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800">Affects VAT</span>
                         )}
                         {t.affects_isr && (
-                          <span className="px-2 py-0.5 text-xs rounded-full bg-amber-50 text-amber-700">Afecta ISR</span>
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800">Affects Income Tax</span>
                         )}
                         {t.is_rst && (
                           <span className="px-2 py-0.5 text-xs rounded-full bg-green-50 text-green-700">RST</span>
@@ -209,10 +249,10 @@ export default function SupplierTypesPage() {
                           <span className="px-2 py-0.5 text-xs rounded-full bg-purple-50 text-purple-700">ONG</span>
                         )}
                         {t.is_non_taxpayer && (
-                          <span className="px-2 py-0.5 text-xs rounded-full bg-red-50 text-red-700">No contribuyente</span>
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-800">Non-taxpayer</span>
                         )}
                         {t.is_government && (
-                          <span className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-blue-700">Gobierno</span>
+                          <span className="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">Government</span>
                         )}
                       </div>
                     </td>
@@ -237,7 +277,7 @@ export default function SupplierTypesPage() {
                 {types.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No hay tipos de suplidor registrados.
+                      No supplier types yet.
                     </td>
                   </tr>
                 )}
@@ -251,12 +291,12 @@ export default function SupplierTypesPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {editingType ? 'Editar Tipo de Suplidor' : 'Nuevo Tipo de Suplidor'}
+                  {editingType ? 'Edit Supplier Type' : 'New Supplier Type'}
                 </h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
                   <input
                     type="text"
                     required
@@ -275,7 +315,7 @@ export default function SupplierTypesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -285,7 +325,7 @@ export default function SupplierTypesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Retención ISR (Persona Física)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">ISR Withholding (Individuals)</label>
                   <select
                     value={formData.isr_withholding_rate == null ? '' : String(formData.isr_withholding_rate)}
                     onChange={(e) => {
@@ -298,18 +338,18 @@ export default function SupplierTypesPage() {
                     disabled={!isPersonaFisicaType(formData.name)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                   >
-                    <option value="">Sin especificar</option>
+                    <option value="">Not specified</option>
                     {isrWithholdingRateOptions.map((rate) => (
                       <option key={rate} value={rate}>{rate} %</option>
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
-                    Esta tasa se aplica automáticamente solo para suplidores clasificados como Persona Física.
+                    Applied automatically for supplier types classified as Individuals.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Retención ITBIS</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">VAT Withholding</label>
                   <select
                     value={formData.itbis_withholding_rate == null ? '' : String(formData.itbis_withholding_rate)}
                     onChange={(e) => {
@@ -321,7 +361,7 @@ export default function SupplierTypesPage() {
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Sin especificar</option>
+                    <option value="">Not specified</option>
                     {itbisWithholdingRateOptions.map((rate) => (
                       <option key={rate} value={rate}>{rate} %</option>
                     ))}
@@ -335,7 +375,7 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, affects_itbis: e.target.checked })}
                       className="mr-2"
                     />
-                    Afecta ITBIS
+                    Affects VAT
                   </label>
                   <label className="inline-flex items-center text-sm text-gray-700">
                     <input
@@ -344,7 +384,7 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, affects_isr: e.target.checked })}
                       className="mr-2"
                     />
-                    Afecta ISR
+                    Affects Income Tax
                   </label>
                   <label className="inline-flex items-center text-sm text-gray-700">
                     <input
@@ -353,7 +393,7 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, is_rst: e.target.checked })}
                       className="mr-2"
                     />
-                    Régimen RST
+                    RST Regime
                   </label>
                   <label className="inline-flex items-center text-sm text-gray-700">
                     <input
@@ -362,7 +402,7 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, is_ong: e.target.checked })}
                       className="mr-2"
                     />
-                    ONG / Fundación
+                    NGO / Foundation
                   </label>
                   <label className="inline-flex items-center text-sm text-gray-700">
                     <input
@@ -371,7 +411,7 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, is_non_taxpayer: e.target.checked })}
                       className="mr-2"
                     />
-                    No contribuyente
+                    Non-taxpayer
                   </label>
                   <label className="inline-flex items-center text-sm text-gray-700">
                     <input
@@ -380,43 +420,43 @@ export default function SupplierTypesPage() {
                       onChange={(e) => setFormData({ ...formData, is_government: e.target.checked })}
                       className="mr-2"
                     />
-                    Gobierno / Entidad Pública
+                    Government / Public Entity
                   </label>
                 </div>
 
                 {formData.is_government && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Factura Habitual</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Default Invoice Type</label>
                       <select
                         value={formData.default_invoice_type}
                         onChange={(e) => setFormData({ ...formData, default_invoice_type: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="">Seleccionar tipo</option>
-                        <option value="01">01 - Factura de Crédito Fiscal</option>
-                        <option value="02">02 - Factura de Consumo</option>
-                        <option value="03">03 - Nota de Débito</option>
-                        <option value="04">04 - Nota de Crédito</option>
-                        <option value="11">11 - Comprobante de Compras</option>
-                        <option value="12">12 - Registro Único de Ingresos</option>
-                        <option value="13">13 - Gastos Menores</option>
-                        <option value="14">14 - Regímenes Especiales</option>
-                        <option value="15">15 - Comprobante Gubernamental</option>
+                        <option value="">Select type</option>
+                        <option value="01">01 - Fiscal Credit Invoice</option>
+                        <option value="02">02 - Consumer Invoice</option>
+                        <option value="03">03 - Debit Note</option>
+                        <option value="04">04 - Credit Note</option>
+                        <option value="11">11 - Purchase Receipt</option>
+                        <option value="12">12 - Unique Income Record</option>
+                        <option value="13">13 - Minor Expenses</option>
+                        <option value="14">14 - Special Regimes</option>
+                        <option value="15">15 - Government Receipt</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Régimen Tributario</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Tax Regime</label>
                       <select
                         value={formData.tax_regime}
                         onChange={(e) => setFormData({ ...formData, tax_regime: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="">Seleccionar régimen</option>
-                        <option value="ordinario">Ordinario</option>
-                        <option value="simplificado">Régimen Simplificado de Tributación (RST)</option>
-                        <option value="exento">Exento</option>
-                        <option value="especial">Régimen Especial</option>
+                        <option value="">Select regime</option>
+                        <option value="ordinario">Ordinary</option>
+                        <option value="simplificado">Simplified (RST)</option>
+                        <option value="exento">Exempt</option>
+                        <option value="especial">Special Regime</option>
                       </select>
                     </div>
                   </div>
@@ -427,13 +467,14 @@ export default function SupplierTypesPage() {
                     onClick={resetForm}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                    className="px-4 py-2 rounded-lg text-white whitespace-nowrap shadow"
+                    style={{ backgroundColor: palette.greenMid }}
                   >
-                    {editingType ? 'Actualizar' : 'Crear'} Tipo
+                    {editingType ? 'Update Type' : 'Create Type'}
                   </button>
                 </div>
               </form>

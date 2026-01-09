@@ -152,7 +152,7 @@ export default function PayrollBonusesPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving bonus:', error);
-      alert('Error al guardar la bonificación');
+      alert('Error saving bonus');
     }
   };
 
@@ -195,13 +195,13 @@ export default function PayrollBonusesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de que desea eliminar esta bonificación?')) return;
+    if (!confirm('Are you sure you want to delete this bonus?')) return;
     try {
       await bonusesService.delete(id);
       setBonuses(bonuses.filter(bonus => bonus.id !== id));
     } catch (error) {
       console.error('Error deleting bonus:', error);
-      alert('Error al eliminar la bonificación');
+      alert('Error deleting bonus');
     }
   };
 
@@ -231,7 +231,7 @@ export default function PayrollBonusesPage() {
       } : b));
     } catch (error) {
       console.error('Error toggling bonus status:', error);
-      alert('Error al cambiar el estado de la bonificación');
+      alert('Error toggling bonus status');
     }
   };
 
@@ -241,39 +241,39 @@ export default function PayrollBonusesPage() {
     const rows = filteredBonuses.map(bonus => ({
       name: bonus.name,
       type:
-        bonus.type === 'fijo' ? 'Monto Fijo' :
-        bonus.type === 'porcentaje' ? 'Porcentaje' : 'Fórmula',
+        bonus.type === 'fijo' ? 'Fixed Amount' :
+        bonus.type === 'porcentaje' ? 'Percentage' : 'Formula',
       value:
         bonus.type === 'fijo' ? `RD$${bonus.amount.toLocaleString()}` :
         bonus.type === 'porcentaje' ? `${bonus.percentage}%` : bonus.formula,
       frequency: getFrequencyLabel(bonus.frequency),
       category: getCategoryLabel(bonus.category),
-      taxable: bonus.isTaxable ? 'Sí' : 'No',
-      affectsISR: bonus.affectsISR ? 'Sí' : 'No',
-      affectsSS: bonus.affectsSocialSecurity ? 'Sí' : 'No',
-      status: bonus.isActive ? 'Activo' : 'Inactivo',
+      taxable: bonus.isTaxable ? 'Yes' : 'No',
+      affectsISR: bonus.affectsISR ? 'Yes' : 'No',
+      affectsSS: bonus.affectsSocialSecurity ? 'Yes' : 'No',
+      status: bonus.isActive ? 'Active' : 'Inactive',
     }));
 
     if (!rows.length) {
-      alert('No hay bonificaciones para exportar.');
+      alert('No bonuses to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'name', title: 'Nombre', width: 26 },
-        { key: 'type', title: 'Tipo', width: 16 },
-        { key: 'value', title: 'Monto/Porcentaje', width: 20 },
-        { key: 'frequency', title: 'Frecuencia', width: 16 },
-        { key: 'category', title: 'Categoría', width: 18 },
-        { key: 'taxable', title: 'Gravable', width: 12 },
-        { key: 'affectsISR', title: 'Afecta ISR', width: 14 },
-        { key: 'affectsSS', title: 'Afecta SS', width: 14 },
-        { key: 'status', title: 'Estado', width: 12 },
+        { key: 'name', title: 'Name', width: 26 },
+        { key: 'type', title: 'Type', width: 16 },
+        { key: 'value', title: 'Amount/Percentage', width: 20 },
+        { key: 'frequency', title: 'Frequency', width: 16 },
+        { key: 'category', title: 'Category', width: 18 },
+        { key: 'taxable', title: 'Taxable', width: 12 },
+        { key: 'affectsISR', title: 'Income Tax', width: 14 },
+        { key: 'affectsSS', title: 'Social Security', width: 14 },
+        { key: 'status', title: 'Status', width: 12 },
       ],
-      `bonificaciones_${today}`,
-      'Bonificaciones'
+      `bonuses_${today}`,
+      'Bonuses'
     );
   };
 
@@ -292,24 +292,24 @@ export default function PayrollBonusesPage() {
 
   const getCategoryLabel = (category: Bonus['category']) => {
     switch (category) {
-      case 'productividad': return 'Productividad';
-      case 'ventas': return 'Ventas';
-      case 'asistencia': return 'Asistencia';
-      case 'antiguedad': return 'Antigüedad';
-      case 'navidad': return 'Navidad';
-      case 'vacaciones': return 'Vacaciones';
-      case 'otro': return 'Otro';
+      case 'productividad': return 'Productivity';
+      case 'ventas': return 'Sales';
+      case 'asistencia': return 'Attendance';
+      case 'antiguedad': return 'Tenure';
+      case 'navidad': return 'Holiday';
+      case 'vacaciones': return 'Vacation';
+      case 'otro': return 'Other';
       default: return category;
     }
   };
 
   const getFrequencyLabel = (frequency: Bonus['frequency']) => {
     switch (frequency) {
-      case 'mensual': return 'Mensual';
-      case 'trimestral': return 'Trimestral';
-      case 'semestral': return 'Semestral';
-      case 'anual': return 'Anual';
-      case 'unico': return 'Único';
+      case 'mensual': return 'Monthly';
+      case 'trimestral': return 'Quarterly';
+      case 'semestral': return 'Semiannual';
+      case 'anual': return 'Annual';
+      case 'unico': return 'One-time';
       default: return frequency;
     }
   };
@@ -323,75 +323,75 @@ export default function PayrollBonusesPage() {
 
   return (
     <DashboardLayout>
-    <div className="space-y-6">
+    <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bonificaciones</h1>
-          <p className="text-gray-600 mt-1">Gestión de bonificaciones y pagos adicionales</p>
+          <h1 className="text-2xl font-bold text-gray-900">Bonuses</h1>
+          <p className="text-gray-700 mt-1">Manage bonuses and additional payments</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => window.REACT_APP_NAVIGATE('/payroll')}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 whitespace-nowrap"
+            className="px-4 py-2 bg-[#e5ead7] text-[#2f3a1f] rounded-lg hover:bg-[#d7dec3] transition-colors flex items-center gap-2 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line"></i>
-            Volver a Nóminas
+            Back to Payroll
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors flex items-center gap-2 whitespace-nowrap"
+            className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line"></i>
-            Nueva Bonificación
+            New Bonus
           </button>
         </div>
       </div>
 
-      {/* Estadísticas */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <i className="ri-gift-line text-xl text-blue-600"></i>
+            <div className="p-2 bg-[#e5ead7] rounded-lg">
+              <i className="ri-gift-line text-xl text-[#4b5320]"></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Bonos</p>
+              <p className="text-sm font-medium text-gray-600">Total Bonuses</p>
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <i className="ri-check-line text-xl text-green-600"></i>
+            <div className="p-2 bg-[#dbe8c0] rounded-lg">
+              <i className="ri-check-line text-xl text-[#3d451b]"></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Activos</p>
+              <p className="text-sm font-medium text-gray-600">Active</p>
               <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <i className="ri-money-dollar-circle-line text-xl text-orange-600"></i>
+            <div className="p-2 bg-[#f1e4c2] rounded-lg">
+              <i className="ri-money-dollar-circle-line text-xl text-[#4b5320]"></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Gravables</p>
+              <p className="text-sm font-medium text-gray-600">Taxable</p>
               <p className="text-2xl font-bold text-gray-900">{stats.taxable}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <i className="ri-calendar-line text-xl text-purple-600"></i>
+            <div className="p-2 bg-[#e0e5d0] rounded-lg">
+              <i className="ri-calendar-line text-xl text-[#4b5320]"></i>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Mensuales</p>
+              <p className="text-sm font-medium text-gray-600">Monthly</p>
               <p className="text-2xl font-bold text-gray-900">{stats.monthly}</p>
             </div>
           </div>
@@ -399,61 +399,61 @@ export default function PayrollBonusesPage() {
       </div>
 
       {/* Controles */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf] mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex flex-col sm:flex-row gap-4 flex-1">
             <div className="relative">
               <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
               <input
                 type="text"
-                placeholder="Buscar bonificaciones..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Search bonuses..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
-              <option value="todos">Todas las categorías</option>
-              <option value="productividad">Productividad</option>
-              <option value="ventas">Ventas</option>
-              <option value="asistencia">Asistencia</option>
-              <option value="antiguedad">Antigüedad</option>
-              <option value="navidad">Navidad</option>
-              <option value="vacaciones">Vacaciones</option>
-              <option value="otro">Otro</option>
+              <option value="todos">All categories</option>
+              <option value="productividad">Productivity</option>
+              <option value="ventas">Sales</option>
+              <option value="asistencia">Attendance</option>
+              <option value="antiguedad">Tenure</option>
+              <option value="navidad">Holiday</option>
+              <option value="vacaciones">Vacation</option>
+              <option value="otro">Other</option>
             </select>
 
             <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
-              <option value="todos">Todos los tipos</option>
-              <option value="fijo">Monto Fijo</option>
-              <option value="porcentaje">Porcentaje</option>
-              <option value="formula">Fórmula</option>
+              <option value="todos">All types</option>
+              <option value="fijo">Fixed Amount</option>
+              <option value="porcentaje">Percentage</option>
+              <option value="formula">Formula</option>
             </select>
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={exportToCSV}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#2f3a1f] text-white rounded-lg hover:bg-[#273016] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-download-line mr-2"></i>
-              Exportar
+              Export
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors whitespace-nowrap shadow-sm"
             >
               <i className="ri-add-line mr-2"></i>
-              Nueva Bonificación
+              New Bonus
             </button>
           </div>
         </div>
@@ -462,10 +462,10 @@ export default function PayrollBonusesPage() {
       {/* Formulario */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">
               <h2 className="text-xl font-semibold text-gray-900">
-                {editingBonus ? 'Editar Bonificación' : 'Nueva Bonificación'}
+                {editingBonus ? 'Edit Bonus' : 'New Bonus'}
               </h2>
             </div>
 
@@ -473,12 +473,12 @@ export default function PayrollBonusesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre de la Bonificación *
+                    Bonus name *
                   </label>
                   <input
                     type="text"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
@@ -486,31 +486,31 @@ export default function PayrollBonusesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de Cálculo *
+                    Calculation type *
                   </label>
                   <select
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value as Bonus['type'] })}
                   >
-                    <option value="fijo">Monto Fijo</option>
-                    <option value="porcentaje">Porcentaje</option>
-                    <option value="formula">Fórmula</option>
+                    <option value="fijo">Fixed Amount</option>
+                    <option value="porcentaje">Percentage</option>
+                    <option value="formula">Formula</option>
                   </select>
                 </div>
 
                 {formData.type === 'fijo' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Monto (RD$) *
+                      Amount (RD$) *
                     </label>
                     <input
                       type="number"
                       required
                       min="0"
                       step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
                     />
@@ -520,7 +520,7 @@ export default function PayrollBonusesPage() {
                 {formData.type === 'porcentaje' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Porcentaje (%) *
+                      Percentage (%) *
                     </label>
                     <input
                       type="number"
@@ -528,7 +528,7 @@ export default function PayrollBonusesPage() {
                       min="0"
                       max="100"
                       step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       value={formData.percentage}
                       onChange={(e) => setFormData({ ...formData, percentage: parseFloat(e.target.value) })}
                     />
@@ -538,13 +538,13 @@ export default function PayrollBonusesPage() {
                 {formData.type === 'formula' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Fórmula *
+                      Formula *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="ej: salario_base * 0.5"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g. base_salary * 0.5"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                       value={formData.formula}
                       onChange={(e) => setFormData({ ...formData, formula: e.target.value })}
                     />
@@ -553,50 +553,50 @@ export default function PayrollBonusesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Frecuencia *
+                    Frequency *
                   </label>
                   <select
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     value={formData.frequency}
                     onChange={(e) => setFormData({ ...formData, frequency: e.target.value as Bonus['frequency'] })}
                   >
-                    <option value="mensual">Mensual</option>
-                    <option value="trimestral">Trimestral</option>
-                    <option value="semestral">Semestral</option>
-                    <option value="anual">Anual</option>
-                    <option value="unico">Único</option>
+                    <option value="mensual">Monthly</option>
+                    <option value="trimestral">Quarterly</option>
+                    <option value="semestral">Semiannual</option>
+                    <option value="anual">Annual</option>
+                    <option value="unico">One-time</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
+                    Category *
                   </label>
                   <select
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as Bonus['category'] })}
                   >
-                    <option value="productividad">Productividad</option>
-                    <option value="ventas">Ventas</option>
-                    <option value="asistencia">Asistencia</option>
-                    <option value="antiguedad">Antigüedad</option>
-                    <option value="navidad">Navidad</option>
-                    <option value="vacaciones">Vacaciones</option>
-                    <option value="otro">Otro</option>
+                    <option value="productividad">Productivity</option>
+                    <option value="ventas">Sales</option>
+                    <option value="asistencia">Attendance</option>
+                    <option value="antiguedad">Tenure</option>
+                    <option value="navidad">Holiday</option>
+                    <option value="vacaciones">Vacation</option>
+                    <option value="otro">Other</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción
+                  Description
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
@@ -604,11 +604,11 @@ export default function PayrollBonusesPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Condiciones para Aplicar
+                  Conditions to apply
                 </label>
                 <textarea
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                   value={formData.conditions}
                   onChange={(e) => setFormData({ ...formData, conditions: e.target.value })}
                 />
@@ -618,31 +618,31 @@ export default function PayrollBonusesPage() {
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-[#4b5320] focus:ring-[#4b5320]"
                     checked={formData.isTaxable}
                     onChange={(e) => setFormData({ ...formData, isTaxable: e.target.checked })}
                   />
-                  <span className="ml-2 text-sm text-gray-700">Es gravable</span>
+                  <span className="ml-2 text-sm text-gray-700">Taxable</span>
                 </label>
 
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-[#4b5320] focus:ring-[#4b5320]"
                     checked={formData.affectsISR}
                     onChange={(e) => setFormData({ ...formData, affectsISR: e.target.checked })}
                   />
-                  <span className="ml-2 text-sm text-gray-700">Afecta ISR</span>
+                  <span className="ml-2 text-sm text-gray-700">Affects income tax</span>
                 </label>
 
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-[#4b5320] focus:ring-[#4b5320]"
                     checked={formData.affectsSocialSecurity}
                     onChange={(e) => setFormData({ ...formData, affectsSocialSecurity: e.target.checked })}
                   />
-                  <span className="ml-2 text-sm text-gray-700">Afecta Seg. Social</span>
+                  <span className="ml-2 text-sm text-gray-700">Affects social security</span>
                 </label>
               </div>
 
@@ -652,13 +652,13 @@ export default function PayrollBonusesPage() {
                   onClick={resetForm}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                 >
-                  {editingBonus ? 'Actualizar' : 'Crear'} Bonificación
+                  {editingBonus ? 'Update' : 'Create'} Bonus
                 </button>
               </div>
             </form>
@@ -667,31 +667,31 @@ export default function PayrollBonusesPage() {
       )}
 
       {/* Lista de Bonificaciones */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Bonificación
+                  Bonus
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo/Valor
+                  Type/Value
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Frecuencia
+                  Frequency
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Categoría
+                  Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Impuestos
+                  Taxes
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
+                  Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -716,7 +716,11 @@ export default function PayrollBonusesPage() {
                       {bonus.type === 'porcentaje' && `${bonus.percentage}%`}
                       {bonus.type === 'formula' && bonus.formula}
                     </div>
-                    <div className="text-xs text-gray-500 capitalize">{bonus.type}</div>
+                    <div className="text-xs text-gray-500 capitalize">
+                      {bonus.type === 'fijo' && 'Fixed amount'}
+                      {bonus.type === 'porcentaje' && 'Percentage'}
+                      {bonus.type === 'formula' && 'Formula'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{getFrequencyLabel(bonus.frequency)}</div>
@@ -729,18 +733,18 @@ export default function PayrollBonusesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       {bonus.isTaxable && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Gravable
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#dbe8c0] text-[#2f3a1f]">
+                          Taxable
                         </span>
                       )}
                       {bonus.affectsISR && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                          ISR
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#f1e4c2] text-[#3d451b]">
+                          Income Tax
                         </span>
                       )}
                       {bonus.affectsSocialSecurity && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          SS
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#e5ead7] text-[#2f3a1f]">
+                          Social Security
                         </span>
                       )}
                     </div>
@@ -748,32 +752,32 @@ export default function PayrollBonusesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       bonus.isActive 
-                        ? 'bg-green-100 text-green-800' 
+                        ? 'bg-[#dbe8c0] text-[#2f3a1f]' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {bonus.isActive ? 'Activo' : 'Inactivo'}
+                      {bonus.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleEdit(bonus)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Editar"
+                        className="text-[#4b5320] hover:text-[#2f3a1f]"
+                        title="Edit"
                       >
                         <i className="ri-edit-line"></i>
                       </button>
                       <button
                         onClick={() => toggleStatus(bonus.id)}
-                        className={`${bonus.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
-                        title={bonus.isActive ? 'Desactivar' : 'Activar'}
+                        className={`${bonus.isActive ? 'text-red-600 hover:text-red-900' : 'text-[#4b5320] hover:text-[#2f3a1f]'}`}
+                        title={bonus.isActive ? 'Deactivate' : 'Activate'}
                       >
                         <i className={`${bonus.isActive ? 'ri-pause-circle-line' : 'ri-play-circle-line'}`}></i>
                       </button>
                       <button
                         onClick={() => handleDelete(bonus.id)}
                         className="text-red-600 hover:text-red-900"
-                        title="Eliminar"
+                        title="Delete"
                       >
                         <i className="ri-delete-bin-line"></i>
                       </button>
@@ -788,13 +792,13 @@ export default function PayrollBonusesPage() {
         {filteredBonuses.length === 0 && (
           <div className="text-center py-12">
             <i className="ri-gift-line text-4xl text-gray-400 mb-4"></i>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay bonificaciones</h3>
-            <p className="text-gray-500 mb-4">No se encontraron bonificaciones con los filtros aplicados.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No bonuses</h3>
+            <p className="text-gray-500 mb-4">No bonuses found with the current filters.</p>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
             >
-              Crear Primera Bonificación
+              Create first bonus
             </button>
           </div>
         )}

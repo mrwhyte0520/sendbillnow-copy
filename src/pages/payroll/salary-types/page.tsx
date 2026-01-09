@@ -75,7 +75,7 @@ export default function SalaryTypesPage() {
     e.preventDefault();
 
     if (!user) {
-      alert('Debe iniciar sesión para gestionar tipos de salarios.');
+      alert('You must be logged in to manage salary types.');
       return;
     }
 
@@ -131,7 +131,7 @@ export default function SalaryTypesPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving salary type:', error);
-      alert('Error al guardar el tipo de salario');
+      alert('Error saving the salary type.');
     }
   };
 
@@ -177,7 +177,7 @@ export default function SalaryTypesPage() {
       ));
     } catch (error) {
       console.error('Error toggling salary type status:', error);
-      alert('Error al cambiar el estado del tipo de salario');
+      alert('Error changing salary type status.');
     }
   };
 
@@ -188,179 +188,169 @@ export default function SalaryTypesPage() {
       name: type.name,
       description: type.description,
       method:
-        type.calculation_method === 'fixed' ? 'Fijo' :
-        type.calculation_method === 'hourly' ? 'Por Horas' :
-        type.calculation_method === 'commission' ? 'Comisión' : 'Mixto',
+        type.calculation_method === 'fixed' ? 'Fixed' :
+        type.calculation_method === 'hourly' ? 'Hourly' :
+        type.calculation_method === 'commission' ? 'Commission' : 'Mixed',
       baseAmount: type.base_amount,
       commissionRate: type.commission_rate ? `${type.commission_rate}%` : 'N/A',
       overtimeRate: `${(type.overtime_rate * 100)}%`,
       nightShiftRate: `${(type.night_shift_rate * 100)}%`,
       holidayRate: `${(type.holiday_rate * 100)}%`,
-      status: type.is_active ? 'Activo' : 'Inactivo',
+      status: type.is_active ? 'Active' : 'Inactive',
       createdAt: type.created_at,
     }));
 
     if (!rows.length) {
-      alert('No hay tipos de salario para exportar.');
+      alert('No salary types to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'name', title: 'Nombre', width: 22 },
-        { key: 'description', title: 'Descripción', width: 40 },
-        { key: 'method', title: 'Método de Cálculo', width: 20 },
-        { key: 'baseAmount', title: 'Monto Base', width: 16, numFmt: '#,##0.00' },
-        { key: 'commissionRate', title: 'Tasa Comisión', width: 16 },
-        { key: 'overtimeRate', title: 'Tasa Horas Extra', width: 18 },
-        { key: 'nightShiftRate', title: 'Tasa Turno Nocturno', width: 20 },
-        { key: 'holidayRate', title: 'Tasa Días Feriados', width: 20 },
-        { key: 'status', title: 'Estado', width: 12 },
-        { key: 'createdAt', title: 'Fecha Creación', width: 16 },
+        { key: 'name', title: 'Name', width: 22 },
+        { key: 'description', title: 'Description', width: 40 },
+        { key: 'method', title: 'Calculation Method', width: 20 },
+        { key: 'baseAmount', title: 'Base Amount', width: 16, numFmt: '#,##0.00' },
+        { key: 'commissionRate', title: 'Commission Rate', width: 16 },
+        { key: 'overtimeRate', title: 'Overtime Rate', width: 18 },
+        { key: 'nightShiftRate', title: 'Night Shift Rate', width: 20 },
+        { key: 'holidayRate', title: 'Holiday Rate', width: 20 },
+        { key: 'status', title: 'Status', width: 12 },
+        { key: 'createdAt', title: 'Created', width: 16 },
       ],
-      `tipos_salarios_${today}`,
-      'Tipos de Salarios'
+      `salary_types_${today}`,
+      'Salary Types'
     );
   };
 
   const getMethodLabel = (method: string) => {
     switch (method) {
-      case 'fixed': return 'Fijo';
-      case 'hourly': return 'Por Horas';
-      case 'commission': return 'Comisión';
-      case 'mixed': return 'Mixto';
+      case 'fixed': return 'Fixed';
+      case 'hourly': return 'Hourly';
+      case 'commission': return 'Commission';
+      case 'mixed': return 'Mixed';
       default: return method;
-    }
-  };
-
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case 'fixed': return 'bg-blue-100 text-blue-800';
-      case 'hourly': return 'bg-green-100 text-green-800';
-      case 'commission': return 'bg-purple-100 text-purple-800';
-      case 'mixed': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 bg-[#f6f3ea] min-h-screen -mx-4 sm:mx-0 p-4 sm:p-0">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tipos de Salarios</h1>
-            <p className="text-gray-600">Gestiona los diferentes tipos de salarios y métodos de cálculo</p>
+            <h1 className="text-2xl font-bold text-gray-900">Salary Types</h1>
+            <p className="text-gray-700">Manage salary types and calculation methods</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={exportToExcel}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-download-line"></i>
-              Exportar
+              Export
             </button>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors flex items-center gap-2 shadow-sm"
             >
               <i className="ri-add-line"></i>
-              Nuevo Tipo
+              New Type
             </button>
           </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Tipos</p>
+                <p className="text-sm font-medium text-gray-600">Total Types</p>
                 <p className="text-2xl font-bold text-gray-900">{salaryTypes.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-money-dollar-circle-line text-xl text-blue-600"></i>
+              <div className="w-12 h-12 bg-[#e5ead7] rounded-lg flex items-center justify-center">
+                <i className="ri-money-dollar-circle-line text-xl text-[#4b5320]"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Salarios Fijos</p>
+                <p className="text-sm font-medium text-gray-600">Fixed Salaries</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {salaryTypes.filter(t => t.calculation_method === 'fixed').length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-bank-line text-xl text-green-600"></i>
+              <div className="w-12 h-12 bg-[#dbe8c0] rounded-lg flex items-center justify-center">
+                <i className="ri-bank-line text-xl text-[#3d451b]"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Por Comisión</p>
+                <p className="text-sm font-medium text-gray-600">By Commission</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {salaryTypes.filter(t => t.calculation_method === 'commission' || t.calculation_method === 'mixed').length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-line-chart-line text-xl text-purple-600"></i>
+              <div className="w-12 h-12 bg-[#f1e4c2] rounded-lg flex items-center justify-center">
+                <i className="ri-line-chart-line text-xl text-[#4b5320]"></i>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Activos</p>
+                <p className="text-sm font-medium text-gray-600">Active</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {salaryTypes.filter(t => t.is_active).length}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-check-line text-xl text-orange-600"></i>
+              <div className="w-12 h-12 bg-[#e0e5d0] rounded-lg flex items-center justify-center">
+                <i className="ri-check-line text-xl text-[#4b5320]"></i>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-[#dfe5cf]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Buscar
+                Search
               </label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o descripción..."
+                  placeholder="Search by name or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Método de Cálculo
+                Calculation Method
               </label>
               <select
                 value={filterMethod}
                 onChange={(e) => setFilterMethod(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
               >
-                <option value="all">Todos los métodos</option>
-                <option value="fixed">Salario Fijo</option>
-                <option value="hourly">Por Horas</option>
-                <option value="commission">Solo Comisión</option>
-                <option value="mixed">Mixto</option>
+                <option value="all">All methods</option>
+                <option value="fixed">Fixed Salary</option>
+                <option value="hourly">Hourly</option>
+                <option value="commission">Commission Only</option>
+                <option value="mixed">Mixed</option>
               </select>
             </div>
 
@@ -370,40 +360,40 @@ export default function SalaryTypesPage() {
                   setSearchTerm('');
                   setFilterMethod('all');
                 }}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 text-[#4b5320] border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Limpiar Filtros
+                Clear Filters
               </button>
             </div>
           </div>
         </div>
 
         {/* Salary Types Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-[#dfe5cf] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo de Salario
+                    Salary Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Método
+                    Method
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto Base
+                    Base Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Comisión
+                    Commission
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Horas Extra
+                    Overtime
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -417,14 +407,22 @@ export default function SalaryTypesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getMethodColor(type.calculation_method)}`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        type.calculation_method === 'fixed'
+                          ? 'bg-[#e5ead7] text-[#2f3a1f]'
+                          : type.calculation_method === 'hourly'
+                          ? 'bg-[#dbe8c0] text-[#2f3a1f]'
+                          : type.calculation_method === 'commission'
+                          ? 'bg-[#f1e4c2] text-[#3d451b]'
+                          : 'bg-[#e0e5d0] text-[#2f3a1f]'
+                      }`}>
                         {getMethodLabel(type.calculation_method)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {type.calculation_method === 'hourly' 
-                        ? `RD$${type.base_amount.toLocaleString()}/hora`
-                        : `RD$${type.base_amount.toLocaleString()}`
+                        ? `RD$ ${type.base_amount.toLocaleString('en-US')}/hour`
+                        : `RD$ ${type.base_amount.toLocaleString('en-US')}`
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -436,23 +434,23 @@ export default function SalaryTypesPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         type.is_active 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-[#dbe8c0] text-[#2f3a1f]' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {type.is_active ? 'Activo' : 'Inactivo'}
+                        {type.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(type)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#4b5320] hover:text-[#2f3a1f]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
                         <button
                           onClick={() => toggleStatus(type.id)}
-                          className={`${type.is_active ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
+                          className={`${type.is_active ? 'text-red-600 hover:text-red-900' : 'text-[#4b5320] hover:text-[#2f3a1f]'}`}
                         >
                           <i className={`${type.is_active ? 'ri-pause-circle-line' : 'ri-play-circle-line'}`}></i>
                         </button>
@@ -468,10 +466,10 @@ export default function SalaryTypesPage() {
         {/* Form Modal */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editingType ? 'Editar Tipo de Salario' : 'Nuevo Tipo de Salario'}
+                  {editingType ? 'Edit Salary Type' : 'New Salary Type'}
                 </h2>
                 <button
                   onClick={resetForm}
@@ -482,89 +480,87 @@ export default function SalaryTypesPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Tipo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Ej: Salario Fijo Mensual"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Método de Cálculo *
-                    </label>
-                    <select
-                      required
-                      value={formData.calculation_method}
-                      onChange={(e) => setFormData(prev => ({ ...prev, calculation_method: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="fixed">Salario Fijo</option>
-                      <option value="hourly">Por Horas</option>
-                      <option value="commission">Solo Comisión</option>
-                      <option value="mixed">Salario + Comisión</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
+                    Description
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Descripción del tipo de salario..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                    placeholder="Description of the salary type..."
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {formData.calculation_method === 'hourly' ? 'Tarifa por Hora (RD$)' : 'Monto Base (RD$)'}
+                      Type Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                      placeholder="E.g., Monthly Fixed Salary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Calculation Method *
+                    </label>
+                    <select
+                      required
+                      value={formData.calculation_method}
+                      onChange={(e) => setFormData(prev => ({ ...prev, calculation_method: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                    >
+                      <option value="fixed">Fixed Salary</option>
+                      <option value="hourly">Hourly</option>
+                      <option value="commission">Commission Only</option>
+                      <option value="mixed">Salary + Commission</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {formData.calculation_method === 'hourly' ? 'Hourly Rate (RD$)' : 'Base Amount (RD$)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.base_amount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, base_amount: parseFloat(e.target.value) || 0 }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
+                  />
+                </div>
+
+                {(formData.calculation_method === 'commission' || formData.calculation_method === 'mixed') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Commission Rate (%)
                     </label>
                     <input
                       type="number"
                       min="0"
-                      step="0.01"
-                      value={formData.base_amount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, base_amount: parseFloat(e.target.value) || 0 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      max="100"
+                      step="0.1"
+                      value={formData.commission_rate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, commission_rate: parseFloat(e.target.value) || 0 }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
-
-                  {(formData.calculation_method === 'commission' || formData.calculation_method === 'mixed') && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tasa de Comisión (%)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={formData.commission_rate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, commission_rate: parseFloat(e.target.value) || 0 }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  )}
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tasa Horas Extra
+                      Overtime Rate
                     </label>
                     <input
                       type="number"
@@ -573,13 +569,13 @@ export default function SalaryTypesPage() {
                       step="0.1"
                       value={formData.overtime_rate}
                       onChange={(e) => setFormData(prev => ({ ...prev, overtime_rate: parseFloat(e.target.value) || 1.5 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tasa Turno Nocturno
+                      Night Shift Rate
                     </label>
                     <input
                       type="number"
@@ -588,13 +584,13 @@ export default function SalaryTypesPage() {
                       step="0.01"
                       value={formData.night_shift_rate}
                       onChange={(e) => setFormData(prev => ({ ...prev, night_shift_rate: parseFloat(e.target.value) || 1.15 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tasa Días Feriados
+                      Holiday Rate
                     </label>
                     <input
                       type="number"
@@ -603,7 +599,7 @@ export default function SalaryTypesPage() {
                       step="0.1"
                       value={formData.holiday_rate}
                       onChange={(e) => setFormData(prev => ({ ...prev, holiday_rate: parseFloat(e.target.value) || 2.0 }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -612,15 +608,15 @@ export default function SalaryTypesPage() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d451b] transition-colors shadow-sm"
                   >
-                    {editingType ? 'Actualizar' : 'Crear'} Tipo
+                    {editingType ? 'Update' : 'Create'} Type
                   </button>
                 </div>
               </form>

@@ -159,7 +159,7 @@ export default function VacationsPage() {
     e.preventDefault();
 
     if (!user) {
-      alert('Debe iniciar sesión para gestionar vacaciones.');
+      alert('You must be logged in to manage vacations.');
       return;
     }
 
@@ -234,7 +234,7 @@ export default function VacationsPage() {
       resetForm();
     } catch (error) {
       console.error('Error saving vacation request:', error);
-      alert('Error al guardar la solicitud de vacaciones');
+      alert('Error saving the vacation request.');
     }
   };
 
@@ -308,7 +308,7 @@ export default function VacationsPage() {
       ));
     } catch (error) {
       console.error('Error updating vacation status:', error);
-      alert('Error al actualizar el estado de la solicitud');
+      alert('Error updating the request status.');
     }
   };
 
@@ -319,40 +319,40 @@ export default function VacationsPage() {
       employee: request.employeeName,
       department: request.department,
       type:
-        request.vacationType === 'annual' ? 'Anuales' :
-        request.vacationType === 'sick' ? 'Enfermedad' :
-        request.vacationType === 'maternity' ? 'Maternidad' :
-        request.vacationType === 'paternity' ? 'Paternidad' :
-        request.vacationType === 'personal' ? 'Personales' : 'Compensatorias',
+        request.vacationType === 'annual' ? 'Annual' :
+        request.vacationType === 'sick' ? 'Sick Leave' :
+        request.vacationType === 'maternity' ? 'Maternity Leave' :
+        request.vacationType === 'paternity' ? 'Paternity Leave' :
+        request.vacationType === 'personal' ? 'Personal Leave' : 'Compensatory Days',
       startDate: request.startDate,
       endDate: request.endDate,
       totalDays: request.totalDays,
       status:
-        request.status === 'pending' ? 'Pendiente' :
-        request.status === 'approved' ? 'Aprobado' :
-        request.status === 'rejected' ? 'Rechazado' : 'Tomado',
+        request.status === 'pending' ? 'Pending' :
+        request.status === 'approved' ? 'Approved' :
+        request.status === 'rejected' ? 'Rejected' : 'Taken',
       reason: request.reason,
     }));
 
     if (!rows.length) {
-      alert('No hay solicitudes para exportar.');
+      alert('No requests to export.');
       return;
     }
 
     await exportToExcelStyled(
       rows,
       [
-        { key: 'employee', title: 'Empleado', width: 26 },
-        { key: 'department', title: 'Departamento', width: 22 },
-        { key: 'type', title: 'Tipo', width: 18 },
-        { key: 'startDate', title: 'Fecha Inicio', width: 16 },
-        { key: 'endDate', title: 'Fecha Fin', width: 16 },
-        { key: 'totalDays', title: 'Días', width: 10 },
-        { key: 'status', title: 'Estado', width: 14 },
-        { key: 'reason', title: 'Motivo', width: 40 },
+        { key: 'employee', title: 'Employee', width: 26 },
+        { key: 'department', title: 'Department', width: 22 },
+        { key: 'type', title: 'Type', width: 18 },
+        { key: 'startDate', title: 'Start Date', width: 16 },
+        { key: 'endDate', title: 'End Date', width: 16 },
+        { key: 'totalDays', title: 'Days', width: 10 },
+        { key: 'status', title: 'Status', width: 14 },
+        { key: 'reason', title: 'Reason', width: 40 },
       ],
-      `solicitudes_vacaciones_${today}`,
-      'Vacaciones'
+      `vacation_requests_${today}`,
+      'Vacation Requests'
     );
   };
 
@@ -367,15 +367,28 @@ export default function VacationsPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Vacaciones</h1>
-            <p className="text-gray-600">Administra las solicitudes de vacaciones y permisos</p>
+            <h1 className="text-2xl font-bold text-gray-900">Vacation Management</h1>
+            <p className="text-gray-600">Manage vacation and leave requests</p>
           </div>
           <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            onClick={() => {
+              setEditingRequest(null);
+              setFormData({
+                employeeId: '',
+                employeeName: '',
+                department: '',
+                position: '',
+                vacationType: 'annual',
+                startDate: '',
+                endDate: '',
+                reason: ''
+              });
+              setShowForm(true);
+            }}
+            className="bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-add-line mr-2"></i>
-            Nueva Solicitud
+            New Request
           </button>
         </div>
 
@@ -383,11 +396,11 @@ export default function VacationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-calendar-line text-blue-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-calendar-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Solicitudes</p>
+                <p className="text-sm font-medium text-gray-600">Total Requests</p>
                 <p className="text-2xl font-bold text-gray-900">{vacationRequests.length}</p>
               </div>
             </div>
@@ -395,11 +408,11 @@ export default function VacationsPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <i className="ri-time-line text-yellow-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-time-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
                 <p className="text-2xl font-bold text-gray-900">{pendingRequests}</p>
               </div>
             </div>
@@ -407,11 +420,11 @@ export default function VacationsPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-check-line text-green-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-check-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Aprobadas</p>
+                <p className="text-sm font-medium text-gray-600">Approved</p>
                 <p className="text-2xl font-bold text-gray-900">{approvedRequests}</p>
               </div>
             </div>
@@ -419,11 +432,11 @@ export default function VacationsPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-calendar-check-line text-purple-600 text-xl"></i>
+              <div className="p-2 bg-[#e6e9d5] rounded-lg">
+                <i className="ri-calendar-event-line text-[#4b5320] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Días</p>
+                <p className="text-sm font-medium text-gray-600">Total Days</p>
                 <p className="text-2xl font-bold text-gray-900">{totalDaysRequested}</p>
               </div>
             </div>
@@ -434,59 +447,59 @@ export default function VacationsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buscar <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search <span className="text-red-500">*</span></label>
               <div className="relative">
                 <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
                 <input
                   type="text"
-                  placeholder="Buscar empleado..."
+                  placeholder="Search employee..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
-                <option value="pending">Pendiente</option>
-                <option value="approved">Aprobado</option>
-                <option value="rejected">Rechazado</option>
-                <option value="taken">Tomado</option>
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="taken">Taken</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
-                <option value="annual">Anuales</option>
-                <option value="sick">Enfermedad</option>
-                <option value="maternity">Maternidad</option>
-                <option value="paternity">Paternidad</option>
-                <option value="personal">Personales</option>
-                <option value="compensatory">Compensatorias</option>
+                <option value="all">All</option>
+                <option value="annual">Annual</option>
+                <option value="sick">Sick Leave</option>
+                <option value="maternity">Maternity Leave</option>
+                <option value="paternity">Paternity Leave</option>
+                <option value="personal">Personal Leave</option>
+                <option value="compensatory">Compensatory Days</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Departamento</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
               <select
                 value={filterDepartment}
                 onChange={(e) => setFilterDepartment(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm pr-8"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4b5320] focus:border-transparent text-sm pr-8"
               >
-                <option value="all">Todos</option>
+                <option value="all">All</option>
                 {departments.map(dept => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -496,10 +509,10 @@ export default function VacationsPage() {
             <div className="flex items-end">
               <button
                 onClick={exportToCSV}
-                className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
+                className="w-full bg-[#4b5320] text-white px-4 py-2 rounded-lg hover:bg-[#3d431a] transition-colors text-sm whitespace-nowrap shadow-sm"
               >
                 <i className="ri-download-line mr-2"></i>
-                Exportar
+                Export
               </button>
             </div>
           </div>
@@ -512,22 +525,22 @@ export default function VacationsPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Empleado
+                    Employee
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tipo
+                    Type
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fechas
+                    Dates
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Días
+                    Days
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -549,20 +562,20 @@ export default function VacationsPage() {
                         request.vacationType === 'personal' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-green-100 text-green-800'
                       }`}>
-                        {request.vacationType === 'annual' ? 'Anuales' :
-                         request.vacationType === 'sick' ? 'Enfermedad' :
-                         request.vacationType === 'maternity' ? 'Maternidad' :
-                         request.vacationType === 'paternity' ? 'Paternidad' :
-                         request.vacationType === 'personal' ? 'Personales' : 'Compensatorias'}
+                        {request.vacationType === 'annual' ? 'Annual' :
+                         request.vacationType === 'sick' ? 'Sick Leave' :
+                         request.vacationType === 'maternity' ? 'Maternity Leave' :
+                         request.vacationType === 'paternity' ? 'Paternity Leave' :
+                         request.vacationType === 'personal' ? 'Personal Leave' : 'Compensatory Days'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div>{request.startDate}</div>
-                      <div className="text-gray-500">al {request.endDate}</div>
+                      <div className="text-gray-500">to {request.endDate}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="font-medium">{request.totalDays} días</div>
-                      <div className="text-gray-500">Pagados: {request.paidDays}</div>
+                      <div className="font-medium">{request.totalDays} days</div>
+                      <div className="text-gray-500">Paid: {request.paidDays}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -571,16 +584,16 @@ export default function VacationsPage() {
                         request.status === 'rejected' ? 'bg-red-100 text-red-800' :
                         'bg-blue-100 text-blue-800'
                       }`}>
-                        {request.status === 'pending' ? 'Pendiente' :
-                         request.status === 'approved' ? 'Aprobado' :
-                         request.status === 'rejected' ? 'Rechazado' : 'Tomado'}
+                        {request.status === 'pending' ? 'Pending' :
+                         request.status === 'approved' ? 'Approved' :
+                         request.status === 'rejected' ? 'Rejected' : 'Taken'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(request)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-[#4b5320] hover:text-[#3d431a]"
                         >
                           <i className="ri-edit-line"></i>
                         </button>
@@ -616,7 +629,7 @@ export default function VacationsPage() {
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-gray-900">
-                    {editingRequest ? 'Editar Solicitud' : 'Nueva Solicitud de Vacaciones'}
+                    {editingRequest ? 'Edit Request' : 'New Vacation Request'}
                   </h2>
                   <button
                     onClick={resetForm}
@@ -630,7 +643,7 @@ export default function VacationsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Empleado *
+                        Employee *
                       </label>
                       <select
                         required
@@ -651,7 +664,7 @@ export default function VacationsPage() {
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       >
-                        <option value="">Seleccionar empleado...</option>
+                        <option value="">Select employee...</option>
                         {employees.map(emp => (
                           <option key={emp.id} value={emp.id}>
                             {emp.code ? `${emp.code} - ${emp.name}` : emp.name}
@@ -664,7 +677,7 @@ export default function VacationsPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ID Empleado
+                        Employee ID
                       </label>
                       <input
                         type="text"
@@ -679,34 +692,34 @@ export default function VacationsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Departamento
+                        Department
                       </label>
                       <input
                         type="text"
                         value={formData.department}
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Departamento"
+                        placeholder="Department"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Posición
+                        Position
                       </label>
                       <input
                         type="text"
                         value={formData.position}
                         readOnly
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                        placeholder="Cargo"
+                        placeholder="Position"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo de Vacación *
+                      Vacation Type *
                     </label>
                     <select
                       required
@@ -714,19 +727,19 @@ export default function VacationsPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, vacationType: e.target.value as any }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-8"
                     >
-                      <option value="annual">Vacaciones Anuales</option>
-                      <option value="sick">Licencia por Enfermedad</option>
-                      <option value="maternity">Licencia de Maternidad</option>
-                      <option value="paternity">Licencia de Paternidad</option>
-                      <option value="personal">Permiso Personal</option>
-                      <option value="compensatory">Días Compensatorios</option>
+                      <option value="annual">Annual Vacation</option>
+                      <option value="sick">Sick Leave</option>
+                      <option value="maternity">Maternity Leave</option>
+                      <option value="paternity">Paternity Leave</option>
+                      <option value="personal">Personal Leave</option>
+                      <option value="compensatory">Compensatory Days</option>
                     </select>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fecha de Inicio *
+                        Start Date *
                       </label>
                       <input
                         type="date"
@@ -739,7 +752,7 @@ export default function VacationsPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Fecha de Fin *
+                        End Date *
                       </label>
                       <input
                         type="date"
@@ -754,14 +767,14 @@ export default function VacationsPage() {
                   {formData.startDate && formData.endDate && (
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <p className="text-sm text-blue-800">
-                        <strong>Total de días solicitados:</strong> {calculateDays(formData.startDate, formData.endDate)} días
+                        <strong>Total requested days:</strong> {calculateDays(formData.startDate, formData.endDate)} days
                       </p>
                     </div>
                   )}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Motivo *
+                      Reason *
                     </label>
                     <textarea
                       required
@@ -769,7 +782,7 @@ export default function VacationsPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Describe el motivo de la solicitud..."
+                      placeholder="Describe the request reason..."
                     />
                   </div>
 
@@ -779,13 +792,13 @@ export default function VacationsPage() {
                       onClick={resetForm}
                       className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                      className="px-4 py-2 bg-[#4b5320] text-white rounded-lg hover:bg-[#3d431a] transition-colors whitespace-nowrap"
                     >
-                      {editingRequest ? 'Actualizar' : 'Crear'} Solicitud
+                      {editingRequest ? 'Update' : 'Create'} Request
                     </button>
                   </div>
                 </form>
