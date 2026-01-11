@@ -911,50 +911,50 @@ export default function POSPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <i className="ri-shopping-cart-line text-blue-600 text-xl"></i>
+              <div className="w-12 h-12 bg-[#e3e7d3] rounded-lg flex items-center justify-center">
+                <i className="ri-shopping-cart-line text-[#2f3e1e] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Sales Today</p>
-                <p className="text-2xl font-bold text-gray-900">{todayStats.totalSales}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Sales Today</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{todayStats.totalSales}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <i className="ri-money-dollar-circle-line text-green-600 text-xl"></i>
+              <div className="w-12 h-12 bg-[#dce3c2] rounded-lg flex items-center justify-center">
+                <i className="ri-money-dollar-circle-line text-[#3f4d1f] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Revenue Today</p>
-                <p className="text-2xl font-bold text-gray-900">RD${formatAmount(todayStats.totalAmount)}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Revenue Today</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">RD${formatAmount(todayStats.totalAmount)}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <i className="ri-user-line text-purple-600 text-xl"></i>
+              <div className="w-12 h-12 bg-[#ede7d4] rounded-lg flex items-center justify-center">
+                <i className="ri-user-line text-[#4a5d23] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Customers</p>
-                <p className="text-2xl font-bold text-gray-900">{customers.length}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Customers</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{customers.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <i className="ri-shopping-bag-3-line text-orange-600 text-xl"></i>
+              <div className="w-12 h-12 bg-[#e6dac2] rounded-lg flex items-center justify-center">
+                <i className="ri-shopping-bag-3-line text-[#5a6d33] text-xl"></i>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Products</p>
-                <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                <p className="text-sm font-medium text-[#6b5c3b]">Products</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{products.length}</p>
               </div>
             </div>
           </div>
@@ -963,48 +963,48 @@ export default function POSPage() {
         {/* Charts and Recent Sales */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Payment Methods */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Methods Today</h3>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+            <h3 className="text-lg font-semibold text-[#2f3e1e] mb-4">Payment Methods Today</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Cash</span>
+                  <div className="w-3 h-3 rounded-full mr-3 bg-[#4a5d23]"></div>
+                  <span className="text-sm text-[#6b5c3b]">Cash</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.cashSales} sales</span>
+                <span className="text-sm font-semibold text-[#2f3e1e]">{todayStats.cashSales} sales</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Card</span>
+                  <div className="w-3 h-3 rounded-full mr-3 bg-[#5f7434]"></div>
+                  <span className="text-sm text-[#6b5c3b]">Card</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.cardSales} sales</span>
+                <span className="text-sm font-semibold text-[#2f3e1e]">{todayStats.cardSales} sales</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
-                  <span className="text-sm text-gray-600">Transfer</span>
+                  <div className="w-3 h-3 rounded-full mr-3 bg-[#7a8c45]"></div>
+                  <span className="text-sm text-[#6b5c3b]">Transfer</span>
                 </div>
-                <span className="text-sm font-medium">{todayStats.transferSales} sales</span>
+                <span className="text-sm font-semibold text-[#2f3e1e]">{todayStats.transferSales} sales</span>
               </div>
             </div>
           </div>
 
           {/* Top Products */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Best Selling Products</h3>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+            <h3 className="text-lg font-semibold text-[#2f3e1e] mb-4">Best Selling Products</h3>
             <div className="space-y-3">
               {topProducts.map((product, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-medium mr-3">
+                    <span className="w-6 h-6 bg-[#f4ead3] text-[#4a5d23] rounded-full flex items-center justify-center text-xs font-medium mr-3">
                       {index + 1}
                     </span>
-                    <span className="text-sm text-gray-900 truncate">{product.name}</span>
+                    <span className="text-sm text-[#2f3e1e] truncate">{product.name}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">{product.quantity} units</div>
-                    <div className="text-xs text-gray-500">RD${formatAmount(product.revenue)}</div>
+                    <div className="text-sm font-semibold text-[#2f3e1e]">{product.quantity} units</div>
+                    <div className="text-xs text-[#6b5c3b]">RD${formatAmount(product.revenue)}</div>
                   </div>
                 </div>
               ))}
@@ -2081,16 +2081,16 @@ export default function POSPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-[#f5f0e3] min-h-screen -m-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Point of Sale</h1>
-            <p className="text-gray-600">Complete sales and management system</p>
+            <h1 className="text-2xl font-bold text-[#2f3e1e]">Point of Sale</h1>
+            <p className="text-[#6b5c3b]">Complete sales and management system</p>
           </div>
           <button
             onClick={() => window.location.href = '/dashboard'}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+            className="bg-white/80 border border-[#d8cbb5] text-[#2f3e1e] px-4 py-2 rounded-lg hover:bg-[#e3e7d3] transition-colors whitespace-nowrap shadow-sm"
           >
             <i className="ri-arrow-left-line mr-2"></i>
             Back to Home
@@ -2098,7 +2098,7 @@ export default function POSPage() {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="border-b border-gray-200 mb-6">
+        <div className="border-b border-[#d8cbb5] mb-6">
           <nav className="-mb-px flex flex-wrap gap-x-4 gap-y-2">
             {[
               { id: 'dashboard', name: 'Dashboard', icon: 'ri-dashboard-line' },
@@ -2121,10 +2121,10 @@ export default function POSPage() {
                     setActiveTab(tab.id);
                   }
                 }}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-[#4a5d23] text-[#2f3e1e]'
+                    : 'border-transparent text-[#8a7d5c] hover:text-[#4a5d23] hover:border-[#d8cbb5]'
                 }`}
               >
                 <i className={`${tab.icon} mr-2`}></i>
