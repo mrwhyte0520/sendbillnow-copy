@@ -742,7 +742,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {profilePanelOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setProfilePanelOpen(false)}></div>
-          <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out">
+          <div className="absolute right-0 top-0 h-full w-96 bg-[#f6f1e3] shadow-xl transform transition-transform duration-300 ease-in-out">
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -771,23 +771,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     </div>
 
                     {/* Account Status */}
-                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <div className="bg-[#f7f3e5] border border-[#d8cfb6] rounded-xl p-4 mb-6 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Account Status</span>
-                        <span className="text-sm text-green-600 font-medium">Active</span>
+                        <span className="text-sm font-semibold text-[#3b3221]">Account Status</span>
+                        <span className="text-sm font-semibold text-[#4b5f36]">Active</span>
                       </div>
                       <div className="grid grid-cols-3 gap-4 mt-4">
                         <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{kpiCounts.invoices}</div>
-                          <div className="text-xs text-gray-600">Invoices</div>
+                          <div className="text-lg font-bold text-[#2f3e1e]">{kpiCounts.invoices}</div>
+                          <div className="text-xs text-[#5c5138]">Invoices</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{kpiCounts.customers}</div>
-                          <div className="text-xs text-gray-600">Customers</div>
+                          <div className="text-lg font-bold text-[#2f3e1e]">{kpiCounts.customers}</div>
+                          <div className="text-xs text-[#5c5138]">Customers</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-gray-900">{kpiCounts.products}</div>
-                          <div className="text-xs text-gray-600">Products</div>
+                          <div className="text-lg font-bold text-[#2f3e1e]">{kpiCounts.products}</div>
+                          <div className="text-xs text-[#5c5138]">Products</div>
                         </div>
                       </div>
                     </div>

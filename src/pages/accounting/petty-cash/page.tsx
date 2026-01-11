@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+  import React, { useState, useEffect, useRef } from 'react';
 
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { useAuth } from '../../../hooks/useAuth';
+import { useBankCatalog } from '../../../hooks/useBankCatalog';
 import {
   pettyCashService,
   chartAccountsService,
   pettyCashCategoriesService,
-  bankAccountsService,
   suppliersService,
 } from '../../../services/database';
 
@@ -53,6 +53,10 @@ interface PettyCashReimbursement {
 
 const PettyCashPage: React.FC = () => {
   const { user } = useAuth();
+  const { banks: bankAccounts } = useBankCatalog({
+    userId: user?.id || null,
+  });
+
   const [activeTab, setActiveTab] = useState<'funds' | 'expenses' | 'reimbursements' | 'categories'>('funds');
 
   const [funds, setFunds] = useState<PettyCashFund[]>([]);
@@ -65,7 +69,6 @@ const PettyCashPage: React.FC = () => {
   const [selectedFund, setSelectedFund] = useState<PettyCashFund | null>(null);
 
   const [accounts, setAccounts] = useState<any[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -90,13 +93,12 @@ const PettyCashPage: React.FC = () => {
 
       try {
         setLoadingFunds(true);
-        const [fundsData, accountsData, expensesData, reimbursementsData, categoriesData, bankAccountsData] = await Promise.all([
+        const [fundsData, accountsData, expensesData, reimbursementsData, categoriesData] = await Promise.all([
           pettyCashService.getFunds(user.id),
           chartAccountsService.getAll(user.id),
           pettyCashService.getExpenses(user.id),
           pettyCashService.getReimbursements(user.id),
           pettyCashCategoriesService.getAll(user.id),
-          bankAccountsService.getAll(user.id),
         ]);
 
         const mappedFunds: PettyCashFund[] = (fundsData || []).map((f: any) => ({
@@ -129,7 +131,6 @@ const PettyCashPage: React.FC = () => {
         }
 
         setAccounts(accountsData || []);
-        setBankAccounts(bankAccountsData || []);
         setCategories(categoriesData || []);
 
         const mappedExpenses: PettyCashExpense[] = (expensesData || []).map((e: any) => ({

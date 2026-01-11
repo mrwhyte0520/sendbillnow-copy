@@ -11491,8 +11491,8 @@ export const supplierPaymentsService = {
     amount: number;
     status: string;
     description?: string | null;
-    bank_account?: string | null;
-    bank_account_id?: string | null;
+    bank_account_label?: string | null;
+    bank_chart_account_id?: string | null;
     invoice_number?: string | null;
   }, options?: { skipPeriodValidation?: boolean }) {
     try {
@@ -11516,8 +11516,8 @@ export const supplierPaymentsService = {
         amount: payload.amount,
         status: payload.status,
         description: payload.description ?? null,
-        bank_account_id: payload.bank_account_id ?? null,
-        bank_account: payload.bank_account ?? null,
+        bank_account_id: payload.bank_chart_account_id ?? null,
+        bank_account: payload.bank_account_label ?? null,
         invoice_number: payload.invoice_number ?? null,
       };
       const { data, error } = await supabase

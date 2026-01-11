@@ -1,59 +1,100 @@
-import { useEffect, useState } from 'react';
+  import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { bankAccountsService, supplierPaymentsService, suppliersService, apInvoicesService } from '../../../services/database';
+import { useBankCatalog } from '../../../hooks/useBankCatalog';
+import {
+  apInvoicesService,
+  supplierPaymentsService,
+  suppliersService,
+} from '../../../services/database';
 import { exportToExcelStyled } from '../../../utils/exportImportUtils';
+
+type PaymentMethod = 'Transferencia' | 'Cheque' | 'Efectivo' | 'Tarjeta de Crédito';
+type PaymentStatus = 'Completado' | 'Pendiente' | 'Rechazado';
+
+interface PaymentRecord {
+  id: string;
+  date: string;
+  supplier: string;
+  supplierId: string;
+  reference: string;
+  invoice: string;
+  method: PaymentMethod;
+  amount: number;
+  status: PaymentStatus;
+  description: string;
+  bankAccount: string;
+}
+
+interface PaymentFormData {
+  supplierId: string;
+  invoice: string;
+  method: PaymentMethod;
+  amount: string;
+  description: string;
+  bankAccount: string;
+  date: string;
+}
 
 export default function PaymentsPage() {
   const { user } = useAuth();
+  const { banks: bankAccounts } = useBankCatalog({
+    userId: user?.id || null,
+  });
+
   const [showModal, setShowModal] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterMethod, setFilterMethod] = useState('all');
 
-  const [payments, setPayments] = useState<any[]>([]);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentRecord | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | PaymentStatus>('all');
+  const [filterMethod, setFilterMethod] = useState<'all' | PaymentMethod>('all');
 
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [apInvoices, setApInvoices] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PaymentFormData>({
     supplierId: '',
     invoice: '',
     method: 'Transferencia',
     amount: '',
     description: '',
     bankAccount: '',
-    date: new Date().toISOString().split('T')[0]
+    date: new Date().toISOString().split('T')[0],
   });
 
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const paymentMethods: PaymentMethod[] = [
+    'Transferencia',
+    'Cheque',
+    'Efectivo',
+    'Tarjeta de Crédito',
+  ];
 
-  const paymentMethods = ['Transferencia', 'Cheque', 'Efectivo', 'Tarjeta de Crédito'];
-
-  const paymentMethodLabels: Record<string, string> = {
+  const paymentMethodLabels: Record<PaymentMethod, string> = {
     Transferencia: 'Transfer',
     Cheque: 'Check',
     Efectivo: 'Cash',
     'Tarjeta de Crédito': 'Credit Card',
   };
 
-  const paymentStatusLabels: Record<string, string> = {
+  const paymentStatusLabels: Record<PaymentStatus, string> = {
     Completado: 'Completed',
     Pendiente: 'Pending',
     Rechazado: 'Rejected',
   };
 
-  const getMethodLabel = (method: string) => paymentMethodLabels[method] || method;
-  const getStatusLabel = (status: string) => paymentStatusLabels[status] || status || 'Unknown';
+  const getMethodLabel = (method: PaymentMethod | string) =>
+    paymentMethodLabels[method as PaymentMethod] || method;
+  const getStatusLabel = (status: PaymentStatus | string) =>
+    paymentStatusLabels[status as PaymentStatus] || status || 'Unknown';
 
-  const methodPillClasses = (method: string) => {
+  const methodPillClasses = (method: PaymentMethod) => {
     if (method === 'Transferencia') return 'bg-[#d7e2b0] text-[#2f3c24]';
     if (method === 'Cheque') return 'bg-[#b5c38a] text-[#2f3c24]';
     if (method === 'Efectivo') return 'bg-[#f3d8b6] text-[#2f3c24]';
     return 'bg-[#d7d4e3] text-[#2f3c24]';
   };
 
-  const statusBadgeClasses = (status: string) => {
+  const statusBadgeClasses = (status: PaymentStatus) => {
     if (status === 'Completado') return 'bg-[#d7e2b0] text-[#2f3c24]';
     if (status === 'Pendiente') return 'bg-[#f3d8b6] text-[#5b441d]';
     return 'bg-[#f5c2b0] text-[#5b2a1c]';
@@ -69,11 +110,15 @@ export default function PaymentsPage() {
     return 0;
   };
 
-  const filteredPayments = payments.filter(payment => {
-    const matchesStatus = filterStatus === 'all' || payment.status === filterStatus;
-    const matchesMethod = filterMethod === 'all' || payment.method === filterMethod;
-    return matchesStatus && matchesMethod;
-  });
+  const filteredPayments = useMemo(() => {
+    return payments.filter((payment) => {
+      const matchesStatus =
+        filterStatus === 'all' || payment.status === filterStatus;
+      const matchesMethod =
+        filterMethod === 'all' || payment.method === filterMethod;
+      return matchesStatus && matchesMethod;
+    });
+  }, [payments, filterStatus, filterMethod]);
 
   const loadSuppliers = async () => {
     if (!user?.id) {
@@ -84,24 +129,8 @@ export default function PaymentsPage() {
       const data = await suppliersService.getAll(user.id);
       setSuppliers(data || []);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading suppliers for payments', error);
       setSuppliers([]);
-    }
-  };
-
-  const loadBankAccounts = async () => {
-    if (!user?.id) {
-      setBankAccounts([]);
-      return;
-    }
-    try {
-      const data = await bankAccountsService.getAll(user.id);
-      setBankAccounts(data || []);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error loading bank accounts for payments', error);
-      setBankAccounts([]);
     }
   };
 
@@ -112,22 +141,21 @@ export default function PaymentsPage() {
     }
     try {
       const data = await supplierPaymentsService.getAll(user.id);
-      const mapped = (data || []).map((p: any) => ({
-        id: p.id,
+      const mapped: PaymentRecord[] = (data || []).map((p: any) => ({
+        id: String(p.id),
         date: p.payment_date,
         supplier: (p.suppliers as any)?.name || 'Proveedor',
         supplierId: p.supplier_id,
         reference: p.reference,
         invoice: p.invoice_number || '',
-        method: p.method,
+        method: (p.method || 'Transferencia') as PaymentMethod,
         amount: Number(p.amount) || 0,
-        status: p.status || 'Pendiente',
+        status: (p.status || 'Pendiente') as PaymentStatus,
         description: p.description || '',
         bankAccount: p.bank_account || '',
       }));
       setPayments(mapped);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading supplier payments', error);
       setPayments([]);
     }
@@ -146,18 +174,15 @@ export default function PaymentsPage() {
         const paidAmount = Number((inv as any).paid_amount ?? 0) || 0;
         const explicitBalance = Number((inv as any).balance_amount ?? 0) || 0;
 
-        // Priorizar balance_amount si existe; si no, calcularlo como total_to_pay - paid_amount
         let balance = explicitBalance;
         if (balance === 0 && totalToPay > 0) {
           balance = Math.max(totalToPay - paidAmount, 0);
         }
 
-        // Solo mostrar facturas que NO estén marcadas como pagadas y que tengan saldo pendiente > 0.01
         return status !== 'paid' && balance > 0.01;
       });
       setApInvoices(pending);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading AP invoices for supplier payments', error);
       setApInvoices([]);
     }
@@ -165,10 +190,8 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     loadSuppliers();
-    loadBankAccounts();
     loadPayments();
     loadApInvoices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -231,7 +254,7 @@ export default function PaymentsPage() {
       amount: '',
       description: '',
       bankAccount: '',
-      date: new Date().toISOString().split('T')[0]
+      date: new Date().toISOString().split('T')[0],
     });
     setShowModal(false);
   };
@@ -264,7 +287,7 @@ export default function PaymentsPage() {
     }
   };
 
-  const handleViewDetails = (payment: any) => {
+  const handleViewDetails = (payment: PaymentRecord) => {
     setSelectedPayment(payment);
   };
 
@@ -320,14 +343,14 @@ export default function PaymentsPage() {
             <p className="text-[#5c6b42]">Manage supplier disbursements and approvals</p>
           </div>
           <div className="flex space-x-3">
-            <button 
+            <button
               onClick={handleExportExcel}
               className="bg-[#7a8b4a] text-white px-4 py-2 rounded-lg hover:bg-[#67753b] transition-colors whitespace-nowrap shadow"
             >
               <i className="ri-file-excel-line mr-2"></i>
               Export Excel
             </button>
-            <button 
+            <button
               onClick={() => setShowModal(true)}
               className="bg-[#3f4d2c] text-white px-4 py-2 rounded-lg hover:bg-[#2f3a1f] transition-colors whitespace-nowrap shadow-sm"
             >
@@ -335,7 +358,6 @@ export default function PaymentsPage() {
               New Payment
             </button>
           </div>
-
         </div>
 
         {/* Stats Cards */}
@@ -401,9 +423,11 @@ export default function PaymentsPage() {
               <label className="block text-sm font-medium text-[#4c5b36] mb-2">
                 Status <span className="text-red-500">*</span>
               </label>
-              <select 
+              <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) =>
+                  setFilterStatus(e.target.value as 'all' | PaymentStatus)
+                }
                 className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
                 <option value="all">All Statuses</option>
@@ -414,20 +438,27 @@ export default function PaymentsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#4c5b36] mb-2">Payment Method</label>
-              <select 
+              <select
                 value={filterMethod}
-                onChange={(e) => setFilterMethod(e.target.value)}
+                onChange={(e) =>
+                  setFilterMethod(e.target.value as 'all' | PaymentMethod)
+                }
                 className="w-full px-3 py-2 border border-[#c0b596] rounded-lg focus:ring-2 focus:ring-[#4c5b36] focus:border-[#4c5b36] bg-[#fefaf1]"
               >
                 <option value="all">All Methods</option>
-                {paymentMethods.map(method => (
-                  <option key={method} value={method}>{getMethodLabel(method)}</option>
+                {paymentMethods.map((method) => (
+                  <option key={method} value={method}>
+                    {getMethodLabel(method)}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="flex items-end">
-              <button 
-                onClick={() => {setFilterStatus('all'); setFilterMethod('all');}}
+              <button
+                onClick={() => {
+                  setFilterStatus('all');
+                  setFilterMethod('all');
+                }}
                 className="w-full bg-[#5a5c55] text-white py-2 px-4 rounded-lg hover:bg-[#43443f] transition-colors whitespace-nowrap shadow-sm"
               >
                 Clear Filters
@@ -480,7 +511,7 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button 
+                        <button
                           onClick={() => handleViewDetails(payment)}
                           className="text-[#3f4d2c] hover:text-[#2f3a1f] whitespace-nowrap"
                         >
@@ -488,19 +519,18 @@ export default function PaymentsPage() {
                         </button>
                         {payment.status === 'Pendiente' && (
                           <>
-                            <button 
+                            <button
                               onClick={() => handleApprovePayment(payment.id)}
                               className="text-[#4f6131] hover:text-[#2f3c24] whitespace-nowrap"
                             >
                               <i className="ri-check-line"></i>
                             </button>
-                            <button 
+                            <button
                               onClick={() => handleRejectPayment(payment.id)}
                               className="text-[#9c3d25] hover:text-[#6c1f12] whitespace-nowrap"
                             >
                               <i className="ri-close-line"></i>
                             </button>
-
                           </>
                         )}
                       </div>
@@ -523,10 +553,9 @@ export default function PaymentsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">Supplier *</label>
-                    <select 
+                    <select
                       required
                       value={formData.supplierId}
-
                       onChange={(e) => {
                         const supplierId = e.target.value;
                         setFormData({
@@ -540,7 +569,9 @@ export default function PaymentsPage() {
                     >
                       <option value="">Select supplier</option>
                       {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -548,7 +579,6 @@ export default function PaymentsPage() {
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">AP Invoice <span className="text-red-500">*</span></label>
                     <select
                       required
-
                       value={formData.invoice}
                       onChange={(e) => {
                         const invoiceNumber = e.target.value;
@@ -566,64 +596,75 @@ export default function PaymentsPage() {
                       <option value="">No invoice selected</option>
                       {apInvoices
                         .filter((inv: any) => String(inv.supplier_id) === String(formData.supplierId) && inv.status !== 'paid')
-
                         .map((inv: any) => (
                           <option key={inv.id} value={inv.invoice_number || ''}>
-                            {(inv.invoice_number || 'SIN-NUM').toString()} - {(inv.currency || 'DOP')} {Number(inv.balance_amount ?? inv.total_to_pay ?? inv.total_gross ?? 0).toLocaleString()}
+                            {(inv.invoice_number || 'SIN-NUM').toString()} - {(inv.currency || 'DOP')}{' '}
+                            {Number(inv.balance_amount ?? inv.total_to_pay ?? inv.total_gross ?? 0).toLocaleString()}
                           </option>
                         ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">Payment Method *</label>
-                    <select 
+                    <select
                       required
                       value={formData.method}
-
-                      onChange={(e) => setFormData({...formData, method: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          method: e.target.value as PaymentMethod,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {paymentMethods.map(method => (
-                        <option key={method} value={method}>{method}</option>
+                      {paymentMethods.map((method) => (
+                        <option key={method} value={method}>
+                          {method}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">Amount *</label>
-                    <input 
-                      type="number" min="0"
-
+                    <input
+                      type="number"
+                      min="0"
                       required
                       step="0.01"
                       value={formData.amount}
-                      onChange={(e) => setFormData({...formData, amount: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="0.00"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">Bank Account <span className="text-red-500">*</span></label>
-                    <select 
+                    <select
                       value={formData.bankAccount}
-
-                      onChange={(e) => setFormData({...formData, bankAccount: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          bankAccount: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select account</option>
                       {bankAccounts.map((account: any) => {
                         const label = `${account.bank_name} - ${account.account_number}`;
                         return (
-
-                          <option key={account.id} value={account.id}>{label}</option>
+                          <option key={account.id} value={account.id}>
+                            {label}
+                          </option>
                         );
                       })}
                     </select>
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#4c5b36] mb-2">Date *</label>
                     <input 
                       type="date"
-
                       required
                       value={formData.date}
                       onChange={(e) => setFormData({...formData, date: e.target.value})}

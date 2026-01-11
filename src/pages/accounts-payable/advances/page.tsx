@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+  import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
-import { apSupplierAdvancesService, suppliersService, bankAccountsService, chartAccountsService, settingsService } from '../../../services/database';
+import { useBankCatalog } from '../../../hooks/useBankCatalog';
+import { apSupplierAdvancesService, suppliersService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 
 const palette = {
@@ -32,6 +33,9 @@ interface SupplierAdvance {
 
 export default function AdvancesPage() {
   const { user } = useAuth();
+  const { banks: bankAccounts } = useBankCatalog({
+    userId: user?.id || null,
+  });
 
   const [showModal, setShowModal] = useState(false);
   const [editingAdvance, setEditingAdvance] = useState<SupplierAdvance | null>(null);
@@ -39,7 +43,6 @@ export default function AdvancesPage() {
 
   const [advances, setAdvances] = useState<SupplierAdvance[]>([]);
   const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
-  const [banks, setBanks] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
@@ -72,18 +75,11 @@ export default function AdvancesPage() {
 
   const loadBanksAndAccounts = async () => {
     if (!user?.id) {
-      setBanks([]);
       setAccounts([]);
       return;
     }
     try {
-      const [bankRows, accountRows] = await Promise.all([
-        bankAccountsService.getAll(user.id),
-        chartAccountsService.getAll(user.id),
-      ]);
-
-      setBanks(bankRows || []);
-
+      const accountRows = await chartAccountsService.getAll(user.id);
       const assetAccounts = (accountRows || []).filter((acc: any) => {
         if (acc.allow_posting === false) return false;
         const type = (acc.type || acc.account_type || '').toString().toLowerCase();
@@ -92,8 +88,7 @@ export default function AdvancesPage() {
       setAccounts(assetAccounts);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error cargando bancos/cuentas para anticipos CxP', error);
-      setBanks([]);
+      console.error('Error cargando cuentas contables para anticipos CxP', error);
       setAccounts([]);
     }
   };
@@ -864,7 +859,7 @@ export default function AdvancesPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Seleccionar banco...</option>
-                      {banks.map((b: any) => (
+                      {bankAccounts.map((b: any) => (
                         <option key={b.id} value={b.id}>
                           {b.name} - {b.account_number} ({b.currency || 'DOP'})
                         </option>
