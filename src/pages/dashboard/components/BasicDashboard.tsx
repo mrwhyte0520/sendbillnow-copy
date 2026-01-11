@@ -58,55 +58,55 @@ export default function BasicDashboard() {
     <div className="space-y-6">
       {/* Main Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-gradient-to-br from-[#fdf9f0] to-[#f3ecd8] p-6 rounded-2xl border border-[#d8cbb5] shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(totalRevenue)}</p>
+              <p className="text-sm font-semibold text-[#6b5c3b]">Monthly Revenue</p>
+              <p className="text-2xl font-bold text-[#2f3e1e]">{formatCurrency(totalRevenue)}</p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <i className="ri-money-dollar-circle-line text-green-600 text-xl"></i>
+            <div className="w-12 h-12 bg-[#dce3c2] rounded-xl flex items-center justify-center shadow-inner">
+              <i className="ri-money-dollar-circle-line text-[#2f3e1e] text-xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-gradient-to-br from-[#faf3df] to-[#f0e5cd] p-6 rounded-2xl border border-[#d8cbb5] shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Monthly Expenses</p>
-              <p className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+              <p className="text-sm font-semibold text-[#6b5c3b]">Monthly Expenses</p>
+              <p className="text-2xl font-bold text-[#4a5d23]">{formatCurrency(totalExpenses)}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <i className="ri-shopping-cart-line text-red-600 text-xl"></i>
+            <div className="w-12 h-12 bg-[#e6dac2] rounded-xl flex items-center justify-center shadow-inner">
+              <i className="ri-shopping-cart-line text-[#4a5d23] text-xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-gradient-to-br from-[#f5efdb] to-[#ede3c7] p-6 rounded-2xl border border-[#d8cbb5] shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Net Profit</p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(netProfit)}</p>
+              <p className="text-sm font-semibold text-[#6b5c3b]">Net Profit</p>
+              <p className="text-2xl font-bold text-[#2f3e1e]">{formatCurrency(netProfit)}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <i className="ri-line-chart-line text-blue-600 text-xl"></i>
+            <div className="w-12 h-12 bg-[#d9e0bf] rounded-xl flex items-center justify-center shadow-inner">
+              <i className="ri-line-chart-line text-[#2f3e1e] text-xl"></i>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-gradient-to-br from-[#f9f2de] to-[#efe1c8] p-6 rounded-2xl border border-[#d8cbb5] shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pending Invoices</p>
-              <p className="text-2xl font-bold text-orange-600">{pendingInvoices}</p>
+              <p className="text-sm font-semibold text-[#6b5c3b]">Pending Invoices</p>
+              <p className="text-2xl font-bold text-[#4b5c2b]">{pendingInvoices}</p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <i className="ri-file-list-3-line text-orange-600 text-xl"></i>
+            <div className="w-12 h-12 bg-[#ead7b8] rounded-xl flex items-center justify-center shadow-inner">
+              <i className="ri-file-list-3-line text-[#4b5c2b] text-xl"></i>
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-orange-600 font-medium">{formatCurrency(pendingAmount)}</span>
-            <span className="text-gray-500 ml-2">to collect</span>
+            <span className="text-[#2f3e1e] font-semibold">{formatCurrency(pendingAmount)}</span>
+            <span className="text-[#8a7d5c] ml-2">to collect</span>
           </div>
         </div>
       </div>

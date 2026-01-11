@@ -195,10 +195,11 @@ export default function HomePage() {
             </div>
             <div className="relative">
               <img 
-                src="https://readdy.ai/api/search-image?query=Modern%20accounting%20dashboard%20interface%20showing%20financial%20charts%2C%20invoices%2C%20and%20Dominican%20Republic%20business%20data%20with%20clean%20professional%20design%2C%20blue%20and%20white%20color%20scheme%2C%20realistic%20business%20environment&width=600&height=400&seq=hero-dashboard&orientation=landscape"
+                src="/hero-analytics-green.svg"
                 alt="Dashboard de Sendbillnow"
-                className="rounded-lg shadow-2xl object-top"
+                className="rounded-xl shadow-2xl border border-[#d8cbb5] object-cover"
               />
+              <div className="absolute inset-0 rounded-xl border border-white/40 pointer-events-none bg-gradient-to-tr from-[#30442540] via-transparent to-transparent mix-blend-multiply"></div>
             </div>
           </div>
         </div>
