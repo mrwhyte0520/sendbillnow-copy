@@ -237,43 +237,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: 'ri-bar-chart-2-line',
       current: location.pathname === '/statistics'
     },
-    // 1. Accounting
-    {
-      name: 'Accounting',
-      href: '/accounting',
-      icon: 'ri-calculator-line',
-      current: location.pathname.startsWith('/accounting'),
-      submenu: [
-        { name: 'Chart of Accounts', href: '/accounting/chart-accounts' },
-        { name: 'Petty Cash', href: '/accounting/petty-cash' },
-        { name: 'Financial Statements', href: '/accounting/financial-statements' },
-        { name: 'General Journal', href: '/accounting/general-journal' },
-        { name: 'General Ledger', href: '/accounting/general-ledger' },
-        { name: 'Trial Balance', href: '/accounting/trial-balance' },
-        { name: 'Accounting Periods', href: '/accounting/periods' }
-      ]
-    },
-    // 2. Banks
-    {
-      name: 'Banks',
-      href: '/banks-module',
-      icon: 'ri-bank-line',
-      current: location.pathname.startsWith('/banks-module'),
-      submenu: [
-        { name: 'Bank Deposits', href: '/banks-module/deposits' },
-        { name: 'Payment Requests', href: '/banks-module/payment-requests' },
-        { name: 'Checks', href: '/banks-module/checks' },
-        { name: 'Bank Transfers', href: '/banks-module/transfers' },
-        { name: 'Bank Credits', href: '/banks-module/credits' },
-        { name: 'Bank Charges', href: '/banks-module/charges' },
-        { name: 'Create Currency', href: '/banks-module/currencies' },
-        { name: 'Exchange Rates', href: '/banks-module/exchange-rates' },
-        { name: 'Bank Report', href: '/banks-module/reports' },
-        { name: 'Bank Reconciliation', href: '/banks-module/reconciliation' },
-        { name: 'Reconciliation History', href: '/banks-module/reconciliations-history' },
-      ]
-    },
-    // 3. Accounts Receivable
+    // Accounts Receivable
     {
       name: 'Accounts Receivable',
       href: '/accounts-receivable',
@@ -351,67 +315,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Home', href: '/inventory' },
       ]
     },
-    // 8. Fixed Assets
-    {
-      name: 'Fixed Assets',
-      href: '/fixed-assets',
-      icon: 'ri-building-line',
-      current: location.pathname.startsWith('/fixed-assets'),
-      submenu: [
-        { name: 'Asset Register', href: '/fixed-assets/register' },
-        { name: 'Asset Types', href: '/fixed-assets/types' },
-        { name: 'Depreciation', href: '/fixed-assets/depreciation' },
-        { name: 'Depreciation Types', href: '/fixed-assets/depreciation-types' },
-        { name: 'Fixed Assets Report', href: '/fixed-assets/report' },
-        { name: 'Revaluation', href: '/fixed-assets/revaluation' },
-        { name: 'Asset Disposal', href: '/fixed-assets/disposal' }
-      ]
-    },
-    // 9. Payroll
-    {
-      name: 'Payroll',
-      href: '/payroll',
-      icon: 'ri-team-line',
-      current: location.pathname.startsWith('/payroll'),
-      submenu: [
-        { name: 'Payroll Configuration', href: '/payroll/configuration' },
-        { name: 'Employees', href: '/payroll/employees' },
-        { name: 'Employee Types', href: '/payroll/employee-types' },
-        { name: 'Departments', href: '/payroll/departments' },
-        { name: 'Positions', href: '/payroll/positions' },
-        { name: 'Salary Types', href: '/payroll/salary-types' },
-        { name: 'Commission Types', href: '/payroll/commission-types' },
-        { name: 'Vacations', href: '/payroll/vacations' },
-        { name: 'Overtime', href: '/payroll/overtime' },
-        { name: 'Holidays', href: '/payroll/holidays' },
-        { name: 'Christmas Bonus', href: '/payroll/royalties' },
-        { name: 'Bonuses', href: '/payroll/bonuses' },
-        { name: 'Periodic Deductions', href: '/payroll/deductions' },
-        { name: 'Other Deductions', href: '/payroll/other-deductions' },
-        { name: 'Absence Records', href: '/payroll/absences' },
-        { name: 'Payroll Process', href: '/payroll/payroll-process' },
-        { name: 'Payroll Journal Entry', href: '/payroll/journal-entry' }
-      ]
-    },
-    // 10. Taxes
-    {
-      name: 'Taxes',
-      href: '/taxes',
-      icon: 'ri-government-line',
-      current: location.pathname.startsWith('/taxes'),
-      submenu: [
-        { name: 'Configuration', href: '/taxes/configuration' },
-        { name: 'NCF/E-CF', href: '/taxes/ncf' },
-        { name: 'Fiscal Series', href: '/taxes/fiscal-series' },
-        { name: 'Report 606', href: '/taxes/report-606' },
-        { name: 'Report 607', href: '/taxes/report-607' },
-        { name: 'Report 608', href: '/taxes/report-608' },
-        { name: 'Report IT-1', href: '/taxes/report-it1' },
-        { name: 'Report IR-17', href: '/taxes/report-ir17' },
-        { name: 'ITBIS Proportionality', href: '/taxes/itbis-proportionality' }
-      ]
-    },
-    // 11. Plans
+    // Plans
     {
       name: 'Plans',
       href: '/plans',

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
-import { invoicesService, customersService, journalEntriesService } from '../../services/database';
+import { invoicesService, customersService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
 import { formatAmount } from '../../utils/numberFormat';
 import { formatDate } from '../../utils/dateFormat';
@@ -123,55 +123,8 @@ export default function AccountsReceivablePage() {
 
   // Cargar asientos recientes relacionados con CxC
   useEffect(() => {
-    const loadRecentEntries = async () => {
-      if (!user?.id) {
-        setRecentEntries([]);
-        return;
-      }
-      try {
-        const entries = await journalEntriesService.getAll(user.id);
-        // Filtrar asientos relacionados con CxC (pagos de clientes, facturas, etc.)
-        const cxcEntries = (entries || [])
-          .filter((e: any) => {
-            const desc = String(e.description || '').toLowerCase();
-            const ref = String(e.reference || '').toLowerCase();
-            const entryNum = String(e.entry_number || '').toLowerCase();
-            return (
-              desc.includes('cliente') ||
-              desc.includes('cobro') ||
-              desc.includes('pago') ||
-              desc.includes('factura') ||
-              desc.includes('cxc') ||
-              desc.includes('cuentas por cobrar') ||
-              ref.includes('pago') ||
-              ref.includes('fac') ||
-              entryNum.includes('fac') ||
-              entryNum.includes('cp-')
-            );
-          })
-          .sort((a: any, b: any) => {
-            const dateA = new Date(a.entry_date || 0).getTime();
-            const dateB = new Date(b.entry_date || 0).getTime();
-            return dateB - dateA;
-          })
-          .slice(0, 10)
-          .map((e: any) => ({
-            id: e.id,
-            entry_number: e.entry_number,
-            entry_date: e.entry_date,
-            description: e.description,
-            reference: e.reference,
-            total_debit: Number(e.total_debit || 0),
-            total_credit: Number(e.total_credit || 0),
-            status: e.status,
-          }));
-        setRecentEntries(cxcEntries);
-      } catch (error) {
-        console.error('Error loading recent CxC entries:', error);
-        setRecentEntries([]);
-      }
-    };
-    loadRecentEntries();
+    // Journal entries removed - no longer loading recent entries
+    setRecentEntries([]);
   }, [user?.id]);
 
   const handleViewEntry = async (entry: JournalEntry) => {

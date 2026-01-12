@@ -4,7 +4,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useAuth } from '../../../hooks/useAuth';
-import { customersService, invoicesService, creditDebitNotesService, accountingSettingsService, journalEntriesService, chartAccountsService, settingsService } from '../../../services/database';
+import { customersService, invoicesService, creditDebitNotesService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -81,10 +81,9 @@ export default function DebitNotesPage() {
     if (!user?.id) return;
     setLoadingSupport(true);
     try {
-      const [custList, invList, accList] = await Promise.all([
+      const [custList, invList] = await Promise.all([
         customersService.getAll(user.id),
         invoicesService.getAll(user.id),
-        chartAccountsService.getAll(user.id),
       ]);
       setCustomers(custList.map((c: any) => ({ id: c.id, name: c.name })));
       setInvoices(
@@ -97,8 +96,6 @@ export default function DebitNotesPage() {
           customerId: String(inv.customer_id),
         }))
       );
-
-      setAccounts(accList || []);
 
       // Mapa de cuentas de CxC por cliente (si tienen arAccountId configurado)
       const arMap: Record<string, string> = {};
@@ -356,11 +353,10 @@ export default function DebitNotesPage() {
     const invoiceId = String(formData.get('invoice_id') || '');
     const reason = String(formData.get('reason') || '');
     const concept = String(formData.get('concept') || '');
-    const arAccountIdFromForm = String(formData.get('ar_account_id') || '');
     const creditAccountId = String(formData.get('credit_account_id') || '');
 
-    if (!customerId || !amount || !creditAccountId || !invoiceId || !arAccountIdFromForm) {
-      alert('Customer, amount, invoice, credit account, and accounts receivable are required.');
+    if (!customerId || !amount || !creditAccountId || !invoiceId) {
+      alert('Customer, amount, invoice, and credit account are required.');
       return;
     }
 
@@ -411,65 +407,6 @@ export default function DebitNotesPage() {
         }
 
         await invoicesService.updateTotals(String(invoiceId), newInvoiceTotal, newInvoiceStatus);
-      }
-
-      // Best-effort: asiento contable de nota de débito (aumento de CxC: Debe CxC, Haber cuenta seleccionada)
-      try {
-        const settings = await accountingSettingsService.get(user.id);
-
-        const customerSpecificArId = customerArAccounts[customerId];
-        const arAccountId = arAccountIdFromForm || customerSpecificArId || settings?.ar_account_id;
-
-        if (!arAccountId) {
-          alert('Debit note created, but journal entry failed: configure or select an Accounts Receivable account.');
-        } else {
-          const noteAmount = Number(created.total_amount) || amount;
-
-          const lines: any[] = [
-            {
-              account_id: arAccountId,
-              description: 'Nota de débito - Aumento de Cuentas por Cobrar',
-              debit_amount: noteAmount,
-              credit_amount: 0,
-              line_number: 1,
-            },
-            {
-              account_id: creditAccountId,
-              description: 'Nota de débito - Cargo a cuenta seleccionada',
-              debit_amount: 0,
-              credit_amount: noteAmount,
-              line_number: 2,
-            },
-          ];
-
-          const customerName = customers.find(c => c.id === customerId)?.name || '';
-          const descriptionText = customerName
-            ? `Nota de débito ${created.note_number || noteNumber} - ${customerName}`
-            : `Nota de débito ${created.note_number || noteNumber}`;
-
-          const refText = created.reason || reason || concept || '';
-          const entryReference = refText
-            ? `ND:${created.id} Motivo:${refText}`
-            : `ND:${created.id}`;
-
-          const entryDate = created.note_date || noteDate;
-
-          const entryPayload = {
-            entry_number: created.id,
-            entry_date: entryDate,
-            description: descriptionText,
-            reference: entryReference,
-            total_debit: noteAmount,
-            total_credit: noteAmount,
-            status: 'posted' as const,
-          };
-
-          await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-        }
-      } catch (jeError) {
-        // eslint-disable-next-line no-console
-        console.error('[DebitNotes] Error creando asiento contable de nota de débito:', jeError);
-        alert('Nota de débito creada, pero ocurrió un error al crear el asiento contable. Revise el libro diario y la configuración.');
       }
 
       await loadNotes();

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { customersService, invoicesService, journalEntriesService, chartAccountsService } from '../../../services/database';
+import { customersService, invoicesService } from '../../../services/database';
 
 interface ArDiscount {
   id: string;
@@ -58,11 +58,9 @@ export default function DiscountsPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [custList, invList, accList, entries] = await Promise.all([
+      const [custList, invList] = await Promise.all([
         customersService.getAll(user.id),
         invoicesService.getAll(user.id),
-        chartAccountsService.getAll(user.id),
-        journalEntriesService.getAll(user.id),
       ]);
 
       const customersArray = (custList || []).map((c: any) => ({ id: String(c.id), name: String(c.name) }));
@@ -84,57 +82,8 @@ export default function DiscountsPage() {
       });
       setInvoices(invoicesArray);
 
-      setAccounts(accList || []);
-
-      const customersMap: Record<string, string> = {};
-      customersArray.forEach((c: { id: string; name: string }) => {
-        customersMap[c.id] = c.name;
-      });
-
-      const invoicesMap: Record<string, string> = {};
-      invoicesArray.forEach((inv) => {
-        invoicesMap[inv.id] = inv.invoiceNumber;
-      });
-
-      const discEntries = (entries as any[] || []).filter((e) => {
-        const num = String(e.entry_number || '');
-        return num.startsWith('DSC-');
-      });
-
-      const mapped: ArDiscount[] = discEntries.map((e: any) => {
-        const ref = String(e.reference || '');
-        let customerId: string | undefined;
-        let invoiceId: string | undefined;
-        let concept = '';
-
-        if (ref.startsWith('DSC|')) {
-          const parts = ref.split('|');
-          customerId = parts[1] || undefined;
-          invoiceId = parts[2] || undefined;
-          concept = parts.slice(3).join('|') || (e.description as string) || '';
-        } else {
-          concept = (e.description as string) || '';
-        }
-
-        const customerName = customerId ? (customersMap[customerId] || '') : '';
-        const invoiceNumber = invoiceId ? invoicesMap[invoiceId] : undefined;
-
-        const amount = Number(e.total_debit) || Number(e.total_credit) || 0;
-
-        return {
-          id: String(e.id),
-          entryNumber: String(e.entry_number),
-          date: String(e.entry_date),
-          customerId,
-          customerName,
-          invoiceId,
-          invoiceNumber,
-          amount,
-          concept,
-        };
-      });
-
-      setDiscounts(mapped);
+      // Discounts are now tracked directly, not via journal entries
+      setDiscounts([]);
     } finally {
       setLoading(false);
     }
@@ -304,33 +253,8 @@ export default function DiscountsPage() {
     const description = descriptionParts.join(' - ');
     const reference = `DSC|${customerId}|${invoiceId}|${concept}`;
 
-    const lines = [
-      {
-        account_id: originAccountId,
-        description: 'Reverso de ingresos por descuento',
-        debit_amount: amount,
-        credit_amount: 0,
-        line_number: 1,
-      },
-      {
-        account_id: discountsAccountId,
-        description: 'Descuentos en ventas',
-        debit_amount: 0,
-        credit_amount: amount,
-        line_number: 2,
-      },
-    ];
-
     try {
-      await journalEntriesService.createWithLines(user.id, {
-        entry_number: entryNumber,
-        entry_date: entryDate,
-        description,
-        reference,
-        status: 'posted',
-      }, lines);
-
-      // Si hay una factura relacionada, actualizar su total y estado (similar a aplicar una nota de crédito)
+      // Si hay una factura relacionada, actualizar su total y estado
       if (invoiceId) {
         const targetInvoice = invoices.find((inv) => inv.id === invoiceId);
         if (targetInvoice) {

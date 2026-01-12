@@ -6,9 +6,6 @@ import * as QRCode from 'qrcode';
 import {
   customersService,
   invoicesService,
-  journalEntriesService,
-  chartAccountsService,
-  accountingSettingsService,
   settingsService,
 } from '../../../services/database';
 import { formatAmount } from '../../../utils/numberFormat';
@@ -81,12 +78,9 @@ export default function ReturnsPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [custList, invList, accList, entries, settings] = await Promise.all([
+      const [custList, invList] = await Promise.all([
         customersService.getAll(user.id),
         invoicesService.getAll(user.id),
-        chartAccountsService.getAll(user.id),
-        journalEntriesService.getAll(user.id),
-        accountingSettingsService.get(user.id),
       ]);
 
       const customersArray = (custList || []).map((c: any) => ({ id: String(c.id), name: String(c.name) }));
@@ -131,96 +125,8 @@ export default function ReturnsPage() {
       });
       setInvoices(invoicesArray);
 
-      setAccounts(accList || []);
-      setAccountingSettings(settings || null);
-
-      // Preseleccionar cuentas por defecto desde Ajustes Contables cuando sea posible
-      if (Array.isArray(accList) && accList.length > 0) {
-        const incomeAccs = (accList as any[]).filter((acc) => acc.allowPosting && acc.type === 'income');
-        const defaultOrigin = (settings as any)?.sales_account_id as string | undefined;
-        const defaultReturns = (settings as any)?.sales_returns_account_id as string | undefined;
-
-        if (!originAccountId && defaultOrigin && incomeAccs.some((acc) => String(acc.id) === String(defaultOrigin))) {
-          setOriginAccountId(String(defaultOrigin));
-        }
-
-        // Buscar cuenta de devoluciones: primero de settings, luego por nombre/código
-        if (!returnsAccountId) {
-          let targetReturnsId: string | undefined;
-          
-          // 1. Usar cuenta configurada en settings
-          if (defaultReturns && incomeAccs.some((acc) => String(acc.id) === String(defaultReturns))) {
-            targetReturnsId = String(defaultReturns);
-          }
-          
-          // 2. Si no hay en settings, buscar cuenta que contenga "devoluc" en nombre o código
-          if (!targetReturnsId) {
-            const returnsAccount = incomeAccs.find((acc) => {
-              const name = String(acc.name || '').toLowerCase();
-              const code = String(acc.code || '').toLowerCase();
-              return name.includes('devoluc') || code.includes('devoluc') || 
-                     name.includes('devolucion') || name.includes('devolución');
-            });
-            if (returnsAccount) {
-              targetReturnsId = String(returnsAccount.id);
-            }
-          }
-          
-          if (targetReturnsId) {
-            setReturnsAccountId(targetReturnsId);
-          }
-        }
-      }
-
-      const customersMap: Record<string, string> = {};
-      customersArray.forEach((c: { id: string; name: string }) => {
-        customersMap[c.id] = c.name;
-      });
-
-      const invoicesMap: Record<string, string> = {};
-      invoicesArray.forEach((inv) => {
-        invoicesMap[inv.id] = inv.invoiceNumber;
-      });
-
-      const retEntries = (entries as any[] || []).filter((e) => {
-        const num = String(e.entry_number || '');
-        return num.startsWith('DEV-');
-      });
-
-      const mapped: ArReturn[] = retEntries.map((e: any) => {
-        const ref = String(e.reference || '');
-        let customerId: string | undefined;
-        let invoiceId: string | undefined;
-        let concept = '';
-
-        if (ref.startsWith('RET|')) {
-          const parts = ref.split('|');
-          customerId = parts[1] || undefined;
-          invoiceId = parts[2] || undefined;
-          concept = parts.slice(3).join('|') || (e.description as string) || '';
-        } else {
-          concept = (e.description as string) || '';
-        }
-
-        const customerName = customerId ? (customersMap[customerId] || '') : '';
-        const invoiceNumber = invoiceId ? invoicesMap[invoiceId] : undefined;
-
-        const amount = Number(e.total_debit) || Number(e.total_credit) || 0;
-
-        return {
-          id: String(e.id),
-          entryNumber: String(e.entry_number),
-          date: String(e.entry_date),
-          customerId,
-          customerName,
-          invoiceId,
-          invoiceNumber,
-          amount,
-          concept,
-        };
-      });
-
-      setReturns(mapped);
+      // Returns are now tracked directly, not via journal entries
+      setReturns([]);
     } finally {
       setLoading(false);
     }
@@ -544,32 +450,7 @@ export default function ReturnsPage() {
     const description = descriptionParts.join(' - ');
     const reference = `RET|${customerId}|${invoiceId}|${concept}`;
 
-    const lines = [
-      {
-        account_id: returnsAccountFromForm,
-        description: 'Devoluciones en ventas',
-        debit_amount: amount,
-        credit_amount: 0,
-        line_number: 1,
-      },
-      {
-        account_id: originAccountFromForm,
-        description: 'Reverso de ingresos por devolución',
-        debit_amount: 0,
-        credit_amount: amount,
-        line_number: 2,
-      },
-    ];
-
     try {
-      await journalEntriesService.createWithLines(user.id, {
-        entry_number: entryNumber,
-        entry_date: entryDate,
-        description,
-        reference,
-        status: 'posted',
-      }, lines);
-
       // Si hay una factura relacionada, actualizar su total y estado
       if (invoiceId) {
         const targetInvoice = invoices.find((inv) => inv.id === invoiceId);

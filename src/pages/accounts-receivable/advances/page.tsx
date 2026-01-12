@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
-import { customersService, invoicesService, customerAdvancesService, bankAccountsService, journalEntriesService, settingsService, accountingSettingsService } from '../../../services/database';
+import { customersService, invoicesService, customerAdvancesService, bankAccountsService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
@@ -560,87 +560,7 @@ export default function AdvancesPage() {
     };
 
     try {
-      const created = await customerAdvancesService.create(user.id, payload);
-
-      // Best-effort: registrar asiento contable del anticipo (Banco/Caja vs Anticipos de cliente)
-      try {
-        const customerAdvanceAccountId = customerAdvanceAccounts[customerId];
-
-        if (!customerAdvanceAccountId) {
-          alert('Anticipo registrado, pero no se pudo crear el asiento: el cliente no tiene configurada una cuenta de Anticipos.');
-        } else {
-          let bankChartAccountId: string | null = null;
-
-          if (bankAccountId) {
-            const bank = bankAccounts.find((b) => b.id === bankAccountId);
-            bankChartAccountId = bank?.chartAccountId || null;
-          }
-
-          // Si es efectivo y no hay banco, intentar usar cuenta de Caja/Efectivo global
-          if (!bankChartAccountId && paymentMethod === 'cash') {
-            const settings = await accountingSettingsService.get(user.id);
-            const cashAccountId = (settings as any)?.cash_account_id as string | undefined;
-            if (cashAccountId) {
-              bankChartAccountId = cashAccountId;
-            }
-          }
-
-          if (!bankChartAccountId) {
-            if (paymentMethod === 'cash') {
-              alert('Anticipo registrado en efectivo, pero no se pudo crear el asiento: configure una cuenta de Caja/Efectivo en Ajustes Contables o use una cuenta bancaria con cuenta contable asociada.');
-            } else {
-              alert('Anticipo registrado, pero no se pudo crear el asiento: la cuenta de banco seleccionada no tiene cuenta contable asociada.');
-            }
-          } else {
-            const entryAmount = Number(created.amount) || amount;
-
-            const lines: any[] = [
-              {
-                account_id: bankChartAccountId,
-                description: paymentMethod === 'cash' ? 'Anticipo de cliente - Caja/Efectivo' : 'Anticipo de cliente - Banco',
-                debit_amount: entryAmount,
-                credit_amount: 0,
-                line_number: 1,
-              },
-              {
-                account_id: customerAdvanceAccountId,
-                description: 'Anticipo de cliente - Pasivo',
-                debit_amount: 0,
-                credit_amount: entryAmount,
-                line_number: 2,
-              },
-            ];
-
-            const customerName = customers.find((c) => c.id === customerId)?.name || '';
-            const descriptionText = customerName
-              ? `Anticipo ${created.advance_number || advanceNumber} - ${customerName}`
-              : `Anticipo ${created.advance_number || advanceNumber}`;
-
-            const refText = created.reference || reference || '';
-            const entryReference = refText
-              ? `Anticipo:${created.id} Ref:${refText}`
-              : `Anticipo:${created.id}`;
-
-            const entryDate = created.advance_date || advanceDate;
-
-            const entryPayload = {
-              entry_number: created.id,
-              entry_date: entryDate,
-              description: descriptionText,
-              reference: entryReference,
-              total_debit: entryAmount,
-              total_credit: entryAmount,
-              status: 'posted' as const,
-            };
-
-            await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-          }
-        }
-      } catch (jeError) {
-        // eslint-disable-next-line no-console
-        console.error('[Advances] Error creando asiento contable de anticipo:', jeError);
-        alert('Anticipo registrado, pero ocurrió un error al crear el asiento contable. Revise el libro diario y la configuración.');
-      }
+      await customerAdvancesService.create(user.id, payload);
 
       await loadAdvances();
       alert('Anticipo creado exitosamente');
@@ -709,67 +629,6 @@ export default function AdvancesPage() {
         appliedAmount: newApplied,
         balanceAmount: newBalance,
       });
-
-      // Best-effort: registrar asiento contable de aplicación de anticipo (Anticipos vs CxC)
-      try {
-        const customerId = selectedAdvance.customerId;
-        const advanceAccountId = customerAdvanceAccounts[customerId];
-
-        if (!advanceAccountId) {
-          alert('Anticipo aplicado, pero no se pudo crear el asiento: el cliente no tiene configurada una cuenta de Anticipos.');
-        } else {
-          const settings = await accountingSettingsService.get(user.id);
-          const customerSpecificArId = customerArAccounts[customerId];
-          const arAccountId = customerSpecificArId || settings?.ar_account_id;
-
-          if (!arAccountId) {
-            alert('Anticipo aplicado, pero no se pudo crear el asiento: configure una cuenta de Cuentas por Cobrar en el cliente o en Ajustes Contables.');
-          } else {
-            const amountForEntry = amountToApply;
-
-            const lines: any[] = [
-              {
-                account_id: advanceAccountId,
-                description: 'Aplicación de anticipo a factura - Anticipos de Cliente',
-                debit_amount: amountForEntry,
-                credit_amount: 0,
-                line_number: 1,
-              },
-              {
-                account_id: arAccountId,
-                description: 'Aplicación de anticipo a factura - Cuentas por Cobrar',
-                debit_amount: 0,
-                credit_amount: amountForEntry,
-                line_number: 2,
-              },
-            ];
-
-            const customerName = customers.find(c => c.id === customerId)?.name || selectedAdvance.customerName;
-            const descriptionText = customerName
-              ? `Aplicación anticipo ${selectedAdvance.advanceNumber} a factura ${targetInvoice.invoiceNumber} - ${customerName}`
-              : `Aplicación anticipo ${selectedAdvance.advanceNumber} a factura ${targetInvoice.invoiceNumber}`;
-
-            const entryDate = new Date().toISOString().split('T')[0];
-            const entryReference = `AdvApply:${selectedAdvance.id}-Inv:${invoiceId}`;
-
-            const entryPayload = {
-              entry_number: `${selectedAdvance.id}-APP-${Date.now()}`,
-              entry_date: entryDate,
-              description: descriptionText,
-              reference: entryReference,
-              total_debit: amountForEntry,
-              total_credit: amountForEntry,
-              status: 'posted' as const,
-            };
-
-            await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-          }
-        }
-      } catch (jeError) {
-        // eslint-disable-next-line no-console
-        console.error('[Advances] Error creando asiento contable de aplicación de anticipo:', jeError);
-        alert('Anticipo aplicado, pero ocurrió un error al crear el asiento contable. Revise el libro diario y la configuración.');
-      }
 
       await loadAdvances();
       alert('Anticipo aplicado exitosamente');

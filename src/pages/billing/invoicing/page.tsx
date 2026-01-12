@@ -9,17 +9,14 @@ import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 
 import { useAuth } from '../../../hooks/useAuth';
 import {
-  accountingSettingsService,
   bankAccountsService,
   bankCurrenciesService,
   bankExchangeRatesService,
-  chartAccountsService,
   customerPaymentsService,
   customerTypesService,
   customersService,
   inventoryService,
   invoicesService,
-  journalEntriesService,
   paymentTermsService,
   receiptApplicationsService,
   receiptsService,
@@ -172,6 +169,41 @@ export default function InvoicingPage() {
     setNewInvoiceSubtotal(subtotal);
     setNewInvoiceTax(tax);
     setNewInvoiceTotal(total);
+  };
+
+  const openHtmlPreview = (html: string, title: string, filename: string) => {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    setDocumentPreviewTitle(title);
+    setDocumentPreviewFilename(filename);
+    setDocumentPreviewBlob(blob);
+    setDocumentPreviewUrl(url);
+    setShowDocumentPreviewModal(true);
+  };
+
+  const handleCloseDocumentPreview = () => {
+    setShowDocumentPreviewModal(false);
+    if (documentPreviewUrl) {
+      URL.revokeObjectURL(documentPreviewUrl);
+    }
+    setDocumentPreviewTitle('');
+    setDocumentPreviewFilename('');
+    setDocumentPreviewBlob(null);
+    setDocumentPreviewUrl('');
+  };
+
+  const handleDownloadDocumentPreview = () => {
+    if (!documentPreviewBlob) return;
+    saveAs(documentPreviewBlob, documentPreviewFilename || 'document.html');
+  };
+
+  const handlePrintDocumentPreview = () => {
+    const iframe = documentPreviewIframeRef.current;
+    const win = iframe?.contentWindow;
+    if (!win) return;
+    win.focus();
+    win.print();
   };
 
   const loadTaxConfig = async () => {
@@ -594,7 +626,7 @@ export default function InvoicingPage() {
     const printCustomerAddress = fullCustomer?.address || invoice.customerAddress || '';
 
     const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
-    const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || '';
+    const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
     const companyPhone = (companyInfo as any)?.phone || '';
     const companyEmail = (companyInfo as any)?.email || '';
     const companyAddress = (companyInfo as any)?.address || '';
@@ -1221,67 +1253,9 @@ export default function InvoicingPage() {
       if (isCashSale && created?.invoice?.id) {
         const createdInvoice = created.invoice as any;
         const invoiceId = String(createdInvoice.id);
-        const invoiceNumber = String(createdInvoice.invoice_number || `FAC-${Date.now()}`);
+        const createdInvoiceNumber = String(createdInvoice.invoice_number || `FAC-${Date.now()}`);
         const paymentDate = String(createdInvoice.invoice_date || newInvoiceDate);
         const amountToPay = Number(createdInvoice.total_amount) || total;
-
-        const customer = customers.find((c) => c.id === newInvoiceCustomerId);
-
-        const resolvePostingAccounts = async (): Promise<{
-          debitAccountId: string;
-          arAccountId: string;
-        } | null> => {
-          try {
-            const settings = await accountingSettingsService.get(user.id);
-            const normalizeCode = (code: string | null | undefined) => String(code || '').replace(/\./g, '');
-
-            const arAccountId =
-              (customer?.arAccountId ? String(customer.arAccountId) : '') ||
-              ((settings as any)?.ar_account_id ? String((settings as any).ar_account_id) : '');
-
-            let cashAccountId: string | null = (settings as any)?.cash_account_id
-              ? String((settings as any).cash_account_id)
-              : null;
-
-            if (!cashAccountId) {
-              try {
-                const all = await chartAccountsService.getAll(user.id);
-                const cash100101 = (all || []).find((a: any) => normalizeCode(a.code) === '100101');
-                if (cash100101?.id) cashAccountId = String(cash100101.id);
-              } catch {
-                cashAccountId = null;
-              }
-            }
-
-            let debitAccountId: string | null = null;
-            if (newInvoicePaymentMethod && newInvoicePaymentMethod !== 'cash' && newInvoiceBankAccountId) {
-              const bank = bankAccounts.find((b) => String(b.id) === String(newInvoiceBankAccountId));
-              if (bank?.chartAccountId) {
-                debitAccountId = String(bank.chartAccountId);
-              }
-            }
-
-            if (!debitAccountId) {
-              debitAccountId = cashAccountId;
-            }
-
-            if (!debitAccountId) {
-              alert('Could not register automatic payment: configure the Cash/Bank account for the entry.');
-              return null;
-            }
-
-            if (!arAccountId) {
-              alert('Could not register automatic payment: configure the Accounts Receivable account (customer or settings).');
-              return null;
-            }
-
-            return { debitAccountId, arAccountId };
-          } catch (err) {
-            console.error('Error resolving accounts for cash sale:', err);
-            alert('Could not register automatic payment: error resolving accounting accounts.');
-            return null;
-          }
-        };
 
         try {
           const paymentPayload: any = {
@@ -1294,56 +1268,8 @@ export default function InvoicingPage() {
             reference: newInvoicePaymentReference ? newInvoicePaymentReference.trim() : null,
           };
 
-          const createdPayment = await customerPaymentsService.create(user.id, paymentPayload);
-
+          await customerPaymentsService.create(user.id, paymentPayload);
           await invoicesService.updatePayment(invoiceId, amountToPay, 'paid');
-
-          try {
-            const postingAccounts = await resolvePostingAccounts();
-            if (!postingAccounts) {
-              throw new Error('Could not resolve accounting accounts for automatic payment');
-            }
-
-            const lines: any[] = [
-              {
-                account_id: postingAccounts.debitAccountId,
-                description: 'Customer payment - Cash/Bank',
-                debit_amount: amountToPay,
-                credit_amount: 0,
-                line_number: 1,
-              },
-              {
-                account_id: postingAccounts.arAccountId,
-                description: 'Customer payment - Accounts Receivable',
-                debit_amount: 0,
-                credit_amount: amountToPay,
-                line_number: 2,
-              },
-            ];
-
-            const description = customer?.name
-              ? `Invoice payment ${invoiceNumber} - ${customer.name}`
-              : `Invoice payment ${invoiceNumber}`;
-
-            const refText = newInvoicePaymentReference ? newInvoicePaymentReference.trim() : '';
-            const entryReference = createdPayment?.id
-              ? refText
-                ? `Payment:${createdPayment.id} Ref:${refText}`
-                : `Payment:${createdPayment.id}`
-              : refText || undefined;
-
-            const entryPayload = {
-              entry_number: createdPayment?.id || `CP-${Date.now()}`,
-              entry_date: paymentDate,
-              description,
-              reference: entryReference ?? null,
-              status: 'posted' as const,
-            };
-
-            await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-          } catch (jeError) {
-            console.error('Error creating journal entry for cash sale:', jeError);
-          }
 
           try {
             const receiptNumber = `RC-${Date.now()}`;
@@ -1354,7 +1280,7 @@ export default function InvoicingPage() {
               amount: amountToPay,
               payment_method: newInvoicePaymentMethod,
               reference: newInvoicePaymentReference ? newInvoicePaymentReference.trim() : null,
-              concept: `Invoice payment ${invoiceNumber}`,
+              concept: `Invoice payment ${createdInvoiceNumber}`,
               status: 'active' as const,
             };
 
@@ -1395,51 +1321,14 @@ export default function InvoicingPage() {
       if (documentPreviewUrl) {
         URL.revokeObjectURL(documentPreviewUrl);
       }
+      setDocumentPreviewBlob(null);
+      setDocumentPreviewUrl('');
     };
   }, [documentPreviewUrl]);
-
-  const handleCloseDocumentPreview = () => {
-    setShowDocumentPreviewModal(false);
-    setDocumentPreviewTitle('');
-    setDocumentPreviewFilename('');
-    setDocumentPreviewBlob(null);
-    setDocumentPreviewUrl('');
-  };
-
-  const handlePrintDocumentPreview = () => {
-    const iframe = documentPreviewIframeRef.current;
-    const win = iframe?.contentWindow;
-    if (!win) return;
-    win.focus();
-    win.print();
-  };
-
-  const handleDownloadDocumentPreview = () => {
-    if (!documentPreviewBlob || !documentPreviewFilename) return;
-    const url = URL.createObjectURL(documentPreviewBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = documentPreviewFilename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  };
-
-  const openHtmlPreview = (html: string, title: string, filename: string) => {
-    const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    setDocumentPreviewTitle(title);
-    setDocumentPreviewFilename(filename);
-    setDocumentPreviewBlob(blob);
-    setDocumentPreviewUrl(url);
-    setShowDocumentPreviewModal(true);
-  };
 
   return (
     <DashboardLayout>
       <div className="space-y-8 bg-[#F4ECDC] min-h-screen rounded-[32px] p-6">
-        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <span className="inline-flex text-xs font-semibold tracking-[0.2em] uppercase text-[#7A705A]">

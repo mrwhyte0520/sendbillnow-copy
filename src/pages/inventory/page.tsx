@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { inventoryService, settingsService, chartAccountsService, journalEntriesService, accountingSettingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, resolveTenantId } from '../../services/database';
+import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, resolveTenantId } from '../../services/database';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
@@ -54,8 +54,8 @@ export default function InventoryPage() {
       loadData();
       loadWarehouses();
       loadStores();
-      loadAccounts();
-      loadAccountingSettings();
+      setAccounts([]);
+      setAccountingSettings(null);
     } else {
       // No user: clear data (do not use sample data)
       setItems([]);
@@ -232,55 +232,6 @@ export default function InventoryPage() {
     }
   };
 
-  const loadAccounts = async () => {
-    try {
-      if (!user?.id) {
-        setAccounts([]);
-        return;
-      }
-      const data = await chartAccountsService.getAll(user.id);
-      const options = (data || [])
-        .filter((acc: any) => acc.allow_posting !== false)
-        .map((acc: any) => ({ id: acc.id, code: acc.code, name: acc.name, type: acc.type }));
-      setAccounts(options);
-    } catch (error) {
-      console.error('Error loading accounts:', error);
-      setAccounts([]);
-    }
-  };
-
-  const loadAccountingSettings = async () => {
-    try {
-      if (!user?.id) {
-        setAccountingSettings(null);
-        return;
-      }
-      const settings = await accountingSettingsService.get(user.id);
-      setAccountingSettings(settings);
-    } catch (error) {
-      console.error('Error loading accounting settings:', error);
-      setAccountingSettings(null);
-    }
-  };
-
-  const handleDeleteWarehouse = async (warehouse: any) => {
-    const productCount = items.filter((item) => item.warehouse_id === warehouse.id).length;
-    if (productCount > 0) {
-      alert('You cannot delete this warehouse because it has assigned products. Move or delete the products first.');
-      return;
-    }
-
-    if (!confirm('Delete this warehouse? This action cannot be undone.')) return;
-
-    try {
-      await settingsService.deleteWarehouse(warehouse.id);
-      await loadWarehouses();
-    } catch (error) {
-      console.error('Error deleting warehouse:', error);
-      alert('Could not delete warehouse');
-    }
-  };
-
   const loadWarehouses = async () => {
     try {
       const data = await settingsService.getWarehouses();
@@ -376,42 +327,12 @@ export default function InventoryPage() {
     }
 
     if (!item && type === 'item') {
-      const itemType = baseForm.item_type || 'inventory';
-      if (itemType === 'inventory' && accountingSettings) {
-        if (!baseForm.inventory_account_id && accountingSettings.default_inventory_asset_account_id) {
-          baseForm.inventory_account_id = accountingSettings.default_inventory_asset_account_id;
-        }
-        if (!baseForm.income_account_id && accountingSettings.default_inventory_income_account_id) {
-          baseForm.income_account_id = accountingSettings.default_inventory_income_account_id;
-        }
-        if (!baseForm.cogs_account_id && accountingSettings.default_inventory_cogs_account_id) {
-          baseForm.cogs_account_id = accountingSettings.default_inventory_cogs_account_id;
-        }
-        baseForm.item_type = itemType;
-      }
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+      setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
     }
 
     setFormData(baseForm);
-
-    if (!item && type === 'item') {
-      // Auto-generate SKU using user's configurable sequence
-      if (user?.id) {
-        accountingSettingsService.generateNextSku(user.id)
-          .then((sku) => {
-            setFormData((prev: any) => ({ ...prev, sku }));
-          })
-          .catch(() => {
-            // Fallback if error
-            const timestamp = Date.now().toString().slice(-6);
-            const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-            setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
-          });
-      } else {
-        const timestamp = Date.now().toString().slice(-6);
-        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-        setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
-      }
-    }
 
     setShowModal(true);
 
@@ -520,10 +441,6 @@ export default function InventoryPage() {
             item_type: formData.item_type || 'inventory',
             is_commissionable: formData.is_commissionable !== false,
             warehouse_id: formData.warehouse_id || null,
-            inventory_account_id: formData.inventory_account_id || null,
-            income_account_id: formData.income_account_id || null,
-            asset_account_id: formData.asset_account_id || null,
-            cogs_account_id: formData.cogs_account_id || null,
           };
 
           // If there's a user, try to save to database
@@ -602,100 +519,6 @@ export default function InventoryPage() {
             }
           } catch (stockError) {
             console.error('Error updating current stock for manual inventory movement', stockError);
-          }
-
-          // Best-effort: register journal entry for inventory movement
-          try {
-            const item = items.find((it) => String(it.id) === String(formData.item_id));
-            const inventoryAccountId = item?.inventory_account_id as string | undefined;
-            const counterAccountId = account_id as string | undefined;
-
-            if (inventoryAccountId && counterAccountId && totalCost > 0 && formData.movement_type) {
-              const lines: any[] = [];
-
-              if (formData.movement_type === 'entry') {
-                lines.push(
-                  {
-                    account_id: inventoryAccountId,
-                    description: 'Inventory entry',
-                    debit_amount: totalCost,
-                    credit_amount: 0,
-                  },
-                  {
-                    account_id: counterAccountId,
-                    description: 'Inventory entry counterpart',
-                    debit_amount: 0,
-                    credit_amount: totalCost,
-                  },
-                );
-              } else if (formData.movement_type === 'exit') {
-                lines.push(
-                  {
-                    account_id: counterAccountId,
-                    description: 'Inventory exit expense',
-                    debit_amount: totalCost,
-                    credit_amount: 0,
-                  },
-                  {
-                    account_id: inventoryAccountId,
-                    description: 'Inventory exit',
-                    debit_amount: 0,
-                    credit_amount: totalCost,
-                  },
-                );
-              } else if (formData.movement_type === 'adjustment') {
-                // Adjustments can be positive (increase) or negative (decrease)
-                const isPositive = formData.adjustment_direction !== 'negative';
-                if (isPositive) {
-                  // Positive adjustment: debit inventory, credit counterpart
-                  lines.push(
-                    {
-                      account_id: inventoryAccountId,
-                      description: 'Inventory adjustment (increase)',
-                      debit_amount: totalCost,
-                      credit_amount: 0,
-                    },
-                    {
-                      account_id: counterAccountId,
-                      description: 'Inventory adjustment counterpart',
-                      debit_amount: 0,
-                      credit_amount: totalCost,
-                    },
-                  );
-                } else {
-                  // Negative adjustment: credit inventory, debit counterpart (expense/loss)
-                  lines.push(
-                    {
-                      account_id: counterAccountId,
-                      description: 'Inventory loss/shrinkage',
-                      debit_amount: totalCost,
-                      credit_amount: 0,
-                    },
-                    {
-                      account_id: inventoryAccountId,
-                      description: 'Inventory adjustment (decrease)',
-                      debit_amount: 0,
-                      credit_amount: totalCost,
-                    },
-                  );
-                }
-              }
-
-              if (lines.length > 0) {
-                const entryPayload = {
-                  entry_number: `INV-MOV-${createdMovement.id}`,
-                  entry_date: movementDate,
-                  description: `Inventory movement ${formData.movement_type}`,
-                  reference: createdMovement.id ? String(createdMovement.id) : null,
-                  status: 'posted' as const,
-                };
-
-                await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-              }
-            }
-          } catch (jeError) {
-            // eslint-disable-next-line no-console
-            console.error('Error posting inventory movement to ledger', jeError);
           }
         }
       } else if (modalType === 'warehouse') {
@@ -903,21 +726,11 @@ export default function InventoryPage() {
   };
 
   const generateSKU = async () => {
-    if (user?.id) {
-      try {
-        const sku = await accountingSettingsService.generateNextSku(user.id);
-        setFormData((prev: any) => ({ ...prev, sku }));
-        return sku;
-      } catch (error) {
-        console.error('Error generating SKU:', error);
-      }
-    }
-    // Fallback
     const timestamp = Date.now().toString().slice(-6);
     const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-    const fallbackSku = `INV-${timestamp}-${random}`;
-    setFormData((prev: any) => ({ ...prev, sku: fallbackSku }));
-    return fallbackSku;
+    const sku = `INV-${timestamp}-${random}`;
+    setFormData((prev: any) => ({ ...prev, sku }));
+    return sku;
   };
 
   // Export functions

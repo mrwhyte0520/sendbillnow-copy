@@ -15,9 +15,6 @@ import {
   taxService,
   customerTypesService,
   customerPaymentsService,
-  accountingSettingsService,
-  chartAccountsService,
-  journalEntriesService,
   receiptsService,
   receiptApplicationsService,
 } from '../../../services/database';
@@ -230,32 +227,6 @@ export default function InvoicesPage() {
     loadCustomers();
     loadInvoices();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  useEffect(() => {
-    const loadCashAccounts = async () => {
-      if (!user?.id) return;
-      try {
-        const data = await chartAccountsService.getAll(user.id as string);
-        const normalizeCode = (code: string | null | undefined) => String(code || '').replace(/\./g, '');
-        const filtered = (data || [])
-          .filter((acc: any) => {
-            const norm = normalizeCode(acc.code);
-            return norm === '100101'; // Solo Efectivo en Caja (100101)
-          })
-          .map((acc: any) => ({
-            id: String(acc.id),
-            code: String(acc.code || ''),
-            name: String(acc.name || ''),
-          }));
-        setCashAccounts(filtered);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error cargando cuenta 100101 para pagos de clientes:', error);
-      }
-    };
-
-    loadCashAccounts();
   }, [user?.id]);
 
   useEffect(() => {
@@ -803,30 +774,6 @@ export default function InvoicesPage() {
     const newStatus: Invoice['status'] = newBalance > 0 ? 'partial' : 'paid';
 
     try {
-      const settings = await accountingSettingsService.get(user.id);
-      const normalizeCode = (code: string | null | undefined) => String(code || '').replace(/\./g, '');
-
-      let cashAccountId: string | null = cashAccountIdFromForm ? cashAccountIdFromForm : '';
-      if (!cashAccountId) {
-        cashAccountId = (settings as any)?.cash_account_id ? String((settings as any).cash_account_id) : '';
-      }
-      if (!cashAccountId) {
-        const fromState = cashAccounts[0]?.id;
-        if (fromState) cashAccountId = String(fromState);
-      }
-      if (!cashAccountId) {
-        try {
-          const allAccounts = await chartAccountsService.getAll(user.id);
-          const cash100101 = (allAccounts || []).find((a: any) => normalizeCode(a.code) === '100101');
-          if (cash100101?.id) cashAccountId = String(cash100101.id);
-        } catch {
-          // ignore
-        }
-      }
-
-      const customerSpecificArId = customers.find((c) => c.id === currentInvoice.customerId)?.arAccountId;
-      const arAccountId = customerSpecificArId || (settings?.ar_account_id as string | undefined);
-
       const paymentPayload: any = {
         customer_id: currentInvoice.customerId,
         invoice_id: invoiceId,
@@ -841,53 +788,6 @@ export default function InvoicesPage() {
 
       await invoicesService.updatePayment(invoiceId, newPaid, newStatus);
       await loadInvoices();
-
-      try {
-        if (!cashAccountId) {
-          alert('Pago registrado, pero no se pudo crear el asiento contable: configure la cuenta de Caja General (100101).');
-        } else if (!arAccountId) {
-          alert('Pago registrado, pero no se pudo crear el asiento contable: configure la cuenta de Cuentas por Cobrar.');
-        } else {
-          const lines: any[] = [
-            {
-              account_id: cashAccountId,
-              description: 'Cobro de cliente - Caja General',
-              debit_amount: effectivePayment,
-              credit_amount: 0,
-              line_number: 1,
-            },
-            {
-              account_id: arAccountId,
-              description: 'Cobro de cliente - Cuentas por Cobrar',
-              debit_amount: 0,
-              credit_amount: effectivePayment,
-              line_number: 2,
-            },
-          ];
-
-          const description = `Pago factura ${currentInvoice.invoiceNumber}`;
-
-          const refText = reference || '';
-          const entryReference = createdPayment?.id
-            ? refText
-              ? `Pago:${createdPayment.id} Ref:${refText}`
-              : `Pago:${createdPayment.id}`
-            : refText || undefined;
-
-          const entryPayload = {
-            entry_number: createdPayment?.id || `CP-${Date.now()}`,
-            entry_date: paymentDate,
-            description,
-            reference: entryReference ?? null,
-            status: 'posted' as const,
-          };
-
-          await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-        }
-      } catch (jeError) {
-        console.error('Error creando asiento contable para pago de factura:', jeError);
-        alert('Pago registrado, pero ocurrió un error al crear el asiento contable.');
-      }
 
       try {
         const receiptNumber = `RC-${Date.now()}`;

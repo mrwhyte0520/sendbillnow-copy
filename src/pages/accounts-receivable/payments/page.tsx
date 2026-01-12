@@ -3,7 +3,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useAuth } from '../../../hooks/useAuth';
-import { customerPaymentsService, invoicesService, bankAccountsService, accountingSettingsService, journalEntriesService, customersService, receiptsService, receiptApplicationsService, chartAccountsService, settingsService } from '../../../services/database';
+import { customerPaymentsService, invoicesService, bankAccountsService, customersService, receiptsService, receiptApplicationsService, settingsService } from '../../../services/database';
 import ExcelJS from 'exceljs';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
@@ -110,12 +110,11 @@ export default function PaymentsPage() {
     const loadData = async () => {
       if (!user?.id) return;
       try {
-        const [paymentsData, invoicesData, bankAccountsData, customersData, accountsData] = await Promise.all([
+        const [paymentsData, invoicesData, bankAccountsData, customersData] = await Promise.all([
           customerPaymentsService.getAll(user.id),
           invoicesService.getAll(user.id),
           bankAccountsService.getAll(user.id),
           customersService.getAll(user.id),
-          chartAccountsService.getAll(user.id),
         ]);
 
         const mappedPayments: Payment[] = (paymentsData || []).map((p: any) => ({
@@ -204,12 +203,7 @@ export default function PaymentsPage() {
         }, {} as Record<string, string>);
         setCustomerDocuments(mappedCustomerDocuments);
 
-        const mappedAccounts = (accountsData || []).map((a: any) => ({
-          ...a,
-          id: String(a.id),
-          allowPosting: !!(a.allowPosting ?? a.allow_posting),
-        }));
-        setAccounts(mappedAccounts);
+        setAccounts([]);
       } catch (error) {
         console.error('Error cargando datos de pagos recibidos:', error);
       }
@@ -583,92 +577,6 @@ export default function PaymentsPage() {
     const newStatus = newBalance > 0 ? 'partial' : 'paid';
 
     try {
-      // Resolver cuentas contables antes de registrar el pago para garantizar asiento automático
-      const settings = await accountingSettingsService.get(user.id);
-      const normalizeCode = (code: string | null | undefined) => String(code || '').replace(/\./g, '');
-      const customerArId = customerArAccounts[String(invoice.customerId)];
-      const resolvedArAccountId =
-        (arAccountIdOverride ? arAccountIdOverride : '') ||
-        (customerArId ? String(customerArId) : '') ||
-        (settings?.ar_account_id ? String(settings.ar_account_id) : '');
-
-      // Determinar cuenta de débito: Si hay banco seleccionado, usar su cuenta contable; sino usar Caja General
-      let debitAccountId: string | null = null;
-      let debitAccountLabel = 'Caja General';
-
-      // Si hay banco seleccionado, obtener su cuenta contable
-      if (bankAccountId) {
-        const selectedBank = bankAccounts.find((b) => b.id === bankAccountId);
-        if (selectedBank?.chartAccountId) {
-          debitAccountId = String(selectedBank.chartAccountId);
-          debitAccountLabel = selectedBank.name || 'Banco';
-        }
-      }
-
-      // Fallback a Caja General si no hay banco o no tiene cuenta contable
-      if (!debitAccountId) {
-        let cashGeneralAccountId: string | null = (settings as any)?.cash_account_id
-          ? String((settings as any).cash_account_id)
-          : null;
-
-        if (!cashGeneralAccountId) {
-          const fromState = accounts.find((a: any) => normalizeCode(a.code) === '100101');
-          if (fromState?.id) cashGeneralAccountId = String(fromState.id);
-        }
-
-        if (!cashGeneralAccountId) {
-          try {
-            const allAccounts = await chartAccountsService.getAll(user.id);
-            const cash100101 = (allAccounts || []).find((a: any) => normalizeCode(a.code) === '100101');
-            if (cash100101?.id) cashGeneralAccountId = String(cash100101.id);
-          } catch {
-            cashGeneralAccountId = null;
-          }
-        }
-
-        debitAccountId = cashGeneralAccountId;
-      }
-
-      if (!debitAccountId) {
-        alert(
-          'No se pudo registrar el pago: configure la cuenta de Caja General (código 100101 o cash_account_id) o seleccione un banco con cuenta contable asociada.',
-        );
-        return;
-      }
-
-      // Cuenta para registrar retenciones (best-effort)
-      // Reusamos itbis_receivable_account_id (si existe) o la cuenta 110201 como fallback.
-      // Si no existe ninguna, caemos en Caja General solo para evitar descuadre.
-      let withholdingAccountId: string | null = (settings as any)?.itbis_receivable_account_id
-        ? String((settings as any).itbis_receivable_account_id)
-        : null;
-
-      if (!withholdingAccountId) {
-        const fromState = accounts.find((a: any) => normalizeCode(a.code) === '110201');
-        if (fromState?.id) withholdingAccountId = String(fromState.id);
-      }
-
-      if (!withholdingAccountId) {
-        try {
-          const allAccounts = await chartAccountsService.getAll(user.id);
-          const itbis110201 = (allAccounts || []).find((a: any) => normalizeCode(a.code) === '110201');
-          if (itbis110201?.id) withholdingAccountId = String(itbis110201.id);
-        } catch {
-          withholdingAccountId = null;
-        }
-      }
-
-      if (!withholdingAccountId) {
-        withholdingAccountId = debitAccountId;
-      }
-
-      if (!resolvedArAccountId) {
-        alert(
-          'No se pudo registrar el pago: configure la cuenta de Cuentas por Cobrar (Clientes) en Ajustes Contables o en el cliente.',
-        );
-        return;
-      }
-
       const paymentPayload: any = {
         customer_id: invoice.customerId,
         invoice_id: invoiceId,
@@ -727,63 +635,6 @@ export default function PaymentsPage() {
         setInvoices(mappedInvoices);
       } catch (refreshError) {
         console.error('Error recargando pagos/facturas luego del registro:', refreshError);
-      }
-
-      try {
-        const totalWithheld = isFiscal ? Math.max(0, (Number(itbisWithheld) || 0) + (Number(isrWithheld) || 0)) : 0;
-        const cashReceived = Math.max(0, effectivePayment - totalWithheld);
-
-        const lines: any[] = [
-          {
-            account_id: debitAccountId,
-            description: `Cobro de cliente - ${debitAccountLabel}`,
-            debit_amount: cashReceived,
-            credit_amount: 0,
-            line_number: 1,
-          },
-          ...(totalWithheld > 0
-            ? [
-                {
-                  account_id: withholdingAccountId,
-                  description: 'Retenciones de cliente (ITBIS/ISR) - Por cobrar',
-                  debit_amount: totalWithheld,
-                  credit_amount: 0,
-                  line_number: 2,
-                },
-              ]
-            : []),
-          {
-            account_id: resolvedArAccountId,
-            description: 'Cobro de cliente - Cuentas por Cobrar',
-            debit_amount: 0,
-            credit_amount: effectivePayment,
-            line_number: totalWithheld > 0 ? 3 : 2,
-          },
-        ];
-
-        const description = invoice.customerName
-          ? `Pago factura ${invoice.invoiceNumber} - ${invoice.customerName}`
-          : `Pago factura ${invoice.invoiceNumber}`;
-
-        const refText = reference || '';
-        const entryReference = createdPayment?.id
-          ? refText
-            ? `Pago:${createdPayment.id} Ref:${refText}`
-            : `Pago:${createdPayment.id}`
-          : refText || undefined;
-
-        const entryPayload = {
-          entry_number: createdPayment?.id || `CP-${Date.now()}`,
-          entry_date: paymentDate,
-          description,
-          reference: entryReference ?? null,
-          status: 'posted' as const,
-        };
-
-        await journalEntriesService.createWithLines(user.id, entryPayload, lines);
-      } catch (jeError) {
-        console.error('Error creando asiento contable para pago de factura:', jeError);
-        alert('Pago registrado, pero ocurrió un error al crear el asiento contable.');
       }
 
       try {
