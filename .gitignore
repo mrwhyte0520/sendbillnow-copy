@@ -12,3 +12,6 @@ pnpm-debug.log*
 coverage/
 .vscode/
 .DS_Store
+.env
+.env.local
+.env.example

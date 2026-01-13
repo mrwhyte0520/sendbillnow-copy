@@ -188,16 +188,6 @@ export default function AdvancesPage() {
       return;
     }
 
-    if (!formData.bankId) {
-      alert('Select the bank account used to disburse the advance.');
-      return;
-    }
-
-    if (!formData.accountId) {
-      alert('Select the accounting ledger for supplier advances.');
-      return;
-    }
-
     if ((formData.paymentMethod === 'check' || formData.paymentMethod === 'transfer') && !formData.documentNumber.trim()) {
       alert('Document number is required for checks or transfers.');
       return;
@@ -232,10 +222,10 @@ export default function AdvancesPage() {
           balance_amount: amountNumber,
           payment_method: formData.paymentMethod,
           transaction_date: formData.transactionDate,
-          bank_id: formData.bankId,
+          bank_id: formData.bankId || null,
           document_number: formData.documentNumber || null,
           document_date: formData.documentDate || null,
-          account_id: formData.accountId,
+          account_id: formData.accountId || null,
         });
       }
 
@@ -797,27 +787,27 @@ export default function AdvancesPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {editingAdvance ? 'Editar Anticipo' : 'Nuevo Anticipo'}
+                  {editingAdvance ? 'Edit Advance' : 'New Advance'}
                 </h3>
               </div>
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Proveedor *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
                     <select 
                       required
                       value={formData.supplierId}
                       onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Seleccionar proveedor</option>
+                      <option value="">Select supplier</option>
                       {suppliers.map((supplier) => (
                         <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Monto *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
                     <input 
                       type="number" min="0"
                       required
@@ -829,7 +819,7 @@ export default function AdvancesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Transacción *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Transaction Date *</label>
                     <input 
                       type="date"
                       required
@@ -839,26 +829,26 @@ export default function AdvancesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Pago *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
                     <select
                       value={formData.paymentMethod}
                       onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="cash">Efectivo</option>
-                      <option value="check">Cheque</option>
-                      <option value="transfer">Transferencia</option>
-                      <option value="petty_cash">Caja Chica</option>
+                      <option value="cash">Cash</option>
+                      <option value="check">Check</option>
+                      <option value="transfer">Transfer</option>
+                      <option value="petty_cash">Petty Cash</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Banco / Cuenta *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account</label>
                     <select
                       value={formData.bankId}
                       onChange={(e) => setFormData({ ...formData, bankId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Seleccionar banco...</option>
+                      <option value="">Select bank...</option>
                       {bankAccounts.map((b: any) => (
                         <option key={b.id} value={b.id}>
                           {b.name} - {b.account_number} ({b.currency || 'DOP'})
@@ -867,17 +857,17 @@ export default function AdvancesPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">N° Documento Soporte</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Supporting Document No.</label>
                     <input
                       type="text"
                       value={formData.documentNumber}
                       onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="N° cheque o transferencia"
+                      placeholder="Check/transfer reference"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha Documento</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Date</label>
                     <input
                       type="date"
                       value={formData.documentDate}
@@ -886,13 +876,13 @@ export default function AdvancesPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cuenta de Anticipo *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Advance Account *</label>
                     <select
                       value={formData.accountId}
                       onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="">Seleccione cuenta...</option>
+                      <option value="">Select account...</option>
                       {accounts.map((acc: any) => (
                         <option key={acc.id} value={acc.id}>
                           {acc.code} - {acc.name}
@@ -901,18 +891,18 @@ export default function AdvancesPage() {
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Motivo *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason *</label>
                     <textarea 
                       required
                       value={formData.reason}
                       onChange={(e) => setFormData({...formData, reason: e.target.value})}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Describe el motivo del anticipo..."
+                      placeholder="Describe the reason for the advance..."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Fecha de Vencimiento *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date *</label>
                     <input 
                       type="date"
                       required
@@ -928,13 +918,14 @@ export default function AdvancesPage() {
                     onClick={resetForm}
                     className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                    className="px-4 py-2 text-white rounded-lg whitespace-nowrap transition-colors shadow-sm"
+                    style={{ backgroundColor: '#4b5c4b' }}
                   >
-                    {editingAdvance ? 'Actualizar' : 'Crear'} Anticipo
+                    {editingAdvance ? 'Update' : 'Create'} Advance
                   </button>
                 </div>
               </form>

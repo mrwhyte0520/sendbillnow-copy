@@ -16,6 +16,8 @@ interface ArDiscount {
   concept: string;
 }
 
+const STORAGE_PREFIX = 'contabi_ar_discounts_';
+
 export default function DiscountsPage() {
   const { user } = useAuth();
   const [discounts, setDiscounts] = useState<ArDiscount[]>([]);
@@ -54,6 +56,8 @@ export default function DiscountsPage() {
     setNoteConcept('');
   };
 
+  const storageKey = user?.id ? `${STORAGE_PREFIX}${user.id}` : null;
+
   const loadData = async () => {
     if (!user?.id) return;
     setLoading(true);
@@ -82,8 +86,25 @@ export default function DiscountsPage() {
       });
       setInvoices(invoicesArray);
 
-      // Discounts are now tracked directly, not via journal entries
-      setDiscounts([]);
+      if (storageKey) {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              setDiscounts(parsed);
+            } else {
+              setDiscounts([]);
+            }
+          } catch {
+            setDiscounts([]);
+          }
+        } else {
+          setDiscounts([]);
+        }
+      } else {
+        setDiscounts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -199,8 +220,6 @@ export default function DiscountsPage() {
     const date = String(formData.get('date') || '');
     const amount = Number(formData.get('amount') || 0);
     const invoiceId = String(formData.get('invoice_id') || '');
-    const originAccountId = String(formData.get('origin_account_id') || '');
-    const discountsAccountId = String(formData.get('discounts_account_id') || '');
     const concept = String(formData.get('concept') || '');
 
     if (!invoiceId) {
@@ -229,11 +248,6 @@ export default function DiscountsPage() {
           return;
         }
       }
-    }
-
-    if (!originAccountId || !discountsAccountId) {
-      alert('Debes seleccionar la cuenta de ingresos original y la cuenta "Descuentos en ventas"');
-      return;
     }
 
     const entryDate = date || new Date().toISOString().slice(0, 10);
@@ -276,8 +290,28 @@ export default function DiscountsPage() {
         }
       }
 
-      await loadData();
-      alert('Descuento registrado exitosamente');
+      const now = entryDate;
+      const newDiscount: ArDiscount = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        entryNumber,
+        date: now,
+        customerId,
+        customerName,
+        invoiceId,
+        invoiceNumber,
+        amount,
+        concept,
+      };
+
+      setDiscounts(prev => {
+        const updated = [newDiscount, ...prev];
+        if (storageKey) {
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+        }
+        return updated;
+      });
+
+      alert('Discount saved successfully');
       setShowModal(false);
       resetDiscountForm();
     } catch (error: any) {
@@ -537,7 +571,6 @@ export default function DiscountsPage() {
                     </label>
                     <select
                       name="origin_account_id"
-                      required
                       value={noteOriginAccountId}
                       onChange={(e) => setNoteOriginAccountId(e.target.value)}
                       className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
@@ -557,7 +590,6 @@ export default function DiscountsPage() {
                     </label>
                     <select
                       name="discounts_account_id"
-                      required
                       value={noteDiscountsAccountId}
                       onChange={(e) => setNoteDiscountsAccountId(e.target.value)}
                       className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"

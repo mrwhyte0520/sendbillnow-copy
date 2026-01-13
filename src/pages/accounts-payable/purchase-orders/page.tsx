@@ -1206,14 +1206,18 @@ export default function PurchaseOrdersPage() {
 
         {/* Order Modal */}
         {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-8 px-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+              <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
                 <h3 className="text-lg font-semibold text-gray-900">
                   {editingOrder ? 'Edit Purchase Order' : 'New Purchase Order'}
                 </h3>
               </div>
-              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <form
+                id="purchase-order-form"
+                onSubmit={handleSubmit}
+                className="flex-1 overflow-y-auto p-6 space-y-6"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
@@ -1341,23 +1345,36 @@ export default function PurchaseOrdersPage() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 text-right">
-                    <p className="text-lg font-bold text-gray-900">
-                      Subtotal: {formatMoney(calculateSubtotal(), 'RD$')}
-                    </p>
-                    <p className="text-lg font-bold text-gray-900">
-                      ITBIS: {formatMoney(calculateItbis(), 'RD$')}
-                    </p>
-                    <p className="text-lg font-bold text-gray-900">
-                      Total: {formatMoney(calculateTotal(), 'RD$')}
-                    </p>
-                  </div>
-
                 </div>
+
               </form>
+              <div className="p-6 border-t border-gray-200 flex flex-col md:flex-row md:justify-between md:items-center gap-3 sticky bottom-0 bg-white">
+                <div className="text-right md:text-left">
+                  <p className="text-base font-semibold text-gray-900">Subtotal: {formatMoney(calculateSubtotal(), 'RD$')}</p>
+                  <p className="text-base font-semibold text-gray-900">ITBIS: {formatMoney(calculateItbis(), 'RD$')}</p>
+                  <p className="text-xl font-bold text-gray-900">Total: {formatMoney(calculateTotal(), 'RD$')}</p>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="w-full md:w-auto px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="purchase-order-form"
+                    className="w-full md:w-auto px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700"
+                  >
+                    {editingOrder ? 'Update Order' : 'Create Order'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
+
       </div>
     </DashboardLayout>
   );

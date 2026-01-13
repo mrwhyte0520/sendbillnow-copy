@@ -49,6 +49,24 @@ export default function InventoryPage() {
     { inventory_item_id: '', quantity: '', notes: '' },
   ]);
 
+  const getWarehouseStats = (warehouseId: string) => {
+    const wid = String(warehouseId || '');
+    const inWarehouse = (Array.isArray(items) ? items : []).filter((it: any) => String(it?.warehouse_id ?? '') === wid);
+    const products = inWarehouse.length;
+    const stockTotal = inWarehouse.reduce((sum: number, it: any) => sum + (Number(it?.current_stock) || 0), 0);
+    const valueTotal = inWarehouse.reduce((sum: number, it: any) => {
+      const stock = Number(it?.current_stock) || 0;
+      const cost = Number(it?.cost_price) || 0;
+      return sum + stock * cost;
+    }, 0);
+
+    return {
+      products,
+      stockTotal,
+      valueTotal,
+    };
+  };
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -1116,6 +1134,26 @@ export default function InventoryPage() {
 
   const renderItems = () => (
     <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h3 className="text-lg font-semibold text-[#2e3c21]">Products</h3>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={exportToExcel}
+            className="bg-[#4f5f33] text-white px-4 py-2 rounded-lg hover:bg-[#3b4d2d] transition-colors whitespace-nowrap"
+          >
+            <i className="ri-file-excel-line mr-2"></i>
+            Export Excel
+          </button>
+          <button
+            onClick={() => handleOpenModal('item')}
+            className="bg-[#6b7a40] text-white px-4 py-2 rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
+          >
+            <i className="ri-add-line mr-2"></i>
+            Add Product
+          </button>
+        </div>
+      </div>
+
       <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -1136,8 +1174,10 @@ export default function InventoryPage() {
               className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40] pr-8"
             >
               <option value="">All categories</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
           </div>
@@ -1223,8 +1263,8 @@ export default function InventoryPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      item.is_active 
-                        ? 'bg-[#d7e4c5] text-[#4f5f33]' 
+                      item.is_active
+                        ? 'bg-[#d7e4c5] text-[#4f5f33]'
                         : 'bg-[#f7d8d0] text-[#b7422a]'
                     }`}>
                       {item.is_active ? 'Active' : 'Inactive'}
@@ -1274,14 +1314,14 @@ export default function InventoryPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={exportToExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-file-excel-line mr-2"></i>
             Export Excel
           </button>
           <button
             onClick={() => handleOpenModal('movement')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-add-line mr-2"></i>
             New Movement
@@ -1472,7 +1512,7 @@ export default function InventoryPage() {
         <h3 className="text-lg font-semibold text-gray-900">Warehouse Entries</h3>
         <button
           onClick={() => handleOpenModal('warehouse_entry')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
           New Entry
@@ -1565,7 +1605,7 @@ export default function InventoryPage() {
         <h3 className="text-lg font-semibold text-gray-900">Warehouse Transfers</h3>
         <button
           onClick={() => handleOpenModal('warehouse_transfer')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
           New Transfer
@@ -1648,7 +1688,7 @@ export default function InventoryPage() {
         <h3 className="text-lg font-semibold text-gray-900">Warehouse Management</h3>
         <button
           onClick={() => handleOpenModal('warehouse')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+          className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
           New Warehouse
@@ -1661,8 +1701,8 @@ export default function InventoryPage() {
           return (
             <div key={warehouse.id} className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center mb-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <i className="ri-building-line text-blue-600"></i>
+                <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+                  <i className="ri-building-line text-[#008000]"></i>
                 </div>
                 <h4 className="text-lg font-semibold text-gray-900 ml-3">{warehouse.name}</h4>
               </div>
@@ -1671,19 +1711,19 @@ export default function InventoryPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Products:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-[#008000]">
                     {stats.products}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Total Stock:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-[#008000]">
                     {stats.stockTotal}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Total Value:</span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-medium text-[#008000]">
                     ${stats.valueTotal.toLocaleString('es-DO')}
                   </span>
                 </div>
@@ -1702,11 +1742,12 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
         {/* Stock Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <i className="ri-file-list-3-line text-blue-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-file-list-3-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Stock Report</h4>
           </div>
@@ -1715,7 +1756,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => navigate('/inventory/reports')}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
             Generate Report
@@ -1725,8 +1766,8 @@ export default function InventoryPage() {
         {/* Physical Inventory Count */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <i className="ri-clipboard-line text-indigo-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-clipboard-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Physical Inventory Count</h4>
           </div>
@@ -1735,7 +1776,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => navigate('/inventory/physical-count')}
-            className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
             Generate Format
@@ -1745,8 +1786,8 @@ export default function InventoryPage() {
         {/* Physical Inventory Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <i className="ri-clipboard-check-line text-amber-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-clipboard-check-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Physical Inventory Report</h4>
           </div>
@@ -1755,7 +1796,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => navigate('/inventory/physical-result')}
-            className="w-full bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-bar-chart-2-line mr-2"></i>
             View Report
@@ -1765,8 +1806,8 @@ export default function InventoryPage() {
         {/* Movements Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <i className="ri-arrow-up-down-line text-green-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-arrow-up-down-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Movements Report</h4>
           </div>
@@ -1778,7 +1819,7 @@ export default function InventoryPage() {
               setActiveTab('movements');
               exportToExcel();
             }}
-            className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
             Generate Report
@@ -1788,8 +1829,8 @@ export default function InventoryPage() {
         {/* Valuation Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <i className="ri-money-dollar-circle-line text-purple-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-money-dollar-circle-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Valuation Report</h4>
           </div>
@@ -1798,7 +1839,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={exportValuationToExcel}
-            className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-download-line mr-2"></i>
             Generate Report
@@ -1808,8 +1849,8 @@ export default function InventoryPage() {
         {/* Cost Revaluation */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <i className="ri-slideshow-line text-orange-600"></i>
+            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+              <i className="ri-slideshow-line text-[#008000]"></i>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 ml-3">Cost Revaluation</h4>
           </div>
@@ -1818,7 +1859,7 @@ export default function InventoryPage() {
           </p>
           <button
             onClick={() => navigate('/inventory/cost-revaluation')}
-            className="w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors whitespace-nowrap"
+            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
           >
             <i className="ri-bar-chart-box-line mr-2"></i>
             Open Module
@@ -2965,7 +3006,7 @@ export default function InventoryPage() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="flex-1 bg-[#008000] text-white py-2 px-4 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
               >
                 {selectedItem ? 'Update' : 'Create'}
               </button>
@@ -3002,13 +3043,6 @@ export default function InventoryPage() {
           <div className="h-6 w-px bg-gray-300"></div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
         </div>
-        <button
-          onClick={() => navigate('/inventory/delivery-notes')}
-          className="flex items-center gap-2 px-4 py-2 text-white border border-transparent rounded-lg bg-[#6b7a40] hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
-        >
-          <i className="ri-truck-line text-lg"></i>
-          <span>Delivery Notes</span>
-        </button>
       </div>
 
       {/* Tabs Navigation */}

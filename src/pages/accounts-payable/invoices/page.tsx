@@ -1372,18 +1372,6 @@ ${items
       }
     }
 
-    // Validación obligatoria del Tipo de Gasto 606 para facturas con NCF
-    const hasNcf = headerForm.documentType && String(headerForm.documentType).trim() !== '';
-    const expenseType606Value = headerForm.expenseType606?.trim() || '';
-    if (hasNcf && !expenseType606Value) {
-      alert(
-        '⚠️ CAMPO OBLIGATORIO: Tipo de Gasto 606\n\n' +
-        'Según las normas de la DGII, el Tipo de Bienes y Servicios (columna 3 del 606) es OBLIGATORIO para todas las facturas con NCF.\n\n' +
-        'Por favor, seleccione el Tipo de Gasto 606 correcto (01-11) antes de guardar.'
-      );
-      return;
-    }
-
     const invoiceNumber = headerForm.invoiceNumber.trim() || `AP-${Date.now()}`;
     const invoiceDate = headerForm.invoiceDate || new Date().toISOString().slice(0, 10);
     const dueDate = headerForm.dueDate || null;

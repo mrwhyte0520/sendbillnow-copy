@@ -215,13 +215,19 @@ export default function PaymentsPage() {
 
     const reference = `PAY-${new Date().getFullYear()}-${String(payments.length + 1).padStart(3, '0')}`;
 
-    // Resolver banco seleccionado
+    const requiresBankAccount =
+      formData.method === 'Transferencia' ||
+      formData.method === 'Cheque';
+
+    // Resolver banco seleccionado (solo obligatorio para Transferencia/Cheque)
     const selectedBank = bankAccounts.find((b: any) => String(b.id) === String(formData.bankAccount));
-    if (!selectedBank) {
+    if (requiresBankAccount && !selectedBank) {
       alert('Please choose a valid bank account');
       return;
     }
-    const bankLabel = `${selectedBank.bank_name} - ${selectedBank.account_number}`;
+
+    const bankLabel = selectedBank ? `${selectedBank.bank_name} - ${selectedBank.account_number}` : null;
+    const bankChartAccountId = selectedBank?.chart_account_id ? String(selectedBank.chart_account_id) : null;
 
     try {
       await supplierPaymentsService.create(user.id, {
@@ -232,8 +238,8 @@ export default function PaymentsPage() {
         amount,
         status: 'Pendiente',
         description: formData.description || null,
-        bank_account_id: selectedBank.id,
-        bank_account: bankLabel,
+        bank_chart_account_id: bankChartAccountId,
+        bank_account_label: bankLabel,
         invoice_number: formData.invoice || null,
       });
       await loadPayments();

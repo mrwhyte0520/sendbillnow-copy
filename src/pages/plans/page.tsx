@@ -38,70 +38,6 @@ export default function PlansPage() {
   } = usePlans();
 
   const plans: Plan[] = [
-    // New affordable plans
-    {
-      id: 'pyme',
-      name: 'PYME',
-      priceMonthly: 39.99,
-      priceAnnual: 239.88,
-      description: 'Ideal for small businesses getting started',
-      features: [
-        'One company',
-        'Basic invoicing',
-        'Basic dashboard',
-        'Limited inventory (500)',
-        'Email support',
-        '7-day free trial'
-      ],
-      popular: false,
-      color: 'from-sky-500 to-sky-600',
-      icon: 'ri-building-line',
-      category: 'contabilidad'
-    },
-    {
-      id: 'pro',
-      name: 'PRO',
-      priceMonthly: 99.99,
-      priceAnnual: 719.88,
-      description: 'Built for growing companies',
-      features: [
-        'Up to 3 companies',
-        'Full accounting suite',
-        'Basic dashboard',
-        'Limited inventory (2,000)',
-        'Basic banking management',
-        'Basic payroll (10 employees)',
-        'Priority support',
-        '7-day free trial'
-      ],
-      popular: true,
-      color: 'from-blue-500 to-blue-600',
-      icon: 'ri-rocket-line',
-      category: 'contabilidad'
-    },
-    {
-      id: 'plus',
-      name: 'PLUS',
-      priceMonthly: 199.99,
-      priceAnnual: 1559.88,
-      description: 'Complete solution for established companies',
-      features: [
-        'Unlimited companies',
-        'All Sendbillnow features',
-        'Advanced KPI dashboard',
-        'Unlimited inventory',
-        'Full payroll',
-        'Advanced financial analytics',
-        'Custom reports',
-        'Specialized technical support',
-        '24/7 support',
-        '7-day free trial'
-      ],
-      popular: false,
-      color: 'from-purple-500 to-purple-600',
-      icon: 'ri-vip-diamond-line',
-      category: 'contabilidad'
-    },
     // Existing plans
     {
       id: 'facturacion-simple',
@@ -330,7 +266,7 @@ export default function PlansPage() {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#3B4A2A] to-[#1F2616] rounded-2xl p-6 text-white shadow-lg shadow-[#1F2616]/30 border border-[#2A351E]">
+        <div className="bg-gradient-to-r from-[#008000] to-[#008000] rounded-2xl p-6 text-white shadow-lg shadow-[#1F2616]/30 border border-[#2A351E]">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold mb-2">Plans & Subscriptions</h1>
@@ -437,18 +373,20 @@ export default function PlansPage() {
         )}
 
         {/* Contabilidad Plans Section */}
-        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              <i className="ri-calculator-line mr-2 text-sky-600"></i>
-              Accounting Plans
-            </h2>
-            <p className="text-gray-600">End-to-end accounting solutions for your business</p>
+        {contabilidadPlans.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <i className="ri-calculator-line mr-2 text-sky-600"></i>
+                Accounting Plans
+              </h2>
+              <p className="text-gray-600">End-to-end accounting solutions for your business</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {contabilidadPlans.map(renderPlanCard)}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {contabilidadPlans.map(renderPlanCard)}
-          </div>
-        </div>
+        )}
 
         {/* Facturación Plans Section */}
         <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">

@@ -292,8 +292,8 @@ export default function OpeningBalancesPage() {
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                       <i className="ri-folder-open-line text-5xl text-gray-400 mb-4"></i>
-                      <p className="text-lg font-medium">No hay balances registrados</p>
-                      <p className="text-sm">Usa el botón "Importar Catálogo" para cargar todas las cuentas</p>
+                      <p className="text-lg font-medium">No opening balances recorded</p>
+                      <p className="text-sm">Use the "Import Catalog" button to load all accounts</p>
                     </td>
                   </tr>
                 )}

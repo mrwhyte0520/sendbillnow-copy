@@ -74,10 +74,10 @@ export default function BasicDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-[#6b5c3b]">Monthly Expenses</p>
-              <p className="text-2xl font-bold text-[#4a5d23]">{formatCurrency(totalExpenses)}</p>
+              <p className="text-2xl font-bold text-[#008000]">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="w-12 h-12 bg-[#e6dac2] rounded-xl flex items-center justify-center shadow-inner">
-              <i className="ri-shopping-cart-line text-[#4a5d23] text-xl"></i>
+              <i className="ri-shopping-cart-line text-[#008000] text-xl"></i>
             </div>
           </div>
         </div>

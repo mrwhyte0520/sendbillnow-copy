@@ -65,6 +65,7 @@ export default function POSPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartOpen, setCartOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -329,6 +330,9 @@ export default function POSPage() {
   };
 
   const loadSales = async () => {
+    const savedSales = localStorage.getItem('contabi_pos_sales');
+    const localSales: Sale[] = savedSales ? JSON.parse(savedSales) : [];
+
     try {
       if (user?.id) {
         const invoices: any[] = await invoicesService.getAll(user.id);
@@ -389,7 +393,11 @@ export default function POSPage() {
           } as Sale;
         });
 
-        setSales(mappedSales);
+        // Merge local + DB sales (prefer DB when same id)
+        const byId = new Map<string, Sale>();
+        (localSales || []).forEach((s) => byId.set(String(s.id), s));
+        (mappedSales || []).forEach((s) => byId.set(String(s.id), s));
+        setSales(Array.from(byId.values()));
         return;
       }
     } catch (error) {
@@ -397,19 +405,14 @@ export default function POSPage() {
       console.error('[POS] Error loading sales from invoices, falling back to localStorage', error);
     }
 
-    const savedSales = localStorage.getItem('contabi_pos_sales');
-    if (savedSales) {
-      setSales(JSON.parse(savedSales));
-    } else {
-      setSales([]);
-    }
+    setSales(localSales || []);
   };
 
   const loadCustomers = async () => {
     try {
       if (user?.id) {
         const rows = await customersService.getAll(user.id);
-        const mapped: Customer[] = (rows || []).map((c: any) => ({
+        let mapped: Customer[] = (rows || []).map((c: any) => ({
           id: c.id,
           name: c.name || c.customer_name || 'Cliente',
           document: c.document || c.tax_id || '',
@@ -420,19 +423,87 @@ export default function POSPage() {
           customerTypeId: c.customerType || null,
           paymentTermId: c.paymentTermId || null,
         }));
+
+        let general = mapped.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
+        if (!general) {
+          try {
+            const created: any = await customersService.create(user.id, {
+              name: 'General Customer',
+              document: '',
+              phone: '',
+              email: '',
+              address: '',
+              creditLimit: 0,
+              status: 'active',
+            });
+
+            if (created?.id) {
+              general = {
+                id: created.id,
+                name: created.name || 'General Customer',
+                document: created.document || '',
+                phone: created.phone || '',
+                email: created.email || '',
+                address: created.address || '',
+                type: 'regular',
+                customerTypeId: null,
+                paymentTermId: null,
+              } as Customer;
+              mapped = [general, ...mapped];
+            }
+          } catch (e) {
+            console.warn('Could not create General Customer in DB:', e);
+          }
+        }
+
         setCustomers(mapped);
+
+        if (!selectedCustomer) {
+          const fallbackGeneral = general || mapped.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
+          if (fallbackGeneral) setSelectedCustomer(fallbackGeneral);
+        }
       } else {
         const savedCustomers = localStorage.getItem('contabi_pos_customers');
-        if (savedCustomers) {
-          setCustomers(JSON.parse(savedCustomers));
-        } else {
-          setCustomers([]);
+        const parsed: Customer[] = savedCustomers ? JSON.parse(savedCustomers) : [];
+
+        let general = parsed.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
+        if (!general) {
+          general = {
+            id: 'general',
+            name: 'General Customer',
+            document: '',
+            phone: '',
+            email: '',
+            address: '',
+            type: 'regular',
+          } as Customer;
+          parsed.unshift(general);
+          localStorage.setItem('contabi_pos_customers', JSON.stringify(parsed));
         }
+
+        setCustomers(parsed);
+        if (!selectedCustomer && general) setSelectedCustomer(general);
       }
     } catch (e) {
       console.warn('loadCustomers failed, using localStorage fallback');
       const savedCustomers = localStorage.getItem('contabi_pos_customers');
-      setCustomers(savedCustomers ? JSON.parse(savedCustomers) : []);
+      const parsed: Customer[] = savedCustomers ? JSON.parse(savedCustomers) : [];
+      let general = parsed.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
+      if (!general) {
+        general = {
+          id: 'general',
+          name: 'General Customer',
+          document: '',
+          phone: '',
+          email: '',
+          address: '',
+          type: 'regular',
+        } as Customer;
+        parsed.unshift(general);
+        localStorage.setItem('contabi_pos_customers', JSON.stringify(parsed));
+      }
+      setCustomers(parsed);
+      if (!selectedCustomer && general) setSelectedCustomer(general);
     }
   };
 
@@ -593,6 +664,46 @@ export default function POSPage() {
       // If logged in and a concrete customer is selected, create AR invoice/receipt in Supabase
       if (user?.id && selectedCustomer) {
         try {
+          let customerForAr: Customer | null = selectedCustomer;
+          if (customerForAr && !isUuid(String(customerForAr.id || ''))) {
+            // Ensure we never send a non-UUID customer_id to Supabase
+            const rows = await customersService.getAll(user.id);
+            let generalDb = (rows || []).find((c: any) => String(c?.name || '').trim().toLowerCase() === 'general customer');
+            if (!generalDb) {
+              try {
+                generalDb = await customersService.create(user.id, {
+                  name: 'General Customer',
+                  document: '',
+                  phone: '',
+                  email: '',
+                  address: '',
+                  creditLimit: 0,
+                  status: 'active',
+                });
+              } catch (e) {
+                console.warn('[POS] Could not create General Customer in DB:', e);
+              }
+            }
+
+            if (generalDb?.id && isUuid(String(generalDb.id))) {
+              customerForAr = {
+                id: String(generalDb.id),
+                name: String(generalDb.name || 'General Customer'),
+                document: String(generalDb.document || ''),
+                phone: String(generalDb.phone || ''),
+                email: String(generalDb.email || ''),
+                address: String(generalDb.address || ''),
+                type: 'regular',
+                customerTypeId: (generalDb as any).customerType || null,
+                paymentTermId: (generalDb as any).paymentTermId || null,
+              } as Customer;
+              setSelectedCustomer(customerForAr);
+            } else {
+              // Can't safely create AR records without a valid UUID
+              throw new Error('No valid customer UUID available for Accounts Receivable');
+            }
+          }
+
           const todayStr = newSale.date;
           const invoiceNumber = `POS-${Date.now()}`;
 
@@ -608,7 +719,7 @@ export default function POSPage() {
           }
 
           const invoicePayload = {
-            customer_id: selectedCustomer.id,
+            customer_id: customerForAr.id,
             invoice_number: invoiceNumber,
             invoice_date: todayStr,
             due_date: dueDateStr,
@@ -635,12 +746,12 @@ export default function POSPage() {
             };
           });
 
-          const created = await invoicesService.create(user.id, invoicePayload, linesPayload);
+          const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
 
           // Create receipt only when sale is fully paid (which is the only case permitido ahora)
           const receiptNumber = `REC-${Date.now()}`;
           await receiptsService.create(user.id, {
-            customer_id: selectedCustomer.id,
+            customer_id: customerForAr.id,
             receipt_number: receiptNumber,
             receipt_date: todayStr,
             amount: newSale.total,
@@ -652,7 +763,7 @@ export default function POSPage() {
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('[POS] Error creando factura/recibo en CxC', error);
-          alert('The sale was saved in POS, but there was a problem registering the invoice/receipt in Accounts Receivable. Check the console.');
+          // Sale is still saved locally, just log any AR/receipt errors
         }
       }
 
@@ -938,7 +1049,7 @@ export default function POSPage() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#ede7d4] rounded-lg flex items-center justify-center">
-                <i className="ri-user-line text-[#4a5d23] text-xl"></i>
+                <i className="ri-user-line text-[#008000] text-xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Customers</p>
@@ -950,7 +1061,7 @@ export default function POSPage() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#e6dac2] rounded-lg flex items-center justify-center">
-                <i className="ri-shopping-bag-3-line text-[#5a6d33] text-xl"></i>
+                <i className="ri-shopping-bag-3-line text-[#008000] text-xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Products</p>
@@ -968,7 +1079,7 @@ export default function POSPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full mr-3 bg-[#4a5d23]"></div>
+                  <div className="w-3 h-3 rounded-full mr-3 bg-[#008000]"></div>
                   <span className="text-sm text-[#6b5c3b]">Cash</span>
                 </div>
                 <span className="text-sm font-semibold text-[#2f3e1e]">{todayStats.cashSales} sales</span>
@@ -997,7 +1108,7 @@ export default function POSPage() {
               {topProducts.map((product, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="w-6 h-6 bg-[#f4ead3] text-[#4a5d23] rounded-full flex items-center justify-center text-xs font-medium mr-3">
+                    <span className="w-6 h-6 bg-[#f4ead3] text-[#008000] rounded-full flex items-center justify-center text-xs font-medium mr-3">
                       {index + 1}
                     </span>
                     <span className="text-sm text-[#2f3e1e] truncate">{product.name}</span>
@@ -1058,11 +1169,21 @@ export default function POSPage() {
   };
 
   const renderPOS = () => (
-    <div className="flex h-screen bg-gray-50">
+    <div className="relative flex h-screen bg-gray-50">
       {/* Products Section */}
       <div className="flex-1 p-6">
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Products</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Products</h2>
+            <button
+              type="button"
+              onClick={() => setCartOpen(prev => !prev)}
+              className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+            >
+              <i className="ri-shopping-cart-line mr-2"></i>
+              {cartOpen ? 'Hide cart' : 'Show cart'}
+            </button>
+          </div>
           
           {/* Search and Filters */}
           <div className="flex space-x-4 mb-4">
@@ -1151,7 +1272,7 @@ export default function POSPage() {
 
               {/* Precio + botón agregar */}
               <div className="mt-auto flex items-center justify-between pt-2">
-                <span className="text-base font-extrabold text-blue-600 max-w-[70%] truncate leading-tight">
+                <span className="text-base font-extrabold text-[#008000] max-w-[70%] truncate leading-tight">
                   RD${formatAmount(product.price)}
                 </span>
                 <button
@@ -1159,7 +1280,7 @@ export default function POSPage() {
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm flex-shrink-0 ${
                     product.stock <= 0
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'bg-[#008000] text-white hover:bg-[#006600]'
                   }`}
                 >
                   <i className="ri-add-line text-sm"></i>
@@ -1184,7 +1305,7 @@ export default function POSPage() {
                 className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg flex items-center space-x-1 text-sm transition-colors ${
                   currentPage === 1
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-[#008000] text-white hover:bg-[#006600]'
                 }`}
               >
                 <i className="ri-arrow-left-s-line text-base"></i>
@@ -1201,7 +1322,7 @@ export default function POSPage() {
                       onClick={() => setCurrentPage(page)}
                       className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === page
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#008000] text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -1215,7 +1336,7 @@ export default function POSPage() {
                       onClick={() => setCurrentPage(1)}
                       className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === 1
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#008000] text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -1235,7 +1356,7 @@ export default function POSPage() {
                           onClick={() => setCurrentPage(page)}
                           className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
                             currentPage === page
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-[#008000] text-white'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                         >
@@ -1252,7 +1373,7 @@ export default function POSPage() {
                       onClick={() => setCurrentPage(totalPages)}
                       className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
                         currentPage === totalPages
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[#008000] text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -1268,7 +1389,7 @@ export default function POSPage() {
                 className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg flex items-center space-x-1 text-sm transition-colors ${
                   currentPage === totalPages
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-[#008000] text-white hover:bg-[#006600]'
                 }`}
               >
                 <span className="hidden sm:inline">Next</span>
@@ -1280,96 +1401,116 @@ export default function POSPage() {
         )}
       </div>
 
-      {/* Cart Section */}
-      <div className="w-96 bg-white border-l border-gray-200 flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Shopping Cart</h2>
+      <div className={`fixed inset-0 z-30 ${cartOpen ? '' : 'pointer-events-none'}`}>
+        <button
+          type="button"
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${cartOpen ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setCartOpen(false)}
+        />
+
+        <div
+          className={`absolute top-0 right-0 h-full w-full sm:w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl will-change-transform transition-transform duration-500 ease-in-out ${
+            cartOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="p-6 border-b border-[#c5e4c5] bg-[#f3fbf3]">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#0b3f0b]">Shopping Cart</h2>
+              <button
+                type="button"
+                onClick={() => setCartOpen(false)}
+                className="p-2 text-[#4a754a] hover:text-[#0b3f0b] rounded-lg hover:bg-[#e0f2e0] transition-colors"
+              >
+                <i className="ri-close-line text-lg"></i>
+              </button>
+            </div>
           
-          <div className="mt-4">
-            <button
-              onClick={() => setShowCustomerModal(true)}
-              className="w-full flex items-center justify-between p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center">
-                <i className="ri-user-line text-gray-400 mr-2"></i>
-                <span className="text-sm text-gray-600">
-                  {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
-                </span>
-              </div>
-              <i className="ri-arrow-down-s-line text-gray-400"></i>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {cart.length === 0 ? (
-            <div className="text-center text-gray-500 mt-8">
-              <i className="ri-shopping-cart-line text-4xl mb-2"></i>
-              <p>Empty cart</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {cart.map((item) => (
-                <div key={item.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3 flex-shrink-0">
-                    {item.imageUrl && (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover object-top"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAyMEMyNi4yMDkxIDIwIDI4IDE4LjIwOTEgMjggMTZDMjggMTMuNzkwOSAyNi4yMDkxIDEyIDI0IDEyQzIxLjc5MDkgMTIgMjAgMTMuNzkwOSAyMCAxNkMyMCAxOC4yMDkxIDIxLjc5MDkgMjAgMjQgMjBaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0zMiAyNEgxNkMxNC44OTU0IDI0IDE0IDI0Ljg5NTQgMTQgMjZWMzRDMTQgMzUuMTA0NiAxNC44OTU0IDM2IDE2IDM2SDMyQzMzLjEwNDYgMzYgMzQgMzUuMTA0NiAzNCAzNFYyNkMzNCAyNC44OTU0IDMzLjEwNDYgMjQgMzIgMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 text-sm truncate">{item.name}</h4>
-                    <p className="text-xs text-gray-500">RD${formatAmount(item.price)} c/u</p>
-                    <p className="text-sm font-semibold text-gray-900">RD${formatAmount(item.total)}</p>
-                    <p className={`text-xs mt-0.5 ${
-                      item.quantity >= item.stock
-                        ? 'text-red-600 font-medium'
-                        : item.stock - item.quantity <= 3
-                        ? 'text-amber-600'
-                        : 'text-gray-400'
-                    }`}>
-                      Available stock: {item.stock - item.quantity}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center space-x-2 ml-3">
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                    >
-                      <i className="ri-subtract-line text-xs"></i>
-                    </button>
-                    <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      disabled={item.quantity >= item.stock}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                        item.quantity >= item.stock
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                      }`}
-                    >
-                      <i className="ri-add-line text-xs"></i>
-                    </button>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
-                    >
-                      <i className="ri-delete-bin-line text-xs"></i>
-                    </button>
-                  </div>
+            <div className="mt-4">
+              <button
+                onClick={() => setShowCustomerModal(true)}
+                className="w-full flex items-center justify-between p-3 border border-[#8bc48b] rounded-lg bg-white hover:bg-[#f0fbf0] transition-colors shadow-sm"
+              >
+                <div className="flex items-center">
+                  <i className="ri-user-line text-[#4a754a] mr-2"></i>
+                  <span className="text-sm text-[#2d4a2d]">
+                    {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
+                  </span>
                 </div>
-              ))}
+                <i className="ri-arrow-down-s-line text-[#4a754a]"></i>
+              </button>
             </div>
-          )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6">
+            {cart.length === 0 ? (
+              <div className="text-center text-gray-500 mt-8">
+                <i className="ri-shopping-cart-line text-4xl mb-2"></i>
+                <p>Empty cart</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3 flex-shrink-0">
+                      {item.imageUrl && (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAyMEMyNi4yMDkxIDIwIDI4IDE4LjIwOTEgMjggMTZDMjggMTMuNzkwOSAyNi4yMDkxIDEyIDI0IDEyQzIxLjc5MDkgMTIgMjAgMTMuNzkwOSAyMCAxNkMyMCAxOC4yMDkxIDIxLjc5MDkgMjAgMjQgMjBaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0zMiAyNEgxNkMxNC44OTU0IDI0IDE0IDI0Ljg5NTQgMTQgMjZWMzRDMTQgMzUuMTA0NiAxNC44OTU0IDM2IDE2IDM2SDMyQzMzLjEwNDYgMzYgMzQgMzUuMTA0NiAzNCAzNFYyNkMzNCAyNC44OTU0IDMzLjEwNDYgMjQgMzIgMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 text-sm truncate">{item.name}</h4>
+                      <p className="text-xs text-gray-500">RD${formatAmount(item.price)} c/u</p>
+                      <p className="text-sm font-semibold text-gray-900">RD${formatAmount(item.total)}</p>
+                      <p className={`text-xs mt-0.5 ${
+                        item.quantity >= item.stock
+                          ? 'text-red-600 font-medium'
+                          : item.stock - item.quantity <= 3
+                          ? 'text-amber-600'
+                          : 'text-gray-400'
+                      }`}>
+                        Available stock: {item.stock - item.quantity}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2 ml-3">
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                      >
+                        <i className="ri-subtract-line text-xs"></i>
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        disabled={item.quantity >= item.stock}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                          item.quantity >= item.stock
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      >
+                        <i className="ri-add-line text-xs"></i>
+                      </button>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
+                      >
+                        <i className="ri-delete-bin-line text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
 
         {/* Edit Customer Modal (root level) */}
@@ -1445,44 +1586,43 @@ export default function POSPage() {
 
                 <div className="flex space-x-3 pt-4">
                   <button type="button" onClick={() => setShowEditCustomerModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Save Changes</button>
+                  <button type="submit" className="flex-1 px-4 py-2 bg-[#008000] text-white rounded-lg hover:bg-[#006600] transition-colors">Save Changes</button>
                 </div>
               </form>
             </div>
           </Modal>
         )}
 
-        </div>
-
-        {cart.length > 0 && (
-          <div className="p-6 border-t border-gray-200">
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span>RD${formatAmount(getSubtotal())}</span>
+          {cart.length > 0 && (
+            <div className="p-6 border-t border-gray-200">
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span>RD${formatAmount(getSubtotal())}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>ITBIS (18%):</span>
+                  <span>RD${formatAmount(getTax())}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2">
+                  <span>Total:</span>
+                  <span>RD${formatAmount(getTotal())}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>ITBIS (18%):</span>
-                <span>RD${formatAmount(getTax())}</span>
-              </div>
-              <div className="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total:</span>
-                <span>RD${formatAmount(getTotal())}</span>
-              </div>
+              
+              <button
+                onClick={() => {
+                  setPaymentMethod('');
+                  setAmountReceived('');
+                  setShowPaymentModal(true);
+                }}
+                className="w-full bg-[#008000] text-white py-3 rounded-lg font-medium hover:bg-[#006600] transition-colors whitespace-nowrap"
+              >
+                Process Payment
+              </button>
             </div>
-            
-            <button
-              onClick={() => {
-                setPaymentMethod('');
-                setAmountReceived('');
-                setShowPaymentModal(true);
-              }}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
-            >
-              Process Payment
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2123,8 +2263,8 @@ export default function POSPage() {
                 }}
                 className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'border-[#4a5d23] text-[#2f3e1e]'
-                    : 'border-transparent text-[#8a7d5c] hover:text-[#4a5d23] hover:border-[#d8cbb5]'
+                    ? 'border-[#008000] text-[#2f3e1e]'
+                    : 'border-transparent text-[#8a7d5c] hover:text-[#008000] hover:border-[#d8cbb5]'
                 }`}
               >
                 <i className={`${tab.icon} mr-2`}></i>
@@ -2159,7 +2299,8 @@ export default function POSPage() {
               <div className="space-y-2">
                 <button
                   onClick={() => {
-                    setSelectedCustomer(null);
+                    const general = customers.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
+                    setSelectedCustomer(general || null);
                     setShowCustomerModal(false);
                   }}
                   className="w-full text-left p-3 hover:bg-gray-50 rounded-lg border"

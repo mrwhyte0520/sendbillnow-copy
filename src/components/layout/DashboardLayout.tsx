@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlans } from '../../hooks/usePlans';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
-import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService, accountingPeriodsService } from '../../services/database';
+import { customersService, invoicesService, inventoryService, resolveTenantId, settingsService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
 import InitialPlanSelectionModal from '../common/InitialPlanSelectionModal';
 
@@ -13,6 +13,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications] = useState<Array<{ title: string; time: string; type: 'info'|'warning'|'success' }>>([]);
@@ -38,7 +39,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { currentPlan, getTrialStatus, trialInfo, hasUsedTrial, startTrialWithPlan, hasAccess } = usePlans();
-  const { canAccessRoute, getRequiredPlanForRoute, requiresAccountingSetup } = usePlanPermissions();
+  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
   const [kpiCounts, setKpiCounts] = useState({ invoices: 0, customers: 0, products: 0 });
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -48,8 +49,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     moduleName: '',
     requiredPlan: ''
   });
-  const [showAccountingSetupModal, setShowAccountingSetupModal] = useState(false);
-  const [accountingSetupChecked, setAccountingSetupChecked] = useState(false);
   const [showInitialPlanModal, setShowInitialPlanModal] = useState(false);
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
 
@@ -60,6 +59,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       email: user?.email ?? prev.email,
     }));
   }, [user]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('sendbillnow_sidebar_collapsed');
+      if (stored === '1') setSidebarCollapsed(true);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('sendbillnow_sidebar_collapsed', next ? '1' : '0');
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -122,29 +142,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
     checkIfOwner();
   }, [user?.id]);
-
-  // Verificar si necesita configuración contable (para planes avanzados)
-  useEffect(() => {
-    const checkAccountingSetup = async () => {
-      if (!user?.id || accountingSetupChecked || !requiresAccountingSetup) return;
-      
-      try {
-        const periods = await accountingPeriodsService.getAll(user.id);
-        const hasOpenPeriod = periods && periods.length > 0 && periods.some((p: any) => p.status === 'open');
-        
-        if (!hasOpenPeriod) {
-          // El usuario tiene un plan avanzado pero no tiene períodos contables configurados
-          setShowAccountingSetupModal(true);
-        }
-        setAccountingSetupChecked(true);
-      } catch (error) {
-        console.error('Error verificando configuración contable:', error);
-        setAccountingSetupChecked(true);
-      }
-    };
-    
-    checkAccountingSetup();
-  }, [user?.id, requiresAccountingSetup, accountingSetupChecked]);
 
   // Verificar si es usuario nuevo y mostrar modal de selección de plan
   useEffect(() => {
@@ -354,7 +351,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       submenu: [
         { name: 'Company', href: '/settings/company' },
         { name: 'Opening Balances', href: '/settings/opening-balances' },
-        { name: 'Accounting', href: '/settings/accounting' },
         { name: 'Inventory', href: '/settings/inventory' },
         { name: 'Backups', href: '/settings/backup' }
       ]
@@ -408,12 +404,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // Item restringido por plan - mostrar con candado
             <div
               onClick={handleRestrictedClick}
-              className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer"
+              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer ${sidebarCollapsed ? 'justify-center' : ''}`}
               title={`Requiere ${requiredPlan}`}
             >
-              <i className={`${item.icon} mr-3 text-lg flex-shrink-0 opacity-50`}></i>
-              <span className="truncate opacity-70">{item.name}</span>
-              <i className="ri-lock-2-fill ml-auto text-amber-500/70 text-sm"></i>
+              <i className={`${item.icon} ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0 opacity-50`}></i>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="truncate opacity-70">{item.name}</span>
+                  <i className="ri-lock-2-fill ml-auto text-amber-500/70 text-sm"></i>
+                </>
+              )}
             </div>
           ) : (
             // Item permitido
@@ -421,16 +421,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               to={item.href}
               className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 ${
                 item.current
-                  ? 'bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white font-semibold shadow-md'
+                  ? 'bg-gradient-to-r from-[#008000] to-[#008000] text-white font-semibold shadow-md'
                   : 'text-stone-700 hover:bg-stone-200 hover:text-stone-900'
-              }`}
+              } ${sidebarCollapsed ? 'justify-center' : ''}`}
               onClick={() => setSidebarOpen(false)}
+              title={sidebarCollapsed ? item.name : undefined}
             >
-              <i className={`${item.icon} mr-3 text-lg flex-shrink-0`}></i>
-              <span className="truncate">{item.name}</span>
+              <i className={`${item.icon} ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
+              {!sidebarCollapsed && <span className="truncate">{item.name}</span>}
             </Link>
           )}
-          {hasFilteredSubmenu && !isPlanRestricted && (
+          {hasFilteredSubmenu && !isPlanRestricted && !sidebarCollapsed && (
             <button
               onClick={() => toggleSubmenu(item.href)}
               className="p-2 ml-1 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
@@ -439,7 +440,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           )}
         </div>
-        {hasFilteredSubmenu && isExpanded && !isPlanRestricted && (
+        {hasFilteredSubmenu && isExpanded && !isPlanRestricted && !sidebarCollapsed && (
           <div className="ml-6 mt-2 space-y-1 border-l border-stone-300 pl-4">
             {submenu!.map((subItem: any) => {
               const isSubItemRestricted = !canAccessRoute(subItem.href);
@@ -472,7 +473,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   to={subItem.href}
                   className={`block px-3 py-2 text-sm rounded-md transition-all duration-200 ${
                     location.pathname === subItem.href
-                      ? 'text-[#4a5d23] bg-stone-200 font-medium'
+                      ? 'text-[#008000] bg-stone-200 font-medium'
                       : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
                   }`}
                   onClick={() => setSidebarOpen(false)}
@@ -581,58 +582,78 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F1E3] flex">
+    <div className="min-h-screen flex bg-[#f6f1e3]">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-72 bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform transition-[width] duration-300 ease-in-out overflow-hidden ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+      >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex h-16 shrink-0 items-center px-6 border-b border-stone-200 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33]">
-            <div className="flex items-center">
-              <div>
-                <h1 className="brand-serif text-xl font-bold text-white">Sendbillnow</h1>
-                <p className="text-xs text-stone-200">Finance System</p>
-              </div>
+          <div className={`flex h-16 shrink-0 items-center border-b border-stone-200 bg-gradient-to-r from-[#008000] to-[#008000] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-3 justify-center' : 'px-6 justify-between'}`}>
+            <div className="flex items-center min-w-0">
+              {!sidebarCollapsed && (
+                <div>
+                  <h1 className="brand-serif text-xl font-bold text-white">Sendbillnow</h1>
+                  <p className="text-xs text-white/70">Finance System</p>
+                </div>
+              )}
+              {sidebarCollapsed && (
+                <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center">
+                  <span className="brand-serif text-white font-bold text-lg">S</span>
+                </div>
+              )}
             </div>
+
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className={`p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 transition-colors duration-200 ${sidebarCollapsed ? 'hidden lg:flex' : 'hidden lg:flex'}`}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <i className={`${sidebarCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} text-lg`}></i>
+            </button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent">
+          <nav className={`flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-1">
               {navigation.map(renderNavItem)}
-              
+
               {/* Mi Perfil Button */}
               <div className="mb-1">
                 <button
                   onClick={handleProfileClick}
-                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-stone-700 hover:bg-stone-200 hover:text-stone-900"
+                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-stone-700 hover:bg-stone-200 hover:text-stone-900 ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  title={sidebarCollapsed ? 'My Profile' : undefined}
                 >
-                  <i className="ri-user-line mr-3 text-lg flex-shrink-0"></i>
-                  <span className="truncate">My Profile</span>
+                  <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
+                  {!sidebarCollapsed && <span className="truncate">My Profile</span>}
                 </button>
               </div>
             </div>
           </nav>
 
           {/* User info */}
-          <div className="border-t border-stone-200 p-4 bg-gradient-to-r from-stone-100 to-stone-50">
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] flex items-center justify-center shadow-lg">
+          <div className={`border-t border-stone-200 bg-gradient-to-r from-stone-100 to-stone-50 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#008000] to-[#008000] flex items-center justify-center shadow-lg">
                 <span className="text-sm font-bold text-white">
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
-              <div className="ml-3 flex-1 min-w-0">
-                <p className="text-sm font-medium text-stone-800 truncate">
-                  {user?.email || 'User'}
-                </p>
-                <p className="text-xs text-stone-500 truncate">
-                  {currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')}
-                  {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d left)`}
-                </p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="ml-3 flex-1 min-w-0">
+                  <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
+                  <p className="text-xs text-stone-500 truncate">
+                    {currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')}
+                    {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d left)`}
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleSignOut}
-                className="ml-2 p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
+                className={`${sidebarCollapsed ? 'ml-0' : 'ml-2'} p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200`}
                 title="Sign Out"
               >
                 <i className="ri-logout-box-line text-lg"></i>
@@ -1093,7 +1114,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Modal de configuración contable requerida */}
-      {showAccountingSetupModal && (
+      {false && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
@@ -1128,14 +1149,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setShowAccountingSetupModal(false)}
+                  onClick={() => {}}
                   className="flex-1 px-4 py-2.5 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg font-medium text-sm hover:bg-[#f3e7cf] transition-colors"
                 >
                   Later
                 </button>
                 <button
                   onClick={() => {
-                    setShowAccountingSetupModal(false);
                     navigate('/settings/accounting');
                   }}
                   className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#4b5f36] to-[#2f3e1e] text-white rounded-lg font-medium text-sm hover:from-[#3f4f2d] hover:to-[#1f2a15] transition-all flex items-center justify-center shadow-md"

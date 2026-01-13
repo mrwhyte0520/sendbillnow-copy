@@ -355,8 +355,8 @@ export default function DebitNotesPage() {
     const concept = String(formData.get('concept') || '');
     const creditAccountId = String(formData.get('credit_account_id') || '');
 
-    if (!customerId || !amount || !creditAccountId || !invoiceId) {
-      alert('Customer, amount, invoice, and credit account are required.');
+    if (!customerId || !amount || !invoiceId) {
+      alert('Customer, amount, and invoice are required.');
       return;
     }
 
@@ -818,11 +818,10 @@ export default function DebitNotesPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Accounts Receivable <span className="text-red-500">*</span>
+                    Accounts Receivable 
                   </label>
                   <select
                     name="ar_account_id"
-                    required
                     className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""
                   >
@@ -840,7 +839,6 @@ export default function DebitNotesPage() {
                     Credit account
                   </label>
                   <select
-                    required
                     name="credit_account_id"
                     className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""

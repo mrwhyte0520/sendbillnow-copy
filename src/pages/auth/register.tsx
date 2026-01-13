@@ -98,8 +98,8 @@ export default function Register() {
             <p className="text-gray-600 mb-6">
               We have sent a confirmation email to <strong>{formData.email}</strong>
             </p>
-            <div className="bg-[#4a5d23]/10 border border-[#4a5d23]/30 rounded-lg p-4 mb-6">
-              <p className="text-sm text-[#4a5d23]">
+            <div className="bg-[#008000]/10 border border-[#008000]/30 rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#008000]">
                 <i className="ri-information-line mr-2"></i>
                 Please check your inbox and click the confirmation link to activate your account.
               </p>
@@ -109,7 +109,7 @@ export default function Register() {
             </p>
             <Link
               to="/auth/login"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#008000] to-[#008000] text-white rounded-lg font-medium hover:from-[#008000] hover:to-[#008000] transition-all whitespace-nowrap"
             >
               <i className="ri-login-box-line mr-2"></i>
               Go to Sign In
@@ -126,7 +126,7 @@ export default function Register() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo y título */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#4a5d23] to-[#5a6d33] rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#008000] to-[#008000] rounded-2xl mb-4">
               <i className="ri-user-add-line text-3xl text-white"></i>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
@@ -157,7 +157,7 @@ export default function Register() {
                   type="text"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
                   placeholder="John Doe"
                   disabled={loading}
                 />
@@ -178,7 +178,7 @@ export default function Register() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
                   placeholder="tu@email.com"
                   disabled={loading}
                 />
@@ -199,7 +199,7 @@ export default function Register() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
                   placeholder="Minimum 6 characters"
                   disabled={loading}
                 />
@@ -228,7 +228,7 @@ export default function Register() {
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#4a5d23] focus:border-transparent transition-all"
+                  className="block w-full pl-10 pr-10 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
                   placeholder="Repeat your password"
                   disabled={loading}
                 />
@@ -248,16 +248,16 @@ export default function Register() {
                 id="terms"
                 type="checkbox"
                 required
-                className="h-4 w-4 text-[#4a5d23] focus:ring-[#4a5d23] border-stone-300 rounded cursor-pointer mt-1"
+                className="h-4 w-4 text-[#008000] focus:ring-[#008000] border-stone-300 rounded cursor-pointer mt-1"
                 disabled={loading}
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                 I accept the{' '}
-                <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
+                <a href="#" className="text-[#008000] hover:text-[#008000] font-medium whitespace-nowrap">
                   terms and conditions
                 </a>{' '}
                 and the{' '}
-                <a href="#" className="text-[#4a5d23] hover:text-[#3d4d1c] font-medium whitespace-nowrap">
+                <a href="#" className="text-[#008000] hover:text-[#008000] font-medium whitespace-nowrap">
                   privacy policy
                 </a>
               </label>
@@ -266,7 +266,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] text-white py-3 px-4 rounded-lg font-medium hover:from-[#3d4d1c] hover:to-[#4a5d23] focus:outline-none focus:ring-2 focus:ring-[#4a5d23] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+              className="w-full bg-gradient-to-r from-[#008000] to-[#008000] text-white py-3 px-4 rounded-lg font-medium hover:from-[#008000] hover:to-[#008000] focus:outline-none focus:ring-2 focus:ring-[#008000] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
             >
               {loading ? (
                 <>
@@ -288,7 +288,7 @@ export default function Register() {
               Already have an account?{' '}
               <Link
                 to="/auth/login"
-                className="font-medium text-[#4a5d23] hover:text-[#3d4d1c] transition-colors whitespace-nowrap"
+                className="font-medium text-[#008000] hover:text-[#008000] transition-colors whitespace-nowrap"
               >
                 Sign in here
               </Link>

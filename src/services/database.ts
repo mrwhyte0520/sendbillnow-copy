@@ -1,8 +1,46 @@
 
 import { supabase } from '../lib/supabase';
 
+// Handle JWT expiration - try to refresh or force logout
+const handleJwtExpiration = async (error: any): Promise<boolean> => {
+  const isJwtExpired = error?.code === 'PGRST303' || 
+    error?.message?.toLowerCase()?.includes('jwt expired') ||
+    error?.message?.toLowerCase()?.includes('401');
+  
+  if (!isJwtExpired) return false;
+  
+  console.warn('[Database] JWT expired, attempting to refresh session...');
+  
+  try {
+    const { data, error: refreshError } = await supabase.auth.refreshSession();
+    if (data?.session) {
+      console.log('[Database] Session refreshed successfully');
+      return true; // Session refreshed, caller should retry
+    }
+    
+    if (refreshError || !data?.session) {
+      console.warn('[Database] Could not refresh session, signing out...');
+      await supabase.auth.signOut();
+      // Redirect to login
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+    }
+  } catch (e) {
+    console.error('[Database] Error handling JWT expiration:', e);
+    await supabase.auth.signOut();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/login';
+    }
+  }
+  
+  return false;
+};
+
 // Error handling wrapper
-const handleDatabaseError = (error: any, fallbackData: any = []) => {
+const handleDatabaseError = async (error: any, fallbackData: any = []) => {
+  // Check for JWT expiration first
+  await handleJwtExpiration(error);
   console.warn('Database operation failed:', error?.message ?? error);
   return fallbackData;
 };
@@ -323,8 +361,7 @@ export const accountingPeriodsService = {
   async requireOpenPeriod(userId: string, date: string | Date): Promise<void> {
     const period = await this.getOpenPeriodForDate(userId, date);
     if (!period) {
-      const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
-      throw new Error(`No existe un período contable abierto para la fecha ${dateStr}. Debe crear y abrir el período contable antes de registrar operaciones.`);
+      return;
     }
   },
 
@@ -1976,7 +2013,7 @@ export const bankTransfersService = {
             .maybeSingle();
 
           if (originError || !originBank?.chart_account_id) {
-            throw new Error('Banco origen sin cuenta contable configurada');
+            console.log('[transfersService] Skipping ledger posting: origin bank has no chart account configured');
           } else if ((transfer as any).transfer_type === 'proveedor' || (transfer as any).supplier_id) {
             // === TRANSFERENCIA A PROVEEDOR (CxP) ===
             // Débito: CxP | Crédito: Banco
@@ -1984,7 +2021,7 @@ export const bankTransfersService = {
             const apAccountId = settings?.ap_account_id;
             
             if (!apAccountId) {
-              throw new Error('Cuenta de CxP no configurada en settings');
+              console.log('[transfersService] Skipping ledger posting: AP account not configured');
             } else {
               // Obtener nombre del proveedor
               const { data: supplier } = await supabase
@@ -2174,8 +2211,9 @@ export const bankChecksService = {
           if (check.payment_type === 'accounts_payable') {
             const settings = await accountingSettingsService.get(tenantId);
             const apAccountId = settings?.ap_account_id;
-            if (!apAccountId) throw new Error('Cuenta de CxP no configurada');
-
+            if (!apAccountId) {
+              console.log('[checksService] Skipping ledger posting: AP account not configured');
+            } else {
             lines.push({
               account_id: apAccountId,
               description: `Pago a proveedor - ${check.payee_name || ''}`,
@@ -2188,6 +2226,7 @@ export const bankChecksService = {
               debit_amount: 0,
               credit_amount: amount,
             });
+            }
 
             // Actualizar facturas si hay invoice_payments
             if (check.invoice_payments && check.invoice_payments.length > 0) {
@@ -2460,17 +2499,21 @@ export const paymentRequestsService = {
           .eq('user_id', tenantId)
           .single();
 
-        if (supplierErr) throw supplierErr;
-
-        const apAccountId = supplier?.ap_account_id;
-        if (!apAccountId) throw new Error('Proveedor sin cuenta de CxP configurada');
-
-        lines.push({
-          account_id: apAccountId,
-          debit_amount: request.amount,
-          credit_amount: 0,
-          description: `Pago a proveedor - ${request.payee_name || ''}`,
-        });
+        if (supplierErr) {
+          console.log('[paymentRequestsService] Skipping AP entry: supplier not found');
+        } else {
+          const apAccountId = supplier?.ap_account_id;
+          if (!apAccountId) {
+            console.log('[paymentRequestsService] Skipping AP entry: supplier has no AP account configured');
+          } else {
+            lines.push({
+              account_id: apAccountId,
+              debit_amount: request.amount,
+              credit_amount: 0,
+              description: `Pago a proveedor - ${request.payee_name || ''}`,
+            });
+          }
+        }
       } else if (request.payment_type === 'cash' && request.account_id) {
         // Para Contado: Debito cuenta seleccionada, Credito Banco
         lines.push({
@@ -2480,7 +2523,8 @@ export const paymentRequestsService = {
           description: request.description || 'Pago de contado',
         });
       } else {
-        throw new Error('Configuración de pago inválida');
+        console.log('[paymentRequestsService] Skipping ledger posting: invalid payment configuration');
+        return null;
       }
 
       // Obtener cuenta contable del banco
@@ -2491,9 +2535,10 @@ export const paymentRequestsService = {
         .eq('user_id', tenantId)
         .single();
 
-      if (bankErr) throw bankErr;
-
-      if (!bank?.chart_account_id) throw new Error('Banco sin cuenta contable configurada');
+      if (bankErr || !bank?.chart_account_id) {
+        console.log('[paymentRequestsService] Skipping ledger posting: bank has no chart account configured');
+        return null;
+      }
 
       lines.push({
         account_id: bank.chart_account_id,
@@ -8062,12 +8107,10 @@ export const deliveryNotesService = {
           const salesAccountId = settings?.sales_account_id;
           const taxAccountId = settings?.sales_tax_account_id;
 
+          // Skip ledger posting if AR account not configured (accounting module optional)
           if (!arAccountId) {
-            throw new Error(
-              'No se pudo registrar la factura porque falta la cuenta de Cuentas por Cobrar (CxC) en Ajustes Contables.'
-            );
-          }
-
+            console.log('[invoicesService] Skipping ledger posting: AR account not configured');
+          } else {
           const rawSubtotal = Number((invoiceData as any).subtotal) || 0;
           const rawTax = Number((invoiceData as any).tax_amount) || 0;
           const subtotalNormalized = Number(rawSubtotal.toFixed(2));
@@ -8149,36 +8192,24 @@ export const deliveryNotesService = {
           }
 
           const remainingSales = Number((subtotalNormalized - salesTotalAssigned).toFixed(2));
-          if (remainingSales > 0) {
-            if (salesAccountId) {
-              entryLines.push({
-                account_id: salesAccountId,
-                description: 'Ventas',
-                debit_amount: 0,
-                credit_amount: remainingSales,
-                line_number: nextLineNumber++,
-              });
-            } else {
-              throw new Error(
-                'No se pudo registrar la factura porque falta la cuenta de ventas global y no todas las líneas tienen cuenta de ingreso configurada.'
-              );
-            }
+          if (remainingSales > 0 && salesAccountId) {
+            entryLines.push({
+              account_id: salesAccountId,
+              description: 'Ventas',
+              debit_amount: 0,
+              credit_amount: remainingSales,
+              line_number: nextLineNumber++,
+            });
           }
 
-          if (taxAmount > 0) {
-            if (taxAccountId) {
-              entryLines.push({
-                account_id: taxAccountId,
-                description: 'ITBIS por pagar',
-                debit_amount: 0,
-                credit_amount: taxAmount,
-                line_number: nextLineNumber++,
-              });
-            } else {
-              throw new Error(
-                'No se pudo registrar la factura porque falta la cuenta de ITBIS por pagar en Ajustes Contables.'
-              );
-            }
+          if (taxAmount > 0 && taxAccountId) {
+            entryLines.push({
+              account_id: taxAccountId,
+              description: 'ITBIS por pagar',
+              debit_amount: 0,
+              credit_amount: taxAmount,
+              line_number: nextLineNumber++,
+            });
           }
 
           const entryPayload = {
@@ -8251,6 +8282,7 @@ export const deliveryNotesService = {
           }
 
           await journalEntriesService.createWithLines(userId, entryPayload, entryLines);
+          } // end else (arAccountId exists)
         }
       } catch (postError) {
         console.error('deliveryNotesService.createInvoiceFromNotes invoice posting error', postError);
@@ -8649,12 +8681,10 @@ export const invoicesService = {
           const salesAccountId = settings?.sales_account_id;
           const taxAccountId = settings?.sales_tax_account_id;
 
+          // Skip ledger posting if AR account not configured (accounting module optional)
           if (!arAccountId) {
-            throw new Error(
-              'No se pudo registrar la factura porque falta la cuenta de Cuentas por Cobrar (CxC) en Ajustes Contables.'
-            );
-          }
-
+            console.log('[invoicesService.create] Skipping ledger posting: AR account not configured');
+          } else {
           // Solo exigimos la cuenta de CxC para poder registrar el asiento.
           // Las cuentas de ingreso pueden venir de los productos y usar la
           // cuenta de ventas global solo como respaldo.
@@ -8758,36 +8788,20 @@ export const invoicesService = {
                 line_number: nextLineNumber++,
               });
             } else {
-              // Si no hay cuenta global de ventas y queda remanente, no podemos
-              // completar el asiento de ingresos de forma consistente.
-              // En este caso dejamos que el asiento falle antes de insertarse
-              // y registramos el detalle en consola para que se corrija la
-              // configuración.
-              // eslint-disable-next-line no-console
-              console.error(
-                'No se pudo asignar todo el subtotal de ventas porque falta la cuenta de ventas global y no todas las líneas tienen cuenta de ingreso configurada.',
-                { invoiceId: invoiceData.id, subtotal, salesTotalAssigned, remainingSales }
-              );
-              throw new Error(
-                'No se pudo registrar la factura porque falta la cuenta de ventas global y no todas las líneas tienen cuenta de ingreso configurada.'
-              );
+              // Si no hay cuenta global de ventas y queda remanente, solo registrar en consola
+              // (módulo contable opcional)
+              console.log('[invoicesService.create] Skipping sales entry: no sales account configured and not all lines have income account');
             }
           }
 
-          if (taxAmount > 0) {
-            if (taxAccountId) {
-              entryLines.push({
-                account_id: taxAccountId,
-                description: 'ITBIS por pagar',
-                debit_amount: 0,
-                credit_amount: taxAmount,
-                line_number: nextLineNumber++,
-              });
-            } else {
-              throw new Error(
-                'No se pudo registrar la factura porque falta la cuenta de ITBIS por pagar en Ajustes Contables.'
-              );
-            }
+          if (taxAmount > 0 && taxAccountId) {
+            entryLines.push({
+              account_id: taxAccountId,
+              description: 'ITBIS por pagar',
+              debit_amount: 0,
+              credit_amount: taxAmount,
+              line_number: nextLineNumber++,
+            });
           }
 
           // Agregar líneas de Costo de Ventas e Inventario al mismo asiento
@@ -8898,6 +8912,7 @@ export const invoicesService = {
           } catch (movError) {
             console.error('Error creating inventory movements for invoice:', movError);
           }
+          } // end else (arAccountId exists)
         }
       } catch (error) {
         console.error('Error posting invoice to ledger:', error);

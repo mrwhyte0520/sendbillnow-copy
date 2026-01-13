@@ -24,7 +24,18 @@ export const useAuth = () => {
 
   useEffect(() => {
     // Cargar sesión primero (no bloqueante)
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      // If session expired, try to refresh it
+      if (error?.message?.includes('expired') || (!session && !error)) {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (refreshData?.session) {
+          setUser(refreshData.session.user);
+          setLoading(false);
+          setTimeout(() => checkUserStatus(refreshData.session!.user.id), 100);
+          return;
+        }
+      }
+      
       setUser(session?.user ?? null);
       setLoading(false);
       
@@ -37,7 +48,21 @@ export const useAuth = () => {
     // Escuchar cambios de autenticación
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Handle token refresh events
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[Auth] Token refreshed successfully');
+      }
+      
+      // If signed out due to expired token, try to refresh
+      if (event === 'SIGNED_OUT' && !session) {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (refreshData?.session) {
+          setUser(refreshData.session.user);
+          return;
+        }
+      }
+      
       setUser(session?.user ?? null);
       setLoading(false);
       

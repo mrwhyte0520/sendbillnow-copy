@@ -54,20 +54,20 @@ export default function DashboardPage() {
 
   // Botones de acceso rápido con sus módulos correspondientes
   const allQuickAccessButtons = [
-    { name: 'User', icon: 'ri-user-add-line', href: '/users', color: 'from-[#2f3e1e] to-[#4b5c2b]', module: 'users' },
-    { name: 'New Customer', icon: 'ri-user-smile-line', href: '/customers', color: 'from-[#3a4a21] to-[#556629]', module: 'customers' },
-    { name: 'New Supplier', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-[#4a5d23] to-[#627730]', module: 'accounts-payable' },
-    { name: 'New Invoice', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-[#566830] to-[#6e823a]', module: 'billing' },
-    { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-[#5d6e34] to-[#7a8c45]', module: 'pos' },
-    { name: 'Cash Closing', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-[#607337] to-[#81924a]', module: 'billing' },
-    { name: 'Sales', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-[#4c5e2c] to-[#708443]', module: 'billing' },
-    { name: 'Products', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-[#3f4d1f] to-[#5f7434]', module: 'products' },
-    { name: 'Inventory', icon: 'ri-archive-line', href: '/inventory', color: 'from-[#54662d] to-[#6f8240]', module: 'inventory' },
-    { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-[#5b6d33] to-[#7a8f45]', module: 'inventory' },
-    { name: 'Entries', icon: 'ri-download-line', href: '/inventory', color: 'from-[#485829] to-[#6a7f3d]', module: 'inventory' },
-    { name: 'Transfers', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-[#3b4820] to-[#5a6e33]', module: 'inventory' },
-    { name: 'Warehouse', icon: 'ri-building-line', href: '/inventory', color: 'from-[#2f3b16] to-[#4b5f29]', module: 'inventory' },
-    { name: 'Payroll', icon: 'ri-wallet-line', href: '/payroll', color: 'from-[#384619] to-[#576c2b]', module: 'payroll' },
+    { name: 'User', icon: 'ri-user-add-line', href: '/users', color: 'from-[#008000] to-[#008000]', module: 'users' },
+    { name: 'New Customer', icon: 'ri-user-smile-line', href: '/customers', color: 'from-[#008000] to-[#008000]', module: 'customers' },
+    { name: 'New Supplier', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-[#008000] to-[#008000]', module: 'accounts-payable' },
+    { name: 'New Invoice', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
+    { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-[#008000] to-[#008000]', module: 'pos' },
+    { name: 'Cash Closing', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
+    { name: 'Sales', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-[#008000] to-[#008000]', module: 'billing' },
+    { name: 'Products', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-[#008000] to-[#008000]', module: 'products' },
+    { name: 'Inventory', icon: 'ri-archive-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Entries', icon: 'ri-download-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Transfers', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Warehouse', icon: 'ri-building-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Payroll', icon: 'ri-wallet-line', href: '/payroll', color: 'from-[#008000] to-[#008000]', module: 'payroll' },
   ];
 
   // Filtrar botones según permisos del usuario
@@ -105,7 +105,7 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] rounded-lg p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-[#008000] to-[#008000] rounded-lg p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-900">
               Calendar - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <i className="ri-calendar-line text-2xl text-[#4a5d23]"></i>
+            <i className="ri-calendar-line text-2xl text-[#008000]"></i>
           </div>
           
           <div className="grid grid-cols-7 gap-2">
@@ -170,8 +170,8 @@ export default function DashboardPage() {
                   day === null
                     ? 'bg-transparent'
                     : day === currentDate.getDate()
-                    ? 'bg-[#4a5d23] text-white font-bold shadow-lg'
-                    : 'bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-[#4a5d23] cursor-pointer'
+                    ? 'bg-[#008000] text-white font-bold shadow-lg'
+                    : 'bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-[#008000] cursor-pointer'
                 }`}
               >
                 {day}

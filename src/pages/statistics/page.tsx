@@ -14,7 +14,7 @@ export default function StatisticsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#4a5d23] to-[#5a6d33] rounded-lg p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-r from-[#008000] to-[#008000] rounded-lg p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">
@@ -31,7 +31,7 @@ export default function StatisticsPage() {
                   onClick={() => setActiveView('advanced')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                     activeView === 'advanced'
-                      ? 'bg-white text-[#4a5d23] shadow-sm'
+                      ? 'bg-white text-[#008000] shadow-sm'
                       : 'text-white hover:bg-white/10'
                   }`}
                 >
@@ -42,7 +42,7 @@ export default function StatisticsPage() {
                   onClick={() => setActiveView('basic')}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                     activeView === 'basic'
-                      ? 'bg-white text-[#4a5d23] shadow-sm'
+                      ? 'bg-white text-[#008000] shadow-sm'
                       : 'text-white hover:bg-white/10'
                   }`}
                 >

@@ -341,11 +341,10 @@ export default function CreditNotesPage() {
     const invoiceId = String(formData.get('invoice_id') || '');
     const reason = String(formData.get('reason') || '');
     const concept = String(formData.get('concept') || '');
-    const arAccountIdFromForm = String(formData.get('ar_account_id') || '');
     const debitAccountId = String(formData.get('debit_account_id') || '');
 
-    if (!customerId || !amount || !debitAccountId || !invoiceId || !arAccountIdFromForm) {
-      alert('Cliente, monto, factura, cuenta contable de débito y cuenta por cobrar son obligatorios');
+    if (!customerId || !amount || !invoiceId) {
+      alert('Cliente, monto y factura son obligatorios');
       return;
     }
 
@@ -826,11 +825,10 @@ export default function CreditNotesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Accounts Receivable <span className="text-red-500">*</span>
+                    Accounts Receivable
                   </label>
                   <select
                     name="ar_account_id"
-                    required
                     className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""
                   >
@@ -848,7 +846,6 @@ export default function CreditNotesPage() {
                     Debit account
                   </label>
                   <select
-                    required
                     name="debit_account_id"
                     className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
                     defaultValue=""

@@ -11,7 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(`Missing Supabase environment variables: ${missing.join(', ')}`);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+});
 
 export type Database = {
   public: {

@@ -816,7 +816,6 @@ export default function QuotesPage() {
                     />
                   </div>
                 </div>
-
                 {/* Suppliers */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -824,12 +823,14 @@ export default function QuotesPage() {
                     <button 
                       type="button"
                       onClick={addSupplier}
-                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 whitespace-nowrap"
+                      className="text-white px-3 py-1 rounded text-sm hover:shadow-md whitespace-nowrap transition-colors"
+                      style={{ backgroundColor: '#4b5c4b', boxShadow: '0 2px 6px rgba(75,92,75,0.2)' }}
                     >
                       <i className="ri-add-line mr-1"></i>
                       Add
                     </button>
                   </div>
+
                   <div className="space-y-2">
                     {formData.suppliers.map((supplier, index) => (
                       <div key={index} className="flex gap-2">
@@ -879,7 +880,8 @@ export default function QuotesPage() {
                   </button>
                   <button 
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 whitespace-nowrap"
+                    className="px-4 py-2 text-white rounded-lg whitespace-nowrap transition-colors shadow-sm"
+                    style={{ backgroundColor: '#4b5c4b', boxShadow: '0 6px 14px rgba(47,62,30,0.25)' }}
                   >
                     Create Request
                   </button>
@@ -888,8 +890,6 @@ export default function QuotesPage() {
             </div>
           </div>
         )}
-
-        {/* Quote Details Modal */}
         {selectedQuote && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">

@@ -30,13 +30,6 @@ const settingsSections: SettingsSection[] = [
     description: 'Configure basic company data, logo, and contact details',
     icon: 'ri-building-line',
     href: '/settings/company'
-  },
-  {
-    id: 'accounting',
-    name: 'Accounting Settings',
-    description: 'Configure fiscal periods, currencies, and accounting policies',
-    icon: 'ri-calculator-line',
-    href: '/settings/accounting'
   }
 ];
 

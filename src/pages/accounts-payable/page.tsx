@@ -369,10 +369,11 @@ export default function AccountsPayablePage() {
               <p className="text-gray-600 mb-4 text-sm">{module.description}</p>
               <button 
                 onClick={() => handleAccessModule(module.href)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#4b5c4b] text-white py-2 px-4 rounded-lg hover:bg-[#3f4f3f] transition-colors whitespace-nowrap shadow-sm"
               >
                 Enter
               </button>
+
             </div>
           ))}
         </div>

@@ -120,11 +120,6 @@ export default function APDebitCreditNotesPage() {
       return;
     }
 
-    if (!form.accountId) {
-      alert('Select the ledger account to impact.');
-      return;
-    }
-
     try {
       await apInvoiceNotesService.create(user.id, {
         supplier_id: selectedSupplierId,
@@ -133,7 +128,7 @@ export default function APDebitCreditNotesPage() {
         note_date: form.noteDate,
         currency: form.currency,
         amount,
-        account_id: form.accountId,
+        account_id: form.accountId || null,
         reason: form.reason,
       });
 
