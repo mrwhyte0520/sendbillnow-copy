@@ -146,11 +146,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-                Smart <span className="text-[#008000]">Accounting</span> for Your Business
+              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight text-gray-900 mb-4 sm:mb-6">
+                Smart <span className="text-[#008000]">POS &amp; Invoicing</span> System
               </h1>
-              <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-                The most complete accounting system for businesses. Automate all your accounting processes.
+              <p className="text-base sm:text-xl leading-relaxed text-gray-600 mb-8 max-w-3xl mx-auto">
+                A Smart System for all your POS &amp; Invoicing needs.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
