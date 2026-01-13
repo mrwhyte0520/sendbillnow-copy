@@ -92,18 +92,7 @@ export default function PlansPage() {
         '2 inventory warehouses',
         'Customer management',
         '2,000 electronic invoices',
-        'Backup every 48 hours',
-        'Petty cash',
-        'Commission calculation',
-        'Purchases and expenses',
-        'Vendors',
-        'Accounts receivable',
-        'Accounts payable',
-        'Full payroll',
-        'Multi-branch',
-        'Repair service',
-        'Quotations',
-        'Returns'
+        'Backup every 48 hours'
       ],
       popular: false,
       color: 'from-emerald-500 to-emerald-600',
@@ -181,7 +170,6 @@ export default function PlansPage() {
 
   const trialStatus = getTrialStatus();
   const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
-  const contabilidadPlans = plans.filter(p => p.category === 'contabilidad');
   const facturacionPlans = plans.filter(p => p.category === 'facturacion');
   const posPlans = plans.filter(p => p.category === 'pos');
 
@@ -368,22 +356,6 @@ export default function PlansPage() {
                   You have full access to every feature in the {currentPlan.name} plan.
                 </p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Contabilidad Plans Section */}
-        {contabilidadPlans.length > 0 && (
-          <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                <i className="ri-calculator-line mr-2 text-sky-600"></i>
-                Accounting Plans
-              </h2>
-              <p className="text-gray-600">End-to-end accounting solutions for your business</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {contabilidadPlans.map(renderPlanCard)}
             </div>
           </div>
         )}
