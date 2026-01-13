@@ -585,9 +585,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen flex bg-[#f6f1e3]">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform transition-[width] duration-300 ease-in-out overflow-hidden ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}
+        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform overflow-hidden transition-all duration-500 ease-in-out ${
+          sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+        } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
@@ -1015,11 +1015,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-30 lg:hidden">
-          <div className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-        </div>
-      )}
+      <div 
+        className={`fixed inset-0 z-30 lg:hidden transition-all duration-500 ease-in-out ${
+          sidebarOpen 
+            ? 'opacity-100 pointer-events-auto' 
+            : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div 
+          className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      </div>
 
       {/* Click outside to close dropdowns */}
       {(profileDropdownOpen || notificationsOpen) && (

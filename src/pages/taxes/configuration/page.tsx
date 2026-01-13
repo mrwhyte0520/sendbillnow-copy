@@ -540,16 +540,16 @@ export default function TaxConfigurationPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              RD$ {formatAmount(bracket.min_amount)}
+                               {formatAmount(bracket.min_amount)}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {bracket.max_amount === null ? 'En adelante' : `RD$ ${formatAmount(bracket.max_amount)}`}
+                              {bracket.max_amount === null ? 'En adelante' : ` ${formatAmount(bracket.max_amount)}`}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                               {bracket.rate_percent}%
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              RD$ {formatAmount(bracket.fixed_amount)}
+                               {formatAmount(bracket.fixed_amount)}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">
                               {bracket.description || '-'}

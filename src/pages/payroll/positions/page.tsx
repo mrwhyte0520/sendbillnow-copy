@@ -525,7 +525,7 @@ export default function PositionsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        RD$ {position.salaryRange.min.toLocaleString('en-US')} - RD$ {position.salaryRange.max.toLocaleString('en-US')}
+                         {position.salaryRange.min.toLocaleString('en-US')} -  {position.salaryRange.max.toLocaleString('en-US')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

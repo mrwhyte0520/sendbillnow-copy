@@ -238,7 +238,7 @@ export default function QuotesPage() {
 
   const formatCurrency = (amount: number | null | undefined) => {
     const safe = Number(amount || 0);
-    return formatMoney(safe, 'RD$');
+    return formatMoney(safe, '');
   };
 
   const exportToPDF = async () => {
@@ -721,7 +721,7 @@ export default function QuotesPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{quote.requestedBy}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{quote.dueDate}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                      RD$ {quote.estimatedAmount.toLocaleString()}
+                       {quote.estimatedAmount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -946,7 +946,7 @@ export default function QuotesPage() {
                           <tr key={index}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{response.supplier}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                              {response.amount > 0 ? `RD$ ${response.amount.toLocaleString()}` : 'Pending'}
+                              {response.amount > 0 ? ` ${response.amount.toLocaleString()}` : 'Pending'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{response.deliveryTime || 'N/A'}</td>
                             <td className="px-6 py-4 whitespace-nowrap">

@@ -456,7 +456,7 @@ export default function PurchaseOrdersPage() {
       order.number,
       order.date,
       order.supplier,
-      `${formatMoney(order.total, 'RD$')}`,
+      `${formatMoney(order.total, '')}`,
       order.deliveryDate,
       order.status,
     ]);
@@ -480,7 +480,7 @@ export default function PurchaseOrdersPage() {
 
     (doc as any).autoTable({
       body: [
-        ['Total Amount:', `${formatMoney(totalAmount, 'RD$')}`],
+        ['Total Amount:', `${formatMoney(totalAmount, '')}`],
         ['Pending Orders:', `${pendingOrders}`],
         ['Approved Orders:', `${approvedOrders}`],
       ],
@@ -713,9 +713,9 @@ export default function PurchaseOrdersPage() {
               <tr>
                 <td style="width: 54px;">${idx + 1}</td>
                 <td>${product.name || ''}</td>
-                <td class="num" style="width: 110px;">RD$ ${Number(price || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="num" style="width: 110px;"> ${Number(price || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td class="num" style="width: 80px;">${qty.toLocaleString('es-DO')}</td>
-                <td class="num" style="width: 120px;">RD$ ${Number(lineTotal || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td class="num" style="width: 120px;"> ${Number(lineTotal || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               </tr>`;
       })
       .join('');
@@ -819,9 +819,9 @@ export default function PurchaseOrdersPage() {
               <div class="totals">
                 <div class="totals-head">Resumen</div>
                 <div class="totals-body">
-                  <div class="totals-row"><div class="label">Subtotal</div><div class="value">RD$ ${Number(order.subtotal || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
-                  <div class="totals-row"><div class="label">ITBIS</div><div class="value">RD$ ${Number(order.itbis || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
-                  <div class="totals-row total"><div class="label">Total</div><div class="value">RD$ ${Number(order.total || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                  <div class="totals-row"><div class="label">Subtotal</div><div class="value"> ${Number(order.subtotal || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                  <div class="totals-row"><div class="label">ITBIS</div><div class="value"> ${Number(order.itbis || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
+                  <div class="totals-row total"><div class="label">Total</div><div class="value"> ${Number(order.total || 0).toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div></div>
                 </div>
               </div>
             </div>
@@ -927,15 +927,15 @@ export default function PurchaseOrdersPage() {
       worksheet.addRow([
         product.name || '',
         qty,
-        formatMoney(price, 'RD$'),
-        formatMoney(lineTotal, 'RD$'),
+        formatMoney(price, ''),
+        formatMoney(lineTotal, ''),
       ]);
     });
 
     worksheet.addRow([]);
-    worksheet.addRow(['', '', 'Subtotal', formatMoney(order.subtotal, 'RD$')]);
-    worksheet.addRow(['', '', 'ITBIS', formatMoney(order.itbis, 'RD$')]);
-    worksheet.addRow(['', '', 'Total', formatMoney(order.total, 'RD$')]);
+    worksheet.addRow(['', '', 'Subtotal', formatMoney(order.subtotal, '')]);
+    worksheet.addRow(['', '', 'ITBIS', formatMoney(order.itbis, '')]);
+    worksheet.addRow(['', '', 'Total', formatMoney(order.total, '')]);
 
     worksheet.columns = [
       { width: 40 },
@@ -1042,7 +1042,7 @@ export default function PurchaseOrdersPage() {
               </div>
               <div>
                 <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">{formatMoney(orders.reduce((sum, o) => sum + o.total, 0), 'RD$')}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatMoney(orders.reduce((sum, o) => sum + o.total, 0), '')}</p>
               </div>
             </div>
           </div>
@@ -1117,7 +1117,7 @@ export default function PurchaseOrdersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.supplier}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.deliveryDate}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                      {formatMoney(order.total, 'RD$')}
+                      {formatMoney(order.total, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {order.orderedQtyTotal > 0 ? (
@@ -1330,7 +1330,7 @@ export default function PurchaseOrdersPage() {
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-900">
-                            {formatMoney(item.quantity * item.price, 'RD$')}
+                            {formatMoney(item.quantity * item.price, '')}
                           </span>
                           {formData.products.length > 1 && (
                             <button 
@@ -1350,9 +1350,9 @@ export default function PurchaseOrdersPage() {
               </form>
               <div className="p-6 border-t border-gray-200 flex flex-col md:flex-row md:justify-between md:items-center gap-3 sticky bottom-0 bg-white">
                 <div className="text-right md:text-left">
-                  <p className="text-base font-semibold text-gray-900">Subtotal: {formatMoney(calculateSubtotal(), 'RD$')}</p>
-                  <p className="text-base font-semibold text-gray-900">ITBIS: {formatMoney(calculateItbis(), 'RD$')}</p>
-                  <p className="text-xl font-bold text-gray-900">Total: {formatMoney(calculateTotal(), 'RD$')}</p>
+                  <p className="text-base font-semibold text-gray-900">Subtotal: {formatMoney(calculateSubtotal(), '')}</p>
+                  <p className="text-base font-semibold text-gray-900">ITBIS: {formatMoney(calculateItbis(), '')}</p>
+                  <p className="text-xl font-bold text-gray-900">Total: {formatMoney(calculateTotal(), '')}</p>
                 </div>
                 <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
                   <button

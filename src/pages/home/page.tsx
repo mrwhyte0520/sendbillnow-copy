@@ -41,50 +41,55 @@ export default function HomePage() {
 
   const plans = [
     {
-      name: 'SMB',
-      price: 'USD $39.99',
+      name: 'Simple Invoicing',
+      price: 'USD $19.99',
       period: '/month',
+      description: 'Ideal for businesses starting with basic invoicing',
       features: [
-        'One company',
-        'Basic invoicing',
-        'Basic dashboard',
-        'Email support',
-        '15-day free trial'
+        '1 user',
+        '100 invoices per month',
+        'Quotations',
+        '2 invoice templates',
+        'Credit/debit notes',
+        'Basic reports'
       ],
-      popular: false
+      popular: false,
+      category: 'invoicing'
     },
     {
-      name: 'PRO',
-      price: 'USD $99.99',
+      name: 'Premium Invoicing',
+      price: 'USD $49.99',
       period: '/month',
+      description: 'For companies that need higher invoicing capacity',
       features: [
-        'Up to 3 companies',
-        'Basic dashboard',
-        'Limited inventory (2,000)',
-        'Basic banking management',
-        'Basic payroll (10 employees)',
-        'Priority support',
-        '15-day free trial'
+        '8 users',
+        '500 invoices per month',
+        'Quotations',
+        '2 invoice templates',
+        '1 inventory warehouse',
+        'Credit/debit notes',
+        'Comprehensive reports'
       ],
-      popular: true
+      popular: false,
+      category: 'invoicing'
     },
     {
-      name: 'PLUS',
-      price: 'USD $199.99',
+      name: 'POS Premium',
+      price: 'USD $129.99',
       period: '/month',
+      description: 'Complete solution for retail points of sale and business management',
       features: [
-        'Unlimited companies',
-        'All features',
-        'Advanced KPI dashboard',
-        'Unlimited inventory',
-        'Complete payroll',
-        'Advanced financial analysis',
-        'Custom reports',
-        'Specialized technical support',
-        '24/7 support',
-        '15-day free trial'
+        'Full dashboard',
+        'POS system',
+        '30 users',
+        'Unlimited products',
+        '2 inventory warehouses',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours'
       ],
-      popular: false
+      popular: false,
+      category: 'pos'
     },
   ];
 
@@ -195,58 +200,109 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Invoicing Plans Section */}
       <section id="pricing" className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Plans that fit your business
-            </h2>
+          {/* Invoicing Plans */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center mb-4">
+              <i className="ri-file-text-line text-3xl text-[#008000] mr-3"></i>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+                Invoicing Plans
+              </h2>
+            </div>
             <p className="text-xl text-gray-600">
-              Start free and scale as your business grows
+              Quoting and invoicing solutions
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {plans.map((plan, index) => (
-              <div key={index} className={`bg-white rounded-lg shadow-lg p-8 relative ${
-                plan.popular ? 'ring-2 ring-[#008000]' : ''
-              }`}>
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-[#008000] text-white px-4 py-1 rounded-full text-sm font-medium">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+            {plans.filter(p => p.category === 'invoicing').map((plan, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-200 hover:border-[#008000]/30 transition-all">
+                <div className={`p-6 text-white text-center ${
+                  plan.name === 'Simple Invoicing' 
+                    ? 'bg-gradient-to-r from-teal-500 to-teal-600' 
+                    : 'bg-gradient-to-r from-indigo-500 to-indigo-600'
+                }`}>
+                  <i className={`${
+                    plan.name === 'Simple Invoicing' ? 'ri-file-text-line' : 'ri-file-list-3-line'
+                  } text-4xl mb-3`}></i>
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   <div className="flex items-baseline justify-center">
-                    <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                    <span className="text-gray-600 ml-1">{plan.period}</span>
+                    <span className="text-sm">USD $</span>
+                    <span className="text-3xl font-bold mx-1">{plan.price.replace('USD $', '')}</span>
+                    <span className="text-sm">{plan.period}</span>
                   </div>
                 </div>
 
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-center">
-                      <i className="ri-check-line text-green-500 mr-3"></i>
-                      <span className="text-gray-600">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="p-6">
+                  <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center">
+                        <i className="ri-check-line text-green-500 mr-3"></i>
+                        <span className="text-gray-700 text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-                <Link
-                  to="/auth/register"
-                  className={`w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer ${
-                    plan.popular
-                      ? 'bg-[#008000] text-white hover:bg-[#008000]'
-                      : 'bg-stone-100 text-stone-900 hover:bg-stone-200'
-                  }`}
-                >
-                  Get Started
-                </Link>
+                  <Link
+                    to="/auth/register"
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white hover:bg-[#4a5d29] transition-colors"
+                  >
+                    Select Plan
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* POS Plans */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center mb-4">
+              <i className="ri-store-2-line text-3xl text-[#008000] mr-3"></i>
+              <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
+                POS Plans for Businesses
+              </h2>
+            </div>
+            <p className="text-xl text-gray-600">
+              Complete solution for retail points of sale and business management
+            </p>
+          </div>
+
+          <div className="max-w-md mx-auto">
+            {plans.filter(p => p.category === 'pos').map((plan, index) => (
+              <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden border-2 border-gray-200 hover:border-[#008000]/30 transition-all">
+                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white text-center">
+                  <i className="ri-store-2-line text-4xl mb-3"></i>
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-sm">USD $</span>
+                    <span className="text-3xl font-bold mx-1">{plan.price.replace('USD $', '')}</span>
+                    <span className="text-sm">{plan.period}</span>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
+                  <div className="max-h-64 overflow-y-auto mb-6">
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-center">
+                          <i className="ri-check-line text-green-500 mr-3"></i>
+                          <span className="text-gray-700 text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Link
+                    to="/auth/register"
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white hover:bg-[#4a5d29] transition-colors"
+                  >
+                    Select Plan
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

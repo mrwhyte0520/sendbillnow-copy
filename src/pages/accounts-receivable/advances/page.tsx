@@ -253,9 +253,9 @@ export default function AdvancesPage() {
     
     const summaryData = [
       ['Metric', 'Value'],
-      ['Total Advances', `${formatMoney(totalAmount, 'RD$')}`],
-      ['Applied Amount', `${formatMoney(totalApplied, 'RD$')}`],
-      ['Outstanding Balance', `${formatMoney(totalBalance, 'RD$')}`],
+      ['Total Advances', `${formatMoney(totalAmount, '')}`],
+      ['Applied Amount', `${formatMoney(totalApplied, '')}`],
+      ['Outstanding Balance', `${formatMoney(totalBalance, '')}`],
       ['Pending Advances', pendingAdvances.toString()],
       ['Active Advances', activeAdvances.length.toString()]
     ];
@@ -276,9 +276,9 @@ export default function AdvancesPage() {
       advance.advanceNumber,
       advance.customerName,
       advance.date,
-      `${formatMoney(advance.amount, 'RD$')}`,
-      `${formatMoney(advance.appliedAmount, 'RD$')}`,
-      `${formatMoney(advance.balance, 'RD$')}`,
+      `${formatMoney(advance.amount, '')}`,
+      `${formatMoney(advance.appliedAmount, '')}`,
+      `${formatMoney(advance.balance, '')}`,
       getStatusName(advance.status)
     ]);
     
@@ -320,9 +320,9 @@ export default function AdvancesPage() {
       advanceNumber: advance.advanceNumber,
       customerName: advance.customerName,
       date: advance.date,
-      amount: formatMoney(advance.amount, 'RD$'),
-      appliedAmount: formatMoney(advance.appliedAmount, 'RD$'),
-      balance: formatMoney(advance.balance, 'RD$'),
+      amount: formatMoney(advance.amount, ''),
+      appliedAmount: formatMoney(advance.appliedAmount, ''),
+      balance: formatMoney(advance.balance, ''),
       status: getStatusName(advance.status),
     }));
 
@@ -469,9 +469,9 @@ export default function AdvancesPage() {
             <div class="totals">
               <div class="totals-head">Resumen</div>
               <div class="totals-body">
-                <div class="totals-row"><div class="label">Monto</div><div class="value">RD$ ${formatMoney(advance.amount, '')}</div></div>
-                <div class="totals-row"><div class="label">Aplicado</div><div class="value">RD$ ${formatMoney(advance.appliedAmount, '')}</div></div>
-                <div class="totals-row total"><div class="label">Balance</div><div class="value">RD$ ${formatMoney(advance.balance, '')}</div></div>
+                <div class="totals-row"><div class="label">Monto</div><div class="value"> ${formatMoney(advance.amount, '')}</div></div>
+                <div class="totals-row"><div class="label">Aplicado</div><div class="value"> ${formatMoney(advance.appliedAmount, '')}</div></div>
+                <div class="totals-row total"><div class="label">Balance</div><div class="value"> ${formatMoney(advance.balance, '')}</div></div>
               </div>
             </div>
           </div>
@@ -669,7 +669,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Total Advances</p>
                 <p className="text-2xl font-semibold text-[#2f3e1e]">
-                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.amount, 0), 'RD$')}
+                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.amount, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
@@ -683,7 +683,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Available Balance</p>
                 <p className="text-2xl font-semibold text-[#1f2913]">
-                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.balance, 0), 'RD$')}
+                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.balance, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#1f2913]">
@@ -697,7 +697,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
                 <p className="text-2xl font-semibold text-[#4a3c24]">
-                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.appliedAmount, 0), 'RD$')}
+                  {formatMoney(filteredAdvances.reduce((sum, a) => sum + a.appliedAmount, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#4a3c24]">
@@ -819,13 +819,13 @@ export default function AdvancesPage() {
                       {advance.date}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatMoney(advance.amount, 'RD$')}
+                      {formatMoney(advance.amount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(advance.appliedAmount, 'RD$')}
+                      {formatMoney(advance.appliedAmount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      {formatMoney(advance.balance, 'RD$')}
+                      {formatMoney(advance.balance, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(advance.status)}`}>
@@ -1078,7 +1078,7 @@ export default function AdvancesPage() {
                   Customer: <span className="font-medium text-[#2f3e1e]">{selectedAdvance.customerName}</span>
                 </p>
                 <p className="text-lg font-semibold text-[#1f2913]">
-                  Available balance: {formatMoney(selectedAdvance.balance, 'RD$')}
+                  Available balance: {formatMoney(selectedAdvance.balance, '')}
                 </p>
               </div>
               
@@ -1101,7 +1101,7 @@ export default function AdvancesPage() {
                       )
                       .map((inv) => (
                         <option key={inv.id} value={inv.id}>
-                          {inv.invoiceNumber} - {formatMoney(inv.totalAmount, 'RD$')}
+                          {inv.invoiceNumber} - {formatMoney(inv.totalAmount, '')}
                         </option>
                       ))}
                   </select>
@@ -1192,7 +1192,7 @@ export default function AdvancesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Monto Original</label>
-                    <p className="text-2xl font-bold text-blue-600">{formatMoney(selectedAdvance.amount, 'RD$')}</p>
+                    <p className="text-2xl font-bold text-blue-600">{formatMoney(selectedAdvance.amount, '')}</p>
                   </div>
                 </div>
                 
@@ -1209,12 +1209,12 @@ export default function AdvancesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Monto Aplicado</label>
-                    <p className="text-lg font-semibold text-purple-600">{formatMoney(selectedAdvance.appliedAmount, 'RD$')}</p>
+                    <p className="text-lg font-semibold text-purple-600">{formatMoney(selectedAdvance.appliedAmount, '')}</p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Saldo Disponible</label>
-                    <p className="text-2xl font-bold text-green-600">{formatMoney(selectedAdvance.balance, 'RD$')}</p>
+                    <p className="text-2xl font-bold text-green-600">{formatMoney(selectedAdvance.balance, '')}</p>
                   </div>
                 </div>
               </div>

@@ -793,9 +793,9 @@ export default function AccountingPage() {
                         ) : (
                           <p
                             className="text-base font-bold text-gray-900 truncate"
-                            title={`RD$${formatAmount(total)}`}
+                            title={`${formatAmount(total)}`}
                           >
-                            RD${formatAmount(total)}
+                            {formatAmount(total)}
                           </p>
                         )}
                       </div>
@@ -834,7 +834,7 @@ export default function AccountingPage() {
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="text-sm font-semibold text-gray-900">Included accounts</h4>
                         <div className="text-sm text-gray-700">
-                          Total: <span className="font-semibold">RD${formatAmount(calculateAccountTypeTotal(breakdownType) || 0)}</span>
+                          Total: <span className="font-semibold">{formatAmount(calculateAccountTypeTotal(breakdownType) || 0)}</span>
                         </div>
                       </div>
                       <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -854,7 +854,7 @@ export default function AccountingPage() {
                                 <tr key={acc.id}>
                                   <td className="px-4 py-2 text-sm text-gray-900">{acc.code}</td>
                                   <td className="px-4 py-2 text-sm text-gray-900">{acc.name}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">RD${formatAmount(acc.balance || 0)}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatAmount(acc.balance || 0)}</td>
                                 </tr>
                               ))}
                           </tbody>
@@ -862,7 +862,7 @@ export default function AccountingPage() {
                             <tr>
                               <td colSpan={2} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Total:</td>
                               <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
-                                RD${formatAmount(getAccountsByType(breakdownType).reduce((sum, acc) => sum + (acc.balance || 0), 0))}
+                                {formatAmount(getAccountsByType(breakdownType).reduce((sum, acc) => sum + (acc.balance || 0), 0))}
                               </td>
                             </tr>
                           </tfoot>
@@ -895,8 +895,8 @@ export default function AccountingPage() {
                                   <td className="px-4 py-2 text-sm text-gray-900">{l.journal_entries?.entry_number || ''}</td>
                                   <td className="px-4 py-2 text-sm text-gray-500">{l.journal_entries?.entry_date ? formatDate(l.journal_entries.entry_date) : ''}</td>
                                   <td className="px-4 py-2 text-sm text-gray-900">{l.chart_accounts ? `${l.chart_accounts.code} - ${l.chart_accounts.name}` : ''}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">RD${formatAmount(Number(l.debit_amount || 0))}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">RD${formatAmount(Number(l.credit_amount || 0))}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatAmount(Number(l.debit_amount || 0))}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-900 text-right">{formatAmount(Number(l.credit_amount || 0))}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -905,10 +905,10 @@ export default function AccountingPage() {
                                 <tr>
                                   <td colSpan={3} className="px-4 py-2 text-sm font-semibold text-gray-900 text-right">Totals:</td>
                                   <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
-                                    RD${formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.debit_amount || 0), 0))}
+                                    {formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.debit_amount || 0), 0))}
                                   </td>
                                   <td className="px-4 py-2 text-sm font-bold text-gray-900 text-right">
-                                    RD${formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.credit_amount || 0), 0))}
+                                    {formatAmount(breakdownLines.reduce((sum, l) => sum + Number(l.credit_amount || 0), 0))}
                                   </td>
                                 </tr>
                               </tfoot>
@@ -964,10 +964,10 @@ export default function AccountingPage() {
                           {entry.description}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD${formatAmount(entry.total_debit)}
+                          {formatAmount(entry.total_debit)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          RD${formatAmount(entry.total_credit)}
+                          {formatAmount(entry.total_credit)}
                         </td>
                       </tr>
                     ))}
@@ -1042,10 +1042,10 @@ export default function AccountingPage() {
                         {entry.reference}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        RD${entry.total_debit.toLocaleString()}
+                        {entry.total_debit.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        RD${entry.total_credit.toLocaleString()}
+                        {entry.total_credit.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -1317,16 +1317,16 @@ export default function AccountingPage() {
                       <div className="flex justify-between items-center">
                         <div className="text-sm">
                           <span className="font-medium">Total Debit: </span>
-                          <span className="text-blue-600">RD${formatAmount(totalDebit)}</span>
+                          <span className="text-blue-600">{formatAmount(totalDebit)}</span>
                         </div>
                         <div className="text-sm">
                           <span className="font-medium">Total Credit: </span>
-                          <span className="text-green-600">RD${formatAmount(totalCredit)}</span>
+                          <span className="text-green-600">{formatAmount(totalCredit)}</span>
                         </div>
                         <div className="text-sm">
                           <span className="font-medium">Difference: </span>
                           <span className={`${Math.abs(totalDebit - totalCredit) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
-                            RD${formatAmount(Math.abs(totalDebit - totalCredit))}
+                            {formatAmount(Math.abs(totalDebit - totalCredit))}
                           </span>
                         </div>
                       </div>

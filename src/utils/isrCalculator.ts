@@ -3,10 +3,10 @@
  * Conforme a la escala anual vigente de la DGII - República Dominicana
  * 
  * Escala Anual Vigente:
- * - Hasta RD$416,220.00: Exento (0%)
- * - RD$416,220.01 - RD$624,329.00: 15% sobre excedente de RD$416,220.01
- * - RD$624,329.01 - RD$867,123.00: RD$31,216.00 + 20% sobre excedente de RD$624,329.01
- * - Más de RD$867,123.00: RD$79,776.00 + 25% sobre excedente de RD$867,123.00
+ * - Hasta 416,220.00: Exento (0%)
+ * - 416,220.01 - 624,329.00: 15% sobre excedente de 416,220.01
+ * - 624,329.01 - 867,123.00: 31,216.00 + 20% sobre excedente de 624,329.01
+ * - Más de 867,123.00: 79,776.00 + 25% sobre excedente de 867,123.00
  */
 
 export interface ISRBracket {
@@ -32,21 +32,21 @@ export const DEFAULT_ISR_BRACKETS: ISRBracket[] = [
     max_amount: 624329.00,
     rate_percent: 15,
     fixed_amount: 0,
-    description: '15% sobre excedente de RD$416,220.01'
+    description: '15% sobre excedente de 416,220.01'
   },
   {
     min_amount: 624329.01,
     max_amount: 867123.00,
     rate_percent: 20,
     fixed_amount: 31216.00,
-    description: 'RD$31,216.00 + 20% sobre excedente de RD$624,329.01'
+    description: '31,216.00 + 20% sobre excedente de 624,329.01'
   },
   {
     min_amount: 867123.01,
     max_amount: null, // Sin límite superior
     rate_percent: 25,
     fixed_amount: 79776.00,
-    description: 'RD$79,776.00 + 25% sobre excedente de RD$867,123.00'
+    description: '79,776.00 + 25% sobre excedente de 867,123.00'
   }
 ];
 
@@ -65,21 +65,21 @@ export const DEFAULT_ISR_BRACKETS_MONTHLY: ISRBracket[] = [
     max_amount: 52027.42, // 624,329 / 12
     rate_percent: 15,
     fixed_amount: 0,
-    description: '15% sobre excedente de RD$34,685.01'
+    description: '15% sobre excedente de 34,685.01'
   },
   {
     min_amount: 52027.43,
     max_amount: 72260.25, // 867,123 / 12
     rate_percent: 20,
     fixed_amount: 2601.33, // 31,216 / 12
-    description: 'RD$2,601.33 + 20% sobre excedente de RD$52,027.43'
+    description: '2,601.33 + 20% sobre excedente de 52,027.43'
   },
   {
     min_amount: 72260.26,
     max_amount: null,
     rate_percent: 25,
     fixed_amount: 6648.00, // 79,776 / 12
-    description: 'RD$6,648.00 + 25% sobre excedente de RD$72,260.26'
+    description: '6,648.00 + 25% sobre excedente de 72,260.26'
   }
 ];
 
@@ -97,7 +97,7 @@ export interface ISRCalculationResult {
 
 /**
  * Calcula el ISR anual para una renta gravable dada
- * @param taxableIncome Renta gravable anual en RD$
+ * @param taxableIncome Renta gravable anual en 
  * @param brackets Tramos fiscales a usar (opcional, usa los por defecto de DGII)
  * @returns Resultado detallado del cálculo
  */
@@ -177,7 +177,7 @@ function calculateWithBracket(taxableIncome: number, bracket: ISRBracket): ISRCa
 /**
  * Calcula el ISR mensual para una renta gravable mensual
  * Útil para retención de nómina mensual
- * @param monthlyTaxableIncome Renta gravable mensual en RD$
+ * @param monthlyTaxableIncome Renta gravable mensual en 
  * @param brackets Tramos fiscales mensuales (opcional)
  * @returns ISR mensual a retener
  */
@@ -226,8 +226,8 @@ export function formatISRResult(result: ISRCalculationResult): string {
     return 'Exento de ISR';
   }
   
-  return `ISR Anual: RD$${result.totalISR.toLocaleString('es-DO', { minimumFractionDigits: 2 })} | ` +
-         `Retención Mensual: RD$${result.monthlyRetention.toLocaleString('es-DO', { minimumFractionDigits: 2 })} | ` +
+  return `ISR Anual: ${result.totalISR.toLocaleString('es-DO', { minimumFractionDigits: 2 })} | ` +
+         `Retención Mensual: ${result.monthlyRetention.toLocaleString('es-DO', { minimumFractionDigits: 2 })} | ` +
          `Tasa Efectiva: ${result.effectiveRate.toFixed(2)}%`;
 }
 

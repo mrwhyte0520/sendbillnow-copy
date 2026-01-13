@@ -399,7 +399,7 @@ export default function BankReconciliationPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Balance Libro</p>
                     <p className="text-xl font-bold text-gray-900">
-                      RD${balances.bookBalance.toLocaleString()}
+                      {balances.bookBalance.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -413,7 +413,7 @@ export default function BankReconciliationPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Balance Banco</p>
                     <p className="text-xl font-bold text-gray-900">
-                      RD${balances.bankBalance.toLocaleString()}
+                      {balances.bankBalance.toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -441,7 +441,7 @@ export default function BankReconciliationPage() {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Diferencia</p>
                     <p className={`text-xl font-bold ${Math.abs(balances.difference) < 0.01 ? 'text-green-600' : 'text-red-600'}`}>
-                      RD${Math.abs(balances.difference).toLocaleString()}
+                      {Math.abs(balances.difference).toLocaleString()}
                     </p>
                   </div>
                 </div>
@@ -502,7 +502,7 @@ export default function BankReconciliationPage() {
                           <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
                             item.amount >= 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            RD${Math.abs(item.amount).toLocaleString()}
+                            {Math.abs(item.amount).toLocaleString()}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -644,7 +644,7 @@ export default function BankReconciliationPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Monto (RD$)
+                        Monto ()
                       </label>
                       <input
                         type="number"
@@ -732,7 +732,7 @@ export default function BankReconciliationPage() {
                           <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${
                             item.amount >= 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            RD${Math.abs(item.amount).toLocaleString()}
+                            {Math.abs(item.amount).toLocaleString()}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

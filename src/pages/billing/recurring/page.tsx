@@ -278,7 +278,7 @@ export default function RecurringBillingPage() {
 
       await loadData();
       toast.dismiss(loadingId);
-      toast.success(`✅ Invoice generated: ${invoiceNumber}${taxAmount > 0 ? ` (includes ITBIS: RD$ ${taxAmount.toLocaleString()})` : ''}`);
+      toast.success(`✅ Invoice generated: ${invoiceNumber}${taxAmount > 0 ? ` (includes ITBIS:  ${taxAmount.toLocaleString()})` : ''}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating invoice for subscription:', error);
@@ -315,7 +315,7 @@ export default function RecurringBillingPage() {
 
       const total = customerInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
       toast.dismiss(loadingId);
-      toast.info(`Invoices for this customer/subscription: ${customerInvoices.length} | Total: RD$ ${total.toLocaleString()}`);
+      toast.info(`Invoices for this customer/subscription: ${customerInvoices.length} | Total:  ${total.toLocaleString()}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error loading invoices for subscription:', error);
@@ -407,7 +407,7 @@ export default function RecurringBillingPage() {
               <div>
                 <p className="text-sm font-medium text-[#6B6A5E]">Monthly Revenue</p>
                 <p className="text-3xl font-semibold text-[#2F3E2C] mt-1">
-                  RD$ {subscriptions
+                   {subscriptions
                     .filter(s => s.status === 'active' && s.frequency === 'monthly')
                     .reduce((sum, s) => sum + (Number(s.amount) || 0), 0)
                     .toLocaleString()}
@@ -549,7 +549,7 @@ export default function RecurringBillingPage() {
                       <div className="text-sm text-gray-900">{subscription.service_name}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="font-medium">RD$ {Number(subscription.amount || 0).toLocaleString()}</div>
+                      <div className="font-medium"> {Number(subscription.amount || 0).toLocaleString()}</div>
                       {subscription.apply_itbis !== false && (
                         <div className="text-xs text-green-600">
                           +ITBIS ({Number(subscription.itbis_rate) || 18}%)
@@ -779,7 +779,7 @@ export default function RecurringBillingPage() {
                   </div>
                   {applyItbis && amount !== '' && Number(amount) > 0 && (
                     <div className="mt-3 text-sm text-gray-600">
-                      <span className="font-medium">Preview:</span> Amount: RD$ {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%): RD$ {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900">RD$ {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
+                      <span className="font-medium">Preview:</span> Amount:  {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%):  {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900"> {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
                     </div>
                   )}
                 </div>

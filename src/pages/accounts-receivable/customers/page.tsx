@@ -201,8 +201,8 @@ export default function CustomersPage() {
       ['Metric', 'Value'],
       ['Total Customers', customers.length.toString()],
       ['Active Customers', activeCustomers.toString()],
-      ['Total Credit Limit', `RD$ ${totalCreditLimit.toLocaleString()}`],
-      ['Outstanding Balance', `RD$ ${totalBalance.toLocaleString()}`]
+      ['Total Credit Limit', ` ${totalCreditLimit.toLocaleString()}`],
+      ['Outstanding Balance', ` ${totalBalance.toLocaleString()}`]
     ];
     
     (doc as any).autoTable({
@@ -221,8 +221,8 @@ export default function CustomersPage() {
       customer.document,
       customer.phone,
       customer.email,
-      `RD$ ${customer.creditLimit.toLocaleString()}`,
-      `RD$ ${customer.currentBalance.toLocaleString()}`,
+      ` ${customer.creditLimit.toLocaleString()}`,
+      ` ${customer.currentBalance.toLocaleString()}`,
       getCustomerStatusName(customer.status)
     ]);
     
@@ -319,7 +319,7 @@ export default function CustomersPage() {
   };
 
   const handleCustomerStatement = (customer: Customer) => {
-    alert(`Statement for ${customer.name}:\n\nCurrent balance: RD$ ${customer.currentBalance.toLocaleString()}\nCredit limit: RD$ ${customer.creditLimit.toLocaleString()}`);
+    alert(`Statement for ${customer.name}:\n\nCurrent balance:  ${customer.currentBalance.toLocaleString()}\nCredit limit:  ${customer.creditLimit.toLocaleString()}`);
   };
 
   const handleCustomerTypeSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -516,10 +516,10 @@ export default function CustomersPage() {
                         {rep ? rep.name : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        RD${customer.creditLimit.toLocaleString()}
+                        {customer.creditLimit.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        RD${customer.currentBalance.toLocaleString()}
+                        {customer.currentBalance.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(customer.status)}`}>
@@ -967,14 +967,14 @@ export default function CustomersPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Credit limit</label>
                     <p className="text-lg font-semibold text-[#2f3e1e]">
-                      RD${selectedCustomer.creditLimit.toLocaleString()}
+                      {selectedCustomer.creditLimit.toLocaleString()}
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Current balance</label>
                     <p className="text-lg font-semibold text-[#6b4a2b]">
-                      RD${selectedCustomer.currentBalance.toLocaleString()}
+                      {selectedCustomer.currentBalance.toLocaleString()}
                     </p>
                   </div>
 

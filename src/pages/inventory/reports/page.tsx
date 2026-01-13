@@ -351,10 +351,10 @@ export default function InventoryExistenceReportPage() {
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{row.category || '-'}</td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">{row.quantity}</td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-900">
-                        RD${row.unitCost.toLocaleString()}
+                        {row.unitCost.toLocaleString()}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-right font-medium text-gray-900">
-                        RD${row.totalValue.toLocaleString()}
+                        {row.totalValue.toLocaleString()}
                       </td>
                     </tr>
                   ))}

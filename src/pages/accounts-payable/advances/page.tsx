@@ -408,9 +408,9 @@ export default function AdvancesPage() {
             <div class="totals">
               <div class="totals-head">Resumen</div>
               <div class="totals-body">
-                <div class="totals-row"><div class="label">Monto</div><div class="value">RD$ ${formatMoney(advance.amount, '')}</div></div>
-                <div class="totals-row"><div class="label">Aplicado</div><div class="value">RD$ ${formatMoney(advance.appliedAmount, '')}</div></div>
-                <div class="totals-row total"><div class="label">Balance</div><div class="value">RD$ ${formatMoney(advance.remainingBalance, '')}</div></div>
+                <div class="totals-row"><div class="label">Monto</div><div class="value"> ${formatMoney(advance.amount, '')}</div></div>
+                <div class="totals-row"><div class="label">Aplicado</div><div class="value"> ${formatMoney(advance.appliedAmount, '')}</div></div>
+                <div class="totals-row total"><div class="label">Balance</div><div class="value"> ${formatMoney(advance.remainingBalance, '')}</div></div>
               </div>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default function AdvancesPage() {
   const handleApply = async (id: string) => {
     const advance = advances.find(a => a.id === id);
     if (!advance) return;
-    if (!confirm(`Apply the remaining RD$ ${advance.remainingBalance.toLocaleString()} for this advance?`)) return;
+    if (!confirm(`Apply the remaining  ${advance.remainingBalance.toLocaleString()} for this advance?`)) return;
     try {
       const newApplied = advance.appliedAmount + advance.remainingBalance;
       const newBalance = 0;
@@ -609,7 +609,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Total Advances</p>
                 <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
-                  RD$ {advances.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                   {advances.reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -622,7 +622,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Pending</p>
                 <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
-                  RD$ {advances.filter(a => a.status === 'Pending').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                   {advances.filter(a => a.status === 'Pending').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -635,7 +635,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Approved</p>
                 <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
-                  RD$ {advances.filter(a => a.status === 'Approved').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
+                   {advances.filter(a => a.status === 'Approved').reduce((sum, a) => sum + a.amount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -648,7 +648,7 @@ export default function AdvancesPage() {
               <div>
                 <p className="text-sm font-medium" style={{ color: palette.greenSoft }}>Outstanding Balance</p>
                 <p className="text-2xl font-bold" style={{ color: palette.greenDark }}>
-                  RD$ {advances.reduce((sum, a) => sum + a.remainingBalance, 0).toLocaleString()}
+                   {advances.reduce((sum, a) => sum + a.remainingBalance, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -718,10 +718,10 @@ export default function AdvancesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                      RD$ {advance.amount.toLocaleString()}
+                       {advance.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
-                      RD$ {advance.remainingBalance.toLocaleString()}
+                       {advance.remainingBalance.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advance.dueDate}</td>
                     <td className="px-6 py-4 whitespace-nowrap">

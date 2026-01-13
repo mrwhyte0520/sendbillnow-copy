@@ -152,8 +152,8 @@ export default function BankDepositsPage() {
           alert(
             `❌ Saldo insuficiente en cuenta de origen\n\n` +
             `Cuenta: ${originAcct.code} - ${originAcct.name}\n` +
-            `Saldo disponible: RD$${formatAmount(saldoDisponible)}\n` +
-            `Monto a depositar: RD$${formatAmount(montoNumber)}\n\n` +
+            `Saldo disponible: ${formatAmount(saldoDisponible)}\n` +
+            `Monto a depositar: ${formatAmount(montoNumber)}\n\n` +
             `No puede depositar más dinero del que tiene disponible.`
           );
           return;

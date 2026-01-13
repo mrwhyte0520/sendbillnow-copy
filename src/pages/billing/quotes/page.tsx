@@ -746,7 +746,7 @@ export default function QuotesPage() {
         project: quote.project || 'Sin proyecto',
         date: new Date(quote.date).toLocaleDateString('es-DO'),
         validUntil: new Date(quote.validUntil).toLocaleDateString('es-DO'),
-        total: `${getCurrencyPrefix(quote.currency, { forTotals: true }) ? `${getCurrencyPrefix(quote.currency, { forTotals: true })} ` : ''}${formatAmount(quote.total)}`,
+        total: formatAmount(quote.total),
         status: getStatusText(quote.status),
         probability: `${quote.probability}%`
       }));
@@ -867,9 +867,9 @@ export default function QuotesPage() {
           <tr>
             <td>${idx + 1}</td>
             <td>${item.description}</td>
-            <td class="num">${getCurrencyPrefix(quote.currency) ? `${getCurrencyPrefix(quote.currency)} ` : ''}${formatAmount(item.price)}</td>
+            <td class="num">${formatAmount(item.price)}</td>
             <td class="num">${item.quantity}</td>
-            <td class="num">${getCurrencyPrefix(quote.currency) ? `${getCurrencyPrefix(quote.currency)} ` : ''}${formatAmount(item.total)}</td>
+            <td class="num">${formatAmount(item.total)}</td>
           </tr>`
       )
       .join('');
@@ -974,11 +974,11 @@ export default function QuotesPage() {
               <div class="totals">
                 <div class="totals-head">Resumen</div>
                 <div class="totals-body">
-                  <div class="totals-row"><div class="label">Subtotal</div><div class="value">${getCurrencyPrefix(quote.currency, { forTotals: true }) ? `${getCurrencyPrefix(quote.currency, { forTotals: true })} ` : ''}${formatAmount(quote.amount)}</div></div>
-                  <div class="totals-row"><div class="label">Descuento</div><div class="value">- ${getCurrencyPrefix(quote.currency) ? `${getCurrencyPrefix(quote.currency)} ` : ''}${formatAmount(quote.total - quote.amount)}</div></div>
-                  <div class="totals-row"><div class="label">ITBIS (18%):</div><div class="value">${getCurrencyPrefix(quote.currency) ? `${getCurrencyPrefix(quote.currency)} ` : ''}${formatAmount(quote.tax)}</div></div>
-                  <div class="totals-row"><div class="label">Impuestos</div><div class="value">${getCurrencyPrefix(quote.currency) ? `${getCurrencyPrefix(quote.currency)} ` : ''}${formatAmount(quote.tax)}</div></div>
-                  <div class="totals-row total"><div class="label">Total</div><div class="value">${getCurrencyPrefix(quote.currency, { forTotals: true }) ? `${getCurrencyPrefix(quote.currency, { forTotals: true })} ` : ''}${formatAmount(quote.total)}</div></div>
+                  <div class="totals-row"><div class="label">Subtotal</div><div class="value">${formatAmount(quote.amount)}</div></div>
+                  <div class="totals-row"><div class="label">Descuento</div><div class="value">- ${formatAmount(quote.total - quote.amount)}</div></div>
+                  <div class="totals-row"><div class="label">ITBIS (18%):</div><div class="value">${formatAmount(quote.tax)}</div></div>
+                  <div class="totals-row"><div class="label">Impuestos</div><div class="value">${formatAmount(quote.tax)}</div></div>
+                  <div class="totals-row total"><div class="label">Total</div><div class="value">${formatAmount(quote.total)}</div></div>
                 </div>
               </div>
             </div>
@@ -1517,7 +1517,7 @@ export default function QuotesPage() {
 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {`${getCurrencyPrefix(quote.currency, { forTotals: true }) ? `${getCurrencyPrefix(quote.currency, { forTotals: true })} ` : ''}${formatAmount(quote.total)}`}
+                      {formatAmount(quote.total)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`text-sm font-medium ${getProbabilityColor(quote.probability)}`}>
@@ -1654,23 +1654,23 @@ export default function QuotesPage() {
                         <tr key={idx} className="border-t border-gray-100">
                           <td className="px-4 py-2">{item.description}</td>
                           <td className="px-4 py-2">{item.quantity}</td>
-                          <td className="px-4 py-2">{`${getCurrencyPrefix(viewQuote.currency) ? `${getCurrencyPrefix(viewQuote.currency)} ` : ''}${formatAmount(item.price)}`}</td>
-                          <td className="px-4 py-2">{`${getCurrencyPrefix(viewQuote.currency) ? `${getCurrencyPrefix(viewQuote.currency)} ` : ''}${formatAmount(item.total)}`}</td>
+                          <td className="px-4 py-2">{formatAmount(item.price)}</td>
+                          <td className="px-4 py-2">{formatAmount(item.total)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
                         <td colSpan={3} className="px-4 py-2 text-right font-medium">Subtotal:</td>
-                        <td className="px-4 py-2 font-semibold">{`${getCurrencyPrefix(viewQuote.currency, { forTotals: true }) ? `${getCurrencyPrefix(viewQuote.currency, { forTotals: true })} ` : ''}${formatAmount(viewQuote.amount)}`}</td>
+                        <td className="px-4 py-2 font-semibold">{formatAmount(viewQuote.amount)}</td>
                       </tr>
                       <tr>
                         <td colSpan={3} className="px-4 py-2 text-right font-medium">Impuestos:</td>
-                        <td className="px-4 py-2 font-semibold">{`${getCurrencyPrefix(viewQuote.currency) ? `${getCurrencyPrefix(viewQuote.currency)} ` : ''}${formatAmount(viewQuote.tax)}`}</td>
+                        <td className="px-4 py-2 font-semibold">{formatAmount(viewQuote.tax)}</td>
                       </tr>
                       <tr>
                         <td colSpan={3} className="px-4 py-2 text-right font-semibold">Total:</td>
-                        <td className="px-4 py-2 font-bold">{`${getCurrencyPrefix(viewQuote.currency, { forTotals: true }) ? `${getCurrencyPrefix(viewQuote.currency, { forTotals: true })} ` : ''}${formatAmount(viewQuote.total)}`}</td>
+                        <td className="px-4 py-2 font-bold">{formatAmount(viewQuote.total)}</td>
                       </tr>
                     </tfoot>
                   </table>

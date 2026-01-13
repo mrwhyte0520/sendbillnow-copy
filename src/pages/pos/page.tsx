@@ -8,7 +8,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
 import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService } from '../../services/database';
 import { exportToExcelStyled } from '../../utils/exportImportUtils';
-import { formatAmount } from '../../utils/numberFormat';
+import { formatAmount, formatMoney } from '../../utils/numberFormat';
 
 interface Product {
   id: string;
@@ -27,9 +27,16 @@ interface Product {
   status: 'active' | 'inactive';
 }
 
+interface CartItemExtra {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface CartItem extends Product {
   quantity: number;
   total: number;
+  extras?: CartItemExtra[];
 }
 
 interface Customer {
@@ -101,6 +108,42 @@ export default function POSPage() {
   const [savingCashClosing, setSavingCashClosing] = useState(false);
   const [taxConfig, setTaxConfig] = useState<{ itbis_rate: number } | null>(null);
 
+  // View mode: 'simple' | 'normal' | 'custom'
+  const [viewMode, setViewMode] = useState<'simple' | 'normal' | 'custom'>('normal');
+  
+  // Modal for product details (Simple mode)
+  const [showProductDetailModal, setShowProductDetailModal] = useState(false);
+  const [selectedProductDetail, setSelectedProductDetail] = useState<Product | null>(null);
+  const [simpleAddQuantity, setSimpleAddQuantity] = useState(1);
+  
+  // Modal for product customization (Custom mode)
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const [customizeProduct, setCustomizeProduct] = useState<Product | null>(null);
+  const [customizeQuantity, setCustomizeQuantity] = useState(1);
+  const [productExtras, setProductExtras] = useState<{ name: string; price: number; quantity: number }[]>([]);
+
+  // Modal for configuring which products can be extras (Modelo)
+  const [showModeloModal, setShowModeloModal] = useState(false);
+  const [availableExtras, setAvailableExtras] = useState<string[]>([]); // IDs of products that can be extras
+
+  // Load available extras from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('pos_available_extras');
+      if (saved) {
+        setAvailableExtras(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+  // Save available extras to localStorage when changed
+  const saveAvailableExtras = (extras: string[]) => {
+    setAvailableExtras(extras);
+    try {
+      localStorage.setItem('pos_available_extras', JSON.stringify(extras));
+    } catch {}
+  };
+
   const currentItbisRate = taxConfig?.itbis_rate ?? 18;
   
   // Paginación
@@ -130,6 +173,8 @@ export default function POSPage() {
     if (digits.length <= 6) return `${digits.slice(0,3)}-${digits.slice(3)}`;
     return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
   };
+
+  const money = (value: number | string | null | undefined) => formatMoney(value);
 
   const formatAmountInput = (raw: string): string => {
     const cleaned = String(raw ?? '').replace(/\s+/g, '');
@@ -509,7 +554,20 @@ export default function POSPage() {
 
   // categories now managed via state from real data
 
+  // For POS grid: exclude extras (they only appear as add-ons in Custom mode)
   const filteredProducts = products.filter(product => {
+    const isExtra = availableExtras.includes(product.id);
+    if (isExtra) return false;
+    
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.barcode.includes(searchTerm) ||
+                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  // For Inventory view: show ALL products including extras
+  const filteredProductsForInventory = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.barcode.includes(searchTerm) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
@@ -528,30 +586,35 @@ export default function POSPage() {
     setCurrentPage(1);
   }, [searchTerm, selectedCategory]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, quantity: number = 1) => {
     // Validar que haya stock disponible
     if (product.stock <= 0) {
       toast.error(`No stock available for "${product.name}"`);
       return;
     }
 
-    const existingItem = cart.find(item => item.id === product.id);
-    
-    if (existingItem) {
-      // Verificar que no se exceda el stock
-      if (existingItem.quantity < product.stock) {
-        setCart(cart.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
-            : item
-        ));
-      } else {
+    const requestedQty = Math.max(1, Math.floor(Number(quantity) || 1));
+
+    setCart((prev) => {
+      const existingItem = prev.find(item => item.id === product.id);
+      const currentQty = existingItem?.quantity ?? 0;
+      const allowedToAdd = Math.max(0, Math.min(requestedQty, product.stock - currentQty));
+
+      if (allowedToAdd <= 0) {
         toast.warning(`Maximum stock reached for "${product.name}" (${product.stock} available)`);
+        return prev;
       }
-    } else {
-      // Add new product to cart
-      setCart([...cart, { ...product, quantity: 1, total: product.price }]);
-    }
+
+      if (existingItem) {
+        return prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + allowedToAdd, total: (item.quantity + allowedToAdd) * item.price }
+            : item
+        );
+      }
+
+      return [...prev, { ...product, quantity: allowedToAdd, total: allowedToAdd * product.price }];
+    });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -735,16 +798,37 @@ export default function POSPage() {
           // Enlazar líneas de factura con ítems de inventario cuando el id sea un UUID válido.
           // Esto permite que invoicesService.create calcule el Costo de Ventas (COGS) y
           // genere el asiento contable Costo de Ventas vs Inventario.
-          const linesPayload = newSale.items.map((item) => {
+          const linesPayload: { description: string; quantity: number; unit_price: number; line_total: number; item_id: string | null }[] = [];
+          
+          for (const item of newSale.items) {
             const itemId = isUuid(item.id) ? item.id : null;
-            return {
+            
+            // Add main product line
+            linesPayload.push({
               description: item.name,
               quantity: item.quantity,
               unit_price: item.price,
-              line_total: item.total,
+              line_total: item.price * item.quantity,
               item_id: itemId,
-            };
-          });
+            });
+            
+            // Add extras as separate lines (indented with arrow to show they're add-ons)
+            if (item.extras && item.extras.length > 0) {
+              for (const extra of item.extras) {
+                // Find the extra product to get its ID for inventory tracking
+                const extraProduct = products.find(p => p.name === extra.name);
+                const extraItemId = extraProduct && isUuid(extraProduct.id) ? extraProduct.id : null;
+                
+                linesPayload.push({
+                  description: `  ↳ ${extra.name} (extra)`,
+                  quantity: extra.quantity,
+                  unit_price: extra.price,
+                  line_total: extra.price * extra.quantity,
+                  item_id: extraItemId,
+                });
+              }
+            }
+          }
 
           const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
 
@@ -825,7 +909,7 @@ export default function POSPage() {
         }
       }
       
-      alert(`Sale processed successfully. ${paymentMethod === 'cash' ? `Change: RD$${formatAmount(received - total)}` : ''}`);
+      alert(`Sale processed successfully. ${paymentMethod === 'cash' ? `Change: ${money(received - total)}` : ''}`);
       setCart([]);
       setSelectedCustomer(null);
       setAmountReceived('');
@@ -1041,7 +1125,7 @@ export default function POSPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Revenue Today</p>
-                <p className="text-2xl font-bold text-[#2f3e1e]">RD${formatAmount(todayStats.totalAmount)}</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{money(todayStats.totalAmount)}</p>
               </div>
             </div>
           </div>
@@ -1115,7 +1199,7 @@ export default function POSPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold text-[#2f3e1e]">{product.quantity} units</div>
-                    <div className="text-xs text-[#6b5c3b]">RD${formatAmount(product.revenue)}</div>
+                    <div className="text-xs text-[#6b5c3b]">{money(product.revenue)}</div>
                   </div>
                 </div>
               ))}
@@ -1146,16 +1230,19 @@ export default function POSPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {sale.customer?.name || 'General Customer'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD${formatAmount(sale.total)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{money(sale.total)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{sale.paymentMethod}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        sale.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        sale.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {sale.status === 'completed' ? 'Completed' : 
-                         sale.status === 'cancelled' ? 'Cancelled' : 'Refunded'}
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full capitalize ${
+                          sale.status === 'completed'
+                            ? 'bg-[#dff3df] text-[#0b3f0b]'
+                            : sale.status === 'cancelled'
+                              ? 'bg-[#fde4e0] text-[#7a2010]'
+                              : 'bg-[#fff4d4] text-[#7a5b00]'
+                        }`}
+                      >
+                        {sale.status ?? 'pending'}
                       </span>
                     </td>
                   </tr>
@@ -1175,120 +1262,230 @@ export default function POSPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Products</h2>
-            <button
-              type="button"
-              onClick={() => setCartOpen(prev => !prev)}
-              className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
-            >
-              <i className="ri-shopping-cart-line mr-2"></i>
-              {cartOpen ? 'Hide cart' : 'Show cart'}
-            </button>
+            <div className="flex items-center gap-2">
+              {/* View Mode Selector */}
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value as 'simple' | 'normal' | 'custom')}
+                className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 focus:ring-2 focus:ring-[#008000] focus:border-[#008000]"
+              >
+                <option value="simple">Simple</option>
+                <option value="normal">Normal</option>
+                <option value="custom">Custom</option>
+              </select>
+              {/* Modelo Button - Configure extras for Custom mode */}
+              <button
+                type="button"
+                onClick={() => setShowModeloModal(true)}
+                className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              >
+                <i className="ri-settings-3-line mr-2"></i>
+                Modelo
+              </button>
+              <button
+                type="button"
+                onClick={() => setCartOpen(prev => !prev)}
+                className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              >
+                <i className="ri-shopping-cart-line mr-2"></i>
+                {cartOpen ? 'Hide cart' : 'Show cart'}
+              </button>
+            </div>
           </div>
           
-          {/* Search and Filters */}
-          <div className="flex space-x-4 mb-4">
-            <div className="flex-1 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i className="ri-search-line text-gray-400"></i>
-              </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                placeholder="Search products..."
-              />
+          {/* Search */}
+          <div className="relative mb-4">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i className="ri-search-line text-gray-400"></i>
             </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm pr-8"
-            >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category === 'all' ? 'All categories' : category}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-[#008000] text-sm"
+              placeholder="Search products..."
+            />
+          </div>
+
+          {/* Categories */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {categories.map(category => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-[#008000] text-white'
+                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {category === 'all' ? 'All categories' : category}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-          {paginatedProducts.map((product) => (
-            <div
-              key={product.id}
-              className={`relative bg-white rounded-xl shadow-sm border p-4 transition-all flex flex-col h-full overflow-hidden ${
-                product.stock <= 0
-                  ? 'border-gray-300 opacity-60 cursor-not-allowed'
-                  : 'border-gray-200 hover:shadow-md cursor-pointer'
-              }`}
-              onClick={() => addToCart(product)}
-            >
-              {/* Badge "Sin Stock" */}
-              {product.stock <= 0 && (
-                <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md z-10">
-                  OUT OF STOCK
+        {/* Products Grid - Conditional based on viewMode */}
+        {viewMode === 'simple' ? (
+          /* SIMPLE VIEW: Just name and price buttons like POS terminals */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 mb-6">
+            {paginatedProducts.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                disabled={product.stock <= 0}
+                onClick={() => {
+                  setSelectedProductDetail(product);
+                  setSimpleAddQuantity(1);
+                  setShowProductDetailModal(true);
+                }}
+                className={`p-3 rounded-lg text-center transition-all ${
+                  product.stock <= 0
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-[#008000] text-white hover:bg-[#006600] active:scale-95'
+                }`}
+              >
+                <div className="font-semibold text-sm truncate">{product.name}</div>
+                <div className="text-xs mt-1 opacity-90">{money(product.price)}</div>
+              </button>
+            ))}
+          </div>
+        ) : viewMode === 'custom' ? (
+          /* CUSTOM VIEW: Like Normal but clicking opens customization panel */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
+            {paginatedProducts.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => {
+                  if (product.stock > 0) {
+                    setCustomizeProduct(product);
+                    setCustomizeQuantity(1);
+                    setProductExtras([]);
+                    setShowCustomizeModal(true);
+                  }
+                }}
+                className={`bg-white rounded-xl shadow-sm border p-3 transition-all overflow-hidden cursor-pointer ${
+                  product.stock <= 0
+                    ? 'border-gray-300 opacity-60 cursor-not-allowed'
+                    : 'border-gray-200 hover:shadow-md hover:border-[#008000]'
+                }`}
+              >
+                <div className="flex items-stretch gap-3">
+                  <div className="min-w-0 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-600 truncate">{product.category || ''}</p>
+                        <h3 className="font-semibold text-gray-900 text-sm leading-5 truncate">{product.name}</h3>
+                        {product.sku && (
+                          <p className="text-[11px] text-gray-400 truncate">{product.sku}</p>
+                        )}
+                      </div>
+                      {product.stock <= 0 ? (
+                        <span className="shrink-0 rounded-full bg-red-50 text-red-700 px-2 py-0.5 text-[11px] font-medium">
+                          Out
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-medium">
+                          Stock: {product.stock}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-auto pt-3 flex items-center justify-between gap-2">
+                      <span className="text-base font-extrabold text-[#008000] whitespace-nowrap">
+                        {money(product.price)}
+                      </span>
+                      <span className="text-xs text-gray-500">Click to customize</span>
+                    </div>
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNTAgMTAwQzE2MS4wNDYgMTAwIDE3MCA5MC45NTQzIDE3MCA4MEM1NyA2OS4wNDU3IDE0Ny45NTQgNjAgMTM2IDYwQzEyNC45NTQgNjAgMTE2IDY5LjA0NTcgMTE2IDgwQzExNiA5MC45NTQzIDEyNC45NTQgMTAwIDEzNiAxMDBIMTUwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTg2IDEyMEgxMTRDMTA3LjM3MyAxMjAgMTAyIDEyNS4zNzMgMTAyIDEzMlYyMDBDMTAyIDIwNi4yMjcgMTA3LjM3MyAyMTIgMTE0IDIxMkgxODZDMTkyLjYyNyAyMTIgMTk4IDIwNi4yMjJgMTk0IDIwMFYxMzJDMTk0IDEyNS4zNzMgMTkyLjYyNyAxMjAgMTg2IDEyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                        }}
+                      />
+                    ) : (
+                      <i className="ri-image-line text-gray-400 text-2xl" />
+                    )}
+                  </div>
                 </div>
-              )}
-
-              {/* Imagen */}
-              <div className="w-full h-32 mb-2 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
-                {product.imageUrl && (
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="max-h-full w-auto object-contain"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNTAgMTAwQzE2MS4wNDYgMTAwIDE3MCA5MC45NTQzIDE3MCA4MEM1NyA2OS4wNDU3IDE0Ny45NTQgNjAgMTM2IDYwQzEyNC45NTQgNjAgMTE2IDY5LjA0NTcgMTE2IDgwQzExNiA5MC45NTQzIDEyNC45NTQgMTAwIDEzNiAxMDBIMTUwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTg2IDEyMEgxMTRDMTA3LjM3MyAxMjAgMTAyIDEyNS4zNzMgMTAyIDEzMlYyMDBDMTAyIDIwNi4yMjcgMTA3LjM3MyAyMTIgMTE0IDIxMkgxODZDMTkyLjYyNyAyMTIgMTk4IDIwNi4yMjJgMTk0IDIwMFYxMzJDMTk0IDEyNS4zNzMgMTkyLjYyNyAxMjAgMTg2IDEyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
-                    }}
-                  />
-                )}
               </div>
-
-              {/* Categoría + Stock */}
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] uppercase tracking-wide text-gray-400 truncate max-w-[60%]">
-                  {product.category}
-                </span>
-                <span
-                  className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                    product.stock > 10
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : product.stock > 0
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}
-                >
-                  Stock: {product.stock}
-                </span>
+            ))}
+          </div>
+        ) : (
+          /* NORMAL VIEW: Current design with + button */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
+            {paginatedProducts.map((product) => (
+              <div
+                key={product.id}
+                className={`bg-white rounded-xl shadow-sm border p-3 transition-all overflow-hidden ${
+                  product.stock <= 0
+                    ? 'border-gray-300 opacity-60'
+                    : 'border-gray-200 hover:shadow-md'
+                }`}
+              >
+                <div className="flex items-stretch gap-3">
+                  <div className="min-w-0 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-600 truncate">{product.category || ''}</p>
+                        <h3 className="font-semibold text-gray-900 text-sm leading-5 truncate">{product.name}</h3>
+                        {product.sku && (
+                          <p className="text-[11px] text-gray-400 truncate">{product.sku}</p>
+                        )}
+                      </div>
+                      {product.stock <= 0 ? (
+                        <span className="shrink-0 rounded-full bg-red-50 text-red-700 px-2 py-0.5 text-[11px] font-medium">
+                          Out
+                        </span>
+                      ) : (
+                        <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-medium">
+                          Stock: {product.stock}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-auto pt-3 flex items-center justify-between gap-2">
+                      <span className="text-base font-extrabold text-[#008000] whitespace-nowrap">
+                        {money(product.price)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={product.stock <= 0}
+                        onClick={() => addToCart(product)}
+                        className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-bold transition-colors ${
+                          product.stock <= 0
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#008000] text-white hover:bg-[#006600]'
+                        }`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNTAgMTAwQzE2MS4wNDYgMTAwIDE3MCA5MC45NTQzIDE3MCA4MEM1NyA2OS4wNDU3IDE0Ny45NTQgNjAgMTM2IDYwQzEyNC45NTQgNjAgMTE2IDY5LjA0NTcgMTE2IDgwQzExNiA5MC45NTQzIDEyNC45NTQgMTAwIDEzNiAxMDBIMTUwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTg2IDEyMEgxMTRDMTA3LjM3MyAxMjAgMTAyIDEyNS4zNzMgMTAyIDEzMlYyMDBDMTAyIDIwNi4yMjcgMTA3LjM3MyAyMTIgMTE0IDIxMkgxODZDMTkyLjYyNyAyMTIgMTk4IDIwNi4yMjJgMTk0IDIwMFYxMzJDMTk0IDEyNS4zNzMgMTkyLjYyNyAxMjAgMTg2IDEyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                        }}
+                      />
+                    ) : (
+                      <i className="ri-image-line text-gray-400 text-2xl" />
+                    )}
+                  </div>
+                </div>
               </div>
-
-              {/* Nombre */}
-              <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 min-h-[2.5rem]">
-                {product.name}
-              </h3>
-
-              {/* Precio + botón agregar */}
-              <div className="mt-auto flex items-center justify-between pt-2">
-                <span className="text-base font-extrabold text-[#008000] max-w-[70%] truncate leading-tight">
-                  RD${formatAmount(product.price)}
-                </span>
-                <button
-                  disabled={product.stock <= 0}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm flex-shrink-0 ${
-                    product.stock <= 0
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-[#008000] text-white hover:bg-[#006600]'
-                  }`}
-                >
-                  <i className="ri-add-line text-sm"></i>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Controles de Paginación */}
         {totalPages > 1 && (
@@ -1449,63 +1646,87 @@ export default function POSPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {cart.map((item) => (
-                  <div key={item.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3 flex-shrink-0">
-                      {item.imageUrl && (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-cover object-top"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAyMEMyNi4yMDkxIDIwIDI4IDE4LjIwOTEgMjggMTZDMjggMTMuNzkwOSAyNi4yMDkxIDEyIDI0IDEyQzIxLjc5MDkgMTIgMjAgMTMuNzkwOSAyMCAxNkMyMCAxOC4yMDkxIDIxLjc5MDkgMjAgMjQgMjBaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0zMiAyNEgxNkMxNC44OTU0IDI0IDE0IDI0Ljg5NTQgMTQgMjZWMzRDMTQgMzUuMTA0NiAxNC44OTU0IDM2IDE2IDM2SDMyQzMzLjEwNDYgMzYgMzQgMzUuMTA0NiAzNCAzNFYyNkMzNCAyNC44OTU0IDMzLjEwNDYgMjQgMzIgMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
-                          }}
-                        />
-                      )}
-                    </div>
+                {cart.map((item, index) => (
+                  <div key={`${item.id}-${index}`} className="bg-gray-50 rounded-lg overflow-hidden">
+                    <div className="flex items-center p-3">
+                      <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3 flex-shrink-0">
+                        {item.imageUrl && (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-full h-full object-cover object-top"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAyMEMyNi4yMDkxIDIwIDI4IDE4LjIwOTEgMjggMTZDMjggMTMuNzkwOSAyNi4yMDkxIDEyIDI0IDEyQzIxLjc5MDkgMTIgMjAgMTMuNzkwOSAyMCAxNkMyMCAxOC4yMDkxIDIxLjc5MDkgMjAgMjQgMjBaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0zMiAyNEgxNkMxNC44OTU0IDI0IDE0IDI0Ljg5NTQgMTQgMjZWMzRDMTQgMzUuMTA0NiAxNC44OTU0IDM2IDE2IDM2SDMyQzMzLjEwNDYgMzYgMzQgMzUuMTA0NiAzNCAzNFYyNkMzNCAyNC44OTU0IDMzLjEwNDYgMjQgMzIgMjRaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
+                            }}
+                          />
+                        )}
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 text-sm truncate">{item.name}</h4>
-                      <p className="text-xs text-gray-500">RD${formatAmount(item.price)} c/u</p>
-                      <p className="text-sm font-semibold text-gray-900">RD${formatAmount(item.total)}</p>
-                      <p className={`text-xs mt-0.5 ${
-                        item.quantity >= item.stock
-                          ? 'text-red-600 font-medium'
-                          : item.stock - item.quantity <= 3
-                          ? 'text-amber-600'
-                          : 'text-gray-400'
-                      }`}>
-                        Available stock: {item.stock - item.quantity}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center space-x-2 ml-3">
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
-                      >
-                        <i className="ri-subtract-line text-xs"></i>
-                      </button>
-                      <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        disabled={item.quantity >= item.stock}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-gray-900 text-sm truncate">{item.name}</h4>
+                        <p className="text-xs text-gray-500">{money(item.price)} c/u</p>
+                        <p className="text-sm font-semibold text-gray-900">{money(item.total)}</p>
+                        <p className={`text-xs mt-0.5 ${
                           item.quantity >= item.stock
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                        }`}
-                      >
-                        <i className="ri-add-line text-xs"></i>
-                      </button>
-                      <button
-                        onClick={() => removeFromCart(item.id)}
-                        className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
-                      >
-                        <i className="ri-delete-bin-line text-xs"></i>
-                      </button>
+                            ? 'text-red-600 font-medium'
+                            : item.stock - item.quantity <= 3
+                            ? 'text-amber-600'
+                            : 'text-gray-400'
+                        }`}>
+                          Available stock: {item.stock - item.quantity}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 ml-3">
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                        >
+                          <i className="ri-subtract-line text-xs"></i>
+                        </button>
+                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          disabled={item.quantity >= item.stock}
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                            item.quantity >= item.stock
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          }`}
+                        >
+                          <i className="ri-add-line text-xs"></i>
+                        </button>
+                        <button
+                          onClick={() => removeFromCart(item.id)}
+                          className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
+                        >
+                          <i className="ri-delete-bin-line text-xs"></i>
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Extras/Complementarios */}
+                    {item.extras && item.extras.length > 0 && (
+                      <div className="px-3 pb-3 pt-1 border-t border-gray-200 bg-blue-50">
+                        <p className="text-xs font-medium text-blue-700 mb-1">
+                          <i className="ri-add-circle-line mr-1"></i>
+                          Extras:
+                        </p>
+                        <div className="space-y-1">
+                          {item.extras.map((extra, extraIndex) => (
+                            <div key={extraIndex} className="flex items-center justify-between text-xs">
+                              <span className="text-gray-700">
+                                {extra.quantity}x {extra.name}
+                              </span>
+                              <span className="text-[#008000] font-medium">
+                                +{money(extra.price * extra.quantity)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1598,15 +1819,15 @@ export default function POSPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>RD${formatAmount(getSubtotal())}</span>
+                  <span>{money(getSubtotal())}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>ITBIS (18%):</span>
-                  <span>RD${formatAmount(getTax())}</span>
+                  <span>{money(getTax())}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span>RD${formatAmount(getTotal())}</span>
+                  <span>{money(getTotal())}</span>
                 </div>
               </div>
               
@@ -1692,11 +1913,14 @@ export default function POSPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProducts.map((product) => (
+              {filteredProductsForInventory.map((product) => (
                 <tr key={product.id}>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">{product.sku}</td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 truncate max-w-xs">
                     {product.name}
+                    {availableExtras.includes(product.id) && (
+                      <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">Extra</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                     {product.category || 'N/A'}
@@ -1705,7 +1929,7 @@ export default function POSPage() {
                     {product.stock}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900 text-right">
-                    RD${formatAmount(product.price)}
+                    {money(product.price)}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-sm text-center">
                     <span
@@ -1847,7 +2071,7 @@ export default function POSPage() {
           <div className="flex space-x-3">
             <button
               onClick={handleExportCashClosing}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+              className="px-4 py-2 bg-[#008000] text-white rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
               disabled={todaySales.length === 0}
             >
               <i className="ri-file-excel-2-line mr-2" />
@@ -1873,19 +2097,19 @@ export default function POSPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Total in sales:</span>
-                <span className="font-medium">RD${formatAmount(totalSalesAmount)}</span>
+                <span className="font-medium">{money(totalSalesAmount)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Expected cash in drawer:</span>
-                <span className="font-medium">RD${formatAmount(totalCash)}</span>
+                <span className="font-medium">{money(totalCash)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Cards:</span>
-                <span className="font-medium">RD${formatAmount(totalCard)}</span>
+                <span className="font-medium">{money(totalCard)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Transfers:</span>
-                <span className="font-medium">RD${formatAmount(totalTransfer)}</span>
+                <span className="font-medium">{money(totalTransfer)}</span>
               </div>
             </div>
           </div>
@@ -1914,7 +2138,7 @@ export default function POSPage() {
                     return (
                       <tr key={row.value}>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">
-                          RD${formatAmount(row.value)}
+                          {money(row.value)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-right">
                           <input
@@ -1926,7 +2150,7 @@ export default function POSPage() {
                           />
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-right text-gray-900">
-                          RD${formatAmount(rowTotal)}
+                          {money(rowTotal)}
                         </td>
                       </tr>
                     );
@@ -1938,7 +2162,7 @@ export default function POSPage() {
                       Total counted cash
                     </td>
                     <td className="px-4 py-2 text-right font-semibold text-gray-900">
-                      RD${formatAmount(countedCash)}
+                      {money(countedCash)}
                     </td>
                   </tr>
                   <tr>
@@ -1954,7 +2178,7 @@ export default function POSPage() {
                           : 'text-red-600'
                       }`}
                     >
-                      RD${formatAmount(cashDifference)}
+                      {money(cashDifference)}
                     </td>
                   </tr>
                 </tfoot>
@@ -1999,7 +2223,7 @@ export default function POSPage() {
                       {sale.customer?.name || 'General Customer'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                      RD${formatAmount(sale.total)}
+                      {money(sale.total)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
                       {sale.paymentMethod === 'cash'
@@ -2053,7 +2277,7 @@ export default function POSPage() {
         <h2 className="text-xl font-bold text-gray-900">Sales History</h2>
         <button
           onClick={exportSalesReport}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+          className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
         >
           <i className="ri-download-line mr-2"></i>
           Export Report
@@ -2088,7 +2312,7 @@ export default function POSPage() {
                     {sale.items.length} products
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    RD${formatAmount(sale.total)}
+                    {money(sale.total)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
                     {sale.paymentMethod === 'cash' ? 'Cash' : 
@@ -2133,12 +2357,12 @@ export default function POSPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Revenue:</span>
-                <span className="font-medium">RD${formatAmount(todayStats.totalAmount)}</span>
+                <span className="font-medium">{money(todayStats.totalAmount)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Average per Sale:</span>
                 <span className="font-medium">
-                  RD${formatAmount(todayStats.totalSales > 0 ? (todayStats.totalAmount / todayStats.totalSales) : 0)}
+                  {formatAmount(todayStats.totalSales > 0 ? (todayStats.totalAmount / todayStats.totalSales) : 0)}
                 </span>
               </div>
             </div>
@@ -2207,7 +2431,7 @@ export default function POSPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantity} units</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD${formatAmount(product.revenue)}
+                      {formatAmount(product.revenue)}
                     </td>
                   </tr>
                 ))}
@@ -2356,7 +2580,7 @@ export default function POSPage() {
               
               <div className="mb-4">
                 <div className="text-2xl font-bold text-center mb-4">
-                  Total: RD${formatAmount(getTotal())}
+                  Total: {formatAmount(getTotal())}
                 </div>
                 
                 <div className="mb-4">
@@ -2390,7 +2614,7 @@ export default function POSPage() {
                     />
                     {amountReceived && (
                       <div className="mt-2 text-sm">
-                        Change: RD${formatAmount(Math.max(0, parseAmountInput(amountReceived) - getTotal()))}
+                        Change: {formatAmount(Math.max(0, parseAmountInput(amountReceived) - getTotal()))}
                       </div>
                     )}
                   </div>
@@ -2399,10 +2623,454 @@ export default function POSPage() {
               
               <button
                 onClick={processPayment}
-                className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#008000] text-white py-3 rounded-lg font-medium hover:bg-[#006600] transition-colors whitespace-nowrap"
               >
                 Confirm Payment
               </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Product Detail Modal (Simple Mode) */}
+        {showProductDetailModal && selectedProductDetail && (
+          <Modal>
+            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">{selectedProductDetail.name}</h3>
+                <button
+                  onClick={() => {
+                    setShowProductDetailModal(false);
+                    setSelectedProductDetail(null);
+                    setSimpleAddQuantity(1);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              {selectedProductDetail.category && (
+                <p className="text-sm text-[#008000] mb-3">{selectedProductDetail.category}</p>
+              )}
+
+              {selectedProductDetail.imageUrl && (
+                <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
+                  <img
+                    src={selectedProductDetail.imageUrl}
+                    alt={selectedProductDetail.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-3 mb-6">
+                {selectedProductDetail.sku && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">SKU:</span>
+                    <span className="text-gray-900">{selectedProductDetail.sku}</span>
+                  </div>
+                )}
+                {selectedProductDetail.barcode && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Barcode:</span>
+                    <span className="text-gray-900">{selectedProductDetail.barcode}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Stock:</span>
+                  <span className={`font-medium ${selectedProductDetail.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {selectedProductDetail.stock} units
+                  </span>
+                </div>
+                {selectedProductDetail.description && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm text-gray-500 mb-1">Description:</p>
+                    <p className="text-sm text-gray-700">{selectedProductDetail.description}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Quantity</p>
+                    <p className="text-2xl font-bold text-[#008000]">{money(selectedProductDetail.price * simpleAddQuantity)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSimpleAddQuantity(prev => Math.max(1, prev - 1))}
+                      className="w-10 h-10 rounded-lg bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <span className="w-12 text-center text-xl font-bold">{simpleAddQuantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSimpleAddQuantity(prev => Math.min(selectedProductDetail.stock, prev + 1))}
+                      className="w-10 h-10 rounded-lg bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={selectedProductDetail.stock <= 0}
+                  onClick={() => {
+                    addToCart(selectedProductDetail, simpleAddQuantity);
+                    setShowProductDetailModal(false);
+                    setSelectedProductDetail(null);
+                    setSimpleAddQuantity(1);
+                  }}
+                  className={`w-full px-6 py-3 rounded-lg font-semibold transition-colors ${
+                    selectedProductDetail.stock <= 0
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-[#008000] text-white hover:bg-[#006600]'
+                  }`}
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* Product Customization Modal (Custom Mode) */}
+        {showCustomizeModal && customizeProduct && (
+          <Modal>
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-gray-900">{customizeProduct.name}</h3>
+                <button
+                  onClick={() => {
+                    setShowCustomizeModal(false);
+                    setCustomizeProduct(null);
+                    setCustomizeQuantity(1);
+                    setProductExtras([]);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              {customizeProduct.category && (
+                <p className="text-sm text-[#008000] mb-3">{customizeProduct.category}</p>
+              )}
+
+              {customizeProduct.imageUrl && (
+                <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
+                  <img
+                    src={customizeProduct.imageUrl}
+                    alt={customizeProduct.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+
+              {/* Quantity Selector */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Quantity</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      Total ({customizeQuantity} {customizeQuantity === 1 ? 'unit' : 'units'})
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setCustomizeQuantity(prev => Math.max(1, prev - 1))}
+                      className="w-10 h-10 rounded-lg bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-50"
+                    >
+                      -
+                    </button>
+                    <span className="w-12 text-center text-xl font-bold">{customizeQuantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomizeQuantity(prev => Math.min(customizeProduct.stock, prev + 1))}
+                      className="w-10 h-10 rounded-lg bg-white border border-gray-300 flex items-center justify-center text-gray-700 hover:bg-gray-50"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-[#008000] mt-2">
+                  {money(customizeProduct.price * customizeQuantity + productExtras.reduce((sum, e) => sum + e.price * e.quantity, 0))}
+                </p>
+              </div>
+
+              {/* Extras/Add-ons Section */}
+              <div className="border rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Extras / Add-ons</h4>
+                
+                {productExtras.length === 0 ? (
+                  <p className="text-sm text-gray-500 mb-3">No extras added yet</p>
+                ) : (
+                  <div className="space-y-2 mb-3">
+                    {productExtras.map((extra, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{extra.name}</span>
+                          <span className="text-sm text-[#008000]">+{money(extra.price)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductExtras(prev => prev.map((e, i) => 
+                                i === idx ? { ...e, quantity: Math.max(0, e.quantity - 1) } : e
+                              ).filter(e => e.quantity > 0));
+                            }}
+                            className="w-7 h-7 rounded bg-white border text-gray-600 hover:bg-gray-50"
+                          >
+                            -
+                          </button>
+                          <span className="w-6 text-center text-sm font-medium">{extra.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductExtras(prev => prev.map((e, i) => 
+                                i === idx ? { ...e, quantity: e.quantity + 1 } : e
+                              ));
+                            }}
+                            className="w-7 h-7 rounded bg-white border text-gray-600 hover:bg-gray-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick add extras - from configured products */}
+                <div className="space-y-2">
+                  {availableExtras.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">
+                      No extras configured. Click "Modelo" to add products as extras.
+                    </p>
+                  ) : (
+                    products
+                      .filter(p => availableExtras.includes(p.id) && p.id !== customizeProduct?.id)
+                      .map((extraProduct) => (
+                        <div
+                          key={extraProduct.id}
+                          className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          {/* Small image */}
+                          <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
+                            {extraProduct.imageUrl ? (
+                              <img
+                                src={extraProduct.imageUrl}
+                                alt={extraProduct.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAxNkMyMS42NTY5IDE2IDIzIDE0LjY1NjkgMjMgMTNDMjMgMTEuMzQzMSAyMS42NTY5IDEwIDIwIDEwQzE4LjM0MzEgMTAgMTcgMTEuMzQzMSAxNyAxM0MxNyAxNC42NTY5IDE4LjM0MzEgMTYgMjAgMTZaIiBmaWxsPSIjOUNBM0FGIi8+CjxwYXRoIGQ9Ik0yNiAyMEgxNEMxMy40NDc3IDIwIDEzIDIwLjQ0NzcgMTMgMjFWMjhDMTMgMjguNTUyMyAxMy40NDc3IDI5IDE0IDI5SDI2QzI2LjU1MjMgMjkgMjcgMjguNTUyMyAyNyAyOFYyMUMyNyAyMC40NDc3IDI2LjU1MjMgMjAgMjYgMjBaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPg==';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <i className="ri-image-line text-gray-400 text-sm"></i>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Product info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{extraProduct.name}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-[#008000] font-semibold">+{money(extraProduct.price)}</span>
+                              <span className={`text-xs ${extraProduct.stock > 5 ? 'text-gray-500' : 'text-amber-600'}`}>
+                                ({extraProduct.stock} units)
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Add button */}
+                          <button
+                            type="button"
+                            disabled={extraProduct.stock <= 0}
+                            onClick={() => {
+                              const existing = productExtras.find(e => e.name === extraProduct.name);
+                              if (existing) {
+                                setProductExtras(prev => prev.map(e => 
+                                  e.name === extraProduct.name ? { ...e, quantity: e.quantity + 1 } : e
+                                ));
+                              } else {
+                                setProductExtras(prev => [...prev, { name: extraProduct.name, price: extraProduct.price, quantity: 1 }]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                              extraProduct.stock <= 0
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-[#008000] text-white hover:bg-[#006600]'
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  // Calculate extras total
+                  const extrasTotal = productExtras.reduce((sum, e) => sum + e.price * e.quantity, 0);
+                  const itemTotal = (customizeProduct.price * customizeQuantity) + extrasTotal;
+                  
+                  // Add to cart with extras
+                  setCart(prev => {
+                    // For custom items with extras, always add as new item to preserve extras
+                    const newItem: CartItem = {
+                      ...customizeProduct,
+                      quantity: customizeQuantity,
+                      total: itemTotal,
+                      extras: productExtras.length > 0 ? [...productExtras] : undefined
+                    };
+                    return [...prev, newItem];
+                  });
+                  
+                  // Reduce stock for extras products (update state, localStorage, and Supabase)
+                  if (productExtras.length > 0) {
+                    // Update localStorage
+                    try {
+                      const savedProducts = JSON.parse(localStorage.getItem('contabi_products') || '[]') as Product[];
+                      const updatedProducts = savedProducts.map(p => {
+                        const extraUsed = productExtras.find(e => e.name === p.name);
+                        if (extraUsed) {
+                          return { ...p, stock: Math.max(0, p.stock - extraUsed.quantity) };
+                        }
+                        return p;
+                      });
+                      localStorage.setItem('contabi_products', JSON.stringify(updatedProducts));
+                    } catch {}
+                    
+                    // Update Supabase if user is logged in
+                    if (user?.id) {
+                      for (const extra of productExtras) {
+                        const extraProduct = products.find(p => p.name === extra.name);
+                        if (extraProduct && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(extraProduct.id)) {
+                          const newStock = Math.max(0, extraProduct.stock - extra.quantity);
+                          inventoryService.updateItem(user.id, extraProduct.id, {
+                            current_stock: newStock,
+                          }).catch(err => console.error('[POS] Error updating extra stock:', err));
+                        }
+                      }
+                    }
+                    
+                    // Update state
+                    setProducts(prev => {
+                      const updated = prev.map(p => {
+                        const extraUsed = productExtras.find(e => e.name === p.name);
+                        if (extraUsed) {
+                          return { ...p, stock: Math.max(0, p.stock - extraUsed.quantity) };
+                        }
+                        return p;
+                      });
+                      return updated;
+                    });
+                  }
+                  
+                  setShowCustomizeModal(false);
+                  setCustomizeProduct(null);
+                  setCustomizeQuantity(1);
+                  setProductExtras([]);
+                  toast.success(`Added ${customizeQuantity}x ${customizeProduct.name} to cart`);
+                }}
+                className="w-full py-3 bg-[#008000] text-white rounded-lg font-semibold hover:bg-[#006600] transition-colors"
+              >
+                Add to Cart - {money(customizeProduct.price * customizeQuantity + productExtras.reduce((sum, e) => sum + e.price * e.quantity, 0))}
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Modelo Modal - Configure which products can be extras */}
+        {showModeloModal && (
+          <Modal>
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Configure Extras</h3>
+                  <p className="text-sm text-gray-500">Select which products can be added as extras in Custom mode</p>
+                </div>
+                <button
+                  onClick={() => setShowModeloModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <i className="ri-information-line mr-1"></i>
+                  Selected products will appear as add-on options when customizing any product in Custom mode.
+                </p>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {products.map((product) => (
+                  <label
+                    key={product.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                      availableExtras.includes(product.id)
+                        ? 'border-[#008000] bg-green-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={availableExtras.includes(product.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            saveAvailableExtras([...availableExtras, product.id]);
+                          } else {
+                            saveAvailableExtras(availableExtras.filter(id => id !== product.id));
+                          }
+                        }}
+                        className="w-5 h-5 text-[#008000] border-gray-300 rounded focus:ring-[#008000]"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.category} • Stock: {product.stock}</p>
+                      </div>
+                    </div>
+                    <span className="font-semibold text-[#008000]">{money(product.price)}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {availableExtras.length} product{availableExtras.length !== 1 ? 's' : ''} selected as extras
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => saveAvailableExtras([])}
+                    className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModeloModal(false)}
+                    className="px-4 py-2 text-sm text-white bg-[#008000] rounded-lg hover:bg-[#006600] transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             </div>
           </Modal>
         )}

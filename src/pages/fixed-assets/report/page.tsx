@@ -105,7 +105,7 @@ export default function FixedAssetsReportPage() {
   }, [filteredAssets]);
 
   const formatCurrency = (amount: number) => {
-    return formatMoney(amount, 'RD$');
+    return formatMoney(amount, '');
   };
 
   const handleExportExcel = async () => {

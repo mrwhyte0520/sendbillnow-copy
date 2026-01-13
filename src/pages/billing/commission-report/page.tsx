@@ -169,7 +169,7 @@ export default function CommissionReportPage() {
     doc.text(periodText, 14, 30);
 
     const headers = [
-      ['Vendedor', 'Tiendas', '# Facturas', 'Ventas (RD$)', '% Comisión', 'Comisión (RD$)'],
+      ['Vendedor', 'Tiendas', '# Facturas', 'Ventas ()', '% Comisión', 'Comisión ()'],
     ];
 
     const body = rows.map((row) => [
@@ -223,9 +223,9 @@ export default function CommissionReportPage() {
       { key: 'salesRepName', title: 'Vendedor' },
       { key: 'stores', title: 'Tiendas' },
       { key: 'invoiceCount', title: '# Facturas' },
-      { key: 'totalSales', title: 'Ventas (RD$)' },
+      { key: 'totalSales', title: 'Ventas ()' },
       { key: 'commissionRate', title: '% Comisión' },
-      { key: 'commissionAmount', title: 'Comisión (RD$)' },
+      { key: 'commissionAmount', title: 'Comisión ()' },
     ];
 
     const fileBase = `reporte-comision-${fromDate}-a-${toDate}`;
@@ -248,7 +248,7 @@ export default function CommissionReportPage() {
     {
       id: 'total-sales',
       title: 'Total Sales',
-      value: `RD$ ${totalSalesAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
+      value: ` ${totalSalesAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
       helper: 'All sales for the selected filters',
       icon: 'ri-funds-box-line',
       accentBg: 'bg-[#DDE7D0]',
@@ -257,7 +257,7 @@ export default function CommissionReportPage() {
     {
       id: 'total-commission',
       title: 'Total Commissions',
-      value: `RD$ ${totalCommissionAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
+      value: ` ${totalCommissionAll.toLocaleString('es-DO', { maximumFractionDigits: 2 })}`,
       helper: 'Estimated payouts',
       icon: 'ri-hand-coin-line',
       accentBg: 'bg-[#E7DFC9]',
@@ -406,9 +406,9 @@ export default function CommissionReportPage() {
                     <th className="px-6 py-3 text-left font-semibold">Sales Rep</th>
                     <th className="px-6 py-3 text-left font-semibold">Stores</th>
                     <th className="px-6 py-3 text-right font-semibold"># Invoices</th>
-                    <th className="px-6 py-3 text-right font-semibold">Sales (RD$)</th>
+                    <th className="px-6 py-3 text-right font-semibold">Sales ()</th>
                     <th className="px-6 py-3 text-right font-semibold">Commission %</th>
-                    <th className="px-6 py-3 text-right font-semibold">Commission (RD$)</th>
+                    <th className="px-6 py-3 text-right font-semibold">Commission ()</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0E4CF] bg-white">
@@ -420,13 +420,13 @@ export default function CommissionReportPage() {
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-right">{row.invoiceCount}</td>
                       <td className="px-6 py-3 whitespace-nowrap text-right">
-                        RD$ {row.totalSales.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
+                         {row.totalSales.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-right">
                         {row.commissionRate.toLocaleString('es-DO', { maximumFractionDigits: 2 })}%
                       </td>
                       <td className="px-6 py-3 whitespace-nowrap text-right font-semibold">
-                        RD$ {row.commissionAmount.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
+                         {row.commissionAmount.toLocaleString('es-DO', { maximumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}

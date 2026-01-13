@@ -1215,7 +1215,7 @@ const AccountingPeriodsPage: FC = () => {
                     {period.entries_count || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${formatAmount(period.total_debits || 0)}
+                    {formatAmount(period.total_debits || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
@@ -1518,13 +1518,13 @@ const AccountingPeriodsPage: FC = () => {
                     <div>
                       <span className="text-sm font-medium text-gray-500">Total Débitos:</span>
                       <span className="ml-2 text-sm font-bold text-green-600">
-                        RD${formatAmount(selectedPeriod.total_debits || 0)}
+                        {formatAmount(selectedPeriod.total_debits || 0)}
                       </span>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-500">Total Créditos:</span>
                       <span className="ml-2 text-sm font-bold text-red-600">
-                        RD${formatAmount(selectedPeriod.total_credits || 0)}
+                        {formatAmount(selectedPeriod.total_credits || 0)}
                       </span>
                     </div>
                     <div>
@@ -1601,10 +1601,10 @@ const AccountingPeriodsPage: FC = () => {
                               {entry.description || 'Sin descripción'}
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-green-600">
-                              RD${formatAmount(entry.total_debit || 0)}
+                              {formatAmount(entry.total_debit || 0)}
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-red-600">
-                              RD${formatAmount(entry.total_credit || 0)}
+                              {formatAmount(entry.total_credit || 0)}
                             </td>
                           </tr>
                         ))}
@@ -1616,10 +1616,10 @@ const AccountingPeriodsPage: FC = () => {
                               Totales:
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-right text-green-700">
-                              RD${formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_debit) || 0), 0))}
+                              {formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_debit) || 0), 0))}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-right text-red-700">
-                              RD${formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_credit) || 0), 0))}
+                              {formatAmount(periodEntries.reduce((sum, e) => sum + (Number(e.total_credit) || 0), 0))}
                             </td>
                           </tr>
                         </tfoot>

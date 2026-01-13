@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { chartAccountsService, bankAccountsService, invoicesService, apInvoicesService } from '../../../services/database';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
@@ -532,10 +532,9 @@ export default function AdvancedKPIDashboard() {
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-[#008000]">
-                            {b.currency === 'DOP' ? 'RD$' : b.currency === 'USD' ? '$' : b.currency || 'RD$'}{' '}
                             {formatAmount(b.balance || 0)}
                           </p>
-                          {b.currency && b.currency !== 'DOP' && (
+                          {b.currency && (
                             <p className="text-xs text-gray-500">{b.currency}</p>
                           )}
                         </div>

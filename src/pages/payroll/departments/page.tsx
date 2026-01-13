@@ -263,7 +263,7 @@ export default function DepartmentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Budget</p>
-                <p className="text-2xl font-bold text-[#2f3a1f]">RD$ {totalBudget.toLocaleString('en-US')}</p>
+                <p className="text-2xl font-bold text-[#2f3a1f]"> {totalBudget.toLocaleString('en-US')}</p>
               </div>
               <div className="w-12 h-12 bg-[#f1e4c2] rounded-lg flex items-center justify-center">
                 <i className="ri-money-dollar-circle-line text-[#4b5320] text-xl"></i>

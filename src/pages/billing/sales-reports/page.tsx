@@ -33,13 +33,13 @@ export default function SalesReportsPage() {
   const [hasData, setHasData] = useState(false);
 
   const [salesSummary, setSalesSummary] = useState({
-    totalSales: 'RD$ 0',
-    salesWithoutTax: 'RD$ 0',
+    totalSales: ' 0',
+    salesWithoutTax: ' 0',
     totalInvoices: 0,
-    averageTicket: 'RD$ 0',
-    totalTax: 'RD$ 0',
-    netSales: 'RD$ 0',
-    grossProfit: 'RD$ 0',
+    averageTicket: ' 0',
+    totalTax: ' 0',
+    netSales: ' 0',
+    grossProfit: ' 0',
     profitMargin: '0.0%'
   });
 
@@ -266,13 +266,13 @@ export default function SalesReportsPage() {
       // Si no hay facturas en el período, limpiar métricas y marcar sin datos
       if (filteredInvoices.length === 0) {
         setSalesSummary({
-          totalSales: 'RD$ 0',
-          salesWithoutTax: 'RD$ 0',
+          totalSales: ' 0',
+          salesWithoutTax: ' 0',
           totalInvoices: 0,
-          averageTicket: 'RD$ 0',
-          totalTax: 'RD$ 0',
-          netSales: 'RD$ 0',
-          grossProfit: 'RD$ 0',
+          averageTicket: ' 0',
+          totalTax: ' 0',
+          netSales: ' 0',
+          grossProfit: ' 0',
           profitMargin: '0.0%'
         });
         setTopProducts([]);
@@ -298,13 +298,13 @@ export default function SalesReportsPage() {
       const profitMarginNum = netSalesNum > 0 ? (grossProfitNum / netSalesNum) * 100 : 0;
 
       setSalesSummary({
-        totalSales: `RD$ ${totalSalesNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-        salesWithoutTax: `RD$ ${salesWithoutTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        totalSales: ` ${totalSalesNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        salesWithoutTax: ` ${salesWithoutTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
         totalInvoices,
-        averageTicket: `RD$ ${avgTicketNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-        totalTax: `RD$ ${totalTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-        netSales: `RD$ ${netSalesNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-        grossProfit: `RD$ ${grossProfitNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        averageTicket: ` ${avgTicketNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        totalTax: ` ${totalTaxNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        netSales: ` ${netSalesNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+        grossProfit: ` ${grossProfitNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
         profitMargin: `${profitMarginNum.toFixed(1)}%`,
       });
 
@@ -333,7 +333,7 @@ export default function SalesReportsPage() {
         .map((p) => ({
           name: p.name,
           quantity: p.quantity,
-          revenue: `RD$ ${p.revenueNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+          revenue: ` ${p.revenueNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
           margin: 'N/A',
         }));
       setTopProducts(productArray);
@@ -358,7 +358,7 @@ export default function SalesReportsPage() {
         .map((c) => ({
           name: c.name,
           invoices: c.invoices,
-          revenue: `RD$ ${c.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+          revenue: ` ${c.revenue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
           lastPurchase: formatDateEsDO(c.last),
         }));
       setTopCustomers(customerArray);
@@ -393,7 +393,7 @@ export default function SalesReportsPage() {
         .sort((a, b) => b.amountNum - a.amountNum)
         .map((m) => ({
           method: m.method,
-          amount: `RD$ ${m.amountNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+          amount: ` ${m.amountNum.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
           percentage: `${m.percentageNum.toFixed(1)}%`,
           transactions: m.transactions,
         }));

@@ -79,7 +79,7 @@ export default function OpeningBalancesPage() {
     setLoading(true);
     try {
       const result = await openingBalancesService.postToJournal(user!.id, fiscalYear);
-      alert(`Opening balances posted successfully.\n\n${result.linesCount} accounts recorded\nTotal Debit: RD$ ${formatAmount(result.totalDebit)}\nTotal Credit: RD$ ${formatAmount(result.totalCredit)}`);
+      alert(`Opening balances posted successfully.\n\n${result.linesCount} accounts recorded\nTotal Debit:  ${formatAmount(result.totalDebit)}\nTotal Credit:  ${formatAmount(result.totalCredit)}`);
       await loadData();
     } catch (error: any) {
       alert('Error posting balances: ' + error.message);

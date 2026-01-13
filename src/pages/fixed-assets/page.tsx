@@ -49,21 +49,21 @@ export default function FixedAssetsPage() {
         setAssetsStats([
           {
             title: 'Total Asset Value',
-            value: formatMoney(totalValue, 'RD$'),
+            value: formatMoney(totalValue, ''),
             change: '',
             icon: 'ri-building-line',
             color: 'blue',
           },
           {
             title: 'Accumulated Depreciation',
-            value: formatMoney(totalDepreciation, 'RD$'),
+            value: formatMoney(totalDepreciation, ''),
             change: '',
             icon: 'ri-line-chart-line',
             color: 'red',
           },
           {
             title: 'Net Book Value',
-            value: formatMoney(netValue, 'RD$'),
+            value: formatMoney(netValue, ''),
             change: '',
             icon: 'ri-money-dollar-circle-line',
             color: 'green',
@@ -92,8 +92,8 @@ export default function FixedAssetsPage() {
         const categoriesData = Object.entries(categoryMap).map(([category, data]) => ({
           category,
           count: data.count,
-          value: formatMoney(data.value, 'RD$'),
-          depreciation: formatMoney(data.depreciation, 'RD$'),
+          value: formatMoney(data.value, ''),
+          depreciation: formatMoney(data.depreciation, ''),
         }));
 
         if (categoriesData.length > 0) {
@@ -116,8 +116,8 @@ export default function FixedAssetsPage() {
             return {
               asset: assetName,
               code: assetCode,
-              monthlyDepreciation: formatMoney(depAmount, 'RD$'),
-              accumulatedDepreciation: formatMoney(accDepAmount, 'RD$'),
+              monthlyDepreciation: formatMoney(depAmount, ''),
+              accumulatedDepreciation: formatMoney(accDepAmount, ''),
               date: dateStr ? new Date(dateStr).toLocaleDateString('es-DO') : '',
             };
           });
@@ -208,21 +208,21 @@ export default function FixedAssetsPage() {
   const [assetsStats, setAssetsStats] = useState([
     {
       title: 'Total Asset Value',
-      value: 'RD$ 0',
+      value: ' 0',
       change: '',
       icon: 'ri-building-line',
       color: 'blue',
     },
     {
       title: 'Accumulated Depreciation',
-      value: 'RD$ 0',
+      value: ' 0',
       change: '',
       icon: 'ri-line-chart-line',
       color: 'red',
     },
     {
       title: 'Net Book Value',
-      value: 'RD$ 0',
+      value: ' 0',
       change: '',
       icon: 'ri-money-dollar-circle-line',
       color: 'green',

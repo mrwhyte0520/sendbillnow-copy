@@ -476,7 +476,7 @@ export default function ReportsPage() {
       // Formato numérico para montos
       ['B', 'C', 'D', 'E', 'F', 'G'].forEach((col) => {
         const column = worksheet.getColumn(col);
-        column.numFmt = '"RD$"#,##0.00';
+        column.numFmt = '""#,##0.00';
         column.alignment = { horizontal: 'right' } as any;
       });
     } else {
@@ -535,7 +535,7 @@ export default function ReportsPage() {
       ];
 
       const amountColumn = worksheet.getColumn('E');
-      amountColumn.numFmt = '"RD$"#,##0.00';
+      amountColumn.numFmt = '""#,##0.00';
       amountColumn.alignment = { horizontal: 'right' } as any;
     }
 

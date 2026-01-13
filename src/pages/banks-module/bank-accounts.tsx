@@ -98,7 +98,7 @@ export default function BankAccountsPage() {
   };
 
   const formatCurrency = (value: number, currency: string = 'DOP') => {
-    const label = currency === 'DOP' ? 'RD$' : currency === 'USD' ? '$' : currency;
+    const label = currency === 'DOP' ? '' : currency === 'USD' ? '$' : currency;
     return formatMoney(value, label);
   };
 

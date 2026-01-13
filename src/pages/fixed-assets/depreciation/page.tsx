@@ -200,7 +200,7 @@ export default function DepreciationPage() {
 
     // Función auxiliar para formatear moneda
     const formatCurrency = (amount: number) => {
-      return formatMoney(amount, 'RD$');
+      return formatMoney(amount, '');
     };
 
     const locale = 'en-US';
@@ -386,7 +386,7 @@ export default function DepreciationPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return formatMoney(amount, 'RD$');
+    return formatMoney(amount, '');
   };
 
   const getDepreciationJournalEntryNumber = (dep: DepreciationEntry) => {

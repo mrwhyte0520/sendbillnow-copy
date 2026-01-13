@@ -733,7 +733,7 @@ const GeneralLedgerPage: FC = () => {
                     </div>
                     <div className="text-right ml-4">
                       <div className={`text-sm font-medium ${getBalanceColor(account.balance, account.normalBalance)}`}>
-                        RD${formatAmount(Math.abs(account.balance))}
+                        {formatAmount(Math.abs(account.balance))}
                       </div>
                       <div className={`text-xs ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {account.normalBalance === 'debit' ? 'Débito' : 'Crédito'}
@@ -789,7 +789,7 @@ const GeneralLedgerPage: FC = () => {
                           selectedAccount.normalBalance,
                         )}`}
                       >
-                        RD${formatAmount(Math.abs(selectedAccount.balance))}
+                        {formatAmount(Math.abs(selectedAccount.balance))}
                       </div>
                     </div>
                   )}
@@ -951,7 +951,7 @@ const GeneralLedgerPage: FC = () => {
                               <td className="px-6 py-4 text-sm text-gray-900"></td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">RD${formatAmount(Math.abs(openingBalance))}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(Math.abs(openingBalance))}</td>
                             </tr>
                             {filteredLedgerEntries.length > 0 ? (
                               filteredLedgerEntries.map((entry) => (
@@ -968,9 +968,9 @@ const GeneralLedgerPage: FC = () => {
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getEntryDocumentType(entry)}</td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(entry.date)}</td>
                                   <td className="px-6 py-4 text-sm text-gray-900">{entry.description}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.debit > 0 ? `RD$${formatAmount(entry.debit)}` : '-'}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.credit > 0 ? `RD$${formatAmount(entry.credit)}` : '-'}</td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">RD${formatAmount(Math.abs(entry.balance))}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.debit > 0 ? `${formatAmount(entry.debit)}` : '-'}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entry.credit > 0 ? `${formatAmount(entry.credit)}` : '-'}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(Math.abs(entry.balance))}</td>
                                 </tr>
                               ))
                             ) : (
@@ -990,9 +990,9 @@ const GeneralLedgerPage: FC = () => {
                         <tfoot className="bg-gray-50">
                           <tr>
                             <td colSpan={4} className="px-6 py-3 text-right font-medium text-gray-900">Totales:</td>
-                            <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(totalDebits)}</td>
-                            <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(totalCredits)}</td>
-                            <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(Math.abs(finalBalance))}</td>
+                            <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(totalDebits)}</td>
+                            <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(totalCredits)}</td>
+                            <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(Math.abs(finalBalance))}</td>
                           </tr>
                         </tfoot>
                       )}
@@ -1035,7 +1035,7 @@ const GeneralLedgerPage: FC = () => {
                                 <td className="px-6 py-4 text-sm text-gray-900"></td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">-</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">RD${formatAmount(Math.abs(group.opening))}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(Math.abs(group.opening))}</td>
                               </tr>
                               {group.lines.length > 0 ? (
                                 group.lines.map(line => (
@@ -1052,9 +1052,9 @@ const GeneralLedgerPage: FC = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getEntryDocumentType(line)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(line.date)}</td>
                                     <td className="px-6 py-4 text-sm text-gray-900">{line.description}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{line.debit > 0 ? `RD$${formatAmount(line.debit)}` : '-'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{line.credit > 0 ? `RD$${formatAmount(line.credit)}` : '-'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">RD${formatAmount(Math.abs(line.balance))}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{line.debit > 0 ? `${formatAmount(line.debit)}` : '-'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{line.credit > 0 ? `${formatAmount(line.credit)}` : '-'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatAmount(Math.abs(line.balance))}</td>
                                   </tr>
                                 ))
                               ) : (
@@ -1064,9 +1064,9 @@ const GeneralLedgerPage: FC = () => {
                               )}
                               <tr className="bg-gray-100">
                                 <td colSpan={4} className="px-6 py-3 text-right font-medium text-gray-900">Totales de la cuenta:</td>
-                                <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(group.totals.debit)}</td>
-                                <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(group.totals.credit)}</td>
-                                <td className="px-6 py-3 font-bold text-gray-900">RD${formatAmount(Math.abs(group.totals.final))}</td>
+                                <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(group.totals.debit)}</td>
+                                <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(group.totals.credit)}</td>
+                                <td className="px-6 py-3 font-bold text-gray-900">{formatAmount(Math.abs(group.totals.final))}</td>
                               </tr>
                             </Fragment>
                           ))
@@ -1088,13 +1088,13 @@ const GeneralLedgerPage: FC = () => {
                     <div className="text-center">
                       <div className="text-sm text-gray-600">Total Débitos</div>
                       <div className="text-lg font-bold text-green-600">
-                        RD${formatAmount(totalDebits)}
+                        {formatAmount(totalDebits)}
                       </div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm text-gray-600">Total Créditos</div>
                       <div className="text-lg font-bold text-red-600">
-                        RD${formatAmount(totalCredits)}
+                        {formatAmount(totalCredits)}
                       </div>
                     </div>
                   </div>

@@ -618,7 +618,7 @@ export default function PayrollPeriodsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Último Pago</p>
                 <p className="text-lg font-bold text-gray-900">
-                  RD${periods.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_net, 0).toLocaleString()}
+                  {periods.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.total_net, 0).toLocaleString()}
                 </p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -752,10 +752,10 @@ export default function PayrollPeriodsPage() {
                       {period.total_employees}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${period.total_gross.toLocaleString()}
+                      {period.total_gross.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${period.total_net.toLocaleString()}
+                      {period.total_net.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
@@ -964,15 +964,15 @@ export default function PayrollPeriodsPage() {
                   </div>
                   <div>
                     <p className="font-semibold">Total Bruto</p>
-                    <p>RD${viewPeriod.total_gross.toLocaleString()}</p>
+                    <p>{viewPeriod.total_gross.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="font-semibold">Deducciones</p>
-                    <p>RD${viewPeriod.total_deductions.toLocaleString()}</p>
+                    <p>{viewPeriod.total_deductions.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="font-semibold">Total Neto</p>
-                    <p>RD${viewPeriod.total_net.toLocaleString()}</p>
+                    <p>{viewPeriod.total_net.toLocaleString()}</p>
                   </div>
                 </div>
               </div>

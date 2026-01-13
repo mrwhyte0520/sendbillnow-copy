@@ -243,7 +243,7 @@ export default function OtherDeductionsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending deductions</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  RD$ {totalPendiente.toLocaleString('en-US')}
+                   {totalPendiente.toLocaleString('en-US')}
                 </p>
               </div>
             </div>
@@ -257,7 +257,7 @@ export default function OtherDeductionsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Applied deductions</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  RD$ {totalAplicada.toLocaleString('en-US')}
+                   {totalAplicada.toLocaleString('en-US')}
                 </p>
               </div>
             </div>
@@ -361,7 +361,7 @@ export default function OtherDeductionsPage() {
                       {new Date(deduction.deduction_date).toLocaleDateString('en-US')}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      RD$ {deduction.amount.toLocaleString('en-US')}
+                       {deduction.amount.toLocaleString('en-US')}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(deduction.status)}`}>
@@ -478,7 +478,7 @@ export default function OtherDeductionsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Amount (RD$) *
+                      Amount () *
                     </label>
                     <input
                       type="number"

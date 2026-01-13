@@ -616,7 +616,7 @@ export default function RevaluationPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return formatMoney(amount, 'RD$');
+    return formatMoney(amount, '');
   };
 
   return (

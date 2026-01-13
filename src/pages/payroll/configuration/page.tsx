@@ -654,16 +654,16 @@ export default function PayrollConfigurationPage() {
               {taxBrackets.map((bracket) => (
                 <tr key={bracket.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${bracket.min_amount.toLocaleString()}
+                    {bracket.min_amount.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {bracket.max_amount === Infinity ? 'And forward' : `RD$${bracket.max_amount.toLocaleString()}`}
+                    {bracket.max_amount === Infinity ? 'And forward' : `${bracket.max_amount.toLocaleString()}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {bracket.rate}%
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${bracket.fixed_amount.toLocaleString()}
+                    {bracket.fixed_amount.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button

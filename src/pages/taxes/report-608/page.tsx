@@ -435,7 +435,7 @@ export default function Report608Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Monto Total Cancelado</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_amount, 'RD$')}
+                    {formatMoney(totals.total_amount, '')}
                   </p>
                 </div>
               </div>
@@ -448,7 +448,7 @@ export default function Report608Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">ITBIS Cancelado</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_tax, 'RD$')}
+                    {formatMoney(totals.total_tax, '')}
                   </p>
                 </div>
               </div>
@@ -512,10 +512,10 @@ export default function Report608Page() {
                       {doc.customer_rnc}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(doc.amount, 'RD$')}
+                      {formatMoney(doc.amount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(doc.tax_amount, 'RD$')}
+                      {formatMoney(doc.tax_amount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {doc.reason}

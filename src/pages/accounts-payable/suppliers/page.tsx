@@ -572,8 +572,8 @@ export default function SuppliersPage() {
       supplier.rnc,
       supplier.phone,
       supplier.category,
-      `RD$ ${supplier.creditLimit.toLocaleString()}`,
-      `RD$ ${supplier.balance.toLocaleString()}`,
+      ` ${supplier.creditLimit.toLocaleString()}`,
+      ` ${supplier.balance.toLocaleString()}`,
       supplier.status
     ]);
 
@@ -604,8 +604,8 @@ export default function SuppliersPage() {
 
     doc.autoTable({
       body: [
-        ['Total Credit Limit:', `RD$ ${totalCreditLimit.toLocaleString()}`],
-        ['Current Balance Total:', `RD$ ${totalBalance.toLocaleString()}`],
+        ['Total Credit Limit:', ` ${totalCreditLimit.toLocaleString()}`],
+        ['Current Balance Total:', ` ${totalBalance.toLocaleString()}`],
         ['Active Suppliers:', `${activeSuppliers} of ${filteredSuppliers.length}`]
       ],
       startY: ((doc as any).lastAutoTable?.finalY ?? 70) + 20,
@@ -773,7 +773,7 @@ export default function SuppliersPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Total Balance</p>
                 <p className="text-2xl font-bold text-[#2f3c24]">
-                  RD$ {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}
+                   {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -786,7 +786,7 @@ export default function SuppliersPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Available Credit</p>
                 <p className="text-2xl font-bold text-[#2f3c24]">
-                  RD$ {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}
+                   {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -899,10 +899,10 @@ export default function SuppliersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
-                      RD$ {supplier.balance.toLocaleString()}
+                       {supplier.balance.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
-                      RD$ {supplier.creditLimit.toLocaleString()}
+                       {supplier.creditLimit.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(supplier.status)}`}>
@@ -990,11 +990,11 @@ export default function SuppliersPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Credit Limit</h4>
-                    <p className="text-[#2f3c24]">RD$ {selectedSupplier.creditLimit.toLocaleString()}</p>
+                    <p className="text-[#2f3c24]"> {selectedSupplier.creditLimit.toLocaleString()}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Current Balance</h4>
-                    <p className="text-[#2f3c24]">RD$ {selectedSupplier.balance.toLocaleString()}</p>
+                    <p className="text-[#2f3c24]"> {selectedSupplier.balance.toLocaleString()}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Payment Terms</h4>

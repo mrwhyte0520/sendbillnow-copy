@@ -684,7 +684,7 @@ const PettyCashPage: React.FC = () => {
           {[
             {
               label: 'Total Funds',
-              value: `RD$${getTotalFunds().toLocaleString()}`,
+              value: `${getTotalFunds().toLocaleString()}`,
               icon: 'ri-wallet-3-line',
             },
             {
@@ -699,7 +699,7 @@ const PettyCashPage: React.FC = () => {
             },
             {
               label: 'Total Expenses',
-              value: `RD$${getTotalExpenses().toLocaleString()}`,
+              value: `${getTotalExpenses().toLocaleString()}`,
               icon: 'ri-shopping-cart-line',
             },
           ].map((metric, idx) => (
@@ -730,7 +730,7 @@ const PettyCashPage: React.FC = () => {
               <ul className="mt-2 list-disc list-inside text-sm">
                 {lowBalanceFunds.map((fund) => (
                   <li key={fund.id}>
-                    {fund.name}: RD${fund.currentBalance.toLocaleString()} of RD${fund.initialAmount.toLocaleString()}
+                    {fund.name}: {fund.currentBalance.toLocaleString()} of {fund.initialAmount.toLocaleString()}
                   </li>
                 ))}
               </ul>
@@ -835,12 +835,12 @@ const PettyCashPage: React.FC = () => {
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm text-gray-600">Initial Amount:</span>
-                          <span className="font-medium">RD${fund.initialAmount.toLocaleString()}</span>
+                          <span className="font-medium">{fund.initialAmount.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Current Balance:</span>
                           <span className="font-bold text-lg text-blue-600">
-                            RD${fund.currentBalance.toLocaleString()}
+                            {fund.currentBalance.toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -853,8 +853,8 @@ const PettyCashPage: React.FC = () => {
                               `Fund: ${fund.name}`,
                               `Location: ${fund.location || 'N/A'}`,
                               `Custodian: ${fund.custodian || 'N/A'}`,
-                              `Initial amount: RD$${fund.initialAmount.toLocaleString()}`,
-                              `Current balance: RD$${fund.currentBalance.toLocaleString()}`,
+                              `Initial amount: ${fund.initialAmount.toLocaleString()}`,
+                              `Current balance: ${fund.currentBalance.toLocaleString()}`,
                               `Status: ${fund.status === 'active' ? 'Active' : 'Inactive'}`,
                             ].join('\n');
                             alert(details);
@@ -939,7 +939,7 @@ const PettyCashPage: React.FC = () => {
                             {expense.category}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            RD${expense.amount.toLocaleString()}
+                            {expense.amount.toLocaleString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -961,7 +961,7 @@ const PettyCashPage: React.FC = () => {
                                   `Fund: ${funds.find(f => f.id === expense.fundId)?.name || expense.fundId}`,
                                   `Description: ${expense.description}`,
                                   `Category: ${expense.category}`,
-                                  `Amount: RD$${expense.amount.toLocaleString()}`,
+                                  `Amount: ${expense.amount.toLocaleString()}`,
                                   `Status: ${expense.status}`,
                                   `Receipt: ${expense.receipt}`,
                                   `NCF: ${expense.ncf || 'N/A'}`,
@@ -1056,7 +1056,7 @@ const PettyCashPage: React.FC = () => {
                             {funds.find(f => f.id === r.fundId)?.name || r.fundId}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            RD${r.amount.toLocaleString()}
+                            {r.amount.toLocaleString()}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-700">{r.description}</td>
                         </tr>
@@ -1305,7 +1305,7 @@ const PettyCashPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto Inicial (RD$)
+                    Monto Inicial ()
                   </label>
                   <input
                     type="number"
@@ -1458,7 +1458,7 @@ const PettyCashPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto (RD$)
+                    Monto ()
                   </label>
                   <input
                     type="number"
@@ -1558,7 +1558,7 @@ const PettyCashPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ITBIS (RD$, opcional)
+                    ITBIS (, opcional)
                   </label>
                   <input
                     type="number"
@@ -1712,7 +1712,7 @@ const PettyCashPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto (RD$)
+                    Monto ()
                   </label>
                   <input
                     type="number"

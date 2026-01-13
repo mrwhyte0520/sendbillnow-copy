@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -19,7 +19,7 @@ const theme = {
   badgeBg: '#e3e8dd',
 };
 
-// Estilos CSS para mejorar la impresiÃ³n
+// Estilos CSS para mejorar la impresión
 const printStyles = `
   @media print {
     @page { size: landscape; margin: 0.5cm; }
@@ -81,8 +81,8 @@ const getEntryDocumentType = (entry: JournalEntry): string => {
 
   if (num.startsWith('ED-') || num.startsWith('JE-')) return 'Asiento manual';
   if (num.startsWith('BCG-')) return 'Cargo bancario';
-  if (num.startsWith('DEP-')) return 'DepÃ³sito bancario';
-  if (num.startsWith('CRD-')) return 'CrÃ©dito bancario';
+  if (num.startsWith('DEP-')) return 'Depósito bancario';
+  if (num.startsWith('CRD-')) return 'Crédito bancario';
   if (num.startsWith('TRF-')) return 'Transferencia bancaria';
   if (num.startsWith('CHK-')) return 'Cheque';
   if (num.startsWith('INV-MOV-')) return 'Movimiento de inventario';
@@ -140,7 +140,7 @@ const GeneralJournalPage = () => {
         const info = await settingsService.getCompanyInfo();
         setCompanyInfo(info);
       } catch (error) {
-        console.error('Error cargando informaciÃ³n de la empresa para Diario General', error);
+        console.error('Error cargando información de la empresa para Diario General', error);
       }
     };
 
@@ -262,27 +262,27 @@ const GeneralJournalPage = () => {
   const handleSaveEntry = async () => {
     if (!user) return;
 
-    // Validar que los dÃ©bitos y crÃ©ditos estÃ©n balanceados
+    // Validar que los débitos y créditos estén balanceados
     const totalDebit = formData.lines.reduce((sum, line) => sum + (line.debit_amount || 0), 0);
     const totalCredit = formData.lines.reduce((sum, line) => sum + (line.credit_amount || 0), 0);
 
-    // Validar que ninguna lÃ­nea tenga simultÃ¡neamente dÃ©bito y crÃ©dito
+    // Validar que ninguna línea tenga simultáneamente débito y crédito
     const invalidLines = formData.lines.filter(line =>
       (line.debit_amount || 0) > 0 && (line.credit_amount || 0) > 0
     );
 
     if (invalidLines.length > 0) {
-      alert('Cada lÃ­nea debe tener solo dÃ©bito o solo crÃ©dito, no ambos.');
+      alert('Cada línea debe tener solo débito o solo crédito, no ambos.');
       return;
     }
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      alert('Los dÃ©bitos y crÃ©ditos deben estar balanceados');
+      alert('Los débitos y créditos deben estar balanceados');
       return;
     }
 
     if (totalDebit === 0 || totalCredit === 0) {
-      alert('Debe ingresar al menos un dÃ©bito y un crÃ©dito');
+      alert('Debe ingresar al menos un débito y un crédito');
       return;
     }
 
@@ -320,7 +320,7 @@ const GeneralJournalPage = () => {
 
         if (entryError) throw entryError;
 
-        // Reemplazar lÃ­neas del asiento
+        // Reemplazar líneas del asiento
         const { error: deleteError } = await supabase
           .from('journal_entry_lines')
           .delete()
@@ -360,7 +360,7 @@ const GeneralJournalPage = () => {
 
         if (existingEntriesError) {
           console.error('Error generating journal entry number:', existingEntriesError);
-          alert('No se pudo generar el nÃºmero de asiento. Intente nuevamente.');
+          alert('No se pudo generar el número de asiento. Intente nuevamente.');
           return;
         }
 
@@ -435,7 +435,7 @@ const GeneralJournalPage = () => {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm('Â¿EstÃ¡ seguro de que desea anular este asiento? Esta acciÃ³n no se puede deshacer.')) {
+    if (!confirm('¿Está seguro de que desea anular este asiento? Esta acción no se puede deshacer.')) {
       return;
     }
 
@@ -485,7 +485,7 @@ const GeneralJournalPage = () => {
       lines: prev.lines.map((line, i) => {
         if (i !== index) return line;
 
-        // Regla: una lÃ­nea solo puede tener dÃ©bito o crÃ©dito, nunca ambos
+        // Regla: una línea solo puede tener débito o crédito, nunca ambos
         if (field === 'debit_amount') {
           return { ...line, debit_amount: value, credit_amount: 0 };
         }
@@ -681,7 +681,7 @@ const GeneralJournalPage = () => {
         </head>
         <body>
           <h1>General Journal</h1>
-          <h2>Totals: Debit RD$${formatAmount(totalDebitsFiltered)} | Credit RD$${formatAmount(totalCreditsFiltered)}</h2>
+          <h2>Totals: Debit ${formatAmount(totalDebitsFiltered)} | Credit ${formatAmount(totalCreditsFiltered)}</h2>
           <table>
             <thead>
               <tr>
@@ -892,8 +892,8 @@ const GeneralJournalPage = () => {
           </table>
 
           <div style="margin-top:12px; text-align:right; font-weight:600;">
-            <div>Total Debit: RD$ ${formatAmount(entry.total_debit)}</div>
-            <div>Total Credit: RD$ ${formatAmount(entry.total_credit)}</div>
+            <div>Total Debit:  ${formatAmount(entry.total_debit)}</div>
+            <div>Total Credit:  ${formatAmount(entry.total_credit)}</div>
           </div>
         </body>
       </html>
@@ -923,10 +923,10 @@ const GeneralJournalPage = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Estilos de impresión */}
+      {/* Estilos de impresi�n */}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
 
-      {/* Título para impresión (solo visible al imprimir) */}
+      {/* T�tulo para impresi�n (solo visible al imprimir) */}
       {companyNameForPrint && (
         <div className="hidden print:block print-title">{companyNameForPrint}</div>
       )}
@@ -935,7 +935,7 @@ const GeneralJournalPage = () => {
         Generated on {formatDate(new Date())} {(dateFrom || dateTo) && ` - Period: ${dateFrom ? formatDate(dateFrom) : 'Start'} to ${dateTo ? formatDate(dateTo) : 'End'}`}
       </div>
 
-      {/* Header con botón de regreso */}
+      {/* Header con bot�n de regreso */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
           <button
@@ -998,7 +998,7 @@ const GeneralJournalPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Debits</p>
               <p className="text-2xl font-bold text-gray-900">
-                RD${formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_debit, 0))}
+                {formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_debit, 0))}
               </p>
             </div>
           </div>
@@ -1012,7 +1012,7 @@ const GeneralJournalPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Credits</p>
               <p className="text-2xl font-bold text-gray-900">
-                RD${formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_credit, 0))}
+                {formatAmount(nonReversedEntries.reduce((sum, entry) => sum + entry.total_credit, 0))}
               </p>
             </div>
           </div>
@@ -1143,7 +1143,7 @@ const GeneralJournalPage = () => {
             <thead className="bg-gray-50" style={{ backgroundColor: theme.muted }}>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Número
+                  N�mero
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Fecha
@@ -1152,13 +1152,13 @@ const GeneralJournalPage = () => {
                   Proveedor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Descripción
+                  Descripci�n
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Débito
+                  D�bito
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Crédito
+                  Cr�dito
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Estado
@@ -1184,10 +1184,10 @@ const GeneralJournalPage = () => {
                     {entry.description}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${formatAmount(entry.total_debit)}
+                    {formatAmount(entry.total_debit)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    RD${formatAmount(entry.total_credit)}
+                    {formatAmount(entry.total_credit)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -1249,10 +1249,10 @@ const GeneralJournalPage = () => {
                   Totales del reporte:
                 </td>
                 <td className="px-6 py-3 font-bold text-gray-900">
-                  RD${formatAmount(totalDebitsFiltered)}
+                  {formatAmount(totalDebitsFiltered)}
                 </td>
                 <td className="px-6 py-3 font-bold text-gray-900">
-                  RD${formatAmount(totalCreditsFiltered)}
+                  {formatAmount(totalCreditsFiltered)}
                 </td>
                 <td colSpan={2}></td>
               </tr>
@@ -1305,12 +1305,12 @@ const GeneralJournalPage = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción
+                  Descripci�n
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción del asiento contable"
+                  placeholder="Descripci�n del asiento contable"
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1319,7 +1319,7 @@ const GeneralJournalPage = () => {
               {/* Entry Lines */}
               <div className="mb-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Líneas del Asiento</h3>
+                  <h3 className="text-lg font-medium text-gray-900">L�neas del Asiento</h3>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1330,13 +1330,13 @@ const GeneralJournalPage = () => {
                           Cuenta
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Descripción
+                          Descripci�n
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Débito
+                          D�bito
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Crédito
+                          Cr�dito
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Acciones
@@ -1365,7 +1365,7 @@ const GeneralJournalPage = () => {
                               type="text"
                               value={line.description}
                               onChange={(e) => updateLine(index, 'description', e.target.value)}
-                              placeholder="Descripción de la línea"
+                              placeholder="Descripci�n de la l�nea"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </td>
@@ -1418,10 +1418,10 @@ const GeneralJournalPage = () => {
                           Totales:
                         </td>
                         <td className="px-4 py-3 font-bold text-gray-900">
-                          RD${formatAmount(totalDebit)}
+                          {formatAmount(totalDebit)}
                         </td>
                         <td className="px-4 py-3 font-bold text-gray-900">
-                          RD${formatAmount(totalCredit)}
+                          {formatAmount(totalCredit)}
                         </td>
                         <td className="px-4 py-3"></td>
                       </tr>
@@ -1432,7 +1432,7 @@ const GeneralJournalPage = () => {
                             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center"
                           >
                             <i className="ri-add-line mr-2"></i>
-                            Agregar Línea
+                            Agregar L�nea
                           </button>
                         </td>
                       </tr>
@@ -1485,7 +1485,7 @@ const GeneralJournalPage = () => {
                     {companyInfo?.name || companyInfo?.company_name || 'Diario General'}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Período: {dateFrom ? formatDate(dateFrom) : 'Inicio'} - {dateTo ? formatDate(dateTo) : 'Fin'}
+                    Per�odo: {dateFrom ? formatDate(dateFrom) : 'Inicio'} - {dateTo ? formatDate(dateTo) : 'Fin'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -1510,13 +1510,13 @@ const GeneralJournalPage = () => {
                 <table className="min-w-full border border-gray-200 rounded-lg">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">N�mero</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Débito</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crédito</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripci�n</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">D�bito</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cr�dito</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
                   </thead>
@@ -1530,8 +1530,8 @@ const GeneralJournalPage = () => {
                           {entry.supplier_name || entry.vendor_name || entry.payee_name || entry.counterparty || '-'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{entry.description}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">RD${formatAmount(entry.total_debit)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">RD${formatAmount(entry.total_credit)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatAmount(entry.total_debit)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900 text-right">{formatAmount(entry.total_credit)}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                             entry.status === 'posted' ? 'bg-green-100 text-green-800' :
@@ -1551,8 +1551,8 @@ const GeneralJournalPage = () => {
                   <tfoot className="bg-gray-50">
                     <tr>
                       <td colSpan={5} className="px-4 py-3 text-right font-semibold text-gray-900">Totales:</td>
-                      <td className="px-4 py-3 font-bold text-gray-900 text-right">RD${formatAmount(totalDebitsFiltered)}</td>
-                      <td className="px-4 py-3 font-bold text-gray-900 text-right">RD${formatAmount(totalCreditsFiltered)}</td>
+                      <td className="px-4 py-3 font-bold text-gray-900 text-right">{formatAmount(totalDebitsFiltered)}</td>
+                      <td className="px-4 py-3 font-bold text-gray-900 text-right">{formatAmount(totalCreditsFiltered)}</td>
                       <td></td>
                     </tr>
                   </tfoot>
@@ -1565,12 +1565,12 @@ const GeneralJournalPage = () => {
                   <div className="text-2xl font-bold text-blue-900">{sortedEntries.length}</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm text-green-600 font-medium">Total Débitos</div>
-                  <div className="text-2xl font-bold text-green-900">RD${formatAmount(totalDebitsFiltered)}</div>
+                  <div className="text-sm text-green-600 font-medium">Total D�bitos</div>
+                  <div className="text-2xl font-bold text-green-900">{formatAmount(totalDebitsFiltered)}</div>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-sm text-red-600 font-medium">Total Créditos</div>
-                  <div className="text-2xl font-bold text-red-900">RD${formatAmount(totalCreditsFiltered)}</div>
+                  <div className="text-sm text-red-600 font-medium">Total Cr�ditos</div>
+                  <div className="text-2xl font-bold text-red-900">{formatAmount(totalCreditsFiltered)}</div>
                 </div>
               </div>
             </div>
@@ -1599,7 +1599,7 @@ const GeneralJournalPage = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información General</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Informaci�n General</h3>
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-gray-500">Fecha:</span>
@@ -1627,21 +1627,21 @@ const GeneralJournalPage = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Totales</h3>
                   <div className="space-y-3">
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Total DÃ©bito:</span>
+                      <span className="text-sm font-medium text-gray-500">Total Débito:</span>
                       <span className="ml-2 text-sm font-bold text-gray-900">
-                        RD${formatAmount(selectedEntry.total_debit)}
+                        {formatAmount(selectedEntry.total_debit)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-500">Total CrÃ©dito:</span>
+                      <span className="text-sm font-medium text-gray-500">Total Crédito:</span>
                       <span className="ml-2 text-sm font-bold text-gray-900">
-                        RD${formatAmount(selectedEntry.total_credit)}
+                        {formatAmount(selectedEntry.total_credit)}
                       </span>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-500">Diferencia:</span>
                       <span className="ml-2 text-sm font-bold text-green-600">
-                        RD${formatAmount(Math.abs(selectedEntry.total_debit - selectedEntry.total_credit))}
+                        {formatAmount(Math.abs(selectedEntry.total_debit - selectedEntry.total_credit))}
                       </span>
                     </div>
                   </div>
@@ -1649,14 +1649,14 @@ const GeneralJournalPage = () => {
               </div>
 
               <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">DescripciÃ³n</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Descripción</h3>
                 <p className="text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
                   {selectedEntry.description}
                 </p>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">LÃ­neas del Asiento</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Líneas del Asiento</h3>
                 <div className="overflow-x-auto">
                   <table className="min-w-full border border-gray-200 rounded-lg">
                     <thead className="bg-gray-50">
@@ -1665,13 +1665,13 @@ const GeneralJournalPage = () => {
                           Cuenta
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          DescripciÃ³n
+                          Descripción
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          DÃ©bito
+                          Débito
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          CrÃ©dito
+                          Crédito
                         </th>
                       </tr>
                     </thead>
@@ -1685,10 +1685,10 @@ const GeneralJournalPage = () => {
                             {line.description}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {line.debit_amount > 0 ? `RD$${formatAmount(line.debit_amount)}` : '-'}
+                            {line.debit_amount > 0 ? `${formatAmount(line.debit_amount)}` : '-'}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {line.credit_amount > 0 ? `RD$${formatAmount(line.credit_amount)}` : '-'}
+                            {line.credit_amount > 0 ? `${formatAmount(line.credit_amount)}` : '-'}
                           </td>
                         </tr>
                       ))}
@@ -1699,10 +1699,10 @@ const GeneralJournalPage = () => {
                           Totales:
                         </td>
                         <td className="px-4 py-3 font-bold text-gray-900">
-                          RD${formatAmount(selectedEntry.total_debit)}
+                          {formatAmount(selectedEntry.total_debit)}
                         </td>
                         <td className="px-4 py-3 font-bold text-gray-900">
-                          RD${formatAmount(selectedEntry.total_credit)}
+                          {formatAmount(selectedEntry.total_credit)}
                         </td>
                       </tr>
                     </tfoot>

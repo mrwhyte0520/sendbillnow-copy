@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { invoicesService, customersService } from '../../services/database';
 import { supabase } from '../../lib/supabase';
-import { formatAmount } from '../../utils/numberFormat';
+import { formatAmount, formatMoney } from '../../utils/numberFormat';
 import { formatDate } from '../../utils/dateFormat';
 
 const theme = {
@@ -42,6 +42,7 @@ export default function AccountsReceivablePage() {
   const [entryLines, setEntryLines] = useState<any[]>([]);
   const [showEntryModal, setShowEntryModal] = useState(false);
   const [loadingLines, setLoadingLines] = useState(false);
+  const money = (value: number) => formatMoney(value ?? 0);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -250,7 +251,7 @@ export default function AccountsReceivablePage() {
   const summaryCards = [
     {
       label: 'Total Receivables',
-      value: `RD$ ${formatAmount(summary.totalReceivables)}`,
+      value: money(summary.totalReceivables),
       valueColor: '#2f3e1e',
       icon: 'ri-money-dollar-circle-line',
       iconBg: '#e3dcc8',
@@ -258,7 +259,7 @@ export default function AccountsReceivablePage() {
     },
     {
       label: 'Overdue',
-      value: `RD$ ${formatAmount(summary.overdueAmount)}`,
+      value: money(summary.overdueAmount),
       valueColor: '#7a2e1b',
       icon: 'ri-alarm-warning-line',
       iconBg: '#f4d9d4',
@@ -266,7 +267,7 @@ export default function AccountsReceivablePage() {
     },
     {
       label: 'Current',
-      value: `RD$ ${formatAmount(summary.currentAmount)}`,
+      value: money(summary.currentAmount),
       valueColor: '#2f3e1e',
       icon: 'ri-time-line',
       iconBg: '#d7e4c0',
@@ -437,10 +438,10 @@ export default function AccountsReceivablePage() {
                         {entry.description}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-[#2f3e1e]">
-                        RD$ {formatAmount(entry.total_debit)}
+                         {formatAmount(entry.total_debit)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-right font-medium text-[#2f3e1e]">
-                        RD$ {formatAmount(entry.total_credit)}
+                         {formatAmount(entry.total_credit)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -515,11 +516,11 @@ export default function AccountsReceivablePage() {
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 uppercase">Total Debit</p>
-                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedEntry.total_debit)}</p>
+                    <p className="font-semibold text-gray-900"> {formatAmount(selectedEntry.total_debit)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 uppercase">Total Credit</p>
-                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedEntry.total_credit)}</p>
+                    <p className="font-semibold text-gray-900"> {formatAmount(selectedEntry.total_credit)}</p>
                   </div>
                 </div>
 
@@ -567,10 +568,10 @@ export default function AccountsReceivablePage() {
                                 {line.description || '-'}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                {Number(line.debit_amount || 0) > 0 ? `RD$ ${formatAmount(line.debit_amount)}` : '-'}
+                                {Number(line.debit_amount || 0) > 0 ? ` ${formatAmount(line.debit_amount)}` : '-'}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                {Number(line.credit_amount || 0) > 0 ? `RD$ ${formatAmount(line.credit_amount)}` : '-'}
+                                {Number(line.credit_amount || 0) > 0 ? ` ${formatAmount(line.credit_amount)}` : '-'}
                               </td>
                             </tr>
                           ))}
@@ -579,10 +580,10 @@ export default function AccountsReceivablePage() {
                           <tr>
                             <td colSpan={3} className="px-4 py-3 text-right text-gray-700">Totals:</td>
                             <td className="px-4 py-3 text-right text-green-700">
-                              RD$ {formatAmount(entryLines.reduce((sum: number, l: any) => sum + Number(l.debit_amount || 0), 0))}
+                               {formatAmount(entryLines.reduce((sum: number, l: any) => sum + Number(l.debit_amount || 0), 0))}
                             </td>
                             <td className="px-4 py-3 text-right text-green-700">
-                              RD$ {formatAmount(entryLines.reduce((sum: number, l: any) => sum + Number(l.credit_amount || 0), 0))}
+                               {formatAmount(entryLines.reduce((sum: number, l: any) => sum + Number(l.credit_amount || 0), 0))}
                             </td>
                           </tr>
                         </tfoot>

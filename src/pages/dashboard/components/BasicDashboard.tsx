@@ -88,7 +88,7 @@ export default function BasicDashboard() {
               <p className="text-sm font-semibold text-[#6b5c3b]">Net Profit</p>
               <p className="text-2xl font-bold text-[#2f3e1e]">{formatCurrency(netProfit)}</p>
             </div>
-            <div className="w-12 h-12 bg-[#d9e0bf] rounded-xl flex items-center justify-center shadow-inner">
+            <div className="w-12 h-12 bg-[#dce3c2] rounded-xl flex items-center justify-center shadow-inner">
               <i className="ri-line-chart-line text-[#2f3e1e] text-xl"></i>
             </div>
           </div>

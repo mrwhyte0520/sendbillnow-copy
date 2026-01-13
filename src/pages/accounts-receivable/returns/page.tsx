@@ -206,9 +206,9 @@ export default function ReturnsPage() {
             <tr>
               <td>${idx + 1}</td>
               <td>${item.description}</td>
-              <td class="num">RD$ ${formatAmount(item.price)}</td>
+              <td class="num"> ${formatAmount(item.price)}</td>
               <td class="num">${item.quantity}</td>
-              <td class="num">RD$ ${formatAmount(item.total)}</td>
+              <td class="num"> ${formatAmount(item.total)}</td>
             </tr>`,
         )
         .join('');
@@ -295,9 +295,9 @@ export default function ReturnsPage() {
               <div class="totals">
                 <div class="totals-head">Resumen</div>
                 <div class="totals-body">
-                  <div class="totals-row"><div class="label">Monto factura</div><div class="value">RD$ ${formatAmount(invoiceTotal)}</div></div>
-                  <div class="totals-row"><div class="label">Devuelto</div><div class="value">RD$ ${formatAmount(returned)}</div></div>
-                  <div class="totals-row total"><div class="label">Resto</div><div class="value">RD$ ${formatAmount(remaining)}</div></div>
+                  <div class="totals-row"><div class="label">Monto factura</div><div class="value"> ${formatAmount(invoiceTotal)}</div></div>
+                  <div class="totals-row"><div class="label">Devuelto</div><div class="value"> ${formatAmount(returned)}</div></div>
+                  <div class="totals-row total"><div class="label">Resto</div><div class="value"> ${formatAmount(remaining)}</div></div>
                 </div>
               </div>
             </div>
@@ -421,7 +421,7 @@ export default function ReturnsPage() {
         }
         if (amount > pending) {
           alert(
-            `El monto de la devolución no puede ser mayor que el saldo pendiente de la factura (pendiente: RD$${formatAmount(pending)}).`,
+            `El monto de la devolución no puede ser mayor que el saldo pendiente de la factura (pendiente: ${formatAmount(pending)}).`,
           );
           return;
         }
@@ -513,7 +513,7 @@ export default function ReturnsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Devoluciones</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  RD${formatAmount(totalAmount)}
+                  {formatAmount(totalAmount)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -601,7 +601,7 @@ export default function ReturnsPage() {
                       {ret.invoiceNumber || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                      RD${formatAmount(ret.amount)}
+                      {formatAmount(ret.amount)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {ret.concept}

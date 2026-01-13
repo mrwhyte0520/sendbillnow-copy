@@ -375,9 +375,9 @@ export default function InvoicesPage() {
 
     const summaryData = [
       ['Metric', 'Amount'],
-      ['Total Invoiced', `RD$ ${formatAmount(totalAmount)}`],
-      ['Total Paid', `RD$ ${formatAmount(totalPaid)}`],
-      ['Outstanding Balance', `RD$ ${formatAmount(totalBalance)}`],
+      ['Total Invoiced', ` ${formatAmount(totalAmount)}`],
+      ['Total Paid', ` ${formatAmount(totalPaid)}`],
+      ['Outstanding Balance', ` ${formatAmount(totalBalance)}`],
       ['Invoice Count', filteredInvoices.length.toString()]
     ];
 
@@ -399,9 +399,9 @@ export default function InvoicesPage() {
       invoice.customerName,
       formatDate(invoice.date),
       formatDate(invoice.dueDate),
-      `RD$ ${formatAmount(invoice.amount)}`,
-      `RD$ ${formatAmount(invoice.paidAmount)}`,
-      `RD$ ${formatAmount(invoice.balance)}`,
+      ` ${formatAmount(invoice.amount)}`,
+      ` ${formatAmount(invoice.paidAmount)}`,
+      ` ${formatAmount(invoice.balance)}`,
       getStatusName(invoice.status)
     ]);
     
@@ -481,7 +481,7 @@ export default function InvoicesPage() {
 
     worksheet.getCell(`B${resumenStartRow + 3}`).value = filteredInvoices.length;
 
-    // Formato numérico RD$
+    // Formato numérico 
     for (let r = resumenStartRow; r <= resumenStartRow + 2; r++) {
       const cell = worksheet.getCell(`B${r}`);
       cell.numFmt = '#,##0.00';
@@ -866,7 +866,7 @@ export default function InvoicesPage() {
                     <div class="title">
                       <div>
                         <div class="label">Monto recibido</div>
-                        <div class="value">RD$ ${amountText}</div>
+                        <div class="value"> ${amountText}</div>
                       </div>
                       <div style="color: rgba(22,163,74,.9); font-weight:800;">Cobro</div>
                     </div>
@@ -891,7 +891,7 @@ export default function InvoicesPage() {
 
       if (change > 0) {
         alert(
-          `Pago registrado correctamente. Devuelta: RD$ ${formatAmount(change)}`,
+          `Pago registrado correctamente. Devuelta:  ${formatAmount(change)}`,
         );
       } else {
         alert('Pago registrado exitosamente');
@@ -1106,9 +1106,9 @@ export default function InvoicesPage() {
             <tr>
               <td>${idx + 1}</td>
               <td>${item.description}</td>
-              <td class="num">RD$ ${formatAmount(item.price)}</td>
+              <td class="num"> ${formatAmount(item.price)}</td>
               <td class="num">${item.quantity}</td>
-              <td class="num">RD$ ${formatAmount(item.total)}</td>
+              <td class="num"> ${formatAmount(item.total)}</td>
             </tr>`,
         )
         .join('');
@@ -1316,13 +1316,13 @@ export default function InvoicesPage() {
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${formatAmount(invoice.amount)}
+                      {formatAmount(invoice.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${formatAmount(invoice.paidAmount)}
+                      {formatAmount(invoice.paidAmount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      RD${formatAmount(invoice.balance)}
+                      {formatAmount(invoice.balance)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
@@ -1601,7 +1601,7 @@ export default function InvoicesPage() {
                             </td>
                             <td className="px-4 py-2 align-top">
                               <span className="font-medium">
-                                RD$ {formatAmount(item.total)}
+                                 {formatAmount(item.total)}
                               </span>
                             </td>
                             <td className="px-4 py-2 align-top">
@@ -1653,7 +1653,7 @@ export default function InvoicesPage() {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Subtotal:</span>
                           <span className="text-sm font-medium">
-                            RD${' '}
+                            {' '}
                             {formatAmount(newInvoiceSubtotal)}
 
                           </span>
@@ -1699,7 +1699,7 @@ export default function InvoicesPage() {
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">VAT ({currentItbisRate.toFixed(2)}%):</span>
                           <span className="text-sm font-medium">
-                            RD${' '}
+                            {' '}
                             {formatAmount(newInvoiceTax)}
 
                           </span>
@@ -1708,7 +1708,7 @@ export default function InvoicesPage() {
                           <div className="flex justify-between">
                             <span className="text-base font-semibold">Total:</span>
                             <span className="text-base font-semibold">
-                              RD${' '}
+                              {' '}
                               {formatAmount(newInvoiceTotal)}
                             </span>
                           </div>
@@ -1780,13 +1780,13 @@ export default function InvoicesPage() {
                   <p className="text-sm text-gray-600">
                     Deuda total del cliente:{' '}
                     <span className="font-semibold">
-                      RD$
+                      
                       {formatAmount(getCustomerTotalBalance(selectedInvoice.customerId))}
                     </span>
                   </p>
                   <p className="text-lg font-semibold text-blue-600">
                     Saldo de esta factura:{' '}
-                    RD$
+                    
                     {formatAmount(selectedInvoice.balance)}
                   </p>
                 </div>
@@ -1806,7 +1806,7 @@ export default function InvoicesPage() {
                       <option value="">Seleccionar factura</option>
                       {invoices.filter(inv => inv.balance > 0).map((invoice) => (
                         <option key={invoice.id} value={invoice.id}>
-                          {invoice.invoiceNumber} - {invoice.customerName} (RD${formatAmount(invoice.balance)})
+                          {invoice.invoiceNumber} - {invoice.customerName} ({formatAmount(invoice.balance)})
                         </option>
                       ))}
                     </select>
@@ -2053,8 +2053,8 @@ export default function InvoicesPage() {
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-gray-900">{item.description}</td>
                             <td className="px-4 py-3 text-right text-gray-700">{item.quantity}</td>
-                            <td className="px-4 py-3 text-right text-gray-700">RD$ {formatAmount(item.price)}</td>
-                            <td className="px-4 py-3 text-right font-medium text-gray-900">RD$ {formatAmount(item.total)}</td>
+                            <td className="px-4 py-3 text-right text-gray-700"> {formatAmount(item.price)}</td>
+                            <td className="px-4 py-3 text-right font-medium text-gray-900"> {formatAmount(item.total)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2067,25 +2067,25 @@ export default function InvoicesPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal:</span>
-                      <span className="font-medium text-gray-900">RD$ {formatAmount(selectedInvoice.subtotal)}</span>
+                      <span className="font-medium text-gray-900"> {formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">ITBIS:</span>
-                      <span className="font-medium text-gray-900">RD$ {formatAmount(selectedInvoice.tax)}</span>
+                      <span className="font-medium text-gray-900"> {formatAmount(selectedInvoice.tax)}</span>
                     </div>
                     <div className="border-t border-gray-300 my-2"></div>
                     <div className="flex justify-between text-lg">
                       <span className="font-semibold text-gray-700">Total:</span>
-                      <span className="font-bold text-blue-600">RD$ {formatAmount(selectedInvoice.amount)}</span>
+                      <span className="font-bold text-blue-600"> {formatAmount(selectedInvoice.amount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Pagado:</span>
-                      <span className="font-medium text-green-600">RD$ {formatAmount(selectedInvoice.paidAmount)}</span>
+                      <span className="font-medium text-green-600"> {formatAmount(selectedInvoice.paidAmount)}</span>
                     </div>
                     <div className="flex justify-between text-lg">
                       <span className="font-semibold text-gray-700">Saldo pendiente:</span>
                       <span className={`font-bold ${selectedInvoice.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        RD$ {formatAmount(selectedInvoice.balance)}
+                         {formatAmount(selectedInvoice.balance)}
                       </span>
                     </div>
                   </div>
@@ -2128,10 +2128,10 @@ export default function InvoicesPage() {
                                 {mov.description}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                RD$ {formatAmount(mov.total_debit || 0)}
+                                 {formatAmount(mov.total_debit || 0)}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                RD$ {formatAmount(mov.total_credit || 0)}
+                                 {formatAmount(mov.total_credit || 0)}
                               </td>
                               <td className="px-4 py-3 text-center">
                                 <button
@@ -2235,11 +2235,11 @@ export default function InvoicesPage() {
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 uppercase">Total Débito</p>
-                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedMovement.total_debit || 0)}</p>
+                    <p className="font-semibold text-gray-900"> {formatAmount(selectedMovement.total_debit || 0)}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <p className="text-xs text-gray-500 uppercase">Total Crédito</p>
-                    <p className="font-semibold text-gray-900">RD$ {formatAmount(selectedMovement.total_credit || 0)}</p>
+                    <p className="font-semibold text-gray-900"> {formatAmount(selectedMovement.total_credit || 0)}</p>
                   </div>
                 </div>
 
@@ -2287,10 +2287,10 @@ export default function InvoicesPage() {
                                 {line.description || '-'}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                {Number(line.debit_amount || 0) > 0 ? `RD$ ${formatAmount(line.debit_amount)}` : '-'}
+                                {Number(line.debit_amount || 0) > 0 ? ` ${formatAmount(line.debit_amount)}` : '-'}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-gray-900">
-                                {Number(line.credit_amount || 0) > 0 ? `RD$ ${formatAmount(line.credit_amount)}` : '-'}
+                                {Number(line.credit_amount || 0) > 0 ? ` ${formatAmount(line.credit_amount)}` : '-'}
                               </td>
                             </tr>
                           ))}
@@ -2299,10 +2299,10 @@ export default function InvoicesPage() {
                           <tr>
                             <td colSpan={3} className="px-4 py-3 text-right text-gray-700">Totales:</td>
                             <td className="px-4 py-3 text-right text-green-700">
-                              RD$ {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.debit_amount || 0), 0))}
+                               {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.debit_amount || 0), 0))}
                             </td>
                             <td className="px-4 py-3 text-right text-green-700">
-                              RD$ {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.credit_amount || 0), 0))}
+                               {formatAmount(movementLines.reduce((sum: number, l: any) => sum + Number(l.credit_amount || 0), 0))}
                             </td>
                           </tr>
                         </tfoot>

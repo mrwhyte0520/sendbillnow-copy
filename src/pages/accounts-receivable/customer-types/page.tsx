@@ -142,7 +142,7 @@ export default function CustomerTypesPage() {
                       {t.fixedDiscount.toLocaleString()}%
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      RD${t.creditLimit.toLocaleString()}
+                      {t.creditLimit.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {t.allowedDelayDays} days

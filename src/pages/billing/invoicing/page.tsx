@@ -752,9 +752,9 @@ export default function InvoicingPage() {
               <div class="totals">
                 <div class="totals-head">Summary</div>
                 <div class="totals-body">
-                  <div class="totals-row"><div class="label">Subtotal</div><div class="value">RD$ ${formatAmount(invoice.amount)}</div></div>
-                  <div class="totals-row"><div class="label">ITBIS (${itbisLabel}%)</div><div class="value">RD$ ${formatAmount(invoice.tax)}</div></div>
-                  <div class="totals-row total"><div class="label">Total</div><div class="value">RD$ ${formatAmount(invoice.total)}</div></div>
+                  <div class="totals-row"><div class="label">Subtotal</div><div class="value"> ${formatAmount(invoice.amount)}</div></div>
+                  <div class="totals-row"><div class="label">ITBIS (${itbisLabel}%)</div><div class="value"> ${formatAmount(invoice.tax)}</div></div>
+                  <div class="totals-row total"><div class="label">Total</div><div class="value"> ${formatAmount(invoice.total)}</div></div>
                 </div>
               </div>
             </div>
@@ -777,9 +777,9 @@ export default function InvoicingPage() {
                       <tr>
                         <td>${idx + 1}</td>
                         <td>${item.description}</td>
-                        <td class="num">RD$ ${formatAmount(item.price)}</td>
+                        <td class="num"> ${formatAmount(item.price)}</td>
                         <td class="num">${item.quantity}</td>
-                        <td class="num">RD$ ${formatAmount(item.total)}</td>
+                        <td class="num"> ${formatAmount(item.total)}</td>
                       </tr>`
                     )
                     .join('')}
@@ -1487,13 +1487,11 @@ export default function InvoicingPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <div className="text-sm font-medium text-gray-900">
-                          {invoice.currency || baseCurrencyCode}{' '}
                           {formatAmount(invoice.total)}
                         </div>
                         {invoice.baseTotal != null && invoice.currency !== baseCurrencyCode && (
                           <div className="text-xs text-gray-500">
-                            ≈ {baseCurrencyCode}{' '}
-                            {formatAmount(invoice.baseTotal)}
+                            ≈ {formatAmount(invoice.baseTotal)}
                           </div>
                         )}
                       </td>

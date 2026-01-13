@@ -308,7 +308,7 @@ export default function ReceiptsPage() {
     
     const summaryData = [
       ['Metric', 'Value'],
-      ['Total received', `RD$ ${formatAmount(totalAmount)}`],
+      ['Total received', ` ${formatAmount(totalAmount)}`],
       ['Active receipts', activeReceipts.toString()],
       ['Cancelled receipts', cancelledReceipts.toString()],
       ['Total receipts', filteredReceipts.length.toString()]
@@ -340,7 +340,7 @@ export default function ReceiptsPage() {
         customerEmail,
         customerAddress,
         formatDate(receipt.date),
-        `RD$ ${formatAmount(receipt.amount)}`,
+        ` ${formatAmount(receipt.amount)}`,
         getPaymentMethodName(receipt.paymentMethod),
         receipt.reference,
         getStatusName(receipt.status),
@@ -422,7 +422,7 @@ export default function ReceiptsPage() {
     worksheet.getCell(`A${resumenStartRow + 3}`).value = 'Total receipts';
     worksheet.getCell(`B${resumenStartRow + 3}`).value = filteredReceipts.length;
 
-    // Formato numérico RD$ para total recibido
+    // Formato numérico  para total recibido
     const totalCell = worksheet.getCell(`B${resumenStartRow}`);
     totalCell.numFmt = '#,##0.00';
 
@@ -695,7 +695,7 @@ export default function ReceiptsPage() {
             ${enriched.concept ? `<p><strong>Concepto:</strong> ${enriched.concept}</p>` : ''}
             <p><strong>Método de pago:</strong> ${getPaymentMethodName(enriched.paymentMethod)}</p>
             ${enriched.reference ? `<p><strong>Referencia:</strong> ${enriched.reference}</p>` : ''}
-            <p class="amount">Monto: RD$ ${formatAmount(enriched.amount)}</p>
+            <p class="amount">Monto:  ${formatAmount(enriched.amount)}</p>
             ${appliedInvoicesHtml}
           </div>
 
@@ -918,7 +918,7 @@ export default function ReceiptsPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Total received</p>
                 <p className="text-2xl font-bold text-[#2f3e1e]">
-                  RD$
+                  
                   {formatAmount(
                     filteredReceipts
                       .filter((r) => r.status === 'active')
@@ -962,7 +962,7 @@ export default function ReceiptsPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Average per receipt</p>
                 <p className="text-2l font-bold text-[#2f3e1e]">
-                  RD$
+                  
                   {filteredReceipts.length
                     ? formatAmount(
                         Math.round(
@@ -1065,7 +1065,7 @@ export default function ReceiptsPage() {
                       {formatDate(receipt.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#1e2814]">
-                      RD${formatAmount(receipt.amount)}
+                      {formatAmount(receipt.amount)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#1e2814]">
                       {getPaymentMethodName(receipt.paymentMethod)}
@@ -1163,7 +1163,7 @@ export default function ReceiptsPage() {
                   Customer <span className="font-semibold">{selectedReceipt.customerName}</span>
                 </p>
                 <p className="text-lg font-bold text-[#2f3e1e]">
-                  Available RD${formatAmount(selectedReceiptAvailableAmount)}
+                  Available {formatAmount(selectedReceiptAvailableAmount)}
                 </p>
               </div>
               {loadingApplyInvoices && (
@@ -1186,7 +1186,7 @@ export default function ReceiptsPage() {
                       <option value="">Select invoice</option>
                       {applyInvoices.map((inv) => (
                         <option key={inv.id} value={inv.id}>
-                          {inv.invoiceNumber} · RD$ {formatAmount(inv.totalAmount)}
+                          {inv.invoiceNumber} ·  {formatAmount(inv.totalAmount)}
                         </option>
                       ))}
                     </select>
@@ -1319,24 +1319,24 @@ export default function ReceiptsPage() {
                         <option value="">Select invoice (optional)</option>
                         {newReceiptInvoices.map((inv) => (
                           <option key={inv.id} value={inv.id}>
-                            {inv.invoiceNumber} · Balance RD$ {formatAmount(inv.balance)}
+                            {inv.invoiceNumber} · Balance  {formatAmount(inv.balance)}
                           </option>
                         ))}
                       </select>
                       {selectedNewReceiptInvoice && (
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-[#1e2814] bg-[#f7f0df] border border-[#d6cfbf] rounded-lg p-3">
                           <p>
-                            <span className="font-medium">Amount:</span> RD$
+                            <span className="font-medium">Amount:</span> 
                             {formatAmount(selectedNewReceiptInvoice.totalAmount)}
                           </p>
                           <p>
-                            <span className="font-medium">Paid:</span> RD$
+                            <span className="font-medium">Paid:</span> 
                             {formatAmount(selectedNewReceiptInvoice.paidAmount)}
                           </p>
                           <p>
                             <span className="font-medium">Balance:</span>{' '}
                             <span className="text-[#2f3e1e] font-semibold">
-                              RD${formatAmount(selectedNewReceiptInvoice.balance)}
+                              {formatAmount(selectedNewReceiptInvoice.balance)}
                             </span>
                           </p>
                         </div>
@@ -1474,7 +1474,7 @@ export default function ReceiptsPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#4c5535]">Amount</label>
-                    <p className="text-2xl font-bold text-[#2f3e1e]">RD${formatAmount(selectedReceipt.amount)}</p>
+                    <p className="text-2xl font-bold text-[#2f3e1e]">{formatAmount(selectedReceipt.amount)}</p>
                   </div>
                 </div>
                 <div className="space-y-4">

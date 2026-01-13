@@ -202,9 +202,9 @@ export default function DebitNotesPage() {
     
     const summaryData = [
       ['Metric', 'Value'],
-      ['Total Debit Notes', `${formatMoney(totalAmount, 'RD$')}`],
-      ['Total Applied', `${formatMoney(totalApplied, 'RD$')}`],
-      ['Pending Balance', `${formatMoney(totalBalance, 'RD$')}`],
+      ['Total Debit Notes', `${formatMoney(totalAmount, '')}`],
+      ['Total Applied', `${formatMoney(totalApplied, '')}`],
+      ['Pending Balance', `${formatMoney(totalBalance, '')}`],
       ['Pending Notes', pendingNotes.toString()],
       ['Number of Notes', activeNotes.length.toString()]
     ];
@@ -225,9 +225,9 @@ export default function DebitNotesPage() {
       note.noteNumber,
       note.customerName,
       note.date,
-      `${formatMoney(note.amount, 'RD$')}`,
-      `${formatMoney(note.appliedAmount, 'RD$')}`,
-      `${formatMoney(note.balance, 'RD$')}`,
+      `${formatMoney(note.amount, '')}`,
+      `${formatMoney(note.appliedAmount, '')}`,
+      `${formatMoney(note.balance, '')}`,
       note.reason,
       getStatusName(note.status)
     ]);
@@ -270,9 +270,9 @@ export default function DebitNotesPage() {
       noteNumber: note.noteNumber,
       customerName: note.customerName,
       date: note.date,
-      amount: formatMoney(note.amount, 'RD$'),
-      appliedAmount: formatMoney(note.appliedAmount, 'RD$'),
-      balance: formatMoney(note.balance, 'RD$'),
+      amount: formatMoney(note.amount, ''),
+      appliedAmount: formatMoney(note.appliedAmount, ''),
+      balance: formatMoney(note.balance, ''),
       reason: note.reason,
       concept: note.concept,
       status: getStatusName(note.status),
@@ -513,7 +513,7 @@ export default function DebitNotesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Total Notes</p>
                 <p className="text-2xl font-semibold text-[#2f3e1e]">
-                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.amount, 0), 'RD$')}
+                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.amount, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
@@ -527,7 +527,7 @@ export default function DebitNotesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Pending Balance</p>
                 <p className="text-2xl font-semibold text-[#1f2913]">
-                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.balance, 0), 'RD$')}
+                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.balance, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#1f2913]">
@@ -541,7 +541,7 @@ export default function DebitNotesPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
                 <p className="text-2xl font-semibold text-[#4a3c24]">
-                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.appliedAmount, 0), 'RD$')}
+                  {formatMoney(filteredNotes.reduce((sum, n) => sum + n.appliedAmount, 0), '')}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#4a3c24]">
@@ -663,13 +663,13 @@ export default function DebitNotesPage() {
                       {note.date}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatMoney(note.amount, 'RD$')}
+                      {formatMoney(note.amount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(note.appliedAmount, 'RD$')}
+                      {formatMoney(note.appliedAmount, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
-                      {formatMoney(note.balance, 'RD$')}
+                      {formatMoney(note.balance, '')}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {note.reason}
@@ -905,7 +905,7 @@ export default function DebitNotesPage() {
               <div className="mb-4 p-4 bg-[#f3ecda] rounded-lg border border-[#e4d8c4]">
                 <p className="text-sm text-[#4a3c24]">Note: <span className="font-semibold text-[#2f3e1e]">{selectedNote.noteNumber}</span></p>
                 <p className="text-sm text-[#4a3c24]">Customer: <span className="font-semibold text-[#2f3e1e]">{selectedNote.customerName}</span></p>
-                <p className="text-lg font-semibold text-[#bc6c2b]">Pending balance: {formatMoney(selectedNote.balance, 'RD$')}</p>
+                <p className="text-lg font-semibold text-[#bc6c2b]">Pending balance: {formatMoney(selectedNote.balance, '')}</p>
               </div>
               
               <form onSubmit={handleSaveApplication} className="space-y-4">
@@ -1015,7 +1015,7 @@ export default function DebitNotesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Monto Original</label>
-                    <p className="text-2xl font-bold text-red-600">{formatMoney(selectedNote.amount, 'RD$')}</p>
+                    <p className="text-2xl font-bold text-red-600">{formatMoney(selectedNote.amount, '')}</p>
                   </div>
                 </div>
                 
@@ -1034,12 +1034,12 @@ export default function DebitNotesPage() {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Monto Aplicado</label>
-                    <p className="text-lg font-semibold text-green-600">{formatMoney(selectedNote.appliedAmount, 'RD$')}</p>
+                    <p className="text-lg font-semibold text-green-600">{formatMoney(selectedNote.appliedAmount, '')}</p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Saldo Pendiente</label>
-                    <p className="text-2xl font-bold text-orange-600">{formatMoney(selectedNote.balance, 'RD$')}</p>
+                    <p className="text-2xl font-bold text-orange-600">{formatMoney(selectedNote.balance, '')}</p>
                   </div>
                 </div>
               </div>

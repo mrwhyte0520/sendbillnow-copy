@@ -146,18 +146,18 @@ export default function BillingPage() {
         setSalesStats([
           {
             title: 'Today’s Sales',
-            value: `RD$ ${todaySales.toLocaleString('es-DO')}`,
+            value: `$ ${todaySales.toLocaleString('es-DO')}`,
             change: '',
-            previousValue: `RD$ ${yesterdaySales.toLocaleString('es-DO')}`,
+            previousValue: `$ ${yesterdaySales.toLocaleString('es-DO')}`,
             icon: 'ri-money-dollar-circle-line',
             iconWrapperClass: `${ICON_WRAPPER_BASE} bg-[#DDE7D0]`,
             iconColorClass: 'text-[#2F3D2E]',
           },
           {
             title: 'Monthly Revenue',
-            value: `RD$ ${monthlyRevenue.toLocaleString('es-DO')}`,
+            value: `$ ${monthlyRevenue.toLocaleString('es-DO')}`,
             change: '',
-            previousValue: `RD$ ${yesterdaySales.toLocaleString('es-DO')}`,
+            previousValue: `$ ${yesterdaySales.toLocaleString('es-DO')}`,
             icon: 'ri-line-chart-line',
             iconWrapperClass: `${ICON_WRAPPER_BASE} bg-[#E7DFC9]`,
             iconColorClass: 'text-[#3E4E3B]',
@@ -202,7 +202,7 @@ export default function BillingPage() {
             return {
               number: inv.invoice_number || inv.id,
               customer: customerName,
-              amount: `RD$ ${(Number(inv.total_amount) || 0).toLocaleString('es-DO')}`,
+              amount: `$ ${(Number(inv.total_amount) || 0).toLocaleString('es-DO')}`,
               status: statusLabel,
               date: dateStr ? new Date(dateStr).toLocaleDateString('es-DO') : '',
             };
@@ -230,7 +230,7 @@ export default function BillingPage() {
           .map((p) => ({
             name: p.name,
             quantity: p.quantity,
-            revenue: `RD$ ${p.revenue.toLocaleString('es-DO')}`,
+            revenue: `$ ${p.revenue.toLocaleString('es-DO')}`,
             margin: '',
           }));
         if (topProd.length > 0) setTopProducts(topProd);
@@ -250,7 +250,7 @@ export default function BillingPage() {
             return {
               number: q.quote_number || q.id,
               customer: customerName,
-              amount: `RD$ ${amount.toLocaleString('es-DO')}`,
+              amount: `$ ${amount.toLocaleString('es-DO')}`,
               validUntil: valid ? new Date(valid).toLocaleDateString('es-DO') : '',
               status: 'Pending',
             };
@@ -272,18 +272,18 @@ export default function BillingPage() {
   const [salesStats, setSalesStats] = useState([
     {
       title: 'Today’s Sales',
-      value: 'RD$ 0',
+      value: '$ 0',
       change: '',
-      previousValue: 'RD$ 0',
+      previousValue: '$ 0',
       icon: 'ri-money-dollar-circle-line',
       iconWrapperClass: `${ICON_WRAPPER_BASE} bg-[#DDE7D0]`,
       iconColorClass: 'text-[#2F3D2E]',
     },
     {
       title: 'Monthly Revenue',
-      value: 'RD$ 0',
+      value: '$ 0',
       change: '',
-      previousValue: 'RD$ 0',
+      previousValue: '$ 0',
       icon: 'ri-line-chart-line',
       iconWrapperClass: `${ICON_WRAPPER_BASE} bg-[#E7DFC9]`,
       iconColorClass: 'text-[#3E4E3B]',

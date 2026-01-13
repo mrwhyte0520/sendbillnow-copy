@@ -434,7 +434,7 @@ export default function PreInvoicingPage() {
             : quote.customer,
           date: new Date(quote.date).toLocaleDateString('es-DO'),
           validUntil: new Date(quote.validUntil).toLocaleDateString('es-DO'),
-          total: `RD$ ${quote.total.toLocaleString('es-DO')}`,
+          total: ` ${quote.total.toLocaleString('es-DO')}`,
           status: getStatusText(quote.status),
         }));
 
@@ -897,7 +897,7 @@ export default function PreInvoicingPage() {
                         {new Date(quote.validUntil).toLocaleDateString('es-DO')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        RD$ {quote.total.toLocaleString()}
+                         {quote.total.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(quote.status)}`}>
@@ -1113,7 +1113,7 @@ export default function PreInvoicingPage() {
                               />
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-sm font-medium">RD$ {item.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                              <span className="text-sm font-medium"> {item.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                             </td>
                             <td className="px-4 py-3">
                               <button
@@ -1158,18 +1158,18 @@ export default function PreInvoicingPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Subtotal:</span>
-                        <span className="text-sm font-medium">RD$ {quoteSubtotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-medium"> {quoteSubtotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Tax (18%):</span>
 
-                        <span className="text-sm font-medium">RD$ {quoteTax.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-medium"> {quoteTax.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2">
                         <div className="flex justify-between">
                           <span className="text-base font-semibold">Total:</span>
 
-                          <span className="text-base font-semibold">RD$ {quoteTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                          <span className="text-base font-semibold"> {quoteTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     </div>

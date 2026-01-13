@@ -203,7 +203,7 @@ export default function ReportIR17Page() {
     ws.getCell(currentRow, 4).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.getCell(currentRow, 4).alignment = { horizontal: 'center' };
-    ws.getCell(currentRow, 5).value = 'IMPUESTO (RD$)';
+    ws.getCell(currentRow, 5).value = 'IMPUESTO ()';
     ws.getCell(currentRow, 5).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.getCell(currentRow, 5).alignment = { horizontal: 'right' };
@@ -264,7 +264,7 @@ export default function ReportIR17Page() {
     ws.getCell(currentRow, 1).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.mergeCells(currentRow, 5, currentRow, 6);
-    ws.getCell(currentRow, 5).value = 'MONTO (RD$)';
+    ws.getCell(currentRow, 5).value = 'MONTO ()';
     ws.getCell(currentRow, 5).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.getCell(currentRow, 5).alignment = { horizontal: 'right' };
@@ -285,7 +285,7 @@ export default function ReportIR17Page() {
     ws.getCell(currentRow, 1).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.mergeCells(currentRow, 5, currentRow, 6);
-    ws.getCell(currentRow, 5).value = 'MONTO (RD$)';
+    ws.getCell(currentRow, 5).value = 'MONTO ()';
     ws.getCell(currentRow, 5).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     currentRow++;
@@ -301,7 +301,7 @@ export default function ReportIR17Page() {
     ws.getCell(currentRow, 1).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     ws.mergeCells(currentRow, 5, currentRow, 6);
-    ws.getCell(currentRow, 5).value = 'MONTO (RD$)';
+    ws.getCell(currentRow, 5).value = 'MONTO ()';
     ws.getCell(currentRow, 5).font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     ws.getCell(currentRow, 5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: blueColor } };
     currentRow++;
@@ -406,12 +406,12 @@ export default function ReportIR17Page() {
     headerLines.push('');
 
     const rows = [
-      ['A', 'Total ISR retenido a empleados', formatMoney(totalIsrEmpleados, 'RD$')],
-      ['B', 'Total ISR retenido a proveedores/terceros', formatMoney(totalIsrProveedores, 'RD$')],
-      ['B', 'Total ITBIS retenido a proveedores/terceros', formatMoney(totalItbisProveedores, 'RD$')],
-      ['TOTAL', 'Total ISR', formatMoney(totalIsrRetenido, 'RD$')],
-      ['TOTAL', 'Total ITBIS', formatMoney(totalItbisRetenido, 'RD$')],
-      ['TOTAL', 'Total general a pagar DGII', formatMoney(totalPagarDgii, 'RD$')],
+      ['A', 'Total ISR retenido a empleados', formatMoney(totalIsrEmpleados, '')],
+      ['B', 'Total ISR retenido a proveedores/terceros', formatMoney(totalIsrProveedores, '')],
+      ['B', 'Total ITBIS retenido a proveedores/terceros', formatMoney(totalItbisProveedores, '')],
+      ['TOTAL', 'Total ISR', formatMoney(totalIsrRetenido, '')],
+      ['TOTAL', 'Total ITBIS', formatMoney(totalItbisRetenido, '')],
+      ['TOTAL', 'Total general a pagar DGII', formatMoney(totalPagarDgii, '')],
     ];
 
     const csvContent = [
@@ -461,12 +461,12 @@ export default function ReportIR17Page() {
 
     try {
       const data = [
-        { seccion: 'A', concepto: 'Total ISR retenido a empleados', valor: formatMoney(totalIsrEmpleados, 'RD$') },
-        { seccion: 'B', concepto: 'Total ISR retenido a proveedores/terceros', valor: formatMoney(totalIsrProveedores, 'RD$') },
-        { seccion: 'B', concepto: 'Total ITBIS retenido a proveedores/terceros', valor: formatMoney(totalItbisProveedores, 'RD$') },
-        { seccion: 'TOTAL', concepto: 'Total ISR', valor: formatMoney(totalIsrRetenido, 'RD$') },
-        { seccion: 'TOTAL', concepto: 'Total ITBIS', valor: formatMoney(totalItbisRetenido, 'RD$') },
-        { seccion: 'TOTAL', concepto: 'Total general a pagar DGII', valor: formatMoney(totalPagarDgii, 'RD$') },
+        { seccion: 'A', concepto: 'Total ISR retenido a empleados', valor: formatMoney(totalIsrEmpleados, '') },
+        { seccion: 'B', concepto: 'Total ISR retenido a proveedores/terceros', valor: formatMoney(totalIsrProveedores, '') },
+        { seccion: 'B', concepto: 'Total ITBIS retenido a proveedores/terceros', valor: formatMoney(totalItbisProveedores, '') },
+        { seccion: 'TOTAL', concepto: 'Total ISR', valor: formatMoney(totalIsrRetenido, '') },
+        { seccion: 'TOTAL', concepto: 'Total ITBIS', valor: formatMoney(totalItbisRetenido, '') },
+        { seccion: 'TOTAL', concepto: 'Total general a pagar DGII', valor: formatMoney(totalPagarDgii, '') },
       ];
 
       const columns = [
@@ -617,7 +617,7 @@ export default function ReportIR17Page() {
                   <div className="text-sm text-gray-600">Sección A — Empleados</div>
                   <div className="mt-2 flex items-center justify-between">
                     <div className="text-gray-800 font-medium">Total ISR retenido a empleados</div>
-                    <div className="text-xl font-bold text-blue-700">{formatMoney(totalIsrEmpleados, 'RD$')}</div>
+                    <div className="text-xl font-bold text-blue-700">{formatMoney(totalIsrEmpleados, '')}</div>
                   </div>
                 </div>
 
@@ -626,11 +626,11 @@ export default function ReportIR17Page() {
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="text-gray-800 font-medium">Total ISR retenido a proveedores</div>
-                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalIsrProveedores, 'RD$')}</div>
+                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalIsrProveedores, '')}</div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="text-gray-800 font-medium">Total ITBIS retenido (30%)</div>
-                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalItbisProveedores, 'RD$')}</div>
+                      <div className="text-xl font-bold text-orange-700">{formatMoney(totalItbisProveedores, '')}</div>
                     </div>
                   </div>
                 </div>
@@ -639,15 +639,15 @@ export default function ReportIR17Page() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="text-sm text-gray-600">Total ISR</div>
-                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalIsrRetenido, 'RD$')}</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalIsrRetenido, '')}</div>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="text-sm text-gray-600">Total ITBIS</div>
-                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalItbisRetenido, 'RD$')}</div>
+                  <div className="text-2xl font-bold text-gray-900">{formatMoney(totalItbisRetenido, '')}</div>
                 </div>
                 <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                   <div className="text-sm text-gray-600">Total general a pagar DGII</div>
-                  <div className="text-2xl font-bold text-green-700">{formatMoney(totalPagarDgii, 'RD$')}</div>
+                  <div className="text-2xl font-bold text-green-700">{formatMoney(totalPagarDgii, '')}</div>
                 </div>
               </div>
             </div>

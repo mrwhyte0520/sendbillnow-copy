@@ -222,8 +222,8 @@ const Formulario607Page = () => {
         registro.tipo_ingreso,
         registro.rnc_cedula_cliente,
         `"${registro.nombre_cliente}"`,
-        formatMoney(registro.monto_facturado, 'RD$'),
-        formatMoney(registro.itbis_facturado, 'RD$'),
+        formatMoney(registro.monto_facturado, ''),
+        formatMoney(registro.itbis_facturado, ''),
         registro.tipo_pago
       ].join(','))
     ].join('\n');
@@ -242,7 +242,7 @@ const Formulario607Page = () => {
 
   const exportToTXT = () => {
     const txtContent = filteredRegistros.map(registro => 
-      `${registro.fecha_factura}|${registro.tipo_comprobante}|${registro.ncf}|${registro.ncf_modificado || ''}|${registro.tipo_ingreso}|${registro.rnc_cedula_cliente}|${registro.nombre_cliente}|${formatMoney(registro.monto_facturado, 'RD$')}|${formatMoney(registro.itbis_facturado, 'RD$')}|${registro.tipo_pago}`
+      `${registro.fecha_factura}|${registro.tipo_comprobante}|${registro.ncf}|${registro.ncf_modificado || ''}|${registro.tipo_ingreso}|${registro.rnc_cedula_cliente}|${registro.nombre_cliente}|${formatMoney(registro.monto_facturado, '')}|${formatMoney(registro.itbis_facturado, '')}|${registro.tipo_pago}`
     ).join('\n');
 
     const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
@@ -297,7 +297,7 @@ const Formulario607Page = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Monto Total</p>
-              <p className="text-2xl font-bold text-gray-900">{formatMoney(totalMonto, 'RD$')}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatMoney(totalMonto, '')}</p>
             </div>
           </div>
         </div>
@@ -309,7 +309,7 @@ const Formulario607Page = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">ITBIS Total</p>
-              <p className="text-2xl font-bold text-gray-900">{formatMoney(totalItbis, 'RD$')}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatMoney(totalItbis, '')}</p>
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ const Formulario607Page = () => {
                   <span className="text-sm text-gray-600">{tipo}</span>
                   <div className="text-right">
                     <div className="font-semibold text-gray-900">{count} ventas</div>
-                    <div className="text-sm text-gray-500">{formatMoney(monto, 'RD$')}</div>
+                    <div className="text-sm text-gray-500">{formatMoney(monto, '')}</div>
                   </div>
                 </div>
               );
@@ -495,10 +495,10 @@ const Formulario607Page = () => {
                     <div className="text-sm text-gray-500">{registro.rnc_cedula_cliente}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatMoney(registro.monto_facturado, 'RD$')}
+                    {formatMoney(registro.monto_facturado, '')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatMoney(registro.itbis_facturado, 'RD$')}
+                    {formatMoney(registro.itbis_facturado, '')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {registro.tipo_pago}

@@ -1040,7 +1040,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
                 </span>
               </div>
               <div className="text-right text-gray-900 tabular-nums">
-                RD${Math.abs(account.balance).toLocaleString()}
+                {Math.abs(account.balance).toLocaleString()}
                 {account.balance < 0 && ' (Cr)'}
               </div>
             <div className="flex justify-center">
@@ -1114,7 +1114,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
                     </span>
                   </div>
                   <div className="text-right text-gray-900 text-sm font-semibold mt-1">
-                    RD${Math.abs(account.balance).toLocaleString()}
+                    {Math.abs(account.balance).toLocaleString()}
                     {account.balance < 0 && ' (Cr)'}
                   </div>
                 </div>

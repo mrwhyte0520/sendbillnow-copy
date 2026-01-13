@@ -787,7 +787,7 @@ export default function PaymentsPage() {
                     <div class="amount">
                       <div>
                         <div class="label">Monto recibido</div>
-                        <div class="value">RD$ ${amountText}</div>
+                        <div class="value"> ${amountText}</div>
                       </div>
                       <div style="color: rgba(22,163,74,.9); font-weight: 800;">Cobro</div>
                     </div>

@@ -1921,7 +1921,7 @@ export default function FinancialStatementsPage() {
           : []),
         ['ESTADO DE RESULTADOS', '', ''],
         [incomePeriodDates.periodLabel.toUpperCase(), '', ''],
-        ['VALORES EN RD$', '', ''],
+        ['VALORES EN ', '', ''],
         ['', '', ''],
       ];
 
@@ -2017,7 +2017,7 @@ export default function FinancialStatementsPage() {
           : []),
         ['ESTADO DE GASTOS GENERALES Y ADMINISTRATIVOS', '', ''],
         [periodDates.periodLabel.toUpperCase(), '', ''],
-        ['VALORES EN RD$', '', ''],
+        ['VALORES EN ', '', ''],
         ['', '', ''],
       ];
 
@@ -2113,7 +2113,7 @@ export default function FinancialStatementsPage() {
           : []),
         ['ESTADO DE COSTOS DE VENTAS', ''],
         [periodDates.periodLabel.toUpperCase(), ''],
-        ['VALORES EN RD$', ''],
+        ['VALORES EN ', ''],
         ['', ''],
       ];
 
@@ -2197,7 +2197,7 @@ export default function FinancialStatementsPage() {
           : []),
         ['ESTADO DE FLUJOS DE EFECTIVO', '', ''],
         [periodDates.periodLabel.toUpperCase(), '', ''],
-        ['VALORES EN RD$', '', ''],
+        ['VALORES EN ', '', ''],
         ['', '', ''],
       ];
 
@@ -2564,7 +2564,7 @@ export default function FinancialStatementsPage() {
                     Período comparativo: {comparisonPeriodLabel}
                   </p>
                 )}
-                <p className="text-xs text-gray-600">VALORES EN RD$</p>
+                <p className="text-xs text-gray-600">VALORES EN </p>
               </div>
 
               <div className="max-w-3xl mx-auto space-y-6">
@@ -2837,7 +2837,7 @@ export default function FinancialStatementsPage() {
                     Período comparativo: {comparisonPeriodLabel}
                   </p>
                 )}
-                <p className="text-xs text-gray-600">VALORES EN RD$</p>
+                <p className="text-xs text-gray-600">VALORES EN </p>
               </div>
 
               <div className="max-w-3xl mx-auto space-y-6">
@@ -3027,7 +3027,7 @@ export default function FinancialStatementsPage() {
                     Período comparativo: {comparisonPeriodLabel}
                   </p>
                 )}
-                <p className="text-xs text-gray-600">VALORES EN RD$</p>
+                <p className="text-xs text-gray-600">VALORES EN </p>
               </div>
 
               <div className="max-w-4xl mx-auto space-y-6">
@@ -3347,7 +3347,7 @@ export default function FinancialStatementsPage() {
                     Período comparativo: {comparisonPeriodLabel}
                   </p>
                 )}
-                <p className="text-xs text-gray-600">VALORES EN RD$</p>
+                <p className="text-xs text-gray-600">VALORES EN </p>
               </div>
 
               <div className="max-w-3xl mx-auto space-y-6">
@@ -3716,7 +3716,7 @@ export default function FinancialStatementsPage() {
                     Período comparativo: {comparisonPeriodLabel}
                   </p>
                 )}
-                <p className="text-xs text-gray-600">VALORES EN RD$</p>
+                <p className="text-xs text-gray-600">VALORES EN </p>
               </div>
 
               {(() => {
@@ -3951,7 +3951,7 @@ export default function FinancialStatementsPage() {
               <div className="text-center mb-8">
                 <h1 className="text-xl font-bold text-gray-900">ANEXOS A LOS ESTADOS FINANCIEROS</h1>
                 <p className="text-sm text-gray-600">{periodDates.asOfDateLabel}</p>
-                <p className="text-xs text-gray-500 mt-1">Valores en RD$</p>
+                <p className="text-xs text-gray-500 mt-1">Valores en </p>
               </div>
 
               {/* Listado de cuentas agrupadas por tipo */}

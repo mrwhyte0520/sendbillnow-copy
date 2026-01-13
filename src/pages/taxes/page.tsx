@@ -131,28 +131,28 @@ export default function TaxesPage() {
   const taxStatsDisplay = [
     {
       title: 'ITBIS Collected',
-      value: formatMoney(taxStats.itbis_cobrado, 'RD$'),
+      value: formatMoney(taxStats.itbis_cobrado, ''),
       change: '+12%',
       icon: 'ri-money-dollar-circle-line',
       color: 'green'
     },
     {
       title: 'ITBIS Paid',
-      value: formatMoney(taxStats.itbis_pagado, 'RD$'),
+      value: formatMoney(taxStats.itbis_pagado, ''),
       change: '+8%',
       icon: 'ri-bank-card-line',
       color: 'blue'
     },
     {
       title: 'Net ITBIS Due',
-      value: formatMoney(taxStats.itbis_neto, 'RD$'),
+      value: formatMoney(taxStats.itbis_neto, ''),
       change: '+15%',
       icon: 'ri-calculator-line',
       color: 'orange'
     },
     {
       title: 'Withholdings',
-      value: formatMoney(taxStats.retenciones, 'RD$'),
+      value: formatMoney(taxStats.retenciones, ''),
       change: '+5%',
       icon: 'ri-percent-line',
       color: 'purple'

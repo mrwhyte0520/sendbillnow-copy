@@ -468,15 +468,15 @@ const PettyCashReportPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-right">
                   <div>
                     <p className="text-xs uppercase text-gray-500">Monto inicial</p>
-                    <p className="text-lg font-semibold text-gray-900">RD${fund.initialAmount.toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-gray-900">{fund.initialAmount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase text-gray-500">Total reposiciones</p>
-                    <p className="text-lg font-semibold text-gray-900">RD${totalReplenishments.toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-gray-900">{totalReplenishments.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs uppercase text-gray-500">Valor teorico del fondo</p>
-                    <p className="text-lg font-semibold text-gray-900">RD${theoreticalFundValue.toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-gray-900">{theoreticalFundValue.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -510,7 +510,7 @@ const PettyCashReportPage: React.FC = () => {
                               Reposicion del {reimbursement.date || 'N/D'}
                             </p>
                             <p className="text-xs text-gray-600">
-                              Monto reposicion: RD${reimbursement.amount.toLocaleString()}  b7 Numero inicial de recibos:{' '}
+                              Monto reposicion: {reimbursement.amount.toLocaleString()}  b7 Numero inicial de recibos:{' '}
                               {reimbursement.startReceiptNumber || 'No especificado'}
                             </p>
                             {reimbursement.description && (
@@ -522,12 +522,12 @@ const PettyCashReportPage: React.FC = () => {
                           <div className="text-right">
                             <p className="text-xs uppercase text-gray-500">Total recibos</p>
                             <p className="text-sm font-semibold text-gray-900">
-                              RD${totalExpenses.toLocaleString()}
+                              {totalExpenses.toLocaleString()}
                             </p>
                             <p className="text-xs mt-1">
                               Diferencia vs. reposicion:{' '}
                               <span className={difference === 0 ? 'text-green-700' : 'text-red-700 font-semibold'}>
-                                RD${difference.toLocaleString()}
+                                {difference.toLocaleString()}
                               </span>
                             </p>
                           </div>
@@ -581,7 +581,7 @@ const PettyCashReportPage: React.FC = () => {
                                       {expense.category || '-'}
                                     </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-right font-medium text-gray-900">
-                                      RD${expense.amount.toLocaleString()}
+                                      {expense.amount.toLocaleString()}
                                     </td>
                                     <td className="px-4 py-2 whitespace-nowrap text-gray-700">
                                       {expense.status === 'approved'

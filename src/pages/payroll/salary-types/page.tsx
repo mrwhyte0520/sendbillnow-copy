@@ -421,8 +421,8 @@ export default function SalaryTypesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {type.calculation_method === 'hourly' 
-                        ? `RD$ ${type.base_amount.toLocaleString('en-US')}/hour`
-                        : `RD$ ${type.base_amount.toLocaleString('en-US')}`
+                        ? ` ${type.base_amount.toLocaleString('en-US')}/hour`
+                        : ` ${type.base_amount.toLocaleString('en-US')}`
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -528,7 +528,7 @@ export default function SalaryTypesPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {formData.calculation_method === 'hourly' ? 'Hourly Rate (RD$)' : 'Base Amount (RD$)'}
+                    {formData.calculation_method === 'hourly' ? 'Hourly Rate ()' : 'Base Amount ()'}
                   </label>
                   <input
                     type="number"

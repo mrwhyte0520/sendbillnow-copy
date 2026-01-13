@@ -252,7 +252,7 @@ export default function CashClosingPage() {
       const transferCount = countByMethod('transfer');
       const otherCount = Math.max(receiptsCount - cashCount - cardCount - transferCount, 0);
 
-      const formatMoneyRD = (value: number) => formatMoney(value, 'RD$');
+      const formatMoneyRD = (value: number) => formatMoney(value, '');
 
       const salesData = [
         ['Concept', 'Transactions', 'Amount'],
@@ -278,16 +278,16 @@ export default function CashClosingPage() {
       
       const cashData = [
         ['Denomination', 'Count', 'Subtotal'],
-        ['RD$ 2,000', '5', 'RD$ 10,000.00'],
-        ['RD$ 1,000', '8', 'RD$ 8,000.00'],
-        ['RD$ 500', '12', 'RD$ 6,000.00'],
-        ['RD$ 200', '15', 'RD$ 3,000.00'],
-        ['RD$ 100', '20', 'RD$ 2,000.00'],
-        ['RD$ 50', '10', 'RD$ 500.00'],
-        ['RD$ 20', '25', 'RD$ 500.00'],
-        ['RD$ 10', '30', 'RD$ 300.00'],
-        ['RD$ 5', '20', 'RD$ 100.00'],
-        ['RD$ 1', '50', 'RD$ 50.00'],
+        [' 2,000', '5', ' 10,000.00'],
+        [' 1,000', '8', ' 8,000.00'],
+        [' 500', '12', ' 6,000.00'],
+        [' 200', '15', ' 3,000.00'],
+        [' 100', '20', ' 2,000.00'],
+        [' 50', '10', ' 500.00'],
+        [' 20', '25', ' 500.00'],
+        [' 10', '30', ' 300.00'],
+        [' 5', '20', ' 100.00'],
+        [' 1', '50', ' 50.00'],
         ['Total Cash', '', formatMoneyRD(expectedCashBalance)]
       ];
 

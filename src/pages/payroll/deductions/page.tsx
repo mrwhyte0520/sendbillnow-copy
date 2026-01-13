@@ -302,7 +302,7 @@ export default function PeriodicDeductionsPage() {
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {deduction.type === 'fijo'
-                        ? `RD$ ${deduction.amount.toLocaleString('en-US')}`
+                        ? ` ${deduction.amount.toLocaleString('en-US')}`
                         : `${deduction.percentage}%`
                       }
                     </td>
@@ -442,7 +442,7 @@ export default function PeriodicDeductionsPage() {
                   {formData.type === 'fijo' ? (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Amount (RD$) *
+                        Amount () *
                       </label>
                       <input
                         type="number" min="0"

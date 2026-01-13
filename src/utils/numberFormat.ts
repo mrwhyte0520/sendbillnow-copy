@@ -11,9 +11,10 @@ export type GlobalAccountingFormatSettings = {
 
 type NumberSeparators = { thousand: string; decimal: string };
 
+const DOLLAR_SYMBOL = '$';
 let globalDecimalPlaces: number = 2;
 let globalSeparators: NumberSeparators = { thousand: ',', decimal: '.' };
-let globalCurrencyLabel: string = 'RD$';
+let globalCurrencyLabel: string = DOLLAR_SYMBOL;
 
 const parseSeparators = (format: string | null | undefined): NumberSeparators => {
   const fmt = String(format || '').trim();
@@ -22,23 +23,13 @@ const parseSeparators = (format: string | null | undefined): NumberSeparators =>
   return { thousand: ',', decimal: '.' };
 };
 
-const resolveCurrencyLabel = (currency: string | null | undefined): string => {
-  const c = String(currency || '').toUpperCase();
-  if (c === 'USD') return 'US$';
-  if (c === 'EUR') return '€';
-  if (c === 'DOP') return '';
-  return c || 'RD$';
-};
+const coerceCurrencyLabel = (_currency: string | null | undefined): string => DOLLAR_SYMBOL;
 
 export const getCurrencyPrefix = (
   currency: string | null | undefined,
-  options?: { forTotals?: boolean },
+  _options?: { forTotals?: boolean },
 ): string => {
-  const c = String(currency || '').toUpperCase();
-  if (c === 'DOP') {
-    return options?.forTotals ? 'RD$' : '';
-  }
-  return resolveCurrencyLabel(c);
+  return coerceCurrencyLabel(currency);
 };
 
 export const setGlobalAccountingFormatSettings = (settings: GlobalAccountingFormatSettings) => {
@@ -47,7 +38,7 @@ export const setGlobalAccountingFormatSettings = (settings: GlobalAccountingForm
     globalDecimalPlaces = decimals;
   }
   globalSeparators = parseSeparators(settings?.number_format);
-  globalCurrencyLabel = resolveCurrencyLabel(settings?.default_currency);
+  globalCurrencyLabel = coerceCurrencyLabel(settings?.default_currency);
 };
 
 const insertThousands = (intPart: string, thousandSep: string): string => {
@@ -80,17 +71,17 @@ export const formatNumber = (
   return formatBySeparators(numeric, decimals, globalSeparators);
 };
 
-export const formatAmount = (value: number | string | null | undefined): string => {
-  return formatNumber(value, { minimumFractionDigits: globalDecimalPlaces, maximumFractionDigits: globalDecimalPlaces });
-};
-
 export const formatMoney = (
   value: number | string | null | undefined,
   currencyLabel?: string,
 ): string => {
-  const amount = formatAmount(value);
+  const amount = formatNumber(value, { minimumFractionDigits: globalDecimalPlaces, maximumFractionDigits: globalDecimalPlaces });
   if (!amount) return '';
-  const label = currencyLabel ?? globalCurrencyLabel;
+  const label = coerceCurrencyLabel(currencyLabel ?? globalCurrencyLabel);
   if (!label) return amount;
   return `${label} ${amount}`;
+};
+
+export const formatAmount = (value: number | string | null | undefined): string => {
+  return formatMoney(value);
 };

@@ -478,7 +478,7 @@ export default function AssetRegisterPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return formatMoney(amount, 'RD$');
+    return formatMoney(amount, '');
   };
 
   return (

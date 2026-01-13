@@ -243,7 +243,7 @@ export default function DiscountsPage() {
         }
         if (amount > pending) {
           alert(
-            `El monto del descuento no puede ser mayor que el saldo pendiente de la factura (pendiente: RD$${pending.toLocaleString()}).`,
+            `El monto del descuento no puede ser mayor que el saldo pendiente de la factura (pendiente: ${pending.toLocaleString()}).`,
           );
           return;
         }
@@ -351,7 +351,7 @@ export default function DiscountsPage() {
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Total Discounts</p>
                 <p className="text-2xl font-semibold text-[#2f3e1e]">
-                  {`RD$${totalAmount.toLocaleString()}`}
+                  {`${totalAmount.toLocaleString()}`}
                 </p>
               </div>
               <div className="w-12 h-12 bg-[#f3ecda] rounded-xl flex items-center justify-center text-[#2f3e1e]">
@@ -436,7 +436,7 @@ export default function DiscountsPage() {
                       {disc.invoiceNumber || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      RD${disc.amount.toLocaleString()}
+                      {disc.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {disc.concept}
@@ -540,7 +540,7 @@ export default function DiscountsPage() {
                     />
                     {selectedInvoiceForDiscount && (
                       <p className="mt-1 text-xs text-[#6b5c3b]">
-                        Pending balance: RD${selectedInvoicePending.toLocaleString()} · New invoice total: RD${previewNewInvoiceTotal.toLocaleString()}
+                        Pending balance: {selectedInvoicePending.toLocaleString()} · New invoice total: {previewNewInvoiceTotal.toLocaleString()}
                       </p>
                     )}
                   </div>

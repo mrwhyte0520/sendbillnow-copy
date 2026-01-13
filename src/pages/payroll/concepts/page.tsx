@@ -137,7 +137,7 @@ export default function PayrollConceptsPage() {
         : 'Fórmula',
       value:
         concept.calculation_type === 'fixed'
-          ? `RD$${(concept.amount ?? 0).toLocaleString()}`
+          ? `${(concept.amount ?? 0).toLocaleString()}`
           : concept.calculation_type === 'percentage'
             ? `${concept.percentage ?? 0}%`
             : concept.formula || '',
@@ -408,7 +408,7 @@ export default function PayrollConceptsPage() {
                       {getCategoryLabel(concept.category)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {concept.calculation_type === 'fixed' && concept.amount && `RD$${concept.amount.toLocaleString()}`}
+                      {concept.calculation_type === 'fixed' && concept.amount && `${concept.amount.toLocaleString()}`}
                       {concept.calculation_type === 'percentage' && concept.percentage && `${concept.percentage}%`}
                       {concept.calculation_type === 'formula' && 'Fórmula'}
                     </td>
@@ -585,7 +585,7 @@ export default function PayrollConceptsPage() {
                   {formData.calculation_type === 'fixed' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Monto Fijo (RD$)
+                        Monto Fijo ()
                       </label>
                       <input
                         type="number"

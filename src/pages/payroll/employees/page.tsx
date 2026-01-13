@@ -512,8 +512,8 @@ export default function EmployeesPage() {
                       <label className="block text-sm font-medium text-gray-700">Salario Base</label>
                       <p className="text-sm text-gray-900">
                         {selectedEmployee.salary_type_id === '2' ? 
-                          `RD$${selectedEmployee.base_salary}/hora` : 
-                          `RD$${selectedEmployee.base_salary.toLocaleString()}`}
+                          `${selectedEmployee.base_salary}/hora` : 
+                          `${selectedEmployee.base_salary.toLocaleString()}`}
                       </p>
                     </div>
                     <div>
@@ -1061,8 +1061,8 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {employee.salary_type_id === '2' ? 
-                        `RD$${employee.base_salary}/h` : 
-                        `RD$${employee.base_salary.toLocaleString()}`}
+                        `${employee.base_salary}/h` : 
+                        `${employee.base_salary.toLocaleString()}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

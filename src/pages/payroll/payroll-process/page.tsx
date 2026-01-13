@@ -135,7 +135,7 @@ export default function PayrollProcessPage() {
 
       if (budgetViolations.length > 0) {
         const details = budgetViolations
-          .map(v => `${v.departmentName}: payroll RD$ ${v.payroll.toLocaleString('en-US')} vs budget RD$ ${v.budget.toLocaleString('en-US')}`)
+          .map(v => `${v.departmentName}: payroll  ${v.payroll.toLocaleString('en-US')} vs budget  ${v.budget.toLocaleString('en-US')}`)
           .join('\n');
         throw new Error(
           `Calculated payroll exceeds the budget for one or more departments:\n\n${details}\n\nAdjust salaries or budgets before processing.`
@@ -191,7 +191,7 @@ export default function PayrollProcessPage() {
 
       if (totalsError) throw totalsError;
       
-      alert(`Payroll processed successfully:\n\n${activeEmployees.length} employees\nTotal gross: RD$ ${totalGross.toLocaleString('en-US')}\nTotal deductions: RD$ ${totalDeductions.toLocaleString('en-US')}\nTotal net: RD$ ${totalNet.toLocaleString('en-US')}`);
+      alert(`Payroll processed successfully:\n\n${activeEmployees.length} employees\nTotal gross:  ${totalGross.toLocaleString('en-US')}\nTotal deductions:  ${totalDeductions.toLocaleString('en-US')}\nTotal net:  ${totalNet.toLocaleString('en-US')}`);
       await loadPeriods();
     } catch (error) {
       console.error('Error processing payroll:', error);
@@ -350,19 +350,19 @@ export default function PayrollProcessPage() {
                 <div className="bg-[#e5ead7] p-4 rounded-lg border border-[#dfe5cf]">
                   <p className="text-xs text-gray-600 mb-1">Total Gross</p>
                   <p className="text-xl font-bold text-[#2f3a1f]">
-                    RD$ {(period.total_gross || 0).toLocaleString('en-US')}
+                     {(period.total_gross || 0).toLocaleString('en-US')}
                   </p>
                 </div>
                 <div className="bg-[#f1e4c2] p-4 rounded-lg border border-[#e7decd]">
                   <p className="text-xs text-gray-600 mb-1">Deductions</p>
                   <p className="text-xl font-bold text-[#3d451b]">
-                    RD$ {(period.total_deductions || 0).toLocaleString('en-US')}
+                     {(period.total_deductions || 0).toLocaleString('en-US')}
                   </p>
                 </div>
                 <div className="bg-[#dbe8c0] p-4 rounded-lg border border-[#dfe5cf]">
                   <p className="text-xs text-gray-600 mb-1">Net Pay</p>
                   <p className="text-xl font-bold text-[#2f3a1f]">
-                    RD$ {(period.total_net || 0).toLocaleString('en-US')}
+                     {(period.total_net || 0).toLocaleString('en-US')}
                   </p>
                 </div>
               </div>

@@ -376,7 +376,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Total Paid</p>
                 <p className="text-2xl font-bold text-[#2f3c24]">
-                  RD$ {payments.filter(p => p.status === 'Completado').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                   {payments.filter(p => p.status === 'Completado').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -389,7 +389,7 @@ export default function PaymentsPage() {
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Pending Amount</p>
                 <p className="text-2xl font-bold text-[#2f3c24]">
-                  RD$ {payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+                   {payments.filter(p => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -508,7 +508,7 @@ export default function PaymentsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-[#2f3c24]">
-                      RD$ {payment.amount.toLocaleString()}
+                       {payment.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClasses(payment.status)}`}>
@@ -748,7 +748,7 @@ export default function PaymentsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[#5c6b42]">Amount</p>
-                    <p className="text-lg font-bold text-[#2f3c24]">RD$ {selectedPayment.amount.toLocaleString()}</p>
+                    <p className="text-lg font-bold text-[#2f3c24]"> {selectedPayment.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[#5c6b42]">Status</p>

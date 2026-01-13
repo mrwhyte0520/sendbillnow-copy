@@ -647,19 +647,19 @@ export default function Report606Page() {
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-green-600">
-                      RD$ {formatAmount(summary.totalAmount)}
+                       {formatAmount(summary.totalAmount)}
                     </div>
                     <div className="text-sm text-gray-600">Monto Total</div>
                   </div>
                   <div className="bg-yellow-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-yellow-600">
-                      RD$ {formatAmount(summary.totalItbis)}
+                       {formatAmount(summary.totalItbis)}
                     </div>
                     <div className="text-sm text-gray-600">Total ITBIS</div>
                   </div>
                   <div className="bg-red-50 p-4 rounded-lg">
                     <div className="text-2xl font-bold text-red-600">
-                      RD$ {formatAmount(summary.totalRetention)}
+                       {formatAmount(summary.totalRetention)}
                     </div>
                     <div className="text-sm text-gray-600">Total Retenciones</div>
                   </div>
@@ -758,9 +758,9 @@ export default function Report606Page() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ncf}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.fecha_comprobante}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.servicios_facturados)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.bienes_facturados)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">RD$ {formatAmount(row.itbis_facturado)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"> {formatAmount(row.servicios_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"> {formatAmount(row.bienes_facturados)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"> {formatAmount(row.itbis_facturado)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.forma_pago}</td>
                     </tr>
                   ))}

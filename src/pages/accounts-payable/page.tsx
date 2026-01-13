@@ -81,7 +81,7 @@ export default function AccountsPayablePage() {
   const apStats = [
     {
       title: 'Total AP Balance',
-      value: `RD$ ${summary.totalBalance.toLocaleString()}`,
+      value: ` ${summary.totalBalance.toLocaleString()}`,
       change: '0%',
       changeLabel: 'vs last month',
       icon: 'ri-file-list-3-line',
@@ -90,7 +90,7 @@ export default function AccountsPayablePage() {
     },
     {
       title: 'Due This Week',
-      value: `RD$ ${summary.dueThisWeek.toLocaleString()}`,
+      value: ` ${summary.dueThisWeek.toLocaleString()}`,
       change: '0%',
       changeLabel: 'vs last month',
       icon: 'ri-calendar-line',
@@ -99,7 +99,7 @@ export default function AccountsPayablePage() {
     },
     {
       title: 'Overdue Payments',
-      value: `RD$ ${summary.overdue.toLocaleString()}`,
+      value: ` ${summary.overdue.toLocaleString()}`,
       change: '0%',
       changeLabel: 'vs last month',
       icon: 'ri-alert-line',
@@ -214,7 +214,7 @@ export default function AccountsPayablePage() {
             return {
               name: s.name,
               rnc: s.rnc,
-              balance: `RD$ ${s.balance.toLocaleString()}`,
+              balance: ` ${s.balance.toLocaleString()}`,
               dueDate: s.nextDueDate || '-',
               status,
             };
@@ -237,7 +237,7 @@ export default function AccountsPayablePage() {
           .map((inv: any) => ({
             type: 'Factura',
             supplier: (inv.suppliers as any)?.name || 'Suplidor',
-            amount: `RD$ ${Number(
+            amount: ` ${Number(
               inv.total_to_pay ?? inv.total_gross ?? 0,
             ).toLocaleString()}`,
             reference: String(inv.invoice_number || ''),
@@ -262,7 +262,7 @@ export default function AccountsPayablePage() {
           .map((p: any) => ({
             type: 'Pago a proveedor',
             supplier: (p.suppliers as any)?.name || 'Proveedor',
-            amount: `RD$ ${Number(p.amount || 0).toLocaleString()}`,
+            amount: ` ${Number(p.amount || 0).toLocaleString()}`,
             requestedBy: '',
             date: String(p.payment_date || '').slice(0, 10),
           }));

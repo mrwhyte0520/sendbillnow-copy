@@ -691,7 +691,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                    <p className="text-2xl font-semibold text-gray-900">RD${totalValue.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{totalValue.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -703,15 +703,15 @@ export default function ProductsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Valor Total Inventario</p>
-                  <p className="text-2xl font-bold text-blue-600">RD${totalValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-600">{totalValue.toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Costo Total</p>
-                  <p className="text-2xl font-bold text-orange-600">RD${totalCost.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-orange-600">{totalCost.toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Ganancia Potencial</p>
-                  <p className="text-2xl font-bold text-green-600">RD${potentialProfit.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">{potentialProfit.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -888,7 +888,7 @@ export default function ProductsPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium text-gray-900">RD${product.price.toLocaleString()}</p>
+                        <p className="font-medium text-gray-900">{product.price.toLocaleString()}</p>
                         <p className="text-sm text-gray-500">Stock: {product.stock}</p>
                       </div>
                     </div>
@@ -1057,8 +1057,8 @@ export default function ProductsPage() {
                       
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <div className="text-lg font-bold text-blue-600">RD${product.price.toLocaleString()}</div>
-                          <div className="text-xs text-gray-500">Costo: RD${product.cost.toLocaleString()}</div>
+                          <div className="text-lg font-bold text-blue-600">{product.price.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">Costo: {product.cost.toLocaleString()}</div>
                         </div>
                         <div className="text-right">
                           <div className={`text-sm font-medium ${product.stock <= product.minStock ? 'text-red-600' : 'text-gray-900'}`}>
@@ -1155,7 +1155,7 @@ export default function ProductsPage() {
                           
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-600">Valor total:</span>
-                            <span className="font-medium text-green-600">RD${categoryValue.toLocaleString()}</span>
+                            <span className="font-medium text-green-600">{categoryValue.toLocaleString()}</span>
                           </div>
                           
                           {categoryProducts.length > 0 && (
@@ -1302,7 +1302,7 @@ export default function ProductsPage() {
                   <p className="text-sm text-gray-600">Stock Bajo</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">RD${totalValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-purple-600">{totalValue.toLocaleString()}</p>
                   <p className="text-sm text-gray-600">Valor Total</p>
                 </div>
               </div>

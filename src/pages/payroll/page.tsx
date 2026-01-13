@@ -561,7 +561,7 @@ export default function PayrollPage() {
 
       if (budgetViolations.length > 0) {
         const details = budgetViolations
-          .map(v => `${v.departmentName}: nómina ${formatMoney(v.payroll, 'RD$')} vs presupuesto ${formatMoney(v.budget, 'RD$')}`)
+          .map(v => `${v.departmentName}: nómina ${formatMoney(v.payroll, '')} vs presupuesto ${formatMoney(v.budget, '')}`)
           .join('\n');
         alert(
           `La nómina calculada supera el presupuesto de uno o más departamentos:\n\n${details}\n\nAjuste salarios, asignaciones o presupuestos antes de procesar.`
@@ -686,12 +686,12 @@ export default function PayrollPage() {
             },
             {
               label: 'Total Payroll',
-              value: formatMoney(stats.totalSalaries, 'RD$'),
+              value: formatMoney(stats.totalSalaries, ''),
               icon: 'ri-money-dollar-circle-line',
             },
             {
               label: 'Average Salary',
-              value: formatMoney(Math.round(stats.avgSalary), 'RD$'),
+              value: formatMoney(Math.round(stats.avgSalary), ''),
               icon: 'ri-calculator-line',
             },
           ].map((card) => (
@@ -728,7 +728,7 @@ export default function PayrollPage() {
                         <p className={`text-sm ${palette.subheading}`}>{deptEmployees.length} employees</p>
                       </div>
                       <div className="text-right">
-                        <p className={`font-medium ${palette.heading}`}>{formatMoney(deptSalaries, 'RD$')}</p>
+                        <p className={`font-medium ${palette.heading}`}>{formatMoney(deptSalaries, '')}</p>
                         <p className={`text-sm ${palette.subheading}`}>Monthly payroll</p>
                       </div>
                     </div>
@@ -769,7 +769,7 @@ export default function PayrollPage() {
                           ? 'Processing'
                           : 'Open'}
                       </span>
-                      <p className={`text-sm mt-1 ${palette.subheading}`}>{formatMoney(period.total_net, 'RD$')}</p>
+                      <p className={`text-sm mt-1 ${palette.subheading}`}>{formatMoney(period.total_net, '')}</p>
                     </div>
                   </div>
                 ))}
@@ -989,7 +989,7 @@ export default function PayrollPage() {
                     {getPositionTitle(employee.position_id)}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.heading}`}>
-                    {formatMoney(employee.salary, 'RD$')}
+                    {formatMoney(employee.salary, '')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -1062,12 +1062,12 @@ export default function PayrollPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className={`text-sm ${palette.subheading}`}>Monthly payroll:</span>
-                  <span className="text-sm font-medium">{formatMoney(deptSalaries, 'RD$')}</span>
+                  <span className="text-sm font-medium">{formatMoney(deptSalaries, '')}</span>
                 </div>
                 {department.budget && (
                   <div className="flex justify-between">
                     <span className={`text-sm ${palette.subheading}`}>Budget:</span>
-                    <span className="text-sm font-medium">{formatMoney(department.budget, 'RD$')}</span>
+                    <span className="text-sm font-medium">{formatMoney(department.budget, '')}</span>
                   </div>
                 )}
               </div>
@@ -1124,7 +1124,7 @@ export default function PayrollPage() {
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm ${palette.heading}`}>
                       {position.min_salary && position.max_salary ? (
-                        `${formatMoney(position.min_salary, 'RD$')} - ${formatMoney(position.max_salary, 'RD$')}`
+                        `${formatMoney(position.min_salary, '')} - ${formatMoney(position.max_salary, '')}`
                       ) : 'Not defined'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1191,13 +1191,13 @@ export default function PayrollPage() {
               {period.total_net > 0 && (
                 <>
                   <p className="font-semibold text-gray-900">
-                    Bruto: {formatMoney(period.total_gross, 'RD$')}
+                    Bruto: {formatMoney(period.total_gross, '')}
                   </p>
                   <p className="text-red-600">
-                    Deducciones: {formatMoney(period.total_deductions, 'RD$')}
+                    Deducciones: {formatMoney(period.total_deductions, '')}
                   </p>
                   <p className="font-semibold text-green-600">
-                    Neto: {formatMoney(period.total_net, 'RD$')}
+                    Neto: {formatMoney(period.total_net, '')}
                   </p>
                 </>
               )}
@@ -1297,7 +1297,7 @@ export default function PayrollPage() {
                 Department: dept.name,
                 Description: dept.description,
                 'Employee Count': deptEmployees.length,
-                'Total Payroll': formatMoney(totalSalaries, 'RD$'),
+                'Total Payroll': formatMoney(totalSalaries, ''),
                 'Average Salary': deptEmployees.length > 0 ? Math.round(totalSalaries / deptEmployees.length) : 0,
                 Budget: dept.budget || 0
               };
@@ -1364,8 +1364,8 @@ export default function PayrollPage() {
               exportToExcel([
                 { Metric: 'Total Employees', Value: stats.totalEmployees },
                 { Metric: 'Active Employees', Value: stats.activeEmployees },
-                { Metric: 'Total Monthly Payroll', Value: formatMoney(stats.totalSalaries, 'RD$') },
-                { Metric: 'Average Salary', Value: formatMoney(Math.round(stats.avgSalary), 'RD$') },
+                { Metric: 'Total Monthly Payroll', Value: formatMoney(stats.totalSalaries, '') },
+                { Metric: 'Average Salary', Value: formatMoney(Math.round(stats.avgSalary), '') },
                 ...Object.entries(salaryRanges).map(([range, count]) => ({
                   Metric: `Employees earning ${range}`,
                   Value: count
@@ -1456,7 +1456,7 @@ export default function PayrollPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Salario</label>
-                  <p className="text-sm text-gray-900">{formatMoney(selectedItem.salary, 'RD$')}</p>
+                  <p className="text-sm text-gray-900">{formatMoney(selectedItem.salary, '')}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Fecha de Contratación</label>
@@ -1521,11 +1521,11 @@ export default function PayrollPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Total Bruto</label>
-                  <p className="text-sm text-gray-900">{formatMoney(Number(selectedItem.total_gross || 0), 'RD$')}</p>
+                  <p className="text-sm text-gray-900">{formatMoney(Number(selectedItem.total_gross || 0), '')}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Total Neto</label>
-                  <p className="text-sm text-gray-900">{formatMoney(Number(selectedItem.total_net || 0), 'RD$')}</p>
+                  <p className="text-sm text-gray-900">{formatMoney(Number(selectedItem.total_net || 0), '')}</p>
                 </div>
               </div>
 
@@ -1558,9 +1558,9 @@ export default function PayrollPage() {
                           return (
                             <tr key={entry.id} className="hover:bg-gray-50">
                               <td className="px-4 py-2 whitespace-nowrap text-gray-900">{employeeName}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-right">{formatMoney(Number(entry.gross_salary || 0), 'RD$')}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-right text-red-600">{formatMoney(Number(entry.deductions || 0), 'RD$')}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-right text-green-600">{formatMoney(Number(entry.net_salary || 0), 'RD$')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-right">{formatMoney(Number(entry.gross_salary || 0), '')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-right text-red-600">{formatMoney(Number(entry.deductions || 0), '')}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-right text-green-600">{formatMoney(Number(entry.net_salary || 0), '')}</td>
                               <td className="px-4 py-2 whitespace-nowrap text-right">
                                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                                   entry.status === 'paid'

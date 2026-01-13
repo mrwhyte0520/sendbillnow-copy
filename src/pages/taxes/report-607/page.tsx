@@ -128,17 +128,17 @@ export default function Report607Page() {
         row.tipo_identificacion,
         row.numero_comprobante_fiscal,
         row.fecha_comprobante,
-        formatMoney(row.monto_facturado, 'RD$'),
-        formatMoney(row.itbis_facturado, 'RD$'),
-        formatMoney(row.itbis_retenido, 'RD$'),
-        formatMoney(row.monto_propina_legal, 'RD$'),
-        formatMoney(row.itbis_retenido_propina, 'RD$'),
-        formatMoney(row.itbis_percibido_ventas, 'RD$'),
-        formatMoney(row.retencion_renta_terceros, 'RD$'),
-        formatMoney(row.isr_percibido_ventas, 'RD$'),
-        formatMoney(row.impuesto_selectivo_consumo, 'RD$'),
-        formatMoney(row.otros_impuestos_tasas, 'RD$'),
-        formatMoney(row.monto_propina_legal_2, 'RD$')
+        formatMoney(row.monto_facturado, ''),
+        formatMoney(row.itbis_facturado, ''),
+        formatMoney(row.itbis_retenido, ''),
+        formatMoney(row.monto_propina_legal, ''),
+        formatMoney(row.itbis_retenido_propina, ''),
+        formatMoney(row.itbis_percibido_ventas, ''),
+        formatMoney(row.retencion_renta_terceros, ''),
+        formatMoney(row.isr_percibido_ventas, ''),
+        formatMoney(row.impuesto_selectivo_consumo, ''),
+        formatMoney(row.otros_impuestos_tasas, ''),
+        formatMoney(row.monto_propina_legal_2, '')
       ].join(separator))
     ].join('\n');
 
@@ -410,10 +410,10 @@ export default function Report607Page() {
         rnc_cedula: row.rnc_cedula,
         ncf: row.numero_comprobante_fiscal,
         fecha: new Date(row.fecha_comprobante).toLocaleDateString('es-DO'),
-        monto_facturado: formatMoney(row.monto_facturado, 'RD$'),
-        itbis_facturado: formatMoney(row.itbis_facturado, 'RD$'),
-        itbis_retenido: formatMoney(row.itbis_retenido, 'RD$'),
-        isr_retenido: formatMoney(row.retencion_renta_terceros, 'RD$'),
+        monto_facturado: formatMoney(row.monto_facturado, ''),
+        itbis_facturado: formatMoney(row.itbis_facturado, ''),
+        itbis_retenido: formatMoney(row.itbis_retenido, ''),
+        isr_retenido: formatMoney(row.retencion_renta_terceros, ''),
       }));
 
       const columns = [
@@ -559,7 +559,7 @@ export default function Report607Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Vendido</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.monto_facturado, 'RD$')}
+                    {formatMoney(totals.monto_facturado, '')}
                   </p>
                 </div>
               </div>
@@ -572,7 +572,7 @@ export default function Report607Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">ITBIS Cobrado</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.itbis_facturado, 'RD$')}
+                    {formatMoney(totals.itbis_facturado, '')}
                   </p>
                 </div>
               </div>
@@ -585,7 +585,7 @@ export default function Report607Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">ITBIS Retenido</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.itbis_retenido, 'RD$')}
+                    {formatMoney(totals.itbis_retenido, '')}
                   </p>
                 </div>
               </div>
@@ -598,7 +598,7 @@ export default function Report607Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">ISR Retenido</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.retencion_renta_terceros, 'RD$')}
+                    {formatMoney(totals.retencion_renta_terceros, '')}
                   </p>
                 </div>
               </div>
@@ -653,16 +653,16 @@ export default function Report607Page() {
                       {new Date(row.fecha_comprobante).toLocaleDateString('es-DO')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(row.monto_facturado, 'RD$')}
+                      {formatMoney(row.monto_facturado, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(row.itbis_facturado, 'RD$')}
+                      {formatMoney(row.itbis_facturado, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(row.itbis_retenido, 'RD$')}
+                      {formatMoney(row.itbis_retenido, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(row.retencion_renta_terceros, 'RD$')}
+                      {formatMoney(row.retencion_renta_terceros, '')}
                     </td>
                   </tr>
                 ))}

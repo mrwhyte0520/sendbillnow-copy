@@ -1386,8 +1386,8 @@ export const bankChargesService = {
               throw new Error(
                 `❌ Saldo insuficiente en cuenta bancaria\n\n` +
                 `Banco: ${bank.bank_name || 'N/A'}\n` +
-                `Saldo disponible: RD$${saldoDisponible.toFixed(2)}\n` +
-                `Monto del cargo: RD$${amount.toFixed(2)}\n\n` +
+                `Saldo disponible: ${saldoDisponible.toFixed(2)}\n` +
+                `Monto del cargo: ${amount.toFixed(2)}\n\n` +
                 `No se puede registrar el cargo sin fondos suficientes.`
               );
             }
@@ -11645,8 +11645,8 @@ export const supplierPaymentsService = {
             if (saldoDisponible < amount) {
               throw new Error(
                 `❌ Saldo insuficiente en cuenta bancaria\n\n` +
-                `Saldo disponible: RD$${saldoDisponible.toFixed(2)}\n` +
-                `Monto del pago: RD$${amount.toFixed(2)}\n\n` +
+                `Saldo disponible: ${saldoDisponible.toFixed(2)}\n` +
+                `Monto del pago: ${amount.toFixed(2)}\n\n` +
                 `No se puede completar el pago sin fondos suficientes.`
               );
             }
@@ -15608,7 +15608,7 @@ export const payrollSettingsService = {
           rate: 15,
           rate_percent: 15,
           fixed_amount: 0,
-          description: '15% sobre excedente de RD$416,220.01',
+          description: '15% sobre excedente de 416,220.01',
           is_annual: true
         },
         {
@@ -15618,7 +15618,7 @@ export const payrollSettingsService = {
           rate: 20,
           rate_percent: 20,
           fixed_amount: 31216.00,
-          description: 'RD$31,216.00 + 20% sobre excedente de RD$624,329.01',
+          description: '31,216.00 + 20% sobre excedente de 624,329.01',
           is_annual: true
         },
         {
@@ -15628,7 +15628,7 @@ export const payrollSettingsService = {
           rate: 25,
           rate_percent: 25,
           fixed_amount: 79776.00,
-          description: 'RD$79,776.00 + 25% sobre excedente de RD$867,123.00',
+          description: '79,776.00 + 25% sobre excedente de 867,123.00',
           is_annual: true
         }
       ];
@@ -16271,7 +16271,7 @@ export const openingBalancesService = {
       const totalCredit = balances.reduce((sum, b) => sum + (Number(b.credit) || 0), 0);
 
       if (Math.abs(totalDebit - totalCredit) > 0.01) {
-        throw new Error(`Los balances no cuadran. Débito: RD$ ${totalDebit.toFixed(2)}, Crédito: RD$ ${totalCredit.toFixed(2)}`);
+        throw new Error(`Los balances no cuadran. Débito:  ${totalDebit.toFixed(2)}, Crédito:  ${totalCredit.toFixed(2)}`);
       }
 
       // Preparar asiento de diario usando el servicio estándar
@@ -16764,7 +16764,7 @@ export const assetDepreciationService = {
       return {
         depreciations: createdDepreciations,
         journalEntry,
-        message: `Depreciación calculada correctamente: ${depreciationRecords.length} activos, Total: RD$${totalDepreciation.toFixed(2)}`,
+        message: `Depreciación calculada correctamente: ${depreciationRecords.length} activos, Total: ${totalDepreciation.toFixed(2)}`,
       };
     } catch (error) {
       console.error('assetDepreciationService.calculateMonthlyDepreciation error', error);

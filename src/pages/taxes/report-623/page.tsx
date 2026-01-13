@@ -84,7 +84,7 @@ export default function Report623Page() {
       { title: 'Fecha Pago', width: 14 },
       { title: 'Método Pago', width: 16 },
       { title: 'Monto USD', width: 14 },
-      { title: 'Monto RD$', width: 14 },
+      { title: 'Monto ', width: 14 },
       { title: 'Tasa Cambio', width: 14 },
       { title: 'Impuesto', width: 14 },
     ];
@@ -166,7 +166,7 @@ export default function Report623Page() {
       'Concepto',
       'Fecha Pago',
       'Monto USD',
-      'Monto RD$',
+      'Monto ',
       'Tasa Cambio',
       'Impuesto Retenido',
       'Método Pago'
@@ -243,7 +243,7 @@ export default function Report623Page() {
         { key: 'concepto', label: 'Concepto' },
         { key: 'fecha', label: 'Fecha' },
         { key: 'monto_usd', label: 'Monto USD' },
-        { key: 'monto_dop', label: 'Monto RD$' },
+        { key: 'monto_dop', label: 'Monto ' },
         { key: 'tasa', label: 'Tasa' },
         { key: 'impuesto', label: 'Impuesto' },
       ];
@@ -413,7 +413,7 @@ export default function Report623Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total USD</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_usd, 'US$')}
+                    {formatMoney(totals.total_usd)}
                   </p>
                 </div>
               </div>
@@ -424,9 +424,9 @@ export default function Report623Page() {
                   <i className="ri-money-peso-circle-line text-xl text-orange-600"></i>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total RD$</p>
+                  <p className="text-sm font-medium text-gray-600">Total </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_dop, 'RD$')}
+                    {formatMoney(totals.total_dop, '')}
                   </p>
                 </div>
               </div>
@@ -439,7 +439,7 @@ export default function Report623Page() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Impuesto Retenido</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMoney(totals.total_tax, 'RD$')}
+                    {formatMoney(totals.total_tax, '')}
                   </p>
                 </div>
               </div>
@@ -474,7 +474,7 @@ export default function Report623Page() {
                     Monto USD
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto RD$
+                    Monto 
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tasa
@@ -500,16 +500,16 @@ export default function Report623Page() {
                       {new Date(payment.payment_date).toLocaleDateString('es-DO')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(payment.amount_usd, 'US$')}
+                      {formatMoney(payment.amount_usd)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(payment.amount_dop, 'RD$')}
+                      {formatMoney(payment.amount_dop, '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {payment.exchange_rate}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(payment.tax_withheld, 'RD$')}
+                      {formatMoney(payment.tax_withheld, '')}
                     </td>
                   </tr>
                 ))}

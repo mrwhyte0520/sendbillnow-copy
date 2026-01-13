@@ -244,7 +244,7 @@ export default function PayrollBonusesPage() {
         bonus.type === 'fijo' ? 'Fixed Amount' :
         bonus.type === 'porcentaje' ? 'Percentage' : 'Formula',
       value:
-        bonus.type === 'fijo' ? `RD$${bonus.amount.toLocaleString()}` :
+        bonus.type === 'fijo' ? `${bonus.amount.toLocaleString()}` :
         bonus.type === 'porcentaje' ? `${bonus.percentage}%` : bonus.formula,
       frequency: getFrequencyLabel(bonus.frequency),
       category: getCategoryLabel(bonus.category),
@@ -503,7 +503,7 @@ export default function PayrollBonusesPage() {
                 {formData.type === 'fijo' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Amount (RD$) *
+                      Amount () *
                     </label>
                     <input
                       type="number"
@@ -712,7 +712,7 @@ export default function PayrollBonusesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {bonus.type === 'fijo' && `RD$${bonus.amount.toLocaleString()}`}
+                      {bonus.type === 'fijo' && `${bonus.amount.toLocaleString()}`}
                       {bonus.type === 'porcentaje' && `${bonus.percentage}%`}
                       {bonus.type === 'formula' && bonus.formula}
                     </div>
