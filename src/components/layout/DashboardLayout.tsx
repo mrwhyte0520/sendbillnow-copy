@@ -591,18 +591,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className={`flex h-16 shrink-0 items-center border-b border-stone-200 bg-gradient-to-r from-[#008000] to-[#008000] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-3 justify-center' : 'px-6 justify-between'}`}>
+          <div className={`flex h-16 shrink-0 items-center border-b border-stone-200 bg-gradient-to-r from-[#008000] to-[#006600] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-3 justify-center' : 'px-4 justify-between'}`}>
             <div className="flex items-center min-w-0">
               {!sidebarCollapsed && (
-                <div>
-                  <h1 className="brand-serif text-xl font-bold text-white">Send Bill Now</h1>
-                  <p className="text-xs text-white/70">Complete POS & Invoicing System</p>
-                </div>
+                <img 
+                  src="/logo-full.png" 
+                  alt="Send Bill Now" 
+                  className="h-12 w-auto object-contain"
+                />
               )}
               {sidebarCollapsed && (
-                <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center">
-                  <span className="brand-serif text-white font-bold text-lg">S</span>
-                </div>
+                <img 
+                  src="/logo-icon.png" 
+                  alt="SBN" 
+                  className="h-10 w-10 object-contain"
+                />
               )}
             </div>
 
