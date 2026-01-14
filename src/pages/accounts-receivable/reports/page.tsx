@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -246,7 +246,7 @@ export default function ReportsPage() {
         setDebitNotes(mappedDebitNotes);
         setAdvances(mappedAdvances);
       } catch (error) {
-        // Si hay error, dejar arrays vacíos; los reportes simplemente saldrán en blanco
+        // Si hay error, dejar arrays vacÃ­os; los reportes simplemente saldrÃ¡n en blanco
         console.error('Error loading AR reports data:', error);
         setCustomers([]);
         setInvoices([]);
@@ -268,7 +268,7 @@ export default function ReportsPage() {
         setCompanyInfo(info);
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Error cargando información de la empresa para reportes de CxC', error);
+        console.error('Error cargando informaciÃ³n de la empresa para reportes de CxC', error);
       }
     };
 
@@ -382,7 +382,7 @@ export default function ReportsPage() {
       subtitle: 'Past-due balances by customer and aging bucket'
     });
 
-    // Análisis por períodos
+    // AnÃ¡lisis por perÃ­odos
     const agingData = customers.map(customer => {
       const customerInvoices = invoices.filter(inv => inv.customerId === customer.id && inv.balance > 0);
       const current = customerInvoices.filter(inv => inv.daysOverdue === 0).reduce((sum, inv) => sum + inv.balance, 0);
@@ -415,35 +415,28 @@ export default function ReportsPage() {
     openPdfPreview(doc, 'Accounts Receivable Aging Report', filename);
   };
 
-  const handleGenerateStatementReport = () => {
+  const handleGenerateStatementReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo on first page
+    let currentY = await addPdfBrandedHeader(doc, 'Account Statement Report', {
+      subtitle: 'Detailed movement per customer with invoices and payments'
+    });
 
-    const drawPageHeader = () => {
-      doc.setFontSize(16);
-      doc.text(companyName, centerX, 20, { align: 'center' });
-
-      doc.setFontSize(14);
-      doc.text('Estados de Cuenta por Cliente', centerX, 28, { align: 'center' });
-
-      doc.setFontSize(10);
-      doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
-    };
-
-    drawPageHeader();
-    let currentY = 50;
-
-    customers.forEach((customer, index) => {
+    for (let index = 0; index < customers.length; index++) {
+      const customer = customers[index];
       if (index > 0) {
         doc.addPage();
-        drawPageHeader();
-        currentY = 50;
+        currentY = await addPdfBrandedHeader(doc, 'Account Statement Report', {
+          subtitle: `Customer: ${customer.name}`
+        });
       }
 
-      doc.setFontSize(16);
-      doc.text(`Estado de Cuenta - ${customer.name}`, 20, currentY);
-      currentY += 20;
+      doc.setFontSize(14);
+      doc.setTextColor(47, 62, 30);
+      doc.text(`Account Statement - ${customer.name}`, 20, currentY);
+      currentY += 15;
 
       const customerInvoices = invoices.filter(inv => inv.customerId === customer.id);
       const customerPayments = payments.filter(pay => pay.customerName === customer.name);
@@ -451,46 +444,45 @@ export default function ReportsPage() {
       const customerDebitNotes = debitNotes.filter(n => n.customerId === customer.id && n.balance > 0);
       const customerAdvances = advances.filter(a => a.customerId === customer.id && a.balance > 0);
 
-      // Facturas
+      // Invoices
       if (customerInvoices.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Facturas:', 20, currentY);
+        doc.setFontSize(12);
+        doc.text('Invoices:', 20, currentY);
         currentY += 10;
 
         const invoiceData = customerInvoices.map(inv => {
           const invPrefix = getCurrencyPrefix(inv.currency);
           const basePrefix = getCurrencyPrefix(baseCurrencyCode);
           const amountStr = inv.baseAmount != null && inv.currency !== baseCurrencyCode
-            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.amount)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseAmount)})`
+            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.amount)} (â‰ˆ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseAmount)})`
             : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.amount)}`;
           const balanceStr = inv.baseBalance != null && inv.currency !== baseCurrencyCode
-            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.balance)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseBalance)})`
+            ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.balance)} (â‰ˆ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(inv.baseBalance)})`
             : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(inv.balance)}`;
 
           return [
             inv.invoiceNumber,
             amountStr,
             balanceStr,
-            inv.daysOverdue > 0 ? `${inv.daysOverdue} días` : 'Al día',
+            inv.daysOverdue > 0 ? `${inv.daysOverdue} days` : 'Current',
           ];
         });
 
         (doc as any).autoTable({
           startY: currentY,
-          head: [['Factura', 'Monto', 'Saldo', 'Estado']],
+          head: [['Invoice', 'Amount', 'Balance', 'Status']],
           body: invoiceData,
           theme: 'grid',
-          headStyles: { fillColor: [239, 68, 68] },
-          styles: { fontSize: 9 }
+          ...pdfStyles
         });
 
         currentY = (doc as any).lastAutoTable.finalY + 20;
       }
 
-      // Pagos
+      // Payments
       if (customerPayments.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Pagos Recibidos:', 20, currentY);
+        doc.setFontSize(12);
+        doc.text('Payments Received:', 20, currentY);
         currentY += 10;
 
         const paymentData = customerPayments.map(pay => [
@@ -501,20 +493,19 @@ export default function ReportsPage() {
 
         (doc as any).autoTable({
           startY: currentY,
-          head: [['Fecha', 'Monto', 'Método']],
+          head: [['Date', 'Amount', 'Method']],
           body: paymentData,
           theme: 'grid',
-          headStyles: { fillColor: [16, 185, 129] },
-          styles: { fontSize: 9 }
+          ...pdfStyles
         });
 
         currentY = (doc as any).lastAutoTable.finalY + 20;
       }
 
-      // Notas de Crédito
+      // Credit Notes
       if (customerCreditNotes.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Notas de Crédito:', 20, currentY);
+        doc.setFontSize(12);
+        doc.text('Credit Notes:', 20, currentY);
         currentY += 10;
 
         const creditData = customerCreditNotes.map(n => [
@@ -526,20 +517,19 @@ export default function ReportsPage() {
 
         (doc as any).autoTable({
           startY: currentY,
-          head: [['Nota', 'Monto', 'Aplicado', 'Saldo']],
+          head: [['Note', 'Amount', 'Applied', 'Balance']],
           body: creditData,
           theme: 'grid',
-          headStyles: { fillColor: [16, 185, 129] },
-          styles: { fontSize: 9 }
+          ...pdfStyles
         });
 
         currentY = (doc as any).lastAutoTable.finalY + 20;
       }
 
-      // Notas de Débito
+      // Debit Notes
       if (customerDebitNotes.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Notas de Débito:', 20, currentY);
+        doc.setFontSize(12);
+        doc.text('Debit Notes:', 20, currentY);
         currentY += 10;
 
         const debitData = customerDebitNotes.map(n => [
@@ -551,20 +541,19 @@ export default function ReportsPage() {
 
         (doc as any).autoTable({
           startY: currentY,
-          head: [['Nota', 'Monto', 'Aplicado', 'Saldo']],
+          head: [['Note', 'Amount', 'Applied', 'Balance']],
           body: debitData,
           theme: 'grid',
-          headStyles: { fillColor: [16, 185, 129] },
-          styles: { fontSize: 9 }
+          ...pdfStyles
         });
 
         currentY = (doc as any).lastAutoTable.finalY + 20;
       }
 
-      // Anticipos
+      // Customer Advances
       if (customerAdvances.length > 0) {
-        doc.setFontSize(14);
-        doc.text('Anticipos de Cliente:', 20, currentY);
+        doc.setFontSize(12);
+        doc.text('Customer Advances:', 20, currentY);
         currentY += 10;
 
         const advanceData = customerAdvances.map(a => [
@@ -576,21 +565,20 @@ export default function ReportsPage() {
 
         (doc as any).autoTable({
           startY: currentY,
-          head: [['Anticipo', 'Monto', 'Aplicado', 'Saldo']],
+          head: [['Advance', 'Amount', 'Applied', 'Balance']],
           body: advanceData,
           theme: 'grid',
-          headStyles: { fillColor: [16, 185, 129] },
-          styles: { fontSize: 9 }
+          ...pdfStyles
         });
       }
 
-      // Resumen
+      // Summary
       doc.setFontSize(12);
-      doc.text(`Saldo Actual: ${formatMoney(customer.currentBalance)}`, 20, doc.internal.pageSize.height - 30);
-    });
+      doc.text(`Current Balance: ${formatMoney(customer.currentBalance)}`, 20, doc.internal.pageSize.height - 30);
+    }
 
-    const filename = `estados-cuenta-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Estados de Cuenta por Cliente', filename);
+    const filename = `account-statements-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Account Statement Report', filename);
   };
 
   const handleGenerateCollectionReport = async () => {
@@ -618,7 +606,7 @@ export default function ReportsPage() {
     const summaryData = [
       ['Concepto', 'Monto'],
       ['Total Cobrado', formatMoney(totalPayments)],
-      ['Número de Pagos', payments.length.toString()],
+      ['NÃºmero de Pagos', payments.length.toString()],
       ['Efectivo', formatMoney(paymentsByMethod.cash || 0)],
       ['Transferencias', formatMoney(paymentsByMethod.transfer || 0)],
       ['Cheques', formatMoney(paymentsByMethod.check || 0)],
@@ -645,7 +633,7 @@ export default function ReportsPage() {
 
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Fecha', 'Cliente', 'Monto', 'Método']],
+      head: [['Fecha', 'Cliente', 'Monto', 'MÃ©todo']],
       body: paymentData,
       theme: 'striped',
       ...pdfStyles
@@ -667,12 +655,12 @@ export default function ReportsPage() {
     const rows: (string | number)[][] = [
       [companyName],
       ['Reporte de Cobranza'],
-      [`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`],
-      dateFrom && dateTo ? [`Período: ${dateFrom} al ${dateTo}`] : [],
+      [`Fecha de generaciÃ³n: ${new Date().toLocaleDateString('es-DO')}`],
+      dateFrom && dateTo ? [`PerÃ­odo: ${dateFrom} al ${dateTo}`] : [],
       [''],
       ['RESUMEN DE COBRANZA'],
       ['Total Cobrado', ` ${fmt(totalPayments)}`],
-      ['Número de Pagos', payments.length.toString()],
+      ['NÃºmero de Pagos', payments.length.toString()],
       ['Efectivo', ` ${fmt(paymentsByMethod.cash || 0)}`],
       ['Transferencias', ` ${fmt(paymentsByMethod.transfer || 0)}`],
       ['Cheques', ` ${fmt(paymentsByMethod.check || 0)}`],
@@ -680,7 +668,7 @@ export default function ReportsPage() {
 
       [''],
       ['DETALLE DE PAGOS'],
-      ['Fecha', 'Cliente', 'Monto', 'Método'],
+      ['Fecha', 'Cliente', 'Monto', 'MÃ©todo'],
       ...payments.map(payment => [
         payment.date,
         payment.customerName,
@@ -689,16 +677,16 @@ export default function ReportsPage() {
       ])
     ];
 
-    // CSV amigable para Excel (UTF-8 BOM + saltos de línea Windows)
+    // CSV amigable para Excel (UTF-8 BOM + saltos de lÃ­nea Windows)
     const csvBody = rows
       .map(row =>
         row
           .map(col => {
             const str = String(col ?? '');
-            // Si el texto contiene comillas, punto y coma o saltos de línea, lo encerramos entre comillas
+            // Si el texto contiene comillas, punto y coma o saltos de lÃ­nea, lo encerramos entre comillas
             return /[";\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
           })
-          .join(';') // Usar ; como separador para que Excel en español lo detecte como columnas
+          .join(';') // Usar ; como separador para que Excel en espaÃ±ol lo detecte como columnas
       )
       .join('\r\n');
 
@@ -710,14 +698,14 @@ export default function ReportsPage() {
       title: 'Reporte de Cobranza',
       filename,
       blob,
-      headers: ['Fecha', 'Cliente', 'Monto', 'Método'],
+      headers: ['Fecha', 'Cliente', 'Monto', 'MÃ©todo'],
       rows: payments.map(payment => [
         payment.date,
         payment.customerName,
       ]),
       summary: [
         { label: 'Total Cobrado', value: formatMoney(totalPayments) },
-        { label: 'Número de Pagos', value: payments.length.toString() },
+        { label: 'NÃºmero de Pagos', value: payments.length.toString() },
         { label: 'Transferencias', value: formatMoney(paymentsByMethod.transfer || 0) },
         { label: 'Cheques', value: formatMoney(paymentsByMethod.check || 0) },
         { label: 'Efectivo', value: formatMoney(paymentsByMethod.cash || 0) },
@@ -735,7 +723,7 @@ export default function ReportsPage() {
       subtitle: 'Current receivables vs. credit limits with utilization'
     });
 
-    // Estadísticas generales
+    // EstadÃ­sticas generales
     const totalBalance = customers.reduce((sum, c) => sum + c.currentBalance, 0);
     const totalCreditLimit = customers.reduce((sum, c) => sum + c.creditLimit, 0);
     const activeCustomers = customers.filter(c => c.status === 'Activo').length;
@@ -807,7 +795,7 @@ export default function ReportsPage() {
     const overdueInvoices = invoices.filter(inv => inv.daysOverdue > 0 && inv.balance > 0);
     const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0);
 
-    // Análisis por períodos
+    // AnÃ¡lisis por perÃ­odos
     const overdue1to30 = overdueInvoices.filter(inv => inv.daysOverdue >= 1 && inv.daysOverdue <= 30);
     const overdue31to60 = overdueInvoices.filter(inv => inv.daysOverdue >= 31 && inv.daysOverdue <= 60);
     const overdue61to90 = overdueInvoices.filter(inv => inv.daysOverdue >= 61 && inv.daysOverdue <= 90);
@@ -843,10 +831,10 @@ export default function ReportsPage() {
         const invPrefix = getCurrencyPrefix(invoice.currency);
         const basePrefix = getCurrencyPrefix(baseCurrencyCode);
         const amountStr = invoice.baseAmount != null && invoice.currency !== baseCurrencyCode
-          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.amount)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseAmount)})`
+          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.amount)} (â‰ˆ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseAmount)})`
           : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.amount)}`;
         const balanceStr = invoice.baseBalance != null && invoice.currency !== baseCurrencyCode
-          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.balance)} (≈ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseBalance)})`
+          ? `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.balance)} (â‰ˆ ${basePrefix ? `${basePrefix} ` : ''}${formatAmount(invoice.baseBalance)})`
           : `${invPrefix ? `${invPrefix} ` : ''}${formatAmount(invoice.balance)}`;
 
         return [
@@ -872,28 +860,23 @@ export default function ReportsPage() {
     openPdfPreview(doc, 'Overdue Invoices Report', filename);
   };
 
-  const handleGeneratePaymentAnalysisReport = () => {
+  const handleGeneratePaymentAnalysisReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo
+    let startY = await addPdfBrandedHeader(doc, 'Payment Analysis Report', {
+      subtitle: 'Statistical trends for payment frequency and methods'
+    });
 
-    doc.setFontSize(16);
-    doc.text(companyName, centerX, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text('Análisis de Patrones de Pago', centerX, 28, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
-
-    // Análisis por cliente
+    // AnÃ¡lisis por cliente
     const customerPaymentAnalysis = customers.map(customer => {
       const customerPayments = payments.filter(p => p.customerName === customer.name);
       const totalPaid = customerPayments.reduce((sum, p) => sum + p.amount, 0);
       const avgPayment = customerPayments.length > 0 ? totalPaid / customerPayments.length : 0;
       const paymentFrequency = customerPayments.length;
 
-      // Método de pago preferido
+      // MÃ©todo de pago preferido
       const methodCount = customerPayments.reduce((acc, p) => {
         acc[p.paymentMethod] = (acc[p.paymentMethod] || 0) + 1;
         return acc;
@@ -912,7 +895,7 @@ export default function ReportsPage() {
       };
     });
 
-    // Estadísticas generales
+    // EstadÃ­sticas generales
     const totalPaymentsAmount = payments.reduce((sum, p) => sum + p.amount, 0);
     const avgPaymentAmount = payments.length > 0 ? totalPaymentsAmount / payments.length : 0;
 
@@ -921,36 +904,37 @@ export default function ReportsPage() {
       return acc;
     }, {} as Record<string, number>);
 
-    doc.setFontSize(14);
-    doc.text('Estadísticas Generales', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(47, 62, 30);
+    doc.text('General Statistics', 20, startY);
+    startY += 8;
 
     const generalStats = [
-      ['Total Pagos Recibidos', formatMoney(totalPaymentsAmount)],
-      ['Número de Transacciones', payments.length.toString()],
-      ['Pago Promedio', formatMoney(avgPaymentAmount)],
-      ['Transferencias', formatMoney(methodStats.transfer || 0)],
-      ['Cheques', formatMoney(methodStats.check || 0)],
-      ['Efectivo', formatMoney(methodStats.cash || 0)],
-      ['Tarjetas', formatMoney(methodStats.card || 0)]
+      ['Total Payments Received', formatMoney(totalPaymentsAmount)],
+      ['Number of Transactions', payments.length.toString()],
+      ['Average Payment', formatMoney(avgPaymentAmount)],
+      ['Transfers', formatMoney(methodStats.transfer || 0)],
+      ['Checks', formatMoney(methodStats.check || 0)],
+      ['Cash', formatMoney(methodStats.cash || 0)],
+      ['Cards', formatMoney(methodStats.card || 0)]
     ];
 
     (doc as any).autoTable({
-      startY: 70,
-      head: [['Concepto', 'Valor']],
+      startY,
+      head: [['Concept', 'Value']],
       body: generalStats,
       theme: 'grid',
-      headStyles: { fillColor: [99, 102, 241] },
-      styles: { fontSize: 10 }
+      ...pdfStyles
     });
 
     doc.setFontSize(14);
-    doc.text('Análisis por Cliente', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Analysis by Customer', 20, (doc as any).lastAutoTable.finalY + 20);
 
     const analysisData = customerPaymentAnalysis.map(analysis => {
-      const methodName = analysis.preferredMethod === 'transfer' ? 'Transferencia' :
-                        analysis.preferredMethod === 'check' ? 'Cheque' :
-                        analysis.preferredMethod === 'cash' ? 'Efectivo' :
-                        analysis.preferredMethod === 'card' ? 'Tarjeta' : 'N/A';
+      const methodName = analysis.preferredMethod === 'transfer' ? 'Transfer' :
+                        analysis.preferredMethod === 'check' ? 'Check' :
+                        analysis.preferredMethod === 'cash' ? 'Cash' :
+                        analysis.preferredMethod === 'card' ? 'Card' : 'N/A';
 
       return [
         analysis.customer,
@@ -964,15 +948,14 @@ export default function ReportsPage() {
 
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Cliente', 'Total Pagado', 'Frecuencia', 'Pago Promedio', 'Método Preferido', 'Saldo Actual']],
+      head: [['Customer', 'Total Paid', 'Frequency', 'Avg Payment', 'Preferred Method', 'Current Balance']],
       body: analysisData,
       theme: 'striped',
-      headStyles: { fillColor: [99, 102, 241] },
-      styles: { fontSize: 9 }
+      ...pdfStyles
     });
 
-    const filename = `analisis-pagos-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Análisis de Patrones de Pago', filename);
+    const filename = `payment-analysis-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Payment Analysis Report', filename);
   };
 
   return (
