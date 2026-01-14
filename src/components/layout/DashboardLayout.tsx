@@ -596,7 +596,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {!sidebarCollapsed && (
                 <div>
                   <h1 className="brand-serif text-xl font-bold text-white">Send Bill Now</h1>
-                  <p className="text-xs text-white/70">Finance System</p>
+                  <p className="text-xs text-white/70">Complete POS & Invoicing System</p>
                 </div>
               )}
               {sidebarCollapsed && (
