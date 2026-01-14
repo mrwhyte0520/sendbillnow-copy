@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
 import { suppliersService, apQuotesService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 const palette = {
   cream: '#F6F1E7',
@@ -243,40 +244,12 @@ export default function QuotesPage() {
 
   const exportToPDF = async () => {
     const doc = new jsPDF();
+    const pdfStyles = getPdfTableStyles();
 
-    // Company header
-    let companyName = 'ContaBi';
-
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName =
-          (info as any).name ||
-          (info as any).company_name ||
-          (info as any).legal_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para PDF de solicitudes de cotización:', error);
-    }
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    // Company name centered
-    doc.setFontSize(14);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' as any });
-
-    // Title centered
-    doc.setFontSize(18);
-    doc.text('Quote Requests', pageWidth / 2, 25, { align: 'center' as any });
-
-    // Report info
-    doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
-    doc.text(`Total Requests: ${filteredQuotes.length}`, 20, 48);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Quote Requests', {
+      subtitle: `Total Requests: ${filteredQuotes.length}`
+    });
 
     // Table data
     const tableData = filteredQuotes.map((quote: any) => [
@@ -292,17 +265,15 @@ export default function QuotesPage() {
 
     doc.autoTable({
       head: [['Number', 'Date', 'Description', 'Requested By', 'Due Date', 'Est. Amount', 'Status', 'Suppliers']],
-
       body: tableData,
-      startY: 70,
+      startY: startY,
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 3 },
+      ...pdfStyles,
       columnStyles: {
-        2: { cellWidth: 50 }, // Descripción
-        4: { halign: 'right' }, // Vencimiento
-        5: { halign: 'right' }, // Monto Est.
-        7: { halign: 'center' }, // Proveedores
+        2: { cellWidth: 50 },
+        4: { halign: 'right' },
+        5: { halign: 'right' },
+        7: { halign: 'center' },
       },
     });
 
@@ -310,16 +281,16 @@ export default function QuotesPage() {
     doc.setFontSize(16);
     doc.text('Suppliers Detail by Quote', 20, 20);
 
-    let startY = 40;
+    let detailY = 40;
     filteredQuotes.forEach((quote: any) => {
-      if (startY > 250) {
+      if (detailY > 250) {
         doc.addPage();
-        startY = 20;
+        detailY = 20;
       }
 
       doc.setFontSize(12);
-      doc.text(`${quote.number} - ${quote.title}`, 20, startY);
-      startY += 10;
+      doc.text(`${quote.number} - ${quote.title}`, 20, detailY);
+      detailY += 10;
 
       if (quote.suppliers.length > 0) {
         const supplierData = quote.suppliers.map((supplier: { name: string; amount: number; deliveryTime?: string; notes?: string; status: string }) => [
@@ -333,9 +304,9 @@ export default function QuotesPage() {
           head: [['Supplier', 'Amount', 'Delivery Time', 'Status']],
 
           body: supplierData,
-          startY: startY,
+          startY: detailY,
           theme: 'grid',
-          headStyles: { fillColor: [34, 197, 94], fontSize: 10 },
+          headStyles: { fillColor: [0, 128, 0], fontSize: 10 },
           styles: { fontSize: 9 },
           columnStyles: {
             1: { halign: 'right' },
@@ -344,9 +315,9 @@ export default function QuotesPage() {
         });
 
         const anyDoc = doc as any;
-        startY = (anyDoc.lastAutoTable?.finalY || startY) + 15;
+        detailY = (anyDoc.lastAutoTable?.finalY || detailY) + 15;
       } else {
-        startY += 10;
+        detailY += 10;
       }
     });
 
@@ -409,7 +380,7 @@ export default function QuotesPage() {
     const applyHeaderStyle = (row: ExcelJS.Row) => {
       row.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } } as any;
         cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
       });
     };

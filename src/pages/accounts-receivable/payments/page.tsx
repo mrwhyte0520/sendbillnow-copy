@@ -6,6 +6,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { customerPaymentsService, invoicesService, bankAccountsService, customersService, receiptsService, receiptApplicationsService, settingsService } from '../../../services/database';
 import ExcelJS from 'exceljs';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 import { formatDate } from '../../../utils/dateFormat';
 
 interface Payment {
@@ -327,16 +328,10 @@ export default function PaymentsPage() {
 
   const exportToPDF = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    doc.setFontSize(16);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-    doc.setFontSize(20);
-    doc.text('Received Payments Report', 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${formatDate(new Date())}`, 20, 45);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Received Payments Report');
 
     const totalPayments = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
     const paymentsByMethod = filteredPayments.reduce((acc, payment) => {
@@ -344,8 +339,9 @@ export default function PaymentsPage() {
       return acc;
     }, {} as Record<string, number>);
 
-    doc.setFontSize(14);
-    doc.text('Payment Summary', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Payment Summary', 20, startY);
 
     const summaryData = [
       ['Metric', 'Amount'],
@@ -358,11 +354,11 @@ export default function PaymentsPage() {
     ];
 
     (doc as any).autoTable({
-      startY: 70,
+      startY: startY + 5,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] }
+      ...pdfStyles
     });
 
     doc.setFontSize(14);
@@ -439,7 +435,7 @@ export default function PaymentsPage() {
     const headerRow = ws.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
     });
 
     rows.forEach((r) => {

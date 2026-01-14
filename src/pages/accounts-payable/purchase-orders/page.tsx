@@ -9,6 +9,7 @@ import { formatMoney } from '../../../utils/numberFormat';
 import { useNavigate } from 'react-router-dom';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 const palette = {
   cream: '#F6F1E7',
@@ -449,13 +450,12 @@ export default function PurchaseOrdersPage() {
     await import('jspdf-autotable');
 
     const doc = new jsPDF();
+    const pdfStyles = getPdfTableStyles();
 
-    doc.setFontSize(20);
-    doc.text('Purchase Orders', 20, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
-    doc.text(`Total Orders: ${filteredOrders.length}`, 20, 50);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Purchase Orders', {
+      subtitle: `Total Orders: ${filteredOrders.length}`
+    });
 
     const tableData = filteredOrders.map((order) => [
       order.number,
@@ -469,10 +469,9 @@ export default function PurchaseOrdersPage() {
     (doc as any).autoTable({
       head: [['Number', 'Date', 'Supplier', 'Total', 'Delivery', 'Status']],
       body: tableData,
-      startY: 70,
+      startY: startY,
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 10 },
+      ...pdfStyles,
       columnStyles: {
         3: { halign: 'right' },
         5: { halign: 'center' },
@@ -527,7 +526,7 @@ export default function PurchaseOrdersPage() {
     const applyHeaderStyle = (row: ExcelJS.Row) => {
       row.eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } } as any;
         cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
       });
     };
@@ -957,7 +956,7 @@ export default function PurchaseOrdersPage() {
     const headerRow = worksheet.addRow(['Producto', 'Cantidad', 'Precio', 'Total']);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } } as any;
       cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
     });
 

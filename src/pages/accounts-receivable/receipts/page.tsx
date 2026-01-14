@@ -13,6 +13,7 @@ import { formatAmount } from '../../../utils/numberFormat';
 import DateInput from '../../../components/common/DateInput';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface Receipt {
   id: string;
@@ -278,38 +279,21 @@ export default function ReceiptsPage() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    let companyName = 'ContaBi';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName = (info as any).name || (info as any).company_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para PDF de recibos de cobro:', error);
-    }
+    const pdfStyles = getPdfTableStyles();
 
-    doc.setFontSize(16);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-    doc.setFontSize(20);
-    doc.text('Receipt Report', 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${formatDate(new Date())}`, 20, 45);
-    doc.text(`Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`, 20, 55);
-    doc.text(`Payment method: ${paymentMethodFilter === 'all' ? 'All' : getPaymentMethodName(paymentMethodFilter)}`, 20, 65);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Receipt Report', {
+      subtitle: `Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)} | Method: ${paymentMethodFilter === 'all' ? 'All' : getPaymentMethodName(paymentMethodFilter)}`
+    });
     
     // Estadísticas
     const totalAmount = filteredReceipts.reduce((sum, receipt) => sum + receipt.amount, 0);
     const activeReceipts = filteredReceipts.filter(r => r.status === 'active').length;
     const cancelledReceipts = filteredReceipts.filter(r => r.status === 'cancelled').length;
     
-    doc.setFontSize(14);
-    doc.text('Receipt summary', 20, 80);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Receipt summary', 20, startY);
     
     const summaryData = [
       ['Metric', 'Value'],
@@ -320,11 +304,11 @@ export default function ReceiptsPage() {
     ];
     
     (doc as any).autoTable({
-      startY: 90,
+      startY: startY + 5,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      ...pdfStyles
     });
     
     // Tabla de recibos
@@ -357,7 +341,7 @@ export default function ReceiptsPage() {
       head: [['Receipt', 'Customer', 'Document', 'Phone', 'Email', 'Address', 'Date', 'Amount', 'Method', 'Reference', 'Status']],
       body: receiptData,
       theme: 'striped',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [0, 128, 0] },
       styles: { fontSize: 8 }
     });
     

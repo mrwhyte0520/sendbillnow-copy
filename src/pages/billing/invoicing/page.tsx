@@ -8,6 +8,7 @@ import * as QRCode from 'qrcode';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -1094,7 +1095,7 @@ export default function InvoicingPage() {
     ]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
     });
 
     const data = filteredInvoices.map(invoice => [
@@ -1136,26 +1137,12 @@ export default function InvoicingPage() {
     saveAs(blob, `invoices_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const exportToPdf = () => {
+  const exportToPdf = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const companyName =
-      (companyInfo as any)?.name ||
-      (companyInfo as any)?.company_name ||
-      'ContaBi';
-    const title = 'INVOICES REPORT';
-    const date = `Generated on: ${new Date().toLocaleDateString('es-DO')}`;
+    const pdfStyles = getPdfTableStyles();
 
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text(companyName, pageWidth / 2, 18, { align: 'center' } as any);
-
-    doc.setFontSize(12);
-    doc.text(title, pageWidth / 2, 26, { align: 'center' } as any);
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(date, 14, 34);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Invoices Report');
 
     const headers = [
       'Invoice #',
@@ -1182,16 +1169,9 @@ export default function InvoicingPage() {
     (doc as any).autoTable({
       head: [headers],
       body: data,
-      startY: 40,
+      startY: startY,
       theme: 'grid',
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: 'bold'
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245]
-      },
+      ...pdfStyles,
       columnStyles: {
         0: { cellWidth: 25 },
         1: { cellWidth: 40 },

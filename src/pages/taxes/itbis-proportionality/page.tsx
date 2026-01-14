@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface ItbisProportionalityData {
   period: string;
@@ -162,7 +163,7 @@ export default function ItbisProportionalityPage() {
       const cell = headerRow.getCell(idx + 1);
       cell.value = h.title;
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
       cell.alignment = { vertical: 'middle' };
     });
     currentRow++;
@@ -203,45 +204,24 @@ export default function ItbisProportionalityPage() {
     saveAs(blob, `proporcionalidad_itbis_${data.period}.xlsx`);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!data) return;
 
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    const companyName =
-      (companyInfo as any)?.name ||
-      (companyInfo as any)?.company_name ||
-      'ContaBi';
-
-    const companyRnc =
-      (companyInfo as any)?.rnc ||
-      (companyInfo as any)?.tax_id ||
-      '';
-
-    // Encabezado con nombre de la empresa
-    doc.setFontSize(18);
-    doc.text(companyName, pageWidth / 2, 18, { align: 'center' } as any);
-
-    if (companyRnc) {
-      doc.setFontSize(10);
-      doc.text(`RNC: ${companyRnc}`, pageWidth / 2, 24, { align: 'center' } as any);
-    }
-
-    // Título del reporte
-    const titleY = companyRnc ? 32 : 28;
-    doc.setFontSize(14);
-    doc.text('Proporcionalidad del ITBIS', pageWidth / 2, titleY, { align: 'center' } as any);
-
-    doc.setFontSize(12);
-    doc.text(`Período: ${getMonthLabel(data.period)}`, 14, titleY + 10);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Proporcionalidad del ITBIS', {
+      subtitle: `Período: ${getMonthLabel(data.period)}`
+    });
     
     // Ventas del Período
-    doc.setFontSize(14);
-    doc.text('Ventas del Período', 14, 50);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Ventas del Período', 14, startY);
     
     (doc as any).autoTable({
-      startY: 55,
+      startY: startY + 5,
       head: [['Concepto', 'Valor']],
       body: [
         ['Total de las Ventas', formatCurrency(data.totalSales)],
@@ -252,7 +232,7 @@ export default function ItbisProportionalityPage() {
         ['Notas de Crédito < 30 Días', formatCurrency(data.creditNotesLess30Days)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
+      ...pdfStyles,
     });
 
     // Cálculo de Proporcionalidad
@@ -268,7 +248,7 @@ export default function ItbisProportionalityPage() {
         ['ITBIS Sujeto a Proporcionalidad', formatCurrency(data.itbisSubject)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: [0, 128, 0] },
     });
 
     // Resultados
@@ -284,7 +264,7 @@ export default function ItbisProportionalityPage() {
         ['Proporcionalidad No Admitida', formatCurrency(data.nonAdmittedProportionality)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [0, 128, 0] },
       bodyStyles: { fontSize: 12, fontStyle: 'bold' },
     });
 

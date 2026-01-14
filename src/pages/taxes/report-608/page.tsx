@@ -150,7 +150,7 @@ export default function Report608Page() {
       const cell = headerRow.getCell(idx + 1);
       cell.value = h.title;
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
       cell.alignment = { vertical: 'middle' };
     });
     currentRow++;

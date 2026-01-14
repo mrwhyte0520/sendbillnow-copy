@@ -253,7 +253,7 @@ export default function Report606Page() {
     ];
 
     const totalColumns = headers.length;
-    const blueColor = 'FF1E3A5F'; // Azul oscuro (en lugar de verde DGII)
+    const blueColor = 'FF008000'; // Azul oscuro (en lugar de verde DGII)
 
     let currentRow = 1;
 
@@ -422,7 +422,7 @@ export default function Report606Page() {
       [1, 2].forEach(c => {
         const cell = summaryHeaderRow.getCell(c);
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
       });
       sRow++;
 

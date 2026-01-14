@@ -15,6 +15,7 @@ import {
   settingsService,
 } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -258,29 +259,15 @@ export default function ReportsPage() {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const doc = new jsPDF();
+    const pdfStyles = getPdfTableStyles();
 
-    const headerCompanyName = companyName || 'ContaBi';
-
-    // Encabezado con nombre de empresa y título
-    doc.setFontSize(16);
-    if (headerCompanyName) {
-      doc.text(headerCompanyName, 20, 20);
-    }
-
-    doc.setFontSize(14);
-    doc.text('Accounts Payable Reports', 20, 30);
-    
-    // Información del reporte
-    doc.setFontSize(12);
-    doc.text(
-      `Report Type: ${reportType === 'aging' ? 'Aging Summary' : 'Payments Report'}`,
-      20,
-      46,
-    );
-    doc.text(`Period: ${startDate} - ${endDate}`, 20, 54);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 62);
+    // Add branded header with logo
+    const reportTitle = reportType === 'aging' ? 'AP Aging Summary' : 'AP Payments Report';
+    const startY = await addPdfBrandedHeader(doc, reportTitle, {
+      subtitle: `Period: ${startDate} - ${endDate}`
+    });
 
     if (reportType === 'aging') {
       // Reporte de Antigüedad de Saldos
@@ -297,10 +284,9 @@ export default function ReportsPage() {
       doc.autoTable({
         head: [['Supplier', 'Total', 'Current', '1-30 days', '31-60 days', '61-90 days', '+90 days']],
         body: agingTableData,
-        startY: 80,
+        startY: startY,
         theme: 'striped',
-        headStyles: { fillColor: [59, 130, 246] },
-        styles: { fontSize: 10 }
+        ...pdfStyles,
       });
 
       // Totales
@@ -343,7 +329,7 @@ export default function ReportsPage() {
         body: paymentsTableData,
         startY: 80,
         theme: 'striped',
-        headStyles: { fillColor: [34, 197, 94] },
+        headStyles: { fillColor: [0, 128, 0] },
         styles: { fontSize: 10 }
       });
 
@@ -421,7 +407,7 @@ export default function ReportsPage() {
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
+        fgColor: { argb: 'FF008000' },
       } as any;
       headerRow.alignment = { horizontal: 'center' } as any;
 
@@ -492,7 +478,7 @@ export default function ReportsPage() {
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
+        fgColor: { argb: 'FF008000' },
       } as any;
       headerRow.alignment = { horizontal: 'center' } as any;
 

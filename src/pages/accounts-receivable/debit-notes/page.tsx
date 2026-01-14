@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useAuth } from '../../../hooks/useAuth';
 import { customersService, invoicesService, creditDebitNotesService, settingsService } from '../../../services/database';
-import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 
 interface DebitNote {
@@ -164,31 +164,12 @@ export default function DebitNotesPage() {
 
   const exportToPDF = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    let companyName = 'ContaBi';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName = (info as any).name || (info as any).company_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('[DebitNotes] Error obteniendo información de la empresa para PDF de notas de débito:', error);
-    }
-
-    doc.setFontSize(16);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-    doc.setFontSize(20);
-    doc.text('Debit Notes Report', 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Generation date: ${new Date().toLocaleDateString()}`, 20, 45);
-    doc.text(`Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`, 20, 55);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Debit Notes Report', {
+      subtitle: `Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`
+    });
     
     // Estadísticas (excluyendo canceladas)
     const activeNotes = filteredNotes.filter(n => n.status !== 'cancelled');
@@ -197,8 +178,9 @@ export default function DebitNotesPage() {
     const totalBalance = activeNotes.reduce((sum, note) => sum + note.balance, 0);
     const pendingNotes = activeNotes.filter(n => n.status === 'pending').length;
     
-    doc.setFontSize(14);
-    doc.text('Debit Notes Summary', 20, 75);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Debit Notes Summary', 20, startY);
     
     const summaryData = [
       ['Metric', 'Value'],
@@ -210,11 +192,11 @@ export default function DebitNotesPage() {
     ];
     
     (doc as any).autoTable({
-      startY: 85,
+      startY: startY + 5,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [47, 62, 30] }
+      ...pdfStyles,
     });
     
     // Tabla de notas

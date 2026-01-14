@@ -6,7 +6,7 @@ import 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
 import { customersService, invoicesService, customerAdvancesService, bankAccountsService, settingsService } from '../../../services/database';
-import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
@@ -219,31 +219,12 @@ export default function AdvancesPage() {
 
   const exportToPDF = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    let companyName = 'ContaBi';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName = (info as any).name || (info as any).company_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('[Advances] Error obteniendo información de la empresa para PDF de anticipos:', error);
-    }
-
-    doc.setFontSize(16);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-    doc.setFontSize(20);
-    doc.text('Customer Advances Report', 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 45);
-    doc.text(`Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`, 20, 55);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Customer Advances Report', {
+      subtitle: `Status: ${statusFilter === 'all' ? 'All' : getStatusName(statusFilter)}`
+    });
     
     // Summary Stats
     const activeAdvances = filteredAdvances.filter(a => a.status !== 'cancelled');
@@ -252,8 +233,9 @@ export default function AdvancesPage() {
     const totalBalance = activeAdvances.reduce((sum, advance) => sum + advance.balance, 0);
     const pendingAdvances = activeAdvances.filter(a => a.status === 'pending').length;
     
-    doc.setFontSize(14);
-    doc.text('Advance Summary', 20, 75);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Advance Summary', 20, startY);
     
     const summaryData = [
       ['Metric', 'Value'],
@@ -265,11 +247,11 @@ export default function AdvancesPage() {
     ];
     
     (doc as any).autoTable({
-      startY: 85,
+      startY: startY + 5,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      ...pdfStyles
     });
     
     // Advances table
@@ -291,7 +273,7 @@ export default function AdvancesPage() {
       head: [['Advance', 'Customer', 'Date', 'Amount', 'Applied', 'Balance', 'Status']],
       body: advanceData,
       theme: 'striped',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [0, 128, 0] },
       styles: { fontSize: 8 }
     });
     

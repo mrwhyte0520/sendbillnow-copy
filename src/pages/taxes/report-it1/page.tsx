@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface IT1Data {
   id?: string;
@@ -188,7 +189,7 @@ export default function ReportIT1Page() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('IT-1');
 
-    const blueColor = 'FF1E3A5F'; // Azul marino oscuro
+    const blueColor = 'FF008000'; // Azul marino oscuro
 
     // Helper para agregar sección azul marino
     const addGreenSection = (text: string) => {
@@ -465,48 +466,30 @@ export default function ReportIT1Page() {
     document.body.removeChild(link);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     if (!reportData) return;
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    const companyName =
-      (companyInfo as any)?.name ||
-      (companyInfo as any)?.company_name ||
-      'ContaBi';
-
-    // Encabezado con nombre de la empresa
-    doc.setFontSize(18);
-    doc.text(companyName, pageWidth / 2, 18, { align: 'center' } as any);
-
-    doc.setFontSize(14);
-    doc.text('Declaración Jurada del ITBIS (IT-1)', pageWidth / 2, 26, { align: 'center' } as any);
-
-    doc.setFontSize(12);
-    doc.text(
-      `Período: ${periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })}`,
-      14,
-      36,
-    );
-    doc.text(
-      `Generado el: ${new Date(reportData.generated_date).toLocaleDateString('es-DO')}`,
-      14,
-      44,
-    );
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Declaración Jurada del ITBIS (IT-1)', {
+      subtitle: `Período: ${periodToLocalDate(reportData.period).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' })}`
+    });
 
     // Sección I - Ventas
-    doc.setFontSize(14);
-    doc.text('I. Ventas y Servicios Gravados', 14, 50);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('I. Ventas y Servicios Gravados', 14, startY);
 
     (doc as any).autoTable({
-      startY: 55,
+      startY: startY + 5,
       head: [['Concepto', 'Valor']],
       body: [
         ['Total de Ventas y Servicios Gravados', formatMoney(reportData.total_sales)],
         ['ITBIS Cobrado en Ventas', formatMoney(reportData.itbis_collected)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
+      ...pdfStyles,
     });
 
     // Sección II - Compras
@@ -522,7 +505,7 @@ export default function ReportIT1Page() {
         ['ITBIS Pagado en Compras', formatMoney(reportData.itbis_paid)],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
+      headStyles: { fillColor: [0, 128, 0] },
     });
 
     // Sección III - Liquidación
@@ -542,7 +525,7 @@ export default function ReportIT1Page() {
         [netLabel, netValue],
       ],
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [0, 128, 0] },
     });
 
     doc.save(`declaracion_it1_${reportData.period}.pdf`);

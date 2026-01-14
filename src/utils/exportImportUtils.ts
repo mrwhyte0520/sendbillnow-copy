@@ -6,6 +6,302 @@ import 'jspdf-autotable';
 import { settingsService } from '../services/database';
 import { formatAmount } from './numberFormat';
 
+// ============================================================================
+// BRAND COLORS - Unified theme for all reports
+// ============================================================================
+export const REPORT_COLORS = {
+  // Primary green (brand color)
+  primary: '008000',
+  primaryRGB: [0, 128, 0] as [number, number, number],
+  // Light green for alternating rows
+  primaryLight: 'E8F5E9',
+  primaryLightRGB: [232, 245, 233] as [number, number, number],
+  // Dark green for accents
+  primaryDark: '006600',
+  primaryDarkRGB: [0, 102, 0] as [number, number, number],
+  // White
+  white: 'FFFFFF',
+  whiteRGB: [255, 255, 255] as [number, number, number],
+  // Text colors
+  textDark: '333333',
+  textDarkRGB: [51, 51, 51] as [number, number, number],
+  textMuted: '666666',
+  textMutedRGB: [102, 102, 102] as [number, number, number],
+  // Border
+  border: 'E5E7EB',
+  borderRGB: [229, 231, 235] as [number, number, number],
+};
+
+// ============================================================================
+// EXCEL STYLES - Reusable style configurations
+// ============================================================================
+export const EXCEL_STYLES = {
+  headerFill: {
+    type: 'pattern' as const,
+    pattern: 'solid' as const,
+    fgColor: { argb: `FF${REPORT_COLORS.primary}` },
+  },
+  headerFont: {
+    bold: true,
+    color: { argb: `FF${REPORT_COLORS.white}` },
+    size: 11,
+  },
+  titleFont: {
+    bold: true,
+    size: 16,
+    color: { argb: `FF${REPORT_COLORS.primary}` },
+  },
+  subtitleFont: {
+    bold: true,
+    size: 12,
+    color: { argb: `FF${REPORT_COLORS.textDark}` },
+  },
+  alternateRowFill: {
+    type: 'pattern' as const,
+    pattern: 'solid' as const,
+    fgColor: { argb: `FF${REPORT_COLORS.primaryLight}` },
+  },
+};
+
+// ============================================================================
+// HELPER: Get company info with logo
+// ============================================================================
+export const getCompanyInfoForReports = async (): Promise<{
+  name: string;
+  rnc: string;
+  phone: string;
+  email: string;
+  address: string;
+  logo: string;
+}> => {
+  try {
+    const info = await settingsService.getCompanyInfo();
+    if (info) {
+      return {
+        name: (info as any).name || (info as any).company_name || 'Send Bill Now',
+        rnc: (info as any).rnc || (info as any).tax_id || '',
+        phone: (info as any).phone || '',
+        email: (info as any).email || '',
+        address: (info as any).address || '',
+        logo: (info as any).logo || '',
+      };
+    }
+  } catch (error) {
+    console.error('Error getting company info for reports:', error);
+  }
+  return { name: 'Send Bill Now', rnc: '', phone: '', email: '', address: '', logo: '' };
+};
+
+// ============================================================================
+// HELPER: Add branded header to Excel worksheet with logo
+// ============================================================================
+export const addExcelBrandedHeader = async (
+  ws: ExcelJS.Worksheet,
+  wb: ExcelJS.Workbook,
+  reportTitle: string,
+  totalColumns: number,
+  options?: { periodText?: string; subtitle?: string }
+): Promise<number> => {
+  const company = await getCompanyInfoForReports();
+  let currentRow = 1;
+
+  // Add logo if available
+  if (company.logo && company.logo.startsWith('data:image')) {
+    try {
+      const imageId = wb.addImage({
+        base64: company.logo,
+        extension: 'png',
+      });
+      ws.addImage(imageId, {
+        tl: { col: 0, row: 0 },
+        ext: { width: 80, height: 80 },
+      });
+      // Reserve space for logo
+      ws.getRow(1).height = 25;
+      ws.getRow(2).height = 25;
+      ws.getRow(3).height = 25;
+      currentRow = 1;
+    } catch (e) {
+      console.warn('Could not add logo to Excel:', e);
+    }
+  }
+
+  // Company name (centered, green)
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  const companyCell = ws.getCell(currentRow, 1);
+  companyCell.value = company.name;
+  companyCell.font = EXCEL_STYLES.titleFont;
+  companyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  currentRow++;
+
+  // RNC if available
+  if (company.rnc) {
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const rncCell = ws.getCell(currentRow, 1);
+    rncCell.value = `RNC: ${company.rnc}`;
+    rncCell.font = { size: 10, color: { argb: `FF${REPORT_COLORS.textMuted}` } };
+    rncCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    currentRow++;
+  }
+
+  // Report title (centered)
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  const titleCell = ws.getCell(currentRow, 1);
+  titleCell.value = reportTitle;
+  titleCell.font = EXCEL_STYLES.subtitleFont;
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  currentRow++;
+
+  // Subtitle if provided
+  if (options?.subtitle) {
+    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+    const subtitleCell = ws.getCell(currentRow, 1);
+    subtitleCell.value = options.subtitle;
+    subtitleCell.font = { size: 10, color: { argb: `FF${REPORT_COLORS.textMuted}` } };
+    subtitleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    currentRow++;
+  }
+
+  // Period or date
+  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
+  const dateCell = ws.getCell(currentRow, 1);
+  dateCell.value = options?.periodText || `Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+  dateCell.font = { size: 9, italic: true, color: { argb: `FF${REPORT_COLORS.textMuted}` } };
+  dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  currentRow++;
+
+  // Empty row before data
+  currentRow++;
+
+  return currentRow;
+};
+
+// ============================================================================
+// HELPER: Apply branded header row style to Excel
+// ============================================================================
+export const applyExcelHeaderStyle = (row: ExcelJS.Row) => {
+  row.eachCell((cell) => {
+    cell.font = EXCEL_STYLES.headerFont;
+    cell.fill = EXCEL_STYLES.headerFill as ExcelJS.Fill;
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: `FF${REPORT_COLORS.primaryDark}` } },
+      bottom: { style: 'thin', color: { argb: `FF${REPORT_COLORS.primaryDark}` } },
+    };
+  });
+};
+
+// ============================================================================
+// HELPER: Apply alternating row colors to Excel data
+// ============================================================================
+export const applyExcelAlternatingRows = (ws: ExcelJS.Worksheet, startRow: number, endRow: number) => {
+  for (let i = startRow; i <= endRow; i++) {
+    if ((i - startRow) % 2 === 1) {
+      ws.getRow(i).eachCell((cell) => {
+        cell.fill = EXCEL_STYLES.alternateRowFill as ExcelJS.Fill;
+      });
+    }
+  }
+};
+
+// ============================================================================
+// HELPER: Add branded header to PDF with logo
+// ============================================================================
+export const addPdfBrandedHeader = async (
+  doc: jsPDF,
+  reportTitle: string,
+  options?: { subtitle?: string; periodText?: string }
+): Promise<number> => {
+  const company = await getCompanyInfoForReports();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let currentY = 15;
+
+  // Add logo if available (centered)
+  if (company.logo && company.logo.startsWith('data:image')) {
+    try {
+      const logoWidth = 25;
+      const logoHeight = 25;
+      const logoX = (pageWidth - logoWidth) / 2;
+      doc.addImage(company.logo, 'PNG', logoX, currentY - 10, logoWidth, logoHeight);
+      currentY += logoHeight + 5;
+    } catch (e) {
+      console.warn('Could not add logo to PDF:', e);
+    }
+  }
+
+  // Company name (centered, green)
+  doc.setFontSize(18);
+  doc.setTextColor(...REPORT_COLORS.primaryRGB);
+  doc.setFont('helvetica', 'bold');
+  doc.text(company.name, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 6;
+
+  // RNC if available
+  if (company.rnc) {
+    doc.setFontSize(9);
+    doc.setTextColor(...REPORT_COLORS.textMutedRGB);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`RNC: ${company.rnc}`, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+  }
+
+  // Report title
+  doc.setFontSize(14);
+  doc.setTextColor(...REPORT_COLORS.textDarkRGB);
+  doc.setFont('helvetica', 'bold');
+  doc.text(reportTitle, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 5;
+
+  // Subtitle if provided
+  if (options?.subtitle) {
+    doc.setFontSize(10);
+    doc.setTextColor(...REPORT_COLORS.textMutedRGB);
+    doc.setFont('helvetica', 'normal');
+    doc.text(options.subtitle, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+  }
+
+  // Date/Period
+  doc.setFontSize(9);
+  doc.setTextColor(...REPORT_COLORS.textMutedRGB);
+  doc.setFont('helvetica', 'italic');
+  const dateText = options?.periodText || `Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+  doc.text(dateText, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 4;
+
+  // Green divider line
+  doc.setDrawColor(...REPORT_COLORS.primaryRGB);
+  doc.setLineWidth(1);
+  doc.line(14, currentY, pageWidth - 14, currentY);
+  currentY += 8;
+
+  return currentY;
+};
+
+// ============================================================================
+// HELPER: Get PDF autoTable styles with brand colors
+// ============================================================================
+export const getPdfTableStyles = () => ({
+  headStyles: {
+    fillColor: REPORT_COLORS.primaryRGB,
+    textColor: REPORT_COLORS.whiteRGB,
+    fontStyle: 'bold' as const,
+    fontSize: 9,
+  },
+  bodyStyles: {
+    fontSize: 8,
+    textColor: REPORT_COLORS.textDarkRGB,
+  },
+  alternateRowStyles: {
+    fillColor: REPORT_COLORS.primaryLightRGB,
+  },
+  styles: {
+    lineColor: REPORT_COLORS.borderRGB,
+    lineWidth: 0.1,
+    cellPadding: 3,
+  },
+});
+
 export const exportToExcel = (data: any[], fileName: string) => {
   try {
     const ws = utils.json_to_sheet(data);
@@ -28,59 +324,29 @@ export const exportToExcelStyled = async (
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet(sheetName);
 
-  let companyName = 'ContaBi';
-  try {
-    const info = await settingsService.getCompanyInfo();
-    if (info) {
-      companyName = (info as any).name || (info as any).company_name || 'ContaBi';
-    }
-  } catch {
-    // usar default
-  }
-
   const totalColumns = Math.max(1, columns.length);
-  let currentRow = 1;
-
-  // Encabezado superior (empresa / título / fecha)
-  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-  ws.getCell(currentRow, 1).value = companyName;
-  ws.getCell(currentRow, 1).font = { bold: true, size: 14 };
-  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
-  currentRow++;
-
-  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-  ws.getCell(currentRow, 1).value = sheetName;
-  ws.getCell(currentRow, 1).font = { bold: true, size: 12 };
-  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
-  currentRow++;
-
-  ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-  ws.getCell(currentRow, 1).value = `Generado: ${new Date().toLocaleDateString('es-DO')}`;
-  ws.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' };
-  currentRow++;
-
-  // línea en blanco
-  currentRow++;
+  
+  // Use branded header with logo
+  let currentRow = await addExcelBrandedHeader(ws, wb, sheetName, totalColumns);
 
   // Columnas (sin header automático; el header lo pintamos manual)
   ws.columns = columns.map(col => ({ key: col.key, width: col.width || 14 }));
 
-  // Header row (cabecera de columnas)
+  // Header row (cabecera de columnas) - GREEN branded
   const headerRowIndex = currentRow;
   const header = ws.getRow(headerRowIndex);
   columns.forEach((col, idx) => {
     const cell = header.getCell(idx + 1);
     cell.value = col.title;
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
-    cell.alignment = { vertical: 'middle' };
   });
+  applyExcelHeaderStyle(header);
   currentRow++;
 
   // Freeze panes at header row
   ws.views = [{ state: 'frozen', ySplit: headerRowIndex }];
 
   // Data rows
+  const dataStartRow = currentRow;
   rows.forEach(row => {
     const values: Record<string, any> = {};
     columns.forEach(col => {
@@ -88,6 +354,9 @@ export const exportToExcelStyled = async (
     });
     ws.addRow(values);
   });
+
+  // Apply alternating row colors
+  applyExcelAlternatingRows(ws, dataStartRow, ws.rowCount);
 
   // Number formats per column
   columns.forEach((col, idx) => {
@@ -171,19 +440,13 @@ export const exportToExcelWithHeaders = async (
       currentRow++;
     }
 
-    // Fila de encabezados de columnas (azul marino + texto blanco)
+    // Fila de encabezados de columnas (GREEN branded)
     const headerRow = ws.getRow(currentRow);
     headers.forEach((h, idx) => {
       const cell = headerRow.getCell(idx + 1);
       cell.value = h.title;
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
-      };
-      cell.alignment = { vertical: 'middle' };
     });
+    applyExcelHeaderStyle(headerRow);
     currentRow++;
 
     // Filas de datos
@@ -254,7 +517,7 @@ export const exportToPdf = async (
   data: any[],
   columns: any[],
   fileName: string,
-  companyName: string = 'ContaBi', // aquí suele llegar el título del reporte
+  reportTitle: string = 'Report',
   orientation: 'p' | 'l' = 'p',
 ) => {
   try {
@@ -271,72 +534,15 @@ export const exportToPdf = async (
     }
 
     const doc = new jsPDF({ orientation });
-    let startY = 20; // Posición Y inicial para el contenido
-    const pageWidth = doc.internal.pageSize.getWidth();
     
-    // Omitir el logo por ahora para simplificar
-    console.log('Iniciando generación de PDF...');
-    
-    // Resolver nombre de la empresa desde configuración
-    let resolvedCompanyName: string | undefined = undefined;
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info.name || (info as any).company_name)) {
-        resolvedCompanyName = info.name || (info as any).company_name;
-      }
-    } catch (error) {
-      // Si falla, usamos el valor recibido o el default
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para PDF:', error);
-    }
-
-    const mainTitle = resolvedCompanyName || 'ContaBi';
-    const reportTitle = companyName && companyName !== mainTitle ? companyName : '';
-
-    // Configurar estilos para títulos
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.setFont('helvetica', 'bold');
-
-    // Título principal: nombre de la empresa (centrado)
-    doc.text(mainTitle, pageWidth / 2, 18, { align: 'center' } as any);
-
-    // Subtítulo: nombre del reporte si se envió
-    if (reportTitle) {
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(reportTitle, pageWidth / 2, 26, { align: 'center' } as any);
-      startY = 38;
-    } else {
-      startY = 30;
-    }
-    
-    // Línea divisoria debajo del encabezado
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.line(14, startY - 5, pageWidth - 14, startY - 5);
-
-    // Fecha de generación (colocada debajo del título del reporte, sin taparlo)
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.setFont('helvetica', 'normal');
-    const date = new Date().toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    const dateY = reportTitle ? 32 : startY - 6;
-    doc.text(`Generado el: ${date}`, 14, dateY);
+    // Use branded header with logo (GREEN theme)
+    const startY = await addPdfBrandedHeader(doc, reportTitle);
 
     // Preparar datos para la tabla
     const tableData = data.map(item => 
       columns.map(col => {
         const value = item[col.key];
-        // Manejar valores undefined o null
         if (value === undefined || value === null) return '';
-        // Formatear números con separadores de miles
         if (typeof value === 'number') {
           return formatAmount(value);
         }
@@ -344,35 +550,19 @@ export const exportToPdf = async (
       })
     );
 
-    console.log('Datos de la tabla preparados:', tableData.slice(0, 2));
+    // Get branded table styles (GREEN theme)
+    const tableStyles = getPdfTableStyles();
 
-    // Agregar tabla
-    console.log('Agregando tabla al PDF...');
+    // Agregar tabla with GREEN branded styles
     (doc as any).autoTable({
       head: [columns.map(col => col.label || col.key)],
       body: tableData,
       startY: startY,
       margin: { top: startY, right: 10, bottom: 20, left: 10 },
-      styles: { 
-        fontSize: 8,
-        cellPadding: 3,
-        lineColor: [220, 220, 220],
-        textColor: [40, 40, 40],
-        overflow: 'linebreak',
-        lineWidth: 0.1
-      },
-      headStyles: { 
-        fillColor: [41, 128, 185],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        textPadding: { top: 2, right: 2, bottom: 2, left: 2 }
-      },
-      bodyStyles: {
-        textPadding: { top: 2, right: 2, bottom: 2, left: 2 }
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245]
-      },
+      ...tableStyles.styles,
+      headStyles: tableStyles.headStyles,
+      bodyStyles: tableStyles.bodyStyles,
+      alternateRowStyles: tableStyles.alternateRowStyles,
       didDrawPage: function(data: any) {
         // Pie de página
         const pageSize = doc.internal.pageSize;
@@ -395,7 +585,7 @@ export const exportToPdf = async (
           doc.setFontSize(60);
           doc.setTextColor(245, 245, 245);
           doc.text(
-            companyName || 'Confidencial', 
+            reportTitle || 'Confidential', 
             pageSize.width / 2, 
             pageHeight / 2, 
             { 

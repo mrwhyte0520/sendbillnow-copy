@@ -227,7 +227,7 @@ export default function CustomersPage() {
       ws.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FF0B1F3A' },
+        fgColor: { argb: 'FF008000' },
       };
       ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
       ws.getRow(1).height = 25;

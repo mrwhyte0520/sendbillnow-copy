@@ -198,7 +198,7 @@ export default function Report607Page() {
     ];
 
     const totalColumns = headers.length;
-    const blueColor = 'FF1E3A5F'; // Azul oscuro (en lugar de verde DGII)
+    const blueColor = 'FF008000'; // Azul oscuro (en lugar de verde DGII)
 
     let currentRow = 1;
 

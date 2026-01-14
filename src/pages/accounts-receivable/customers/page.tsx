@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { customersService, chartAccountsService, salesRepsService, customerTypesService, paymentTermsService, settingsService } from '../../../services/database';
-import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface Customer {
   id: string;
@@ -166,36 +166,18 @@ export default function CustomersPage() {
     const { default: jsPDF } = await import('jspdf');
     await import('jspdf-autotable');
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const pdfStyles = getPdfTableStyles();
 
-    let companyName = 'ContaBi';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName = (info as any).name || (info as any).company_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      console.error('Error obteniendo información de la empresa para PDF de clientes:', error);
-    }
-
-    doc.setFontSize(16);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-    doc.setFontSize(20);
-    doc.text('Customer Report', 20, 30);
-    
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 45);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Customer Report');
     
     const activeCustomers = customers.filter(c => c.status === 'active').length;
     const totalCreditLimit = customers.reduce((sum, c) => sum + c.creditLimit, 0);
     const totalBalance = customers.reduce((sum, c) => sum + c.currentBalance, 0);
     
-    doc.setFontSize(14);
-    doc.text('Customer Stats', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Customer Stats', 20, startY);
     
     const statsData = [
       ['Metric', 'Value'],
@@ -206,11 +188,11 @@ export default function CustomersPage() {
     ];
     
     (doc as any).autoTable({
-      startY: 70,
+      startY: startY + 5,
       head: [statsData[0]],
       body: statsData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] }
+      ...pdfStyles
     });
     
     doc.setFontSize(14);

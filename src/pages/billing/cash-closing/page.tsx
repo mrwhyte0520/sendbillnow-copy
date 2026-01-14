@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../../../hooks/useAuth';
 import { cashClosingService, invoicesService, receiptsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 // Importación dinámica de jsPDF para evitar errores de compilación
 const loadJsPDF = async () => {
@@ -208,39 +209,17 @@ export default function CashClosingPage() {
     try {
       const jsPDF = await loadJsPDF();
       const doc = new jsPDF();
+      const pdfStyles = getPdfTableStyles();
 
-      let companyName = 'ContaBi';
-      try {
-        const info = await settingsService.getCompanyInfo();
-        if (info && (info as any)) {
-          const resolvedName = (info as any).name || (info as any).company_name;
-          if (resolvedName) {
-            companyName = String(resolvedName);
-          }
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error obteniendo información de la empresa para PDF de cierre de caja:', error);
-      }
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-
-      // Encabezado con nombre de empresa y título
-      doc.setFontSize(16);
-      doc.text(companyName, pageWidth / 2, 15, { align: 'center' } as any);
-
-      doc.setFontSize(20);
-      doc.text('Cash Closing Report', 20, 30);
-      
-      // Información del cierre
-      doc.setFontSize(12);
-      doc.text(`Date: ${selectedDate}`, 20, 50);
-      doc.text(`Cashier: ${currentShift.cashier}`, 20, 60);
-      doc.text(`Shift: ${currentShift.shift}`, 20, 70);
+      // Add branded header with logo
+      const startY = await addPdfBrandedHeader(doc, 'Cash Closing Report', {
+        subtitle: `Date: ${selectedDate} | Cashier: ${currentShift.cashier} | Shift: ${currentShift.shift}`
+      });
       
       // Resumen de ventas
-      doc.setFontSize(14);
-      doc.text('Sales Summary', 20, 90);
+      doc.setFontSize(12);
+      doc.setTextColor(51, 51, 51);
+      doc.text('Sales Summary', 20, startY);
       
       // Calcular cantidades reales de transacciones por método a partir de los recibos del día
       const receiptsCount = dailyReceipts.length;
@@ -269,7 +248,7 @@ export default function CashClosingPage() {
         body: salesData.slice(1),
         theme: 'grid',
         styles: { fontSize: 10 },
-        headStyles: { fillColor: [59, 130, 246] }
+        headStyles: { fillColor: [0, 128, 0] }
       });
 
       // Desglose de efectivo
@@ -297,7 +276,7 @@ export default function CashClosingPage() {
         body: cashData.slice(1),
         theme: 'grid',
         styles: { fontSize: 10 },
-        headStyles: { fillColor: [34, 197, 94] }
+        headStyles: { fillColor: [0, 128, 0] }
       });
 
       // Resumen final

@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
@@ -345,38 +346,23 @@ export default function InvoicesPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    const companyName =
-      (companyInfo as any)?.name ||
-      (companyInfo as any)?.company_name ||
-      'ContaBi';
-
-    const title = 'Accounts Receivable Report';
-    const dateStr = formatDate(new Date());
+    const pdfStyles = getPdfTableStyles();
     const statusText = statusFilter === 'all' ? 'All' : getStatusName(statusFilter);
 
-    // Encabezado: nombre de empresa, título y filtros
-    doc.setFontSize(18);
-    doc.setTextColor(40, 40, 40);
-    doc.text(companyName, pageWidth / 2, 18, { align: 'center' } as any);
-
-    doc.setFontSize(12);
-    doc.text(title, pageWidth / 2, 26, { align: 'center' } as any);
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${dateStr}`, 20, 36);
-    doc.text(`Status filter: ${statusText}`, 20, 44);
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Accounts Receivable Report', {
+      subtitle: `Status: ${statusText}`
+    });
 
     const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
     const totalBalance = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
     const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
 
-    doc.setFontSize(14);
-    doc.text('Financial Summary', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(51, 51, 51);
+    doc.text('Financial Summary', 20, startY);
 
     const summaryData = [
       ['Metric', 'Amount'],
@@ -387,13 +373,11 @@ export default function InvoicesPage() {
     ];
 
     (doc as any).autoTable({
-      startY: 70,
-
+      startY: startY + 5,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 10 }
+      ...pdfStyles
     });
 
     doc.setFontSize(14);
@@ -416,7 +400,7 @@ export default function InvoicesPage() {
 
       body: invoiceData,
       theme: 'striped',
-      headStyles: { fillColor: [34, 197, 94] },
+      headStyles: { fillColor: [0, 128, 0] },
       styles: { fontSize: 8 }
     });
     
@@ -512,7 +496,7 @@ export default function InvoicesPage() {
     ]);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
     });
 
     filteredInvoices.forEach((invoice) => {

@@ -93,7 +93,7 @@ export default function SettingsPage() {
           const cell = headerRow.getCell(idx + 1);
           cell.value = h;
           cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
         });
         data.forEach((row, rowIdx) => {
           const dataRow = ws.getRow(rowIdx + 2);

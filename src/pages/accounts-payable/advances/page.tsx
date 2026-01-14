@@ -549,7 +549,7 @@ export default function AdvancesPage() {
     });
     headerRow.eachCell((cell) => {
       cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } } as any;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } } as any;
       cell.alignment = { vertical: 'middle', horizontal: 'center' } as any;
     });
     currentRow++;

@@ -644,7 +644,7 @@ export default function ReportsPage() {
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [34, 197, 94] }
+      headStyles: { fillColor: [0, 128, 0] }
     });
 
     doc.setFontSize(14);

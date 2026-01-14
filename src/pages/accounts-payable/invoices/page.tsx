@@ -1283,7 +1283,7 @@ ${items
       const itemsHeader = worksheet.addRow(['Descripción', 'Cantidad', 'Precio', 'Total']);
       itemsHeader.font = { bold: true, color: { argb: 'FFFFFFFF' } };
       itemsHeader.eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B1F3A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF008000' } };
       });
 
       items.forEach((item: any) => {

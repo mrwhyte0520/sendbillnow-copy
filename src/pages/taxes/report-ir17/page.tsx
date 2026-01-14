@@ -90,7 +90,7 @@ export default function ReportIR17Page() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('IR-17');
 
-    const blueColor = 'FF1E3A5F'; // Azul marino oscuro
+    const blueColor = 'FF008000'; // Azul marino oscuro
 
     // Helper para agregar sección azul marino
     const addBlueSection = (text: string) => {
