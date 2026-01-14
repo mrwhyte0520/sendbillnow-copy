@@ -20,6 +20,8 @@ import {
   settingsService,
 } from '../../../services/database';
 import { formatAmount, getCurrencyPrefix } from '../../../utils/numberFormat';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 interface APInvoice {
   id: string;
@@ -187,6 +189,9 @@ export default function APInvoicesPage() {
 
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [companyInfo, setCompanyInfo] = useState<any | null>(null);
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [invoiceToPrint, setInvoiceToPrint] = useState<APInvoice | null>(null);
 
   const normalizeSupplierTypeName = (value: any) => String(value || '').trim().toLowerCase();
   const getSupplierTypeKey = (typeRow: any | null) => {
@@ -852,7 +857,74 @@ export default function APInvoicesPage() {
     setShowDocumentPreviewModal(true);
   };
 
-  const handlePrintInvoice = async (invoice: APInvoice) => {
+  const handlePrintInvoice = (invoice: APInvoice) => {
+    setInvoiceToPrint(invoice);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+    const invoice = invoiceToPrint;
+    if (!invoice) return;
+    
+    const supplier = suppliers.find((s: any) => String(s.id) === String(invoice.supplierId));
+    const supplierData = {
+      name: invoice.legalName || invoice.supplierName || 'Supplier',
+      document: String(invoice.taxId || (supplier as any)?.tax_id || '').trim(),
+      phone: String((supplier as any)?.phone || '').trim(),
+      email: String((supplier as any)?.email || '').trim(),
+      address: String((supplier as any)?.address || '').trim(),
+    };
+    const companyData = {
+      name: (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now',
+      rnc: (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id,
+      phone: (companyInfo as any)?.phone,
+      email: (companyInfo as any)?.email,
+      address: (companyInfo as any)?.address,
+    };
+
+    try {
+      const dbLines = await apInvoiceLinesService.getByInvoice(invoice.id);
+      const items = (dbLines || []).map((l: any) => {
+        const qty = Number(l.quantity) || 0;
+        const price = Number(l.unit_price) || 0;
+        const total = Number(l.line_total) || qty * price;
+        return {
+          description: l.description || (l.inventory_items as any)?.name || 'Expense / Service',
+          quantity: qty,
+          price,
+          total,
+        };
+      });
+
+      if (items.length === 0) {
+        items.push({
+          description: invoice.expenseType606 || 'Expense / Service',
+          quantity: 1,
+          price: invoice.totalToPay,
+          total: invoice.totalToPay,
+        });
+      }
+
+      const invoiceData = {
+        invoiceNumber: invoice.invoiceNumber || invoice.id,
+        date: invoice.invoiceDate,
+        dueDate: invoice.dueDate || invoice.invoiceDate,
+        amount: invoice.totalToPay,
+        subtotal: invoice.totalGross - (invoice.totalDiscount || 0),
+        tax: invoice.totalItbis,
+        items,
+      };
+
+      printInvoice(invoiceData, supplierData, companyData, type);
+      setInvoiceToPrint(null);
+    } catch (error) {
+      console.error('Error preparing print:', error);
+      alert('Could not prepare the invoice for printing.');
+      setInvoiceToPrint(null);
+    }
+  };
+
+  const handlePrintInvoiceLegacy = async (invoice: APInvoice) => {
     try {
       const dbLines = await apInvoiceLinesService.getByInvoice(invoice.id);
       const items = (dbLines || []).map((l: any) => {
@@ -2287,6 +2359,18 @@ ${items
             </div>
           </div>
         )}
+
+        {/* Invoice Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setInvoiceToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="supplier_invoice"
+          title="Select Invoice Format"
+        />
       </div>
     </DashboardLayout>
   );

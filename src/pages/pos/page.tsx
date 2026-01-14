@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService } from '../../services/database';
 import { exportToExcelStyled } from '../../utils/exportImportUtils';
 import { formatAmount, formatMoney } from '../../utils/numberFormat';
+import InvoiceTypeModal from '../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
 
 interface Product {
   id: string;
@@ -125,6 +127,10 @@ export default function POSPage() {
   // Modal for configuring which products can be extras (Modelo)
   const [showModeloModal, setShowModeloModal] = useState(false);
   const [availableExtras, setAvailableExtras] = useState<string[]>([]); // IDs of products that can be extras
+
+  // Print type modal state
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [completedSale, setCompletedSale] = useState<Sale | null>(null);
 
   // Load available extras from localStorage on mount
   useEffect(() => {
@@ -909,7 +915,10 @@ export default function POSPage() {
         }
       }
       
-      alert(`Sale processed successfully. ${paymentMethod === 'cash' ? `Change: ${money(received - total)}` : ''}`);
+      // Store the completed sale and open print modal
+      setCompletedSale(newSale);
+      setShowPrintTypeModal(true);
+      
       setCart([]);
       setSelectedCustomer(null);
       setAmountReceived('');
@@ -919,6 +928,42 @@ export default function POSPage() {
     } else {
       alert('Insufficient amount');
     }
+  };
+
+  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+    if (!completedSale) return;
+    
+    const saleData = {
+      invoiceNumber: completedSale.id,
+      date: completedSale.date,
+      dueDate: completedSale.date,
+      amount: completedSale.total,
+      subtotal: completedSale.subtotal,
+      tax: completedSale.tax,
+      items: completedSale.items.map(item => ({
+        description: item.name + (item.extras?.length ? ` + ${item.extras.map(e => e.name).join(', ')}` : ''),
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total,
+      })),
+    };
+    const customerData = {
+      name: completedSale.customer?.name || 'Customer',
+      document: completedSale.customer?.document,
+      phone: completedSale.customer?.phone,
+      email: completedSale.customer?.email,
+      address: completedSale.customer?.address,
+    };
+    const companyData = {
+      name: 'Send Bill Now',
+      rnc: '',
+      phone: '',
+      email: '',
+      address: '',
+    };
+
+    printInvoice(saleData, customerData, companyData, type);
+    setCompletedSale(null);
   };
 
   const addNewCustomer = async () => {
@@ -3189,6 +3234,18 @@ export default function POSPage() {
             </div>
           </Modal>
         )}
+
+        {/* Print Type Modal - Auto opens after payment */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setCompletedSale(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="invoice"
+          title="Print Receipt"
+        />
       </div>
     </DashboardLayout>
   );

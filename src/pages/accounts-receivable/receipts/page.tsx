@@ -11,6 +11,8 @@ import { customersService, receiptsService, invoicesService, receiptApplications
 import { formatDate } from '../../../utils/dateFormat';
 import { formatAmount } from '../../../utils/numberFormat';
 import DateInput from '../../../components/common/DateInput';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 interface Receipt {
   id: string;
@@ -66,6 +68,9 @@ export default function ReceiptsPage() {
   const [loadingNewReceiptInvoices, setLoadingNewReceiptInvoices] = useState(false);
   const [newReceiptInvoiceId, setNewReceiptInvoiceId] = useState<string>('');
   const [newReceiptAmount, setNewReceiptAmount] = useState<string>('');
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [receiptToPrint, setReceiptToPrint] = useState<Receipt | null>(null);
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
@@ -625,7 +630,50 @@ export default function ReceiptsPage() {
     }
   };
 
-  const handlePrintReceipt = async (receipt: Receipt) => {
+  const handlePrintReceipt = (receipt: Receipt) => {
+    setReceiptToPrint(receipt);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+    if (!receiptToPrint) return;
+    const enriched = await enrichReceiptWithInvoices(receiptToPrint);
+    const customer = customers.find((c) => c.id === enriched.customerId);
+    
+    let companyInfo: any = {};
+    try {
+      companyInfo = await settingsService.getCompanyInfo() || {};
+    } catch { /* ignore */ }
+
+    const receiptData = {
+      invoiceNumber: enriched.receiptNumber,
+      date: enriched.date,
+      dueDate: enriched.date,
+      amount: enriched.amount,
+      subtotal: enriched.amount,
+      tax: 0,
+      items: [{ description: `${enriched.concept || 'Receipt'} - ${getPaymentMethodName(enriched.paymentMethod)}${enriched.reference ? ` (Ref: ${enriched.reference})` : ''}`, quantity: 1, price: enriched.amount, total: enriched.amount }],
+    };
+    const customerData = {
+      name: enriched.customerName || customer?.name || 'Customer',
+      document: customer?.document,
+      phone: customer?.phone,
+      email: customer?.email,
+      address: customer?.address,
+    };
+    const companyData = {
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id,
+      phone: companyInfo?.phone,
+      email: companyInfo?.email,
+      address: companyInfo?.address,
+    };
+
+    printInvoice(receiptData, customerData, companyData, type);
+    setReceiptToPrint(null);
+  };
+
+  const handlePrintReceiptLegacy = async (receipt: Receipt) => {
     const enriched = await enrichReceiptWithInvoices(receipt);
 
     const customer = customers.find((c) => c.id === enriched.customerId);
@@ -1535,6 +1583,17 @@ export default function ReceiptsPage() {
             </div>
           </div>
         )}
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setReceiptToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="invoice"
+          title="Select Receipt Format"
+        />
       </div>
     </DashboardLayout>
   );

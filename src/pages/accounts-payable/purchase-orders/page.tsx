@@ -7,6 +7,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { purchaseOrdersService, purchaseOrderItemsService, suppliersService, inventoryService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 import { useNavigate } from 'react-router-dom';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 const palette = {
   cream: '#F6F1E7',
@@ -58,6 +60,9 @@ export default function PurchaseOrdersPage() {
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterSupplier, setFilterSupplier] = useState('all');
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [orderToPrint, setOrderToPrint] = useState<any>(null);
 
   const handleCreateSupplierInvoice = (order: any) => {
     const orderId = String(order?.id || '');
@@ -670,7 +675,42 @@ export default function PurchaseOrdersPage() {
     saveAs(blob, `ordenes-compra-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const printOrder = async (order: any) => {
+  const printOrder = (order: any) => {
+    setOrderToPrint(order);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+    if (!orderToPrint) return;
+    const supplier = suppliers.find((s: any) => String(s.id) === String(orderToPrint.supplierId));
+    const orderData = {
+      invoiceNumber: orderToPrint.number || orderToPrint.id,
+      date: orderToPrint.date,
+      dueDate: orderToPrint.deliveryDate || orderToPrint.date,
+      amount: orderToPrint.total,
+      subtotal: orderToPrint.subtotal,
+      tax: orderToPrint.itbis,
+      items: (orderToPrint.products || []).map((p: any) => ({ description: p.name, quantity: p.quantity, price: p.price, total: p.quantity * p.price })),
+    };
+    const supplierData = {
+      name: supplier?.legalName || supplier?.name || orderToPrint.supplier || 'Supplier',
+      document: supplier?.taxId,
+      phone: supplier?.phone,
+      email: supplier?.email,
+      address: supplier?.address,
+    };
+    const companyData = {
+      name: (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now',
+      rnc: (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id,
+      phone: (companyInfo as any)?.phone,
+      email: (companyInfo as any)?.email,
+      address: (companyInfo as any)?.address,
+    };
+    printInvoice(orderData, supplierData, companyData, type);
+    setOrderToPrint(null);
+  };
+
+  const printOrderLegacy = async (order: any) => {
     const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
     const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
     const companyPhone = (companyInfo as any)?.phone || '';
@@ -1375,6 +1415,17 @@ export default function PurchaseOrdersPage() {
           </div>
         )}
 
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setOrderToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="supplier_invoice"
+          title="Select Order Format"
+        />
       </div>
     </DashboardLayout>
   );

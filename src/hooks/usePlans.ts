@@ -303,8 +303,8 @@ export function usePlans() {
       'pro': 99.99,
       'plus': 199.99,
       'facturacion-simple': 19.99,
-      'facturacion-premium': 49.99,
-      'pos-premium': 129.99
+      'facturacion-premium': 29.99,
+      'pos-premium': 399.99
     };
     return prices[planId] || 0;
   };

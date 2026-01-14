@@ -46,6 +46,19 @@
       <stop offset="100%" stop-color="#d4c9b5"/>
     </linearGradient>
   </defs>
+  <style>
+    svg .kpi, svg .chip, svg .pie {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 260ms cubic-bezier(.2,.8,.2,1);
+      will-change: transform;
+    }
+    svg:hover .kpi-invoices, svg:active .kpi-invoices { transform: translateY(-10px) rotate(-0.6deg); }
+    svg:hover .kpi-profit, svg:active .kpi-profit { transform: translateY(-6px) rotate(0.4deg); }
+    svg:hover .chip-leads, svg:active .chip-leads { transform: translateY(-10px) translateX(6px) rotate(0.8deg) scale(1.02); }
+    svg:hover .chip-cash, svg:active .chip-cash { transform: translateY(-8px) translateX(-6px) rotate(-0.6deg) scale(1.02); }
+    svg:hover .pie, svg:active .pie { transform: translateY(-10px) rotate(1deg) scale(1.02); }
+  </style>
   <rect width="1200" height="800" fill="url(#bg)" rx="40"/>
   <circle cx="920" cy="90" r="360" fill="url(#glow)" opacity="0.7"/>
   <circle cx="250" cy="720" r="280" fill="url(#glow)" opacity="0.35"/>
@@ -86,15 +99,19 @@
   
   <!-- KPI chips -->
   <g font-family="'Inter', 'Segoe UI', sans-serif" font-weight="600">
-    <rect x="215" y="215" width="190" height="95" rx="18" fill="white" opacity="0.95" stroke="#e4d9c3"/>
-    <text x="235" y="250" font-size="16" fill="#7b8f42">Invoices</text>
-    <text x="235" y="280" font-size="32" fill="#2f3e1e" font-weight="700">$5.78K</text>
-    <text x="235" y="305" font-size="14" fill="#a08f68">+12% vs last month</text>
+    <g class="kpi kpi-invoices">
+      <rect x="215" y="215" width="190" height="95" rx="18" fill="white" opacity="0.95" stroke="#e4d9c3"/>
+      <text x="235" y="250" font-size="16" fill="#7b8f42">Invoices</text>
+      <text x="235" y="280" font-size="32" fill="#2f3e1e" font-weight="700">$5.78K</text>
+      <text x="235" y="305" font-size="14" fill="#a08f68">+12% vs last month</text>
+    </g>
 
-    <rect x="215" y="395" width="190" height="95" rx="18" fill="white" opacity="0.95" stroke="#e4d9c3"/>
-    <text x="235" y="430" font-size="16" fill="#7b8f42">Net Profit</text>
-    <text x="235" y="460" font-size="32" fill="#2f3e1e" font-weight="700">18.5%</text>
-    <text x="235" y="485" font-size="14" fill="#a08f68">Stable performance</text>
+    <g class="kpi kpi-profit">
+      <rect x="215" y="395" width="190" height="95" rx="18" fill="white" opacity="0.95" stroke="#e4d9c3"/>
+      <text x="235" y="430" font-size="16" fill="#7b8f42">Net Profit</text>
+      <text x="235" y="460" font-size="32" fill="#2f3e1e" font-weight="700">18.5%</text>
+      <text x="235" y="485" font-size="14" fill="#a08f68">Stable performance</text>
+    </g>
   </g>
 
   <!-- Bar chart -->
@@ -135,7 +152,7 @@
   </g>
 
   <!-- Pie chart -->
-  <g transform="translate(230,560)">
+  <g class="pie" transform="translate(230,560)">
     <circle cx="0" cy="0" r="72" fill="#f8f4e5"/>
     <path d="M0,-72 A72,72 0 0 1 62,28 L0,0Z" fill="#4e633c"/>
     <path d="M62,28 A72,72 0 0 1 -45,56 L0,0Z" fill="#cddf91"/>
@@ -144,14 +161,14 @@
     <text x="0" y="6" text-anchor="middle" font-size="20" font-family="'Inter', 'Segoe UI', sans-serif" fill="#2f3e1e" font-weight="600">68%</text>
   </g>
   <!-- Floating chips -->
-  <g>
+  <g class="chip chip-leads">
     <rect x="860" y="170" width="150" height="70" rx="18" fill="url(#chip)" opacity="0.18" />
     <rect x="870" y="180" width="130" height="55" rx="14" fill="url(#chip)" opacity="0.9" />
     <text x="885" y="210" font-size="16" font-family="'Inter', 'Segoe UI', sans-serif" fill="white" font-weight="600">New Leads</text>
     <text x="885" y="232" font-size="22" font-family="'Inter', 'Segoe UI', sans-serif" fill="#f4f1d8" font-weight="700">245</text>
     <circle cx="985" cy="208" r="6" fill="#f8e8c0" opacity="0.8"/>
   </g>
-  <g opacity="0.9">
+  <g class="chip chip-cash" opacity="0.9">
     <rect x="820" y="430" width="160" height="110" rx="20" fill="#fdfaf2" stroke="#e4d9c3"/>
     <text x="840" y="460" font-size="16" font-family="'Inter', 'Segoe UI', sans-serif" fill="#7b8f42">Cash Flow</text>
     <text x="840" y="490" font-size="30" font-family="'Inter', 'Segoe UI', sans-serif" fill="#2f3e1e" font-weight="700">$256K</text>

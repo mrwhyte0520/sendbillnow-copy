@@ -43,7 +43,7 @@ export default function PlansPage() {
       id: 'facturacion-simple',
       name: 'Simple Invoicing',
       priceMonthly: 19.99,
-      priceAnnual: 107.88,
+      priceAnnual: 167.92,
       description: 'Ideal for businesses starting with basic invoicing',
       features: [
         '1 user',
@@ -61,8 +61,8 @@ export default function PlansPage() {
     {
       id: 'facturacion-premium',
       name: 'Premium Invoicing',
-      priceMonthly: 49.99,
-      priceAnnual: 239.88,
+      priceMonthly: 29.99,
+      priceAnnual: 251.92,
       description: 'For companies that need higher invoicing capacity',
       features: [
         '8 users',
@@ -81,8 +81,8 @@ export default function PlansPage() {
     {
       id: 'pos-premium',
       name: 'POS Premium',
-      priceMonthly: 129.99,
-      priceAnnual: 719.88,
+      priceMonthly: 399.99,
+      priceAnnual: 3359.92,
       description: 'Complete solution for retail points of sale and business management',
       features: [
         'Full dashboard',
@@ -206,14 +206,25 @@ export default function PlansPage() {
         <div className="text-center">
           <i className={`${plan.icon} text-4xl mb-3`}></i>
           <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-          <div className="flex items-baseline justify-center mb-2">
-            <span className="text-sm">USD $</span>
-            <span className="text-3xl font-bold mx-1">{formatMoney(getPrice(plan))}</span>
-            <span className="text-sm">{getPeriodLabel()}</span>
-          </div>
-          {billingPeriod === 'annual' && getSavingsPercent(plan) > 0 && (
-            <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block">
-              Save {getSavingsPercent(plan)}%
+          {billingPeriod === 'monthly' ? (
+            <div className="flex items-baseline justify-center mb-2">
+              <span className="text-sm">USD $</span>
+              <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceMonthly)}</span>
+              <span className="text-sm">/month</span>
+            </div>
+          ) : (
+            <div className="mb-2">
+              <div className="text-sm line-through opacity-60 mb-1">
+                USD ${formatMoney(plan.priceMonthly * 12)}/year
+              </div>
+              <div className="flex items-baseline justify-center">
+                <span className="text-sm">USD $</span>
+                <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceAnnual)}</span>
+                <span className="text-sm">/year</span>
+              </div>
+              <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
+              </div>
             </div>
           )}
         </div>
@@ -315,7 +326,7 @@ export default function PlansPage() {
             >
               Annual
               <span className="ml-2 text-xs bg-[#3E4D2C] text-white px-2 py-0.5 rounded-full">
-                Save more
+                Save 30%
               </span>
             </button>
           </div>

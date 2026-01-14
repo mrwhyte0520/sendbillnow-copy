@@ -180,7 +180,7 @@ export default function Login() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            © 2024 Sendbillnow. All rights reserved.
+            © 2024 Send Bill Now. All rights reserved.
           </p>
         </div>
       </div>

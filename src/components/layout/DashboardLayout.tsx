@@ -595,7 +595,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex items-center min-w-0">
               {!sidebarCollapsed && (
                 <div>
-                  <h1 className="brand-serif text-xl font-bold text-white">Sendbillnow</h1>
+                  <h1 className="brand-serif text-xl font-bold text-white">Send Bill Now</h1>
                   <p className="text-xs text-white/70">Finance System</p>
                 </div>
               )}
@@ -1198,19 +1198,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   Your free trial period of <span className="font-bold">7 days</span> has ended.
                 </p>
                 <p className="text-gray-600 mb-6">
-                  To continue using Sendbillnow, you need to select a payment plan.
+                  To continue using Send Bill Now, you need to select a payment plan.
                 </p>
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg mb-6 text-left">
                   <div className="flex items-start">
-                    <i className="ri-information-line text-blue-600 text-xl mr-3 mt-0.5"></i>
+                    <i className="ri-information-line text-blue-500 mr-3 mt-0.5"></i>
                     <div>
-                      <h4 className="font-semibold text-blue-900 mb-1">Upgrade Benefits</h4>
-                      <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Unlimited access to all features</li>
-                        <li>• No business interruptions</li>
-                        <li>• Priority technical support</li>
-                        <li>• Automatic backups of your data</li>
-                      </ul>
+                      <p className="text-sm font-medium text-blue-800">Important</p>
+                      <p className="text-sm text-blue-700">
+                        Select a plan to regain access to all features and continue using the system.
+                      </p>
                     </div>
                   </div>
                 </div>

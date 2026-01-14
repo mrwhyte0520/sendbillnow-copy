@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { exportToPdf } from '../../../utils/exportImportUtils';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 import { toast } from 'sonner';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatAmount, getCurrencyPrefix } from '../../../utils/numberFormat';
@@ -543,6 +545,8 @@ export default function QuotesPage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [viewQuote, setViewQuote] = useState<Quote | null>(null);
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [quoteToPrint, setQuoteToPrint] = useState<Quote | null>(null);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -791,7 +795,46 @@ export default function QuotesPage() {
     }
   };
 
-  const handlePrintQuote = async (quoteId: string) => {
+  const handlePrintQuote = (quoteId: string) => {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (!quote) return;
+    setQuoteToPrint(quote);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+    if (!quoteToPrint) return;
+    const fullCustomer = quoteToPrint.customerId ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId)) : undefined;
+    let companyInfo: any = null;
+    try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
+    const quoteData = {
+      invoiceNumber: quoteToPrint.id,
+      date: quoteToPrint.date,
+      dueDate: quoteToPrint.validUntil,
+      amount: quoteToPrint.total,
+      subtotal: quoteToPrint.amount,
+      tax: quoteToPrint.tax,
+      items: quoteToPrint.items.map(item => ({ description: item.description, quantity: item.quantity, price: item.price, total: item.total })),
+    };
+    const customerData = {
+      name: quoteToPrint.customer || fullCustomer?.name || 'Customer',
+      document: fullCustomer?.document || undefined,
+      phone: fullCustomer?.phone,
+      email: fullCustomer?.email || quoteToPrint.customerEmail,
+      address: fullCustomer?.address,
+    };
+    const companyData = {
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id,
+      phone: companyInfo?.phone,
+      email: companyInfo?.email,
+      address: companyInfo?.address,
+    };
+    printInvoice(quoteData, customerData, companyData, type);
+    setQuoteToPrint(null);
+  };
+
+  const handlePrintQuoteLegacy = async (quoteId: string) => {
     const quote = quotes.find((q) => q.id === quoteId);
     if (!quote) return;
 
@@ -1870,6 +1913,18 @@ export default function QuotesPage() {
             </div>
           </div>
         )}
+
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setQuoteToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="quote"
+          title="Select Quote Format"
+        />
       </div>
     </DashboardLayout>
   );

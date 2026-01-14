@@ -23,6 +23,8 @@ import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
 import { accountsReceivableTheme as theme } from '../../../theme/accountsReceivable';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 interface Invoice {
   id: string;
@@ -103,6 +105,9 @@ export default function InvoicesPage() {
 
   const [newInvoiceDocumentType, setNewInvoiceDocumentType] = useState<string>('');
   const [ncfSeries, setNcfSeries] = useState<any[]>([]);
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [invoiceToPrint, setInvoiceToPrint] = useState<Invoice | null>(null);
 
   const currentItbisRate = taxConfig?.itbis_rate ?? 18;
 
@@ -1040,126 +1045,29 @@ export default function InvoicesPage() {
   const handlePrintInvoice = (invoiceId: string) => {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) return;
+    setInvoiceToPrint(invoice);
+    setShowPrintTypeModal(true);
+  };
 
-    (async () => {
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('No se pudo abrir la ventana de impresión');
-        return;
-      }
-
-      const fullCustomer = invoice.customerId
-        ? customers.find((c) => c.id === invoice.customerId)
-        : undefined;
-
-      const customerDocument = fullCustomer?.document || '';
-      const customerPhone = fullCustomer?.phone || '';
-      const customerEmail = fullCustomer?.email || '';
-      const customerAddress = fullCustomer?.address || '';
-
-      const companyName =
-        (companyInfo as any)?.name ||
-        (companyInfo as any)?.company_name ||
-        'ContaBi';
-
-      const companyRnc =
-        (companyInfo as any)?.rnc ||
-        (companyInfo as any)?.tax_id ||
-        (companyInfo as any)?.ruc ||
-        '';
-
-      const companyPhone =
-        (companyInfo as any)?.phone ||
-        (companyInfo as any)?.company_phone ||
-        (companyInfo as any)?.contact_phone ||
-        '';
-
-      const companyEmail =
-        (companyInfo as any)?.email ||
-        (companyInfo as any)?.company_email ||
-        (companyInfo as any)?.contact_email ||
-        '';
-
-      const companyAddress =
-        (companyInfo as any)?.address ||
-        (companyInfo as any)?.company_address ||
-        '';
-
-      let qrDataUrl = '';
-      try {
-        const token = invoice.publicToken;
-        const qrUrl = token
-          ? `${window.location.origin}/public/document/invoice/${encodeURIComponent(String(token))}`
-          : `${window.location.origin}/document/invoice/${encodeURIComponent(String(invoice.id))}`;
-        qrDataUrl = await QRCode.toDataURL(qrUrl, {
-          errorCorrectionLevel: 'M',
-          margin: 1,
-          width: 160,
-        });
-      } catch {
-        qrDataUrl = '';
-      }
-
-      const itemsHtml = (invoice.items || [])
-        .map(
-          (item: any, idx: number) => `
-            <tr>
-              <td>${idx + 1}</td>
-              <td>${item.description}</td>
-              <td class="num"> ${formatAmount(item.price)}</td>
-              <td class="num">${item.quantity}</td>
-              <td class="num"> ${formatAmount(item.total)}</td>
-            </tr>`,
-        )
-        .join('');
-
-      const html = `
-        <html>
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>Invoice ${invoice.invoiceNumber}</title>
-            <style>
-              :root { --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --primary:#2563eb; --primaryDark:#1d4ed8; }
-              *{ box-sizing:border-box; }
-              body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
-              .page{ padding:24px; }
-              .card{ max-width:860px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 10px 22px rgba(0,0,0,.08); }
-              .header{ padding:20px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
-              .brand h1{ margin:0; font-size:18px; font-weight:800; }
-              .brand p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
-              .title{ text-align:right; }
-              .title h2{ margin:0; font-size:16px; font-weight:800; color:var(--primary); }
-              .title p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
-              .content{ padding:18px 22px 22px; }
-              .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-              @media (min-width: 720px){ .grid{ grid-template-columns:1fr 1fr; } }
-              .field{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:#fafafa; }
-              .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-              .value{ margin-top:6px; font-size:14px; font-weight:700; word-break:break-word; }
-              .amount{ margin-top:14px; padding:14px; border-radius:12px; border:1px solid rgba(22,163,74,.25); background: rgba(22,163,74,.08); display:flex; justify-content:space-between; gap:12px; align-items:center; }
-              .amount .label{ color: rgba(22,163,74,.9); }
-              .amount .value{ font-size:18px; }
-              .actions{ margin-top:16px; display:flex; justify-content:flex-end; gap:10px; }
-              .btn{ appearance:none; border:0; border-radius:10px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer; }
-              .btnPrimary{ background:var(--primary); color:#fff; }
-              .btnPrimary:hover{ background:var(--primaryDark); }
-              .footer{ padding:14px 22px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
-              @media print{ body{ background:#fff; } .page{ padding:0; } .card{ box-shadow:none; border:0; border-radius:0; } .actions{ display:none !important; } }
-            </style>
-            <script>
-              window.onload = function() {
-                window.print();
-                setTimeout(() => window.close(), 1000);
-              };
-            </script>
-          </body>
-        </html>
-      `;
-
-      printWindow.document.write(html);
-      printWindow.document.close();
-    })();
+  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+    if (!invoiceToPrint) return;
+    const fullCustomer = invoiceToPrint.customerId ? customers.find((c) => c.id === invoiceToPrint.customerId) : undefined;
+    const customerData = {
+      name: invoiceToPrint.customerName || fullCustomer?.name || 'Customer',
+      document: fullCustomer?.document,
+      phone: fullCustomer?.phone,
+      email: fullCustomer?.email,
+      address: fullCustomer?.address,
+    };
+    const companyData = {
+      name: (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now',
+      rnc: (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id,
+      phone: (companyInfo as any)?.phone,
+      email: (companyInfo as any)?.email,
+      address: (companyInfo as any)?.address,
+    };
+    printInvoice(invoiceToPrint, customerData, companyData, type);
+    setInvoiceToPrint(null);
   };
 
   const handleCancelInvoice = async (invoice: Invoice) => {
@@ -2329,6 +2237,16 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+      <InvoiceTypeModal
+        isOpen={showPrintTypeModal}
+        onClose={() => {
+          setShowPrintTypeModal(false);
+          setInvoiceToPrint(null);
+        }}
+        onSelect={handlePrintTypeSelect}
+        documentType="invoice"
+        title="Select Invoice Format"
+      />
     </DashboardLayout>
   );
 }

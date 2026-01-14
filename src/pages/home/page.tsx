@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { referralsService } from '../../services/database';
 
 export default function HomePage() {
@@ -39,11 +39,13 @@ export default function HomePage() {
     }
   ];
 
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+
   const plans = [
     {
       name: 'Simple Invoicing',
-      price: 'USD $19.99',
-      period: '/month',
+      priceMonthly: 19.99,
+      priceAnnual: 167.92,
       description: 'Ideal for businesses starting with basic invoicing',
       features: [
         '1 user',
@@ -58,8 +60,8 @@ export default function HomePage() {
     },
     {
       name: 'Premium Invoicing',
-      price: 'USD $49.99',
-      period: '/month',
+      priceMonthly: 29.99,
+      priceAnnual: 251.92,
       description: 'For companies that need higher invoicing capacity',
       features: [
         '8 users',
@@ -75,8 +77,8 @@ export default function HomePage() {
     },
     {
       name: 'POS Premium',
-      price: 'USD $129.99',
-      period: '/month',
+      priceMonthly: 399.99,
+      priceAnnual: 3359.92,
       description: 'Complete solution for retail points of sale and business management',
       features: [
         'Full dashboard',
@@ -93,6 +95,10 @@ export default function HomePage() {
     },
   ];
 
+  const formatMoney = (amount: number) => {
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const handleSmoothScroll = (elementId: string) => {
     const element = document.getElementById(elementId);
     if (element) {
@@ -108,7 +114,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-[#008000]" style={{ fontFamily: '"Pacifico", serif' }}>
-                Sendbillnow
+                Send Bill Now
               </h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -161,10 +167,10 @@ export default function HomePage() {
                 </Link>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative cursor-pointer select-none touch-manipulation transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 active:scale-[0.99]">
               <img 
                 src="/hero-analytics-green.svg"
-                alt="Dashboard de Sendbillnow"
+                alt="Dashboard de Send Bill Now"
                 className="rounded-xl shadow-2xl border border-[#d8cbb5] object-cover"
               />
               <div className="absolute inset-0 rounded-xl border border-white/40 pointer-events-none bg-gradient-to-tr from-[#30442540] via-transparent to-transparent mix-blend-multiply"></div>
@@ -188,7 +194,7 @@ export default function HomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-gray-50 rounded-lg p-8 hover:shadow-lg transition-shadow cursor-pointer">
+              <div key={index} className="bg-gray-50 rounded-lg p-8 cursor-pointer select-none touch-manipulation transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg active:translate-y-0.5 active:scale-[0.99]">
                 <div className="w-12 h-12 bg-[#008000]/10 rounded-lg flex items-center justify-center mb-4">
                   <i className={`${feature.icon} text-2xl text-[#008000]`}></i>
                 </div>
@@ -211,9 +217,38 @@ export default function HomePage() {
                 Invoicing Plans
               </h2>
             </div>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 mb-6">
               Quoting and invoicing solutions
             </p>
+            
+            {/* Billing Toggle */}
+            <div className="flex justify-center mb-8">
+              <div className="bg-gray-100 border border-gray-200 rounded-2xl p-1 shadow-md inline-flex">
+                <button
+                  onClick={() => setBillingPeriod('monthly')}
+                  className={`px-6 py-2 rounded-xl font-medium transition-all ${
+                    billingPeriod === 'monthly'
+                      ? 'bg-[#008000] text-white shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingPeriod('annual')}
+                  className={`px-6 py-2 rounded-xl font-medium transition-all flex items-center ${
+                    billingPeriod === 'annual'
+                      ? 'bg-[#008000] text-white shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Annual
+                  <span className="ml-2 text-xs bg-green-700 text-white px-2 py-0.5 rounded-full">
+                    Save 30%
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
@@ -228,11 +263,27 @@ export default function HomePage() {
                     plan.name === 'Simple Invoicing' ? 'ri-file-text-line' : 'ri-file-list-3-line'
                   } text-4xl mb-3`}></i>
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-sm">USD $</span>
-                    <span className="text-3xl font-bold mx-1">{plan.price.replace('USD $', '')}</span>
-                    <span className="text-sm">{plan.period}</span>
-                  </div>
+                  {billingPeriod === 'monthly' ? (
+                    <div className="flex items-baseline justify-center">
+                      <span className="text-sm">USD $</span>
+                      <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceMonthly)}</span>
+                      <span className="text-sm">/month</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-sm line-through opacity-60 mb-1">
+                        USD ${formatMoney(plan.priceMonthly * 12)}/year
+                      </div>
+                      <div className="flex items-baseline justify-center">
+                        <span className="text-sm">USD $</span>
+                        <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceAnnual)}</span>
+                        <span className="text-sm">/year</span>
+                      </div>
+                      <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                        30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -276,11 +327,27 @@ export default function HomePage() {
                 <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white text-center">
                   <i className="ri-store-2-line text-4xl mb-3"></i>
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="flex items-baseline justify-center">
-                    <span className="text-sm">USD $</span>
-                    <span className="text-3xl font-bold mx-1">{plan.price.replace('USD $', '')}</span>
-                    <span className="text-sm">{plan.period}</span>
-                  </div>
+                  {billingPeriod === 'monthly' ? (
+                    <div className="flex items-baseline justify-center">
+                      <span className="text-sm">USD $</span>
+                      <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceMonthly)}</span>
+                      <span className="text-sm">/month</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-sm line-through opacity-60 mb-1">
+                        USD ${formatMoney(plan.priceMonthly * 12)}/year
+                      </div>
+                      <div className="flex items-baseline justify-center">
+                        <span className="text-sm">USD $</span>
+                        <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceAnnual)}</span>
+                        <span className="text-sm">/year</span>
+                      </div>
+                      <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                        30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -312,16 +379,16 @@ export default function HomePage() {
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-[#008000] to-[#008000]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+          <h2 className="text-4xl font-bold text-white mb-6">
             Ready to modernize your accounting?
           </h2>
           <p className="text-xl text-stone-200 mb-8 max-w-2xl mx-auto">
-            Join hundreds of businesses that already trust Sendbillnow 
+            Join hundreds of businesses that already trust Send Bill Now 
             for their accounting and tax management.
           </p>
           <Link 
-            to="/auth/register"
-            className="bg-white text-[#008000] px-8 py-4 rounded-lg hover:bg-stone-100 font-semibold text-lg whitespace-nowrap cursor-pointer"
+            to="/auth/register" 
+            className="bg-white text-[#008000] px-8 py-4 rounded-lg font-bold text-lg hover:bg-gray-100 transition-colors inline-block cursor-pointer"
           >
             Start 15-Day Free Trial
           </Link>
@@ -334,7 +401,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-xl font-bold mb-4" style={{ fontFamily: '"Pacifico", serif' }}>
-                Sendbillnow
+                Send Bill Now
               </h3>
               <p className="text-gray-400">
                 The most complete accounting system for businesses.
@@ -407,7 +474,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Sendbillnow. All rights reserved.</p>
+            <p>&copy; 2024 Send Bill Now. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -7,6 +7,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useBankCatalog } from '../../../hooks/useBankCatalog';
 import { apSupplierAdvancesService, suppliersService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 const palette = {
   cream: '#F6F1E7',
@@ -44,6 +46,9 @@ export default function AdvancesPage() {
   const [advances, setAdvances] = useState<SupplierAdvance[]>([]);
   const [suppliers, setSuppliers] = useState<Array<{ id: string; name: string }>>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [advanceToPrint, setAdvanceToPrint] = useState<SupplierAdvance | null>(null);
 
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -309,7 +314,44 @@ export default function AdvancesPage() {
     }
   };
 
-  const handlePrintAdvance = async (advance: SupplierAdvance) => {
+  const handlePrintAdvance = (advance: SupplierAdvance) => {
+    setAdvanceToPrint(advance);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+    if (!advanceToPrint) return;
+    let companyInfo: any = {};
+    try { companyInfo = await settingsService.getCompanyInfo() || {}; } catch { /* ignore */ }
+
+    const advanceData = {
+      invoiceNumber: advanceToPrint.number,
+      date: advanceToPrint.date,
+      dueDate: advanceToPrint.dueDate || advanceToPrint.date,
+      amount: advanceToPrint.amount,
+      subtotal: advanceToPrint.amount,
+      tax: 0,
+      items: [{ description: advanceToPrint.reason || 'Supplier Advance', quantity: 1, price: advanceToPrint.amount, total: advanceToPrint.amount }],
+    };
+    const supplierData = {
+      name: advanceToPrint.supplierName || 'Supplier',
+      document: '',
+      phone: '',
+      email: '',
+      address: '',
+    };
+    const companyData = {
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id,
+      phone: companyInfo?.phone,
+      email: companyInfo?.email,
+      address: companyInfo?.address,
+    };
+    printInvoice(advanceData, supplierData, companyData, type);
+    setAdvanceToPrint(null);
+  };
+
+  const handlePrintAdvanceLegacy = async (advance: SupplierAdvance) => {
     let companyName = 'ContaBi';
     let companyRnc = '';
     let companyPhone = '';
@@ -932,6 +974,18 @@ export default function AdvancesPage() {
             </div>
           </div>
         )}
+
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setAdvanceToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="supplier_invoice"
+          title="Select Advance Format"
+        />
       </div>
     </DashboardLayout>
   );

@@ -6,6 +6,8 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as QRCode from 'qrcode';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -89,6 +91,9 @@ export default function InvoicingPage() {
 
   const [showInvoiceDetailModal, setShowInvoiceDetailModal] = useState(false);
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [invoiceToPrint, setInvoiceToPrint] = useState<UiInvoice | null>(null);
 
   const [paymentTerms, setPaymentTerms] = useState<Array<{ id: string; name: string; days?: number }>>([]);
   const [salesReps, setSalesReps] = useState<Array<{ id: string; name: string; is_active: boolean }>>([]);
@@ -612,7 +617,44 @@ export default function InvoicingPage() {
     }
   };
 
-  const handlePrintInvoice = async (invoiceId: string) => {
+  const handlePrintInvoice = (invoiceId: string) => {
+    const invoice = invoices.find((inv) => inv.id === invoiceId);
+    if (!invoice) return;
+    setInvoiceToPrint(invoice);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+    if (!invoiceToPrint) return;
+    const fullCustomer = invoiceToPrint.customerId ? customers.find((c) => c.id === invoiceToPrint.customerId) : undefined;
+    const invoiceData = {
+      invoiceNumber: invoiceToPrint.id,
+      date: invoiceToPrint.date,
+      dueDate: invoiceToPrint.dueDate,
+      amount: invoiceToPrint.total,
+      subtotal: invoiceToPrint.amount,
+      tax: invoiceToPrint.tax,
+      items: invoiceToPrint.items.map(item => ({ description: item.description, quantity: item.quantity, price: item.price, total: item.total })),
+    };
+    const customerData = {
+      name: invoiceToPrint.customer || fullCustomer?.name || 'Customer',
+      document: fullCustomer?.document || invoiceToPrint.customerDocument,
+      phone: fullCustomer?.phone || invoiceToPrint.customerPhone,
+      email: fullCustomer?.email || invoiceToPrint.customerEmail,
+      address: fullCustomer?.address || invoiceToPrint.customerAddress,
+    };
+    const companyData = {
+      name: (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now',
+      rnc: (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id,
+      phone: (companyInfo as any)?.phone,
+      email: (companyInfo as any)?.email,
+      address: (companyInfo as any)?.address,
+    };
+    printInvoice(invoiceData, customerData, companyData, type);
+    setInvoiceToPrint(null);
+  };
+
+  const handlePrintInvoiceLegacy = async (invoiceId: string) => {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) return;
 
@@ -2383,6 +2425,17 @@ export default function InvoicingPage() {
             </div>
           </div>
         )}
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setInvoiceToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="invoice"
+          title="Select Invoice Format"
+        />
       </div>
     </DashboardLayout>
   );

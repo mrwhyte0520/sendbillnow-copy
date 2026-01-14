@@ -8,6 +8,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { customersService, invoicesService, customerAdvancesService, bankAccountsService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
+import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 interface Advance {
   id: string;
@@ -59,6 +61,8 @@ export default function AdvancesPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
   const [customerAdvanceAccounts, setCustomerAdvanceAccounts] = useState<Record<string, string>>({});
   const [customerArAccounts, setCustomerArAccounts] = useState<Record<string, string>>({});
+  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
+  const [advanceToPrint, setAdvanceToPrint] = useState<Advance | null>(null);
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
@@ -363,7 +367,46 @@ export default function AdvancesPage() {
     setShowAdvanceDetails(true);
   };
 
-  const handlePrintAdvance = async (advance: Advance) => {
+  const handlePrintAdvance = (advance: Advance) => {
+    setAdvanceToPrint(advance);
+    setShowPrintTypeModal(true);
+  };
+
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+    if (!advanceToPrint) return;
+    const customer = customers.find((c) => c.id === advanceToPrint.customerId);
+    let companyInfo: any = {};
+    try { companyInfo = await settingsService.getCompanyInfo() || {}; } catch { /* ignore */ }
+
+    const advanceData = {
+      invoiceNumber: advanceToPrint.advanceNumber,
+      date: advanceToPrint.date,
+      dueDate: advanceToPrint.date,
+      amount: advanceToPrint.amount,
+      subtotal: advanceToPrint.amount,
+      tax: 0,
+      items: [{ description: `${advanceToPrint.concept || 'Customer Advance'} - ${getPaymentMethodName(advanceToPrint.paymentMethod)}`, quantity: 1, price: advanceToPrint.amount, total: advanceToPrint.amount }],
+    };
+    const customerData = {
+      name: advanceToPrint.customerName || customer?.name || 'Customer',
+      document: customer?.document,
+      phone: customer?.phone,
+      email: customer?.email,
+      address: customer?.address,
+    };
+    const companyData = {
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id,
+      phone: companyInfo?.phone,
+      email: companyInfo?.email,
+      address: companyInfo?.address,
+    };
+
+    printInvoice(advanceData, customerData, companyData, type);
+    setAdvanceToPrint(null);
+  };
+
+  const handlePrintAdvanceLegacy = async (advance: Advance) => {
     let companyName = 'ContaBi';
     let companyRnc = '';
     let companyPhone = '';
@@ -1270,6 +1313,18 @@ export default function AdvancesPage() {
             </div>
           </div>
         )}
+        
+        {/* Print Type Modal */}
+        <InvoiceTypeModal
+          isOpen={showPrintTypeModal}
+          onClose={() => {
+            setShowPrintTypeModal(false);
+            setAdvanceToPrint(null);
+          }}
+          onSelect={handlePrintTypeSelect}
+          documentType="invoice"
+          title="Select Advance Format"
+        />
       </div>
     </DashboardLayout>
   );
