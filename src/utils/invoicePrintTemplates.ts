@@ -27,6 +27,7 @@ interface CompanyData {
   phone?: string;
   email?: string;
   address?: string;
+  logo?: string;
 }
 
 const GREEN = '#008000';
@@ -38,16 +39,12 @@ export function generateInvoiceHtml(
   company: CompanyData,
   templateType: InvoiceTemplateType
 ): string {
-  const rows = (invoice.items || []).map((item, idx) => 
-    `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${item.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatAmount(item.total)}</td></tr>`
-  ).join('');
-
   const docTitle = templateType === 'quotation' ? 'QUOTATION' : 'INVOICE';
 
   if (templateType === 'simple') {
-    return generateSimpleTemplate(invoice, customer, company, rows, docTitle);
+    return generateSimpleTemplate(invoice, customer, company, docTitle);
   } else if (templateType === 'detailed') {
-    return generateDetailedTemplate(invoice, customer, company, rows, docTitle);
+    return generateDetailedTemplate(invoice, customer, company, docTitle);
   } else {
     return generateQuotationTemplate(invoice, customer, company);
   }
@@ -57,44 +54,56 @@ function generateSimpleTemplate(
   invoice: InvoiceData,
   customer: CustomerData,
   company: CompanyData,
-  rows: string,
   docTitle: string
 ): string {
+  // Generate rows with alternating colors
+  const coloredRows = (invoice.items || []).map((item, idx) => 
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
+  ).join('');
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,sans-serif;background:#f5f5f5;padding:20px;}
-.invoice{max-width:800px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;}
-.header{display:flex;justify-content:space-between;padding:24px;border-bottom:3px solid ${GREEN};}
-.logo-section h1{font-size:20px;color:${GREEN};margin-bottom:4px;}
-.logo-section p{font-size:11px;color:#666;margin:2px 0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
+.invoice{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
+.logo-section h1{font-size:22px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.logo-section p{font-size:11px;color:#666;margin:3px 0;}
 .invoice-info{text-align:right;}
-.invoice-info h2{font-size:24px;color:${GREEN};margin-bottom:8px;}
-.invoice-info p{font-size:11px;color:#666;margin:3px 0;}
-.customer-section{padding:20px 24px;background:${GREEN_LIGHT};border-bottom:1px solid #ddd;}
-.customer-section h3{font-size:12px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;}
+.invoice-info h2{font-size:28px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.invoice-info p{font-size:11px;color:#666;margin:4px 0;}
+.invoice-info strong{color:#333;}
+.customer-section{padding:20px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};}
+.customer-section h3{font-size:13px;color:${GREEN};margin-bottom:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 .customer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .customer-grid p{font-size:12px;color:#333;}
+.customer-grid strong{color:${GREEN};}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:12px;text-align:left;font-size:12px;text-transform:uppercase;}
-th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
-.totals{padding:20px 24px;display:flex;justify-content:space-between;align-items:flex-start;}
+th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th:nth-child(3),th:nth-child(5){text-align:right;}
+th:nth-child(4){text-align:center;}
+.totals{padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;background:#fafafa;border-top:2px solid ${GREEN};}
 .notes{flex:1;padding-right:40px;}
-.notes h4{font-size:11px;color:#666;margin-bottom:8px;text-transform:uppercase;}
-.notes-box{border:1px solid #ddd;border-radius:6px;padding:12px;min-height:60px;font-size:11px;color:#666;}
-.summary{min-width:240px;}
-.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px solid #eee;}
-.summary-row.total{border-top:2px solid ${GREEN};border-bottom:none;font-weight:700;font-size:16px;color:${GREEN};margin-top:8px;padding-top:12px;}
-.footer{padding:16px 24px;background:#f9f9f9;border-top:1px solid #ddd;text-align:center;font-size:11px;color:${GREEN};}
-@media print{body{background:#fff;padding:0;}.invoice{border:none;border-radius:0;}}
+.notes h4{font-size:11px;color:${GREEN};margin-bottom:10px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:14px;min-height:70px;font-size:11px;color:#666;background:#fff;}
+.summary{min-width:260px;background:#fff;border-radius:8px;padding:16px;border:2px solid ${GREEN_LIGHT};}
+.summary-row{display:flex;justify-content:space-between;padding:10px 0;font-size:13px;border-bottom:1px solid #eee;}
+.summary-row span:first-child{color:#666;}
+.summary-row span:last-child{font-weight:600;color:#333;}
+.summary-row.total{border-top:3px solid ${GREEN};border-bottom:none;font-weight:700;font-size:18px;margin-top:10px;padding-top:14px;background:${GREEN_LIGHT};margin:-16px;margin-top:10px;padding:14px 16px;border-radius:0 0 6px 6px;}
+.summary-row.total span:first-child{color:${GREEN};}
+.summary-row.total span:last-child{color:${GREEN};}
+.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.customer-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
     <div class="logo-section">
+      ${company.logo ? `<img src="${company.logo}" alt="${company.name}" style="max-width:80px;max-height:80px;object-fit:contain;margin-bottom:8px;border-radius:8px;"/>` : ''}
       <h1>${company.name}</h1>
       ${company.address ? `<p>${company.address}</p>` : ''}
-      ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
-      ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+      ${company.phone ? `<p>${company.phone}</p>` : ''}
+      ${company.email ? `<p>${company.email}</p>` : ''}
     </div>
     <div class="invoice-info">
       <h2>${docTitle}</h2>
@@ -102,11 +111,11 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
-      <p><strong>Invoice Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:14px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <div class="customer-section">
-    <h3>Customer:</h3>
+    <h3>Customer Information</h3>
     <div class="customer-grid">
       <p><strong>Name:</strong> ${customer.name}</p>
       <p><strong>Email:</strong> ${customer.email || '-'}</p>
@@ -115,7 +124,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
   </div>
   <table>
     <thead><tr><th>#</th><th>Description</th><th>Price</th><th>QTY</th><th>Amount</th></tr></thead>
-    <tbody>${rows}</tbody>
+    <tbody>${coloredRows}</tbody>
   </table>
   <div class="totals">
     <div class="notes"><h4>Additional Notes:</h4><div class="notes-box"></div></div>
@@ -125,7 +134,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
       <div class="summary-row total"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
     </div>
   </div>
-  <div class="footer">Thank you for your Business!</div>
+  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;
@@ -135,62 +144,73 @@ function generateDetailedTemplate(
   invoice: InvoiceData,
   customer: CustomerData,
   company: CompanyData,
-  rows: string,
   docTitle: string
 ): string {
+  // Generate rows with alternating colors
+  const coloredRows = (invoice.items || []).map((item, idx) => 
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
+  ).join('');
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,sans-serif;background:#f5f5f5;padding:20px;}
-.invoice{max-width:800px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;}
-.header{display:flex;justify-content:space-between;padding:20px 24px;border-bottom:3px solid ${GREEN};}
-.logo-section h1{font-size:18px;color:${GREEN};margin-bottom:4px;}
-.logo-section p{font-size:10px;color:#666;margin:2px 0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
+.invoice{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
+.logo-section h1{font-size:20px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.logo-section p{font-size:10px;color:#666;margin:3px 0;}
 .invoice-info{text-align:right;}
-.invoice-info h2{font-size:22px;color:${GREEN};margin-bottom:6px;}
-.invoice-info p{font-size:10px;color:#666;margin:2px 0;}
-.customer-section{padding:16px 24px;background:${GREEN_LIGHT};border-bottom:1px solid #ddd;}
-.customer-section h3{font-size:11px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;}
-.customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.customer-grid p{font-size:11px;color:#333;margin:2px 0;}
+.invoice-info h2{font-size:26px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.invoice-info p{font-size:10px;color:#666;margin:4px 0;}
+.invoice-info strong{color:#333;}
+.customer-section{padding:20px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};}
+.customer-section h3{font-size:12px;color:${GREEN};margin-bottom:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+.customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.customer-grid p{font-size:11px;color:#333;margin:3px 0;}
+.customer-grid strong{color:${GREEN};}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:10px;text-align:left;font-size:11px;text-transform:uppercase;}
-th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
-.totals{padding:16px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th:nth-child(3),th:nth-child(5){text-align:right;}
+th:nth-child(4){text-align:center;}
+.totals{padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;background:#fafafa;border-top:2px solid ${GREEN};}
 .notes{flex:1;}
-.notes h4{font-size:10px;color:#666;margin-bottom:6px;text-transform:uppercase;}
-.notes-box{border:1px solid #ddd;border-radius:4px;padding:10px;min-height:50px;font-size:10px;color:#666;}
-.summary{min-width:200px;}
-.summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid #eee;}
-.summary-row.total{border-top:2px solid ${GREEN};border-bottom:none;font-weight:700;font-size:14px;color:${GREEN};margin-top:6px;padding-top:10px;}
-.terms{padding:16px 24px;border-top:1px solid #ddd;}
-.terms h4{font-size:10px;color:#666;margin-bottom:6px;text-transform:uppercase;}
-.terms-box{border:1px solid #ddd;border-radius:4px;padding:10px;min-height:60px;font-size:10px;color:#666;}
-.signature{padding:20px 24px;border-top:1px solid #ddd;}
-.signature h4{font-size:12px;color:#333;margin-bottom:12px;}
-.signature-line{border-bottom:1px solid #333;width:200px;margin-bottom:4px;}
-.signature p{font-size:10px;color:${GREEN};}
-.footer{padding:14px 24px;background:#f9f9f9;border-top:1px solid #ddd;text-align:center;font-size:11px;color:${GREEN};}
-@media print{body{background:#fff;padding:0;}.invoice{border:none;border-radius:0;}}
+.notes h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
+.summary{min-width:220px;background:#fff;border-radius:8px;padding:14px;border:2px solid ${GREEN_LIGHT};}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px solid #eee;}
+.summary-row span:first-child{color:#666;}
+.summary-row span:last-child{font-weight:600;color:#333;}
+.summary-row.total{border-top:3px solid ${GREEN};border-bottom:none;font-weight:700;font-size:16px;margin-top:8px;padding-top:12px;background:${GREEN_LIGHT};margin:-14px;margin-top:8px;padding:12px 14px;border-radius:0 0 6px 6px;}
+.summary-row.total span{color:${GREEN};}
+.terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
+.terms h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.terms-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
+.signature{padding:20px 28px;border-top:1px solid #e5e7eb;background:#fafafa;}
+.signature h4{font-size:12px;color:${GREEN};margin-bottom:14px;font-weight:700;}
+.signature-line{border-bottom:2px solid ${GREEN};width:220px;margin-bottom:6px;}
+.signature p{font-size:11px;color:${GREEN};font-weight:600;}
+.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.customer-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
     <div class="logo-section">
+      ${company.logo ? `<img src="${company.logo}" alt="${company.name}" style="max-width:70px;max-height:70px;object-fit:contain;margin-bottom:6px;border-radius:8px;"/>` : ''}
       <h1>${company.name}</h1>
       ${company.address ? `<p>${company.address}</p>` : ''}
-      ${company.phone ? `<p>Phone: ${company.phone}</p>` : ''}
-      ${company.email ? `<p>Email: ${company.email}</p>` : ''}
+      ${company.phone ? `<p>${company.phone}</p>` : ''}
+      ${company.email ? `<p>${company.email}</p>` : ''}
     </div>
     <div class="invoice-info">
       <h2>${docTitle}</h2>
       <p><strong>Invoice No.:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
-      <p><strong>Invoice Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <div class="customer-section">
-    <h3>Customer:</h3>
+    <h3>Customer Information</h3>
     <div class="customer-grid">
       <div>
         <p><strong>Name:</strong> ${customer.name}</p>
@@ -205,7 +225,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
   </div>
   <table>
     <thead><tr><th>#</th><th>Description</th><th>Price</th><th>QTY</th><th>Amount</th></tr></thead>
-    <tbody>${rows}</tbody>
+    <tbody>${coloredRows}</tbody>
   </table>
   <div class="totals">
     <div class="notes"><h4>Additional Notes:</h4><div class="notes-box"></div></div>
@@ -217,7 +237,7 @@ th:nth-child(3),th:nth-child(4),th:nth-child(5){text-align:right;}
   </div>
   <div class="terms"><h4>Terms & Conditions:</h4><div class="terms-box"></div></div>
   <div class="signature"><h4>Signature</h4><div class="signature-line"></div><p>X_________________</p></div>
-  <div class="footer">Thank you for your Business!</div>
+  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;
@@ -228,44 +248,49 @@ function generateQuotationTemplate(
   customer: CustomerData,
   company: CompanyData
 ): string {
-  const quoteRows = (invoice.items || []).map(item => 
-    `<tr><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${item.quantity}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatAmount(item.total)}</td></tr>`
+  // Generate rows with alternating colors
+  const quoteRows = (invoice.items || []).map((item, idx) => 
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;">${item.quantity}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
   ).join('');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Quote ${invoice.invoiceNumber}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:system-ui,sans-serif;background:#f5f5f5;padding:20px;}
-.quote{max-width:800px;margin:0 auto;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;}
-.header{display:flex;justify-content:space-between;padding:20px 24px;border-bottom:3px solid ${GREEN};}
-.logo-section h1{font-size:16px;color:${GREEN};margin-bottom:4px;}
-.logo-section p{font-size:10px;color:#666;margin:2px 0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
+.quote{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
+.logo-section h1{font-size:20px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.logo-section p{font-size:10px;color:#666;margin:3px 0;}
 .quote-info{text-align:right;}
-.quote-info h2{font-size:20px;color:${GREEN};margin-bottom:6px;}
-.quote-info p{font-size:10px;color:#666;margin:2px 0;}
-.meta-section{padding:12px 24px;background:${GREEN_LIGHT};border-bottom:1px solid #ddd;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-.meta-section p{font-size:10px;color:#333;}
-.meta-section strong{color:${GREEN};}
+.quote-info h2{font-size:26px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.quote-info p{font-size:10px;color:#666;margin:4px 0;}
+.quote-info strong{color:#333;}
+.meta-section{padding:16px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.meta-section p{font-size:11px;color:#333;}
+.meta-section strong{color:${GREEN};font-size:12px;}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:10px;text-align:left;font-size:10px;text-transform:uppercase;}
+th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th:nth-child(1){text-align:center;}
 th:nth-child(3),th:nth-child(4){text-align:right;}
-.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);padding:12px 24px;background:#f9f9f9;border-top:2px solid ${GREEN};border-bottom:1px solid #ddd;}
-.summary-bar div{text-align:center;}
-.summary-bar span{display:block;font-size:10px;color:#666;text-transform:uppercase;}
-.summary-bar strong{font-size:13px;color:#333;}
-.summary-bar .total strong{color:${GREEN};font-size:14px;}
-.notes{padding:16px 24px;}
-.notes h4{font-size:10px;color:#666;margin-bottom:6px;text-transform:uppercase;}
-.notes-box{border:1px solid #ddd;border-radius:4px;padding:10px;min-height:40px;font-size:10px;color:#666;}
-.terms{padding:16px 24px;border-top:1px solid #ddd;}
-.terms h4{font-size:10px;color:#666;margin-bottom:6px;text-transform:uppercase;}
-.terms-box{border:1px solid #ddd;border-radius:4px;padding:10px;min-height:60px;font-size:10px;color:#666;}
-.footer{padding:14px 24px;background:${GREEN};text-align:center;font-size:11px;color:#fff;font-weight:600;}
-@media print{body{background:#fff;padding:0;}.quote{border:none;border-radius:0;}}
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);padding:16px 28px;background:#fafafa;border-top:3px solid ${GREEN};border-bottom:1px solid #e5e7eb;}
+.summary-bar div{text-align:center;padding:8px;}
+.summary-bar span{display:block;font-size:10px;color:#666;text-transform:uppercase;margin-bottom:4px;font-weight:600;}
+.summary-bar strong{font-size:14px;color:#333;}
+.summary-bar .total{background:${GREEN_LIGHT};border-radius:8px;margin:-8px;padding:16px;}
+.summary-bar .total strong{color:${GREEN};font-size:16px;}
+.notes{padding:18px 28px;}
+.notes h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:50px;font-size:10px;color:#666;background:#fff;}
+.terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
+.terms h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.terms-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:70px;font-size:10px;color:#666;background:#fff;}
+.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.meta-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}.summary-bar .total{background:${GREEN_LIGHT}!important;}}
 </style></head><body>
 <div class="quote">
   <div class="header">
     <div class="logo-section">
+      ${company.logo ? `<img src="${company.logo}" alt="${company.name}" style="max-width:70px;max-height:70px;object-fit:contain;margin-bottom:6px;border-radius:8px;"/>` : ''}
       <h1>${company.name}</h1>
       <p>COMPANY INFORMATION</p>
       ${company.address ? `<p>${company.address}</p>` : ''}
@@ -275,13 +300,13 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
       <h2>QUOTATION</h2>
       <p><strong>Quote No.:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Quote Date:</strong> ${formatDate(invoice.date)}</p>
-      <p><strong>Quote Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <div class="meta-section">
     <p><strong>Customer:</strong><br/>${customer.name}<br/>${customer.document || '-'}</p>
     <p><strong>Created By:</strong><br/>Admin</p>
-    <p><strong>Status:</strong><br/>Pending</p>
+    <p><strong>Status:</strong><br/><span style="background:${GREEN_LIGHT};color:${GREEN};padding:4px 10px;border-radius:12px;font-weight:700;font-size:10px;">Pending</span></p>
   </div>
   <table>
     <thead><tr><th>QTY</th><th>DESCRIPTION</th><th>UNIT PRICE</th><th>AMOUNT</th></tr></thead>

@@ -31,6 +31,29 @@ export default function CompanySettingsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'Image must be less than 2MB' });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setLogoPreview(base64);
+        setCompanyInfo(prev => ({ ...prev, logo: base64 }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoPreview(null);
+    setCompanyInfo(prev => ({ ...prev, logo: '' }));
+  };
 
   useEffect(() => {
     loadCompanyInfo();
@@ -41,6 +64,9 @@ export default function CompanySettingsPage() {
       const data = await settingsService.getCompanyInfo();
       if (data) {
         setCompanyInfo(data);
+        if (data.logo) {
+          setLogoPreview(data.logo);
+        }
       }
     } catch (error) {
       console.error('Error loading company info:', error);
@@ -53,10 +79,18 @@ export default function CompanySettingsPage() {
     setMessage(null);
 
     try {
-      await settingsService.saveCompanyInfo(companyInfo);
+      const saved = await settingsService.saveCompanyInfo(companyInfo);
+      if (saved) {
+        setCompanyInfo(saved);
+        setLogoPreview(saved.logo || null);
+      }
       setMessage({ type: 'success', text: 'Company information saved successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error saving company information' });
+      const errorText =
+        typeof (error as any)?.message === 'string' && (error as any).message
+          ? (error as any).message
+          : 'Error saving company information';
+      setMessage({ type: 'error', text: errorText });
     } finally {
       setLoading(false);
     }
@@ -99,6 +133,57 @@ export default function CompanySettingsPage() {
 
         {/* Company Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Company Logo */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+            <h2 className="text-lg font-semibold text-[#1F2618] mb-4">Company Logo</h2>
+            <div className="flex items-start gap-6">
+              <div className="w-32 h-32 border-2 border-dashed border-[#E2D6BD] rounded-xl flex items-center justify-center bg-[#FDFBF7] overflow-hidden">
+                {logoPreview || companyInfo.logo ? (
+                  <img
+                    src={logoPreview || companyInfo.logo}
+                    alt="Company Logo"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center text-gray-400">
+                    <i className="ri-image-line text-3xl"></i>
+                    <p className="text-xs mt-1">No logo</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-gray-600 mb-3">
+                  Upload your company logo. This will appear on invoices, quotes, and other documents.
+                </p>
+                <div className="flex items-center gap-3">
+                  <label className="px-4 py-2 bg-[#008000] text-white rounded-lg hover:bg-[#006600] cursor-pointer transition-colors text-sm font-medium">
+                    <i className="ri-upload-2-line mr-2"></i>
+                    Upload Logo
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {(logoPreview || companyInfo.logo) && (
+                    <button
+                      type="button"
+                      onClick={removeLogo}
+                      className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+                    >
+                      <i className="ri-delete-bin-line mr-2"></i>
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Recommended: PNG or JPG, max 2MB, square format
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
             <h2 className="text-lg font-semibold text-[#1F2618] mb-4">Basic Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

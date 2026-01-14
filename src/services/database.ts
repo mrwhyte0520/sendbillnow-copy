@@ -14548,7 +14548,9 @@ export const settingsService = {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(describeSupabaseError(error));
+      }
       return data;
     } catch (error) {
       console.error('Error saving company info:', error);

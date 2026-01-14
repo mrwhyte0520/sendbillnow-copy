@@ -400,6 +400,7 @@ export default function AdvancesPage() {
       phone: companyInfo?.phone,
       email: companyInfo?.email,
       address: companyInfo?.address,
+      logo: companyInfo?.logo,
     };
 
     printInvoice(advanceData, customerData, companyData, type);

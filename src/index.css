@@ -11,3 +11,10 @@
 .brand-serif {
   font-family: 'Bodoni Moda', Georgia, 'Times New Roman', Times, serif;
 }
+
+.pos-customer-select option:hover,
+.pos-customer-select option:checked,
+.pos-customer-select option:focus {
+  background: #008000;
+  color: #ffffff;
+}

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
-import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService } from '../../services/database';
+import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService, settingsService } from '../../services/database';
 import { exportToExcelStyled } from '../../utils/exportImportUtils';
 import { formatAmount, formatMoney } from '../../utils/numberFormat';
 import InvoiceTypeModal from '../../components/common/InvoiceTypeModal';
@@ -930,7 +930,7 @@ export default function POSPage() {
     }
   };
 
-  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
     if (!completedSale) return;
     
     const saleData = {
@@ -954,12 +954,15 @@ export default function POSPage() {
       email: completedSale.customer?.email,
       address: completedSale.customer?.address,
     };
+    let companyInfo: any = null;
+    try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
     const companyData = {
-      name: 'Send Bill Now',
-      rnc: '',
-      phone: '',
-      email: '',
-      address: '',
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
+      phone: companyInfo?.phone || '',
+      email: companyInfo?.email || '',
+      address: companyInfo?.address || '',
+      logo: companyInfo?.logo,
     };
 
     printInvoice(saleData, customerData, companyData, type);
@@ -1655,31 +1658,45 @@ export default function POSPage() {
             cartOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="p-6 border-b border-[#c5e4c5] bg-[#f3fbf3]">
+          <div className="p-6 border-b border-[#008000] bg-[#008000]">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#0b3f0b]">Shopping Cart</h2>
+              <h2 className="text-lg font-semibold text-white">Shopping Cart</h2>
               <button
                 type="button"
                 onClick={() => setCartOpen(false)}
-                className="p-2 text-[#4a754a] hover:text-[#0b3f0b] rounded-lg hover:bg-[#e0f2e0] transition-colors"
+                className="p-2 text-white/90 hover:text-white rounded-lg hover:bg-white/15 transition-colors"
               >
                 <i className="ri-close-line text-lg"></i>
               </button>
             </div>
           
             <div className="mt-4">
-              <button
-                onClick={() => setShowCustomerModal(true)}
-                className="w-full flex items-center justify-between p-3 border border-[#8bc48b] rounded-lg bg-white hover:bg-[#f0fbf0] transition-colors shadow-sm"
-              >
-                <div className="flex items-center">
-                  <i className="ri-user-line text-[#4a754a] mr-2"></i>
-                  <span className="text-sm text-[#2d4a2d]">
-                    {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
-                  </span>
-                </div>
-                <i className="ri-arrow-down-s-line text-[#4a754a]"></i>
-              </button>
+              <div className="relative">
+                <i className="ri-user-line absolute left-3 top-1/2 -translate-y-1/2 text-white/90 pointer-events-none"></i>
+                <select
+                  value={selectedCustomer ? String(selectedCustomer.id) : ''}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (!selectedId) {
+                      setSelectedCustomer(null);
+                      return;
+                    }
+                    const customer = customers.find((c) => String(c.id) === selectedId) || null;
+                    setSelectedCustomer(customer);
+                  }}
+                  className="pos-customer-select w-full appearance-none pl-10 pr-10 py-3 rounded-lg bg-white/15 text-white placeholder-white/70 border border-white/25 focus:outline-none focus:ring-2 focus:ring-white/40"
+                >
+                  <option value="" className="text-gray-900">
+                    Select Customer
+                  </option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={String(customer.id)} className="text-gray-900">
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+                <i className="ri-arrow-down-s-line absolute right-3 top-1/2 -translate-y-1/2 text-white/90 pointer-events-none"></i>
+              </div>
             </div>
           </div>
 

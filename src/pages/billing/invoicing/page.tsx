@@ -649,6 +649,7 @@ export default function InvoicingPage() {
       phone: (companyInfo as any)?.phone,
       email: (companyInfo as any)?.email,
       address: (companyInfo as any)?.address,
+      logo: (companyInfo as any)?.logo,
     };
     printInvoice(invoiceData, customerData, companyData, type);
     setInvoiceToPrint(null);

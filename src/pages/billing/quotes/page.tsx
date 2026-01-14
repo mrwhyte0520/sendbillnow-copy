@@ -829,6 +829,7 @@ export default function QuotesPage() {
       phone: companyInfo?.phone,
       email: companyInfo?.email,
       address: companyInfo?.address,
+      logo: companyInfo?.logo,
     };
     printInvoice(quoteData, customerData, companyData, type);
     setQuoteToPrint(null);

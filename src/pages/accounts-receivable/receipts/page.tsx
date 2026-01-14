@@ -667,6 +667,7 @@ export default function ReceiptsPage() {
       phone: companyInfo?.phone,
       email: companyInfo?.email,
       address: companyInfo?.address,
+      logo: companyInfo?.logo,
     };
 
     printInvoice(receiptData, customerData, companyData, type);

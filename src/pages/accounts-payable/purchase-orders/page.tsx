@@ -705,6 +705,7 @@ export default function PurchaseOrdersPage() {
       phone: (companyInfo as any)?.phone,
       email: (companyInfo as any)?.email,
       address: (companyInfo as any)?.address,
+      logo: (companyInfo as any)?.logo,
     };
     printInvoice(orderData, supplierData, companyData, type);
     setOrderToPrint(null);
