@@ -319,10 +319,10 @@ export default function BankReconciliationPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Conciliación Bancaria</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Conciliación Bancaria</h1>
             <p className="text-gray-600 mt-1">Reconcilie las transacciones del libro con el estado bancario</p>
           </div>
           <div className="flex space-x-3">
@@ -344,7 +344,7 @@ export default function BankReconciliationPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -391,7 +391,7 @@ export default function BankReconciliationPage() {
           <>
             {/* Summary */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="flex items-center">
                   <div className="p-2 bg-blue-100 rounded-lg">
                     <i className="ri-book-line text-2xl text-blue-600"></i>
@@ -405,7 +405,7 @@ export default function BankReconciliationPage() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="flex items-center">
                   <div className="p-2 bg-green-100 rounded-lg">
                     <i className="ri-bank-line text-2xl text-green-600"></i>
@@ -419,7 +419,7 @@ export default function BankReconciliationPage() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="flex items-center">
                   <div className="p-2 bg-yellow-100 rounded-lg">
                     <i className="ri-question-line text-2xl text-yellow-600"></i>
@@ -433,7 +433,7 @@ export default function BankReconciliationPage() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-lg ${Math.abs(balances.difference) < 0.01 ? 'bg-green-100' : 'bg-red-100'}`}>
                     <i className={`ri-calculator-line text-2xl ${Math.abs(balances.difference) < 0.01 ? 'text-green-600' : 'text-red-600'}`}></i>
@@ -447,7 +447,7 @@ export default function BankReconciliationPage() {
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+              <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                 <div className="flex items-center">
                   <div className={`p-2 rounded-lg ${balances.isReconciled ? 'bg-green-100' : 'bg-red-100'}`}>
                     <i className={`ri-check-line text-2xl ${balances.isReconciled ? 'text-green-600' : 'text-red-600'}`}></i>
@@ -540,7 +540,7 @@ export default function BankReconciliationPage() {
         {showBankItemModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
+              <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">Agregar Movimiento Bancario</h2>
                   <button
@@ -780,7 +780,7 @@ export default function BankReconciliationPage() {
         {showAdjustmentModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
+              <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900">Nuevo Ajuste de Conciliación</h2>
                   <button

@@ -644,7 +644,7 @@ export default function AdvancesPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: palette.badgeNeutral }}>
                 <i className="ri-money-dollar-circle-line text-xl" style={{ color: palette.greenDark }}></i>
@@ -657,7 +657,7 @@ export default function AdvancesPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#F2E3C1' }}>
                 <i className="ri-time-line text-xl" style={{ color: palette.green }}></i>
@@ -670,7 +670,7 @@ export default function AdvancesPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#D3E0CF' }}>
                 <i className="ri-check-line text-xl" style={{ color: palette.green }}></i>
@@ -683,7 +683,7 @@ export default function AdvancesPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mr-4" style={{ backgroundColor: '#E5D7F0' }}>
                 <i className="ri-wallet-line text-xl" style={{ color: palette.greenMid }}></i>
@@ -731,13 +731,13 @@ export default function AdvancesPage() {
         </div>
 
         {/* Advances Table */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)]">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
+          <div className="p-6 border-b border-[#e8e0d0] bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0] rounded-t-2xl">
             <h3 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Advance List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>

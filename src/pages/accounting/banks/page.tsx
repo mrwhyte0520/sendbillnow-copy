@@ -170,7 +170,7 @@ export default function BanksPage() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión Bancaria</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Gestión Bancaria</h1>
             <p className="text-gray-600 mt-1">Bancos registrados</p>
           </div>
           <button
@@ -188,10 +188,10 @@ export default function BanksPage() {
         </div>
 
         {/* Lista de Bancos */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Banco</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Número de Cuenta</th>

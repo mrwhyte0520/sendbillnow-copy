@@ -1154,50 +1154,50 @@ export default function POSPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#f8f6f0] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#e3e7d3] rounded-lg flex items-center justify-center">
-                <i className="ri-shopping-cart-line text-[#2f3e1e] text-xl"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#008000] to-[#006600] rounded-xl flex items-center justify-center shadow-lg shadow-[#008000]/30">
+                <i className="ri-shopping-cart-line text-white text-2xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Sales Today</p>
-                <p className="text-2xl font-bold text-[#2f3e1e]">{todayStats.totalSales}</p>
+                <p className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">{todayStats.totalSales}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#f0f5e8] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#d8e4c8] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#dce3c2] rounded-lg flex items-center justify-center">
-                <i className="ri-money-dollar-circle-line text-[#3f4d1f] text-xl"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#4a7c23] to-[#3a6218] rounded-xl flex items-center justify-center shadow-lg shadow-[#4a7c23]/30">
+                <i className="ri-money-dollar-circle-line text-white text-2xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Revenue Today</p>
-                <p className="text-2xl font-bold text-[#2f3e1e]">{money(todayStats.totalAmount)}</p>
+                <p className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">{money(todayStats.totalAmount)}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#f5f0e5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8dcc5] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#ede7d4] rounded-lg flex items-center justify-center">
-                <i className="ri-user-line text-[#008000] text-xl"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#7a8c45] to-[#5f6d35] rounded-xl flex items-center justify-center shadow-lg shadow-[#7a8c45]/30">
+                <i className="ri-user-line text-white text-2xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Customers</p>
-                <p className="text-2xl font-bold text-[#2f3e1e]">{customers.length}</p>
+                <p className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">{customers.length}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#f8f5ed] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e5dcc8] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#e6dac2] rounded-lg flex items-center justify-center">
-                <i className="ri-shopping-bag-3-line text-[#008000] text-xl"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#6b8e23] to-[#556b1c] rounded-xl flex items-center justify-center shadow-lg shadow-[#6b8e23]/30">
+                <i className="ri-shopping-bag-3-line text-white text-2xl"></i>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-[#6b5c3b]">Products</p>
-                <p className="text-2xl font-bold text-[#2f3e1e]">{products.length}</p>
+                <p className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">{products.length}</p>
               </div>
             </div>
           </div>
@@ -1206,7 +1206,7 @@ export default function POSPage() {
         {/* Charts and Recent Sales */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Payment Methods */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#faf8f4] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
             <h3 className="text-lg font-semibold text-[#2f3e1e] mb-4">Payment Methods Today</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -1234,7 +1234,7 @@ export default function POSPage() {
           </div>
 
           {/* Top Products */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#d8cbb5]">
+          <div className="bg-gradient-to-br from-white to-[#f8f6f0] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
             <h3 className="text-lg font-semibold text-[#2f3e1e] mb-4">Best Selling Products</h3>
             <div className="space-y-3">
               {topProducts.map((product, index) => (
@@ -1256,7 +1256,7 @@ export default function POSPage() {
         </div>
 
         {/* Recent Sales */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f6] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Recent Sales</h3>
           </div>
@@ -1304,18 +1304,18 @@ export default function POSPage() {
   };
 
   const renderPOS = () => (
-    <div className="relative flex h-screen bg-gray-50">
+    <div className="relative flex h-screen bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5]">
       {/* Products Section */}
       <div className="flex-1 p-6">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Products</h2>
+            <h2 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Products</h2>
             <div className="flex items-center gap-2">
               {/* View Mode Selector */}
               <select
                 value={viewMode}
                 onChange={(e) => setViewMode(e.target.value as 'simple' | 'normal' | 'custom')}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 focus:ring-2 focus:ring-[#008000] focus:border-[#008000]"
+                className="px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-[#008000]/20 focus:border-[#008000] shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
               >
                 <option value="simple">Simple</option>
                 <option value="normal">Normal</option>
@@ -1325,15 +1325,15 @@ export default function POSPage() {
               <button
                 type="button"
                 onClick={() => setShowModeloModal(true)}
-                className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
               >
-                <i className="ri-settings-3-line mr-2"></i>
+                <i className="ri-settings-3-line mr-2 text-[#7a8c45]"></i>
                 Modelo
               </button>
               <button
                 type="button"
                 onClick={() => setCartOpen(prev => !prev)}
-                className="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-[#008000] to-[#006600] border-2 border-[#006600] rounded-xl hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/25 hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-white shadow-md"
               >
                 <i className="ri-shopping-cart-line mr-2"></i>
                 {cartOpen ? 'Hide cart' : 'Show cart'}
@@ -1343,14 +1343,14 @@ export default function POSPage() {
           
           {/* Search */}
           <div className="relative mb-4">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i className="ri-search-line text-gray-400"></i>
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <i className="ri-search-line text-[#7a8c45] text-lg"></i>
             </div>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-[#008000] text-sm"
+              className="block w-full pl-12 pr-4 py-3.5 bg-gradient-to-r from-white to-[#faf9f5] border-2 border-[#e0d8c8] rounded-xl focus:ring-2 focus:ring-[#008000]/20 focus:border-[#008000] text-sm shadow-[inset_0_2px_4px_rgb(0,0,0,0.04)] transition-all duration-300 placeholder:text-gray-400"
               placeholder="Search products..."
             />
           </div>
@@ -1361,10 +1361,10 @@ export default function POSPage() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 shadow-sm ${
                   selectedCategory === category
-                    ? 'bg-[#008000] text-white'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-md shadow-[#008000]/25 scale-105'
+                    : 'bg-gradient-to-br from-white to-[#f8f6f0] border border-[#e0d8c8] text-gray-700 hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5'
                 }`}
               >
                 {category === 'all' ? 'All categories' : category}
@@ -1466,55 +1466,55 @@ export default function POSPage() {
           </div>
         ) : (
           /* NORMAL VIEW: Current design with + button */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 mb-6">
             {paginatedProducts.map((product) => (
               <div
                 key={product.id}
-                className={`bg-white rounded-xl shadow-sm border p-3 transition-all overflow-hidden ${
+                className={`bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.08)] border p-4 transition-all duration-300 overflow-hidden group ${
                   product.stock <= 0
                     ? 'border-gray-300 opacity-60'
-                    : 'border-gray-200 hover:shadow-md'
+                    : 'border-[#e8e0d0] hover:shadow-[0_8px_30px_rgb(0,128,0,0.12)] hover:-translate-y-1 hover:border-[#008000]/30'
                 }`}
               >
-                <div className="flex items-stretch gap-3">
+                <div className="flex items-stretch gap-4">
                   <div className="min-w-0 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-xs text-gray-600 truncate">{product.category || ''}</p>
-                        <h3 className="font-semibold text-gray-900 text-sm leading-5 truncate">{product.name}</h3>
+                        <p className="text-xs text-[#7a8c45] font-medium truncate uppercase tracking-wide">{product.category || ''}</p>
+                        <h3 className="font-bold text-gray-900 text-base leading-5 truncate mt-0.5">{product.name}</h3>
                         {product.sku && (
-                          <p className="text-[11px] text-gray-400 truncate">{product.sku}</p>
+                          <p className="text-[11px] text-gray-400 truncate mt-0.5">{product.sku}</p>
                         )}
                       </div>
                       {product.stock <= 0 ? (
-                        <span className="shrink-0 rounded-full bg-red-50 text-red-700 px-2 py-0.5 text-[11px] font-medium">
+                        <span className="shrink-0 rounded-full bg-gradient-to-r from-red-100 to-red-50 text-red-700 px-2.5 py-1 text-[11px] font-semibold shadow-sm">
                           Out
                         </span>
                       ) : (
-                        <span className="shrink-0 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[11px] font-medium">
+                        <span className="shrink-0 rounded-full bg-gradient-to-r from-amber-100 to-amber-50 text-amber-700 px-2.5 py-1 text-[11px] font-semibold shadow-sm">
                           Stock: {product.stock}
                         </span>
                       )}
                     </div>
-                    <div className="mt-auto pt-3 flex items-center justify-between gap-2">
-                      <span className="text-base font-extrabold text-[#008000] whitespace-nowrap">
+                    <div className="mt-auto pt-4 flex items-center justify-between gap-2">
+                      <span className="text-xl font-extrabold text-[#008000] whitespace-nowrap drop-shadow-sm">
                         {money(product.price)}
                       </span>
                       <button
                         type="button"
                         disabled={product.stock <= 0}
                         onClick={() => addToCart(product)}
-                        className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center font-bold transition-colors ${
+                        className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg transition-all duration-300 shadow-md ${
                           product.stock <= 0
                             ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                            : 'bg-[#008000] text-white hover:bg-[#006600]'
+                            : 'bg-gradient-to-br from-[#008000] to-[#006600] text-white hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/30 hover:scale-110 active:scale-95'
                         }`}
                       >
                         +
                       </button>
                     </div>
                   </div>
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center overflow-hidden shadow-inner group-hover:shadow-md transition-all duration-300">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
@@ -1537,7 +1537,7 @@ export default function POSPage() {
 
         {/* Controles de Paginación */}
         {totalPages > 1 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.06)] border border-[#e8e0d0] px-5 py-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                 {startIndex + 1}-{Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length}
@@ -1547,10 +1547,10 @@ export default function POSPage() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg flex items-center space-x-1 text-sm transition-colors ${
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center space-x-1 text-sm font-semibold transition-all duration-300 shadow-sm ${
                   currentPage === 1
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#008000] text-white hover:bg-[#006600]'
+                    : 'bg-gradient-to-br from-[#008000] to-[#006600] text-white hover:from-[#006600] hover:to-[#005500] hover:shadow-md hover:-translate-y-0.5'
                 }`}
               >
                 <i className="ri-arrow-left-s-line text-base"></i>
@@ -1565,10 +1565,10 @@ export default function POSPage() {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-semibold transition-all duration-300 ${
                         currentPage === page
-                          ? 'bg-[#008000] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-md shadow-[#008000]/25 scale-110'
+                          : 'bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 border border-[#e0d8c8] hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
                       {page}
@@ -1579,10 +1579,10 @@ export default function POSPage() {
                   <>
                     <button
                       onClick={() => setCurrentPage(1)}
-                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-semibold transition-all duration-300 ${
                         currentPage === 1
-                          ? 'bg-[#008000] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-md shadow-[#008000]/25 scale-110'
+                          : 'bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 border border-[#e0d8c8] hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
                       1
@@ -1599,10 +1599,10 @@ export default function POSPage() {
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
+                          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-semibold transition-all duration-300 ${
                             currentPage === page
-                              ? 'bg-[#008000] text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-md shadow-[#008000]/25 scale-110'
+                              : 'bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 border border-[#e0d8c8] hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5'
                           }`}
                         >
                           {page}
@@ -1616,10 +1616,10 @@ export default function POSPage() {
                     
                     <button
                       onClick={() => setCurrentPage(totalPages)}
-                      className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-sm font-semibold transition-all duration-300 ${
                         currentPage === totalPages
-                          ? 'bg-[#008000] text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-md shadow-[#008000]/25 scale-110'
+                          : 'bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 border border-[#e0d8c8] hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5'
                       }`}
                     >
                       {totalPages}
@@ -1631,10 +1631,10 @@ export default function POSPage() {
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg flex items-center space-x-1 text-sm transition-colors ${
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl flex items-center space-x-1 text-sm font-semibold transition-all duration-300 shadow-sm ${
                   currentPage === totalPages
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#008000] text-white hover:bg-[#006600]'
+                    : 'bg-gradient-to-br from-[#008000] to-[#006600] text-white hover:from-[#006600] hover:to-[#005500] hover:shadow-md hover:-translate-y-0.5'
                 }`}
               >
                 <span className="hidden sm:inline">Next</span>
@@ -1654,19 +1654,19 @@ export default function POSPage() {
         />
 
         <div
-          className={`absolute top-0 right-0 h-full w-full sm:w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl will-change-transform transition-transform duration-500 ease-in-out ${
+          className={`absolute top-0 right-0 h-full w-full sm:w-96 bg-gradient-to-b from-white to-[#faf9f5] border-l border-[#d8cbb5] flex flex-col shadow-[0_0_50px_rgb(0,0,0,0.15)] will-change-transform transition-transform duration-500 ease-in-out ${
             cartOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="p-6 border-b border-[#008000] bg-[#008000]">
+          <div className="p-6 border-b border-[#006600] bg-gradient-to-br from-[#008000] to-[#006600] shadow-lg">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Shopping Cart</h2>
+              <h2 className="text-xl font-bold text-white drop-shadow-sm">Shopping Cart</h2>
               <button
                 type="button"
                 onClick={() => setCartOpen(false)}
-                className="p-2 text-white/90 hover:text-white rounded-lg hover:bg-white/15 transition-colors"
+                className="p-2.5 text-white/90 hover:text-white rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-110"
               >
-                <i className="ri-close-line text-lg"></i>
+                <i className="ri-close-line text-xl"></i>
               </button>
             </div>
           
@@ -1684,7 +1684,7 @@ export default function POSPage() {
                     const customer = customers.find((c) => String(c.id) === selectedId) || null;
                     setSelectedCustomer(customer);
                   }}
-                  className="pos-customer-select w-full appearance-none pl-10 pr-10 py-3 rounded-lg bg-white/15 text-white placeholder-white/70 border border-white/25 focus:outline-none focus:ring-2 focus:ring-white/40"
+                  className="pos-customer-select w-full appearance-none pl-10 pr-10 py-3.5 rounded-xl bg-white/20 text-white placeholder-white/70 border-2 border-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 shadow-inner transition-all duration-300"
                 >
                   <option value="" className="text-gray-900">
                     Select Customer
@@ -1702,14 +1702,17 @@ export default function POSPage() {
 
           <div className="flex-1 overflow-y-auto p-6">
             {cart.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
-                <i className="ri-shopping-cart-line text-4xl mb-2"></i>
-                <p>Empty cart</p>
+              <div className="text-center text-gray-400 mt-12">
+                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center shadow-inner">
+                  <i className="ri-shopping-cart-line text-4xl text-gray-300"></i>
+                </div>
+                <p className="text-lg font-medium">Empty cart</p>
+                <p className="text-sm mt-1">Add products to get started</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {cart.map((item, index) => (
-                  <div key={`${item.id}-${index}`} className="bg-gray-50 rounded-lg overflow-hidden">
+                  <div key={`${item.id}-${index}`} className="bg-gradient-to-br from-white to-[#f8f6f0] rounded-xl overflow-hidden border border-[#e8e0d0] shadow-sm hover:shadow-md transition-all duration-300">
                     <div className="flex items-center p-3">
                       <div className="w-12 h-12 bg-gray-200 rounded-lg overflow-hidden mr-3 flex-shrink-0">
                         {item.imageUrl && (
@@ -1743,27 +1746,27 @@ export default function POSPage() {
                       <div className="flex items-center space-x-2 ml-3">
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-6 h-6 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors"
+                          className="w-7 h-7 bg-gradient-to-br from-gray-100 to-gray-200 text-gray-600 rounded-lg flex items-center justify-center hover:from-gray-200 hover:to-gray-300 hover:shadow-sm transition-all duration-200 shadow-sm"
                         >
-                          <i className="ri-subtract-line text-xs"></i>
+                          <i className="ri-subtract-line text-sm"></i>
                         </button>
-                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                        <span className="w-8 text-center text-sm font-bold text-[#2f3e1e]">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           disabled={item.quantity >= item.stock}
-                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-200 shadow-sm ${
                             item.quantity >= item.stock
                               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                              : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                              : 'bg-gradient-to-br from-[#008000] to-[#006600] text-white hover:from-[#006600] hover:to-[#005500] hover:shadow-md'
                           }`}
                         >
-                          <i className="ri-add-line text-xs"></i>
+                          <i className="ri-add-line text-sm"></i>
                         </button>
                         <button
                           onClick={() => removeFromCart(item.id)}
-                          className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-colors ml-2"
+                          className="w-7 h-7 bg-gradient-to-br from-red-100 to-red-200 text-red-600 rounded-lg flex items-center justify-center hover:from-red-200 hover:to-red-300 hover:shadow-sm transition-all duration-200 shadow-sm ml-2"
                         >
-                          <i className="ri-delete-bin-line text-xs"></i>
+                          <i className="ri-delete-bin-line text-sm"></i>
                         </button>
                       </div>
                     </div>
@@ -1877,19 +1880,19 @@ export default function POSPage() {
         )}
 
           {cart.length > 0 && (
-            <div className="p-6 border-t border-gray-200">
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
+            <div className="p-6 border-t border-[#e8e0d0] bg-gradient-to-t from-[#f5f0e5] to-transparent">
+              <div className="space-y-3 mb-5 bg-white/80 rounded-xl p-4 shadow-sm border border-[#e8e0d0]">
+                <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal:</span>
-                  <span>{money(getSubtotal())}</span>
+                  <span className="font-medium text-[#2f3e1e]">{money(getSubtotal())}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm text-gray-600">
                   <span>ITBIS (18%):</span>
-                  <span>{money(getTax())}</span>
+                  <span className="font-medium text-[#2f3e1e]">{money(getTax())}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
-                  <span>{money(getTotal())}</span>
+                <div className="flex justify-between text-xl font-bold border-t border-[#e0d8c8] pt-3">
+                  <span className="text-[#2f3e1e]">Total:</span>
+                  <span className="text-[#008000] drop-shadow-sm">{money(getTotal())}</span>
                 </div>
               </div>
               
@@ -1899,8 +1902,9 @@ export default function POSPage() {
                   setAmountReceived('');
                   setShowPaymentModal(true);
                 }}
-                className="w-full bg-[#008000] text-white py-3 rounded-lg font-medium hover:bg-[#006600] transition-colors whitespace-nowrap"
+                className="w-full bg-gradient-to-br from-[#008000] to-[#006600] text-white py-4 rounded-xl font-bold text-lg hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/30 hover:-translate-y-0.5 transition-all duration-300 shadow-md whitespace-nowrap"
               >
+                <i className="ri-wallet-3-line mr-2"></i>
                 Process Payment
               </button>
             </div>

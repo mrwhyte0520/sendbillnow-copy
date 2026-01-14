@@ -1075,9 +1075,9 @@ export default function InvoicesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Accounts Receivable Invoices</h1>
+          <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounts Receivable Invoices</h1>
           <div className="flex space-x-3">
             <button
               onClick={handleNewInvoice}
@@ -1150,7 +1150,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
           {(loadingCustomers || loadingInvoices) && (
             <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
@@ -1187,9 +1187,9 @@ export default function InvoicesPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#e8e0d0]">
                 {filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
+                  <tr key={invoice.id} className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {invoice.invoiceNumber}
                     </td>

@@ -469,10 +469,10 @@ export default function DebitNotesPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen p-6 bg-[#f7f3e8]">
+      <div className="min-h-screen p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5]">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#2f3e1e]">Debit Notes</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Debit Notes</h1>
             <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
               <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
@@ -490,7 +490,7 @@ export default function DebitNotesPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Total Notes</p>
@@ -504,7 +504,7 @@ export default function DebitNotesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Pending Balance</p>
@@ -518,7 +518,7 @@ export default function DebitNotesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
@@ -532,7 +532,7 @@ export default function DebitNotesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Pending Notes</p>

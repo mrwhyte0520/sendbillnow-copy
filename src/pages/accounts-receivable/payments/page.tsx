@@ -846,15 +846,15 @@ export default function PaymentsPage() {
           .no-print { display: none !important; }
         }
       `}</style>
-      <div className="p-6 bg-[#f6f2e8] min-h-screen space-y-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e2814]">Received Payments</h1>
+            <h1 className="text-2xl font-bold text-[#1e2814] drop-shadow-sm">Received Payments</h1>
             <p className="text-sm text-[#4c5535]">Track customer collections, filters, and exports from a single console.</p>
           </div>
           <button 
             onClick={handleNewPayment}
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-money-dollar-circle-line mr-2"></i>
             Record Payment
@@ -908,10 +908,10 @@ export default function PaymentsPage() {
         </div>
 
         {/* Payments Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#e0d7c4]">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[#ede7d7]">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Date

@@ -213,13 +213,13 @@ export default function SupplierTypesPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)]">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
+          <div className="p-6 border-b border-[#e8e0d0] bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0] rounded-t-2xl">
             <h3 className="text-lg font-semibold" style={{ color: palette.greenDark }}>Supplier Type List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>

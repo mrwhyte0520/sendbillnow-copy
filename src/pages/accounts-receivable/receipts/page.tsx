@@ -924,10 +924,10 @@ export default function ReceiptsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 bg-[#f6f2e8] min-h-screen space-y-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e2814]">Receipt Center</h1>
+            <h1 className="text-2xl font-bold text-[#1e2814] drop-shadow-sm">Receipt Center</h1>
             <nav className="flex flex-wrap items-center gap-2 text-sm text-[#4c5535] mt-2">
               <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">
                 Accounts Receivable
@@ -938,7 +938,7 @@ export default function ReceiptsPage() {
           </div>
           <button
             onClick={handleNewReceipt}
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-add-line mr-2" />
             New Receipt
@@ -946,7 +946,7 @@ export default function ReceiptsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0d7c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Total received</p>
@@ -964,7 +964,7 @@ export default function ReceiptsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0d7c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Active receipts</p>
@@ -977,7 +977,7 @@ export default function ReceiptsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0d7c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Cancelled receipts</p>
@@ -990,7 +990,7 @@ export default function ReceiptsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#e0d7c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#4c5535]">Average per receipt</p>

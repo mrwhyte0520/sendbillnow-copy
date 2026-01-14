@@ -404,7 +404,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // Item restringido por plan - mostrar con candado
             <div
               onClick={handleRestrictedClick}
-              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer ${sidebarCollapsed ? 'justify-center' : ''}`}
+              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl flex-1 transition-all duration-300 text-[#a09080] hover:bg-[#ebe5d8] cursor-pointer ${sidebarCollapsed ? 'justify-center' : ''}`}
               title={`Requiere ${requiredPlan}`}
             >
               <i className={`${item.icon} ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0 opacity-50`}></i>
@@ -419,10 +419,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             // Item permitido
             <Link
               to={item.href}
-              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg flex-1 transition-all duration-200 ${
+              className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl flex-1 transition-all duration-300 ${
                 item.current
-                  ? 'bg-gradient-to-r from-[#008000] to-[#008000] text-white font-semibold shadow-md'
-                  : 'text-stone-700 hover:bg-stone-200 hover:text-stone-900'
+                  ? 'bg-gradient-to-r from-[#008000] to-[#006600] text-white font-semibold shadow-[0_4px_15px_rgb(0,128,0,0.35)]'
+                  : 'text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)]'
               } ${sidebarCollapsed ? 'justify-center' : ''}`}
               onClick={() => setSidebarOpen(false)}
               title={sidebarCollapsed ? item.name : undefined}
@@ -434,14 +434,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {hasFilteredSubmenu && !isPlanRestricted && !sidebarCollapsed && (
             <button
               onClick={() => toggleSubmenu(item.href)}
-              className="p-2 ml-1 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200"
+              className="p-2 ml-1 text-[#7a8a6a] hover:text-[#2f3e1e] transition-all duration-300 rounded-lg hover:bg-[#e8e2d5]"
             >
               <i className={`ri-arrow-${isExpanded ? 'up' : 'down'}-s-line text-sm`}></i>
             </button>
           )}
         </div>
         {hasFilteredSubmenu && isExpanded && !isPlanRestricted && !sidebarCollapsed && (
-          <div className="ml-6 mt-2 space-y-1 border-l border-stone-300 pl-4">
+          <div className="ml-6 mt-2 space-y-1 border-l-2 border-[#c5d4a8] pl-4">
             {submenu!.map((subItem: any) => {
               const isSubItemRestricted = !canAccessRoute(subItem.href);
               const subRequiredPlan = isSubItemRestricted ? getRequiredPlanForRoute(subItem.href) : '';
@@ -458,7 +458,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                         requiredPlan: subRequiredPlan
                       });
                     }}
-                    className="flex items-center px-3 py-2 text-sm rounded-md transition-all duration-200 text-stone-400 hover:bg-stone-200 cursor-pointer"
+                    className="flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-300 text-[#a09080] hover:bg-[#ebe5d8] cursor-pointer"
                     title={`Requiere ${subRequiredPlan}`}
                   >
                     <span className="truncate opacity-70">{subItem.name}</span>
@@ -471,10 +471,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <Link
                   key={subItem.name}
                   to={subItem.href}
-                  className={`block px-3 py-2 text-sm rounded-md transition-all duration-200 ${
+                  className={`block px-3 py-2 text-sm rounded-lg transition-all duration-300 ${
                     location.pathname === subItem.href
-                      ? 'text-[#008000] bg-stone-200 font-medium'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
+                      ? 'text-[#008000] bg-gradient-to-r from-[#e3edd3] to-[#f0f5e8] font-semibold shadow-[0_2px_6px_rgb(0,128,0,0.12)]'
+                      : 'text-[#5a6a4a] hover:text-[#2f3e1e] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0]'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -585,41 +585,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen flex bg-[#f6f1e3]">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-stone-100 via-stone-50 to-white border-r border-stone-200 shadow-lg transform overflow-hidden transition-all duration-500 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#faf8f3] via-[#f5f2ea] to-[#efe9dc] border-r border-[#e0d6c4] shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform overflow-hidden transition-all duration-500 ease-in-out ${
           sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
         } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className={`flex h-16 shrink-0 items-center border-b border-stone-200 bg-gradient-to-r from-[#008000] to-[#006600] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-3 justify-center' : 'px-4 justify-between'}`}>
-            <div className="flex items-center min-w-0">
-              {!sidebarCollapsed && (
-                <img 
-                  src="/logo-full.png" 
-                  alt="Send Bill Now" 
-                  className="h-12 w-auto object-contain"
-                />
-              )}
-              {sidebarCollapsed && (
-                <img 
-                  src="/logo-icon.png" 
-                  alt="SBN" 
-                  className="h-10 w-10 object-contain"
-                />
-              )}
-            </div>
-
+          <div className={`flex shrink-0 items-center justify-between bg-gradient-to-br from-[#008000] to-[#006600] shadow-[0_4px_20px_rgb(0,128,0,0.4)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'h-16 px-3' : 'h-16 px-4'}`}>
+            {!sidebarCollapsed && (
+              <div className="flex flex-col">
+                <span className="brand-serif text-white text-xl font-bold italic drop-shadow-sm">Send Bill Now</span>
+                <span className="brand-serif text-white/80 text-xs font-bold italic">Complete POS & Invoicing System</span>
+              </div>
+            )}
+            {sidebarCollapsed && (
+              <span className="brand-serif text-white text-xl font-bold mx-auto italic drop-shadow-sm">SBN</span>
+            )}
+            
+            {/* Toggle button */}
             <button
               type="button"
               onClick={toggleSidebarCollapsed}
-              className={`p-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 transition-colors duration-200 ${sidebarCollapsed ? 'hidden lg:flex' : 'hidden lg:flex'}`}
+              className="p-1.5 text-white/80 hover:text-white transition-all duration-300 hidden lg:flex"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <i className={`${sidebarCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} text-lg`}></i>
             </button>
           </div>
 
-          <nav className={`flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-300 scrollbar-track-transparent transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
+          <nav className={`flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#c5b89a] scrollbar-track-transparent transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-1">
               {navigation.map(renderNavItem)}
 
@@ -627,7 +621,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="mb-1">
                 <button
                   onClick={handleProfileClick}
-                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg w-full transition-all duration-200 text-stone-700 hover:bg-stone-200 hover:text-stone-900 ${sidebarCollapsed ? 'justify-center' : ''}`}
+                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl w-full transition-all duration-300 text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)] ${sidebarCollapsed ? 'justify-center' : ''}`}
                   title={sidebarCollapsed ? 'My Profile' : undefined}
                 >
                   <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
@@ -638,7 +632,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* User info */}
-          <div className={`border-t border-stone-200 bg-gradient-to-r from-stone-100 to-stone-50 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
+          <div className={`border-t border-[#e0d6c4] bg-gradient-to-r from-[#f5f2ea] to-[#efe9dc] shadow-[0_-4px_15px_rgb(0,0,0,0.05)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#008000] to-[#008000] flex items-center justify-center shadow-lg">
                 <span className="text-sm font-bold text-white">

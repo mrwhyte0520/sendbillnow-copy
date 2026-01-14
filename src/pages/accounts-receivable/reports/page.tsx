@@ -14,6 +14,7 @@ import {
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatAmount, formatMoney, getCurrencyPrefix } from '../../../utils/numberFormat';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface ReportCustomer {
   id: string;
@@ -344,9 +345,6 @@ export default function ReportsPage() {
     setShowReportPreviewModal(true);
   };
 
-  const paletteGreen = [47, 62, 30];
-  const paletteCream = [243, 236, 218];
-
   const getPaymentMethodLabel = (method: string) => {
     switch (method) {
       case 'transfer':
@@ -375,19 +373,14 @@ export default function ReportsPage() {
     }
   };
 
-  const handleGenerateAgingReport = () => {
+  const handleGenerateAgingReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
-
-    doc.setFontSize(16);
-    doc.text(companyName, centerX, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text('Accounts Receivable Aging Report', centerX, 28, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, centerX, 36, { align: 'center' });
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo
+    const startY = await addPdfBrandedHeader(doc, 'Accounts Receivable Aging Report', {
+      subtitle: 'Past-due balances by customer and aging bucket'
+    });
 
     // Análisis por períodos
     const agingData = customers.map(customer => {
@@ -411,12 +404,11 @@ export default function ReportsPage() {
     });
 
     (doc as any).autoTable({
-      startY: 48,
+      startY,
       head: [['Customer', 'Current', '1-30 days', '31-60 days', '61-90 days', '+90 days', 'Total']],
       body: agingData,
       theme: 'striped',
-      headStyles: { fillColor: paletteGreen, textColor: paletteCream },
-      styles: { fontSize: 8 }
+      ...pdfStyles
     });
 
     const filename = `aging-report-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -504,9 +496,7 @@ export default function ReportsPage() {
         const paymentData = customerPayments.map(pay => [
           pay.date,
           formatMoney(pay.amount),
-          pay.paymentMethod === 'transfer' ? 'Transferencia' :
-          pay.paymentMethod === 'check' ? 'Cheque' :
-          pay.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'
+          getPaymentMethodLabel(pay.paymentMethod)
         ]);
 
         (doc as any).autoTable({
@@ -603,22 +593,16 @@ export default function ReportsPage() {
     openPdfPreview(doc, 'Estados de Cuenta por Cliente', filename);
   };
 
-  const handleGenerateCollectionReport = () => {
+  const handleGenerateCollectionReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
-
-    doc.setFontSize(16);
-    doc.text(companyName, centerX, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text('Reporte de Cobranza', centerX, 28, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
-    if (dateFrom && dateTo) {
-      doc.text(`Período: ${dateFrom} al ${dateTo}`, centerX, 44, { align: 'center' });
-    }
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo
+    const periodText = dateFrom && dateTo ? `Period: ${dateFrom} to ${dateTo}` : undefined;
+    let startY = await addPdfBrandedHeader(doc, 'Collection Summary Report', {
+      subtitle: 'Payments by period and method',
+      periodText
+    });
 
     const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
     const paymentsByMethod = payments.reduce((acc, payment) => {
@@ -626,8 +610,10 @@ export default function ReportsPage() {
       return acc;
     }, {} as Record<string, number>);
 
-    doc.setFontSize(14);
-    doc.text('Resumen de Cobranza', 20, 70);
+    doc.setFontSize(12);
+    doc.setTextColor(47, 62, 30);
+    doc.text('Collection Summary', 20, startY);
+    startY += 8;
 
     const summaryData = [
       ['Concepto', 'Monto'],
@@ -640,11 +626,11 @@ export default function ReportsPage() {
     ];
 
     (doc as any).autoTable({
-      startY: 80,
+      startY,
       head: [summaryData[0]],
       body: summaryData.slice(1),
       theme: 'grid',
-      headStyles: { fillColor: [0, 128, 0] }
+      ...pdfStyles
     });
 
     doc.setFontSize(14);
@@ -654,9 +640,7 @@ export default function ReportsPage() {
       payment.date,
       payment.customerName,
       formatMoney(payment.amount),
-      payment.paymentMethod === 'transfer' ? 'Transferencia' :
-      payment.paymentMethod === 'check' ? 'Cheque' :
-      payment.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'
+      getPaymentMethodLabel(payment.paymentMethod)
     ]);
 
     (doc as any).autoTable({
@@ -664,8 +648,7 @@ export default function ReportsPage() {
       head: [['Fecha', 'Cliente', 'Monto', 'Método']],
       body: paymentData,
       theme: 'striped',
-      headStyles: { fillColor: [16, 185, 129] },
-      styles: { fontSize: 9 }
+      ...pdfStyles
     });
 
     const filename = `reporte-cobranza-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -702,9 +685,7 @@ export default function ReportsPage() {
         payment.date,
         payment.customerName,
         formatMoney(payment.amount),
-        payment.paymentMethod === 'transfer' ? 'Transferencia' :
-        payment.paymentMethod === 'check' ? 'Cheque' :
-        payment.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'
+        getPaymentMethodLabel(payment.paymentMethod)
       ])
     ];
 
@@ -733,10 +714,6 @@ export default function ReportsPage() {
       rows: payments.map(payment => [
         payment.date,
         payment.customerName,
-        formatMoney(payment.amount),
-        payment.paymentMethod === 'transfer' ? 'Transferencia' :
-        payment.paymentMethod === 'check' ? 'Cheque' :
-        payment.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'
       ]),
       summary: [
         { label: 'Total Cobrado', value: formatMoney(totalPayments) },
@@ -749,19 +726,14 @@ export default function ReportsPage() {
     });
   };
 
-  const handleGenerateCustomerBalanceReport = () => {
+  const handleGenerateCustomerBalanceReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
-
-    doc.setFontSize(16);
-    doc.text(companyName, centerX, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text('Reporte de Saldos por Cliente', centerX, 28, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo
+    let startY = await addPdfBrandedHeader(doc, 'Customer Balances Report', {
+      subtitle: 'Current receivables vs. credit limits with utilization'
+    });
 
     // Estadísticas generales
     const totalBalance = customers.reduce((sum, c) => sum + c.currentBalance, 0);
@@ -772,28 +744,29 @@ export default function ReportsPage() {
       ? (totalBalance / totalCreditLimit) * 100
       : 0;
 
-    doc.setFontSize(14);
-    doc.text('Resumen General', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(47, 62, 30);
+    doc.text('General Summary', 20, startY);
+    startY += 8;
 
     const summaryData = [
-      ['Total Saldos por Cobrar', formatMoney(totalBalance)],
-      ['Total Límites de Crédito', formatMoney(totalCreditLimit)],
-      ['Clientes Activos', activeCustomers.toString()],
-      ['Clientes con Saldo', customersWithBalance.toString()],
-      ['Utilización de Crédito', `${creditUtilizationPercent.toFixed(1)}%`]
+      ['Total Receivables', formatMoney(totalBalance)],
+      ['Total Credit Limits', formatMoney(totalCreditLimit)],
+      ['Active Customers', activeCustomers.toString()],
+      ['Customers with Balance', customersWithBalance.toString()],
+      ['Credit Utilization', `${creditUtilizationPercent.toFixed(1)}%`]
     ];
 
     (doc as any).autoTable({
-      startY: 70,
-      head: [['Concepto', 'Valor']],
+      startY,
+      head: [['Concept', 'Value']],
       body: summaryData,
       theme: 'grid',
-      headStyles: { fillColor: [255, 152, 0] },
-      styles: { fontSize: 10 }
+      ...pdfStyles
     });
 
     doc.setFontSize(14);
-    doc.text('Detalle por Cliente', 20, (doc as any).lastAutoTable.finalY + 20);
+    doc.text('Customer Details', 20, (doc as any).lastAutoTable.finalY + 20);
 
     const customerData = customers.map(customer => {
       const utilizationPercent = customer.creditLimit > 0 ? ((customer.currentBalance / customer.creditLimit) * 100).toFixed(1) : '0';
@@ -805,36 +778,30 @@ export default function ReportsPage() {
         formatMoney(customer.creditLimit),
         formatMoney(availableCredit),
         `${utilizationPercent}%`,
-        customer.status
+        getCustomerStatusLabel(customer.status)
       ];
     });
 
     (doc as any).autoTable({
       startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Cliente', 'Saldo Actual', 'Límite Crédito', 'Crédito Disponible', 'Utilización', 'Estado']],
+      head: [['Customer', 'Current Balance', 'Credit Limit', 'Available Credit', 'Utilization', 'Status']],
       body: customerData,
       theme: 'striped',
-      headStyles: { fillColor: [255, 152, 0] },
-      styles: { fontSize: 9 }
+      ...pdfStyles
     });
 
-    const filename = `saldos-por-cliente-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Reporte de Saldos por Cliente', filename);
+    const filename = `customer-balances-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Customer Balances Report', filename);
   };
 
-  const handleGenerateOverdueReport = () => {
+  const handleGenerateOverdueReport = async () => {
     const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const centerX = pageWidth / 2;
-
-    doc.setFontSize(16);
-    doc.text(companyName, centerX, 20, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.text('Reporte de Facturas Vencidas', centerX, 28, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-DO')}`, centerX, 36, { align: 'center' });
+    const pdfStyles = getPdfTableStyles();
+    
+    // Add branded header with logo
+    let startY = await addPdfBrandedHeader(doc, 'Overdue Invoices Report', {
+      subtitle: 'Invoices past due grouped by days late and customer'
+    });
 
     // Filtrar facturas vencidas
     const overdueInvoices = invoices.filter(inv => inv.daysOverdue > 0 && inv.balance > 0);
@@ -846,30 +813,31 @@ export default function ReportsPage() {
     const overdue61to90 = overdueInvoices.filter(inv => inv.daysOverdue >= 61 && inv.daysOverdue <= 90);
     const overdueOver90 = overdueInvoices.filter(inv => inv.daysOverdue > 90);
 
-    doc.setFontSize(14);
-    doc.text('Resumen de Vencimientos', 20, 60);
+    doc.setFontSize(12);
+    doc.setTextColor(47, 62, 30);
+    doc.text('Overdue Summary', 20, startY);
+    startY += 8;
 
     const summaryData = [
-      ['Total Facturas Vencidas', overdueInvoices.length.toString()],
-      ['Monto Total Vencido', formatMoney(totalOverdue)],
-      ['1-30 días', `${overdue1to30.length} facturas - ${formatMoney(overdue1to30.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
-      ['31-60 días', `${overdue31to60.length} facturas - ${formatMoney(overdue31to60.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
-      ['61-90 días', `${overdue61to90.length} facturas - ${formatMoney(overdue61to90.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
-      ['Más de 90 días', `${overdueOver90.length} facturas - ${formatMoney(overdueOver90.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`]
+      ['Total Overdue Invoices', overdueInvoices.length.toString()],
+      ['Total Overdue Amount', formatMoney(totalOverdue)],
+      ['1-30 days', `${overdue1to30.length} invoices - ${formatMoney(overdue1to30.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
+      ['31-60 days', `${overdue31to60.length} invoices - ${formatMoney(overdue31to60.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
+      ['61-90 days', `${overdue61to90.length} invoices - ${formatMoney(overdue61to90.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`],
+      ['Over 90 days', `${overdueOver90.length} invoices - ${formatMoney(overdueOver90.reduce((sum, inv) => sum + (inv.baseBalance ?? inv.balance), 0))}`]
     ];
 
     (doc as any).autoTable({
-      startY: 70,
-      head: [['Concepto', 'Detalle']],
+      startY,
+      head: [['Concept', 'Detail']],
       body: summaryData,
       theme: 'grid',
-      headStyles: { fillColor: [239, 68, 68] },
-      styles: { fontSize: 10 }
+      ...pdfStyles
     });
 
     if (overdueInvoices.length > 0) {
       doc.setFontSize(14);
-      doc.text('Detalle de Facturas Vencidas', 20, (doc as any).lastAutoTable.finalY + 20);
+      doc.text('Overdue Invoice Details', 20, (doc as any).lastAutoTable.finalY + 20);
 
       const overdueData = overdueInvoices.map(invoice => {
         const invPrefix = getCurrencyPrefix(invoice.currency);
@@ -885,7 +853,7 @@ export default function ReportsPage() {
           invoice.invoiceNumber,
           invoice.customerName,
           invoice.dueDate,
-          `${invoice.daysOverdue} días`,
+          `${invoice.daysOverdue} days`,
           amountStr,
           balanceStr,
         ];
@@ -893,16 +861,15 @@ export default function ReportsPage() {
 
       (doc as any).autoTable({
         startY: (doc as any).lastAutoTable.finalY + 30,
-        head: [['Factura', 'Cliente', 'Vencimiento', 'Días Atraso', 'Monto Original', 'Saldo Pendiente']],
+        head: [['Invoice', 'Customer', 'Due Date', 'Days Late', 'Original Amount', 'Balance']],
         body: overdueData,
         theme: 'striped',
-        headStyles: { fillColor: [239, 68, 68] },
-        styles: { fontSize: 9 }
+        ...pdfStyles
       });
     }
 
-    const filename = `facturas-vencidas-${new Date().toISOString().split('T')[0]}.pdf`;
-    openPdfPreview(doc, 'Reporte de Facturas Vencidas', filename);
+    const filename = `overdue-invoices-${new Date().toISOString().split('T')[0]}.pdf`;
+    openPdfPreview(doc, 'Overdue Invoices Report', filename);
   };
 
   const handleGeneratePaymentAnalysisReport = () => {
@@ -1010,11 +977,11 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 bg-[#f7f3e8] min-h-screen">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
             <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Analytics</p>
-            <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Receivable Reports</h1>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounts Receivable Reports</h1>
           </div>
           <div className="flex items-center gap-2 text-[#6b5c3b] bg-white border border-[#e4d8c4] px-4 py-2 rounded-full shadow-sm">
             <i className="ri-bar-chart-grouped-line text-xl"></i>
@@ -1023,7 +990,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Date Filter */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[#e4d8c4] p-6 mb-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-[#2f3e1e]">Date Filters</h3>
             <div className="text-sm text-[#6b5c3b] flex items-center gap-2">
@@ -1056,7 +1023,7 @@ export default function ReportsPage() {
         {/* Reports Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Aging Report */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Aging Analysis</h3>
@@ -1075,7 +1042,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Statement Report */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Account Statement</h3>
@@ -1094,7 +1061,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Collection Report */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Collection Summary</h3>
@@ -1121,7 +1088,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Customer Balance Report */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Customer Balances</h3>
@@ -1140,7 +1107,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Overdue Report */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Overdue Invoices</h3>
@@ -1159,7 +1126,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Payment Analysis */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-[#2f3e1e]">Payment Analysis</h3>

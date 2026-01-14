@@ -672,10 +672,10 @@ export default function AccountingPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Accounting</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounting</h1>
             <p className="text-gray-600 mt-1">Comprehensive accounting management system</p>
           </div>
           <div className="flex space-x-3">
@@ -693,7 +693,7 @@ export default function AccountingPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button 

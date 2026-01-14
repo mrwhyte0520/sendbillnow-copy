@@ -668,11 +668,11 @@ export default function AdvancesPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen p-6 bg-[#f7f3e8]">
+      <div className="min-h-screen p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5]">
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#2f3e1e]">Customer Advances</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Customer Advances</h1>
             <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
               <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
@@ -690,7 +690,7 @@ export default function AdvancesPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Total Advances</p>
@@ -704,7 +704,7 @@ export default function AdvancesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Available Balance</p>
@@ -718,7 +718,7 @@ export default function AdvancesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Applied Amount</p>
@@ -732,7 +732,7 @@ export default function AdvancesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6b5c3b]">Pending Advances</p>
@@ -796,14 +796,14 @@ export default function AdvancesPage() {
         </div>
 
         {/* Advances Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
           {(loadingAdvances || loadingSupport) && (
             <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
 
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Advance

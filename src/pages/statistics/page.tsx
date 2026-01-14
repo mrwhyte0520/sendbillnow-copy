@@ -14,7 +14,7 @@ export default function StatisticsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#008000] to-[#008000] rounded-lg p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-br from-[#008000] to-[#006600] rounded-2xl p-6 text-white shadow-[0_8px_30px_rgb(0,128,0,0.3)]">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">

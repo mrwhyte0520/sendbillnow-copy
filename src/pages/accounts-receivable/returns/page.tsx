@@ -487,10 +487,10 @@ export default function ReturnsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Devoluciones en Ventas (CxC)</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Devoluciones en Ventas (CxC)</h1>
             <nav className="flex space-x-2 text-sm text-gray-600 mt-2">
               <Link to="/accounts-receivable" className="hover:text-blue-600">Cuentas por Cobrar</Link>
               <span>/</span>
@@ -499,7 +499,7 @@ export default function ReturnsPage() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            className="bg-gradient-to-br from-[#008000] to-[#006600] text-white px-6 py-3 rounded-xl shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-add-line mr-2"></i>
             Nueva Devolución
@@ -508,7 +508,7 @@ export default function ReturnsPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Devoluciones</p>
@@ -522,12 +522,12 @@ export default function ReturnsPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <p className="text-sm font-medium text-gray-600">Cantidad de Devoluciones</p>
             <p className="text-2xl font-bold text-gray-900">{filteredReturns.length}</p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <p className="text-sm font-medium text-gray-600">Clientes impactados</p>
             <p className="text-2xl font-bold text-gray-900">
               {new Set(filteredReturns.map((r) => r.customerName).filter(Boolean)).size}

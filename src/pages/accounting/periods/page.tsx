@@ -954,7 +954,7 @@ const AccountingPeriodsPage: FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
@@ -966,7 +966,7 @@ const AccountingPeriodsPage: FC = () => {
             Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Accounting / Fiscal Periods</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounting / Fiscal Periods</h1>
             <p className="text-gray-600">Manage accounting and fiscal periods</p>
           </div>
         </div>
@@ -996,7 +996,7 @@ const AccountingPeriodsPage: FC = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
           <div className="flex items-center">
             <div
               className="p-2 rounded-lg"
@@ -1013,7 +1013,7 @@ const AccountingPeriodsPage: FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
           <div className="flex items-center">
             <div
               className="p-2 rounded-lg"
@@ -1030,7 +1030,7 @@ const AccountingPeriodsPage: FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
           <div className="flex items-center">
             <div
               className="p-2 rounded-lg"
@@ -1047,7 +1047,7 @@ const AccountingPeriodsPage: FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
           <div className="flex items-center">
             <div
               className="p-2 rounded-lg"
@@ -1064,7 +1064,7 @@ const AccountingPeriodsPage: FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
           <div className="flex items-center">
             <div
               className="p-2 rounded-lg"

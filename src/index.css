@@ -18,3 +18,137 @@
   background: #008000;
   color: #ffffff;
 }
+
+/* ========== 3D UI SYSTEM STYLES ========== */
+
+/* Card base with 3D effect */
+.card-3d {
+  @apply bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0];
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.08);
+}
+
+.card-3d:hover {
+  box-shadow: 0 12px 40px rgb(0 128 0 / 0.12);
+}
+
+/* Header with 3D gradient */
+.header-3d {
+  @apply bg-gradient-to-br from-[#008000] to-[#006600] rounded-2xl text-white relative overflow-hidden;
+  box-shadow: 0 8px 30px rgb(0 128 0 / 0.3);
+}
+
+.header-3d::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-white/5 to-transparent;
+}
+
+/* Button primary 3D */
+.btn-3d {
+  @apply bg-gradient-to-br from-[#008000] to-[#006600] text-white font-semibold rounded-xl transition-all duration-300;
+  box-shadow: 0 4px 15px rgb(0 128 0 / 0.3);
+}
+
+.btn-3d:hover {
+  @apply from-[#006600] to-[#005500];
+  box-shadow: 0 6px 20px rgb(0 128 0 / 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-3d:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgb(0 128 0 / 0.3);
+}
+
+/* Button secondary 3D */
+.btn-3d-secondary {
+  @apply bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 font-semibold rounded-xl border-2 border-[#e0d8c8] transition-all duration-300;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.05);
+}
+
+.btn-3d-secondary:hover {
+  @apply border-[#008000]/40;
+  box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}
+
+/* Input 3D */
+.input-3d {
+  @apply bg-gradient-to-r from-white to-[#faf9f5] border-2 border-[#e0d8c8] rounded-xl transition-all duration-300;
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.04);
+}
+
+.input-3d:focus {
+  @apply border-[#008000] ring-2 ring-[#008000]/20;
+}
+
+/* Table 3D */
+.table-3d {
+  @apply bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] overflow-hidden;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.06);
+}
+
+.table-3d thead {
+  @apply bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0];
+}
+
+.table-3d th {
+  @apply text-[#2f3e1e] font-bold uppercase text-xs tracking-wide;
+}
+
+.table-3d tbody tr {
+  @apply border-b border-[#e8e0d0] transition-all duration-200;
+}
+
+.table-3d tbody tr:hover {
+  @apply bg-gradient-to-r from-[#f8f6f0] to-transparent;
+}
+
+/* Stats card 3D */
+.stat-card-3d {
+  @apply bg-gradient-to-br from-white to-[#f8f6f0] p-6 rounded-2xl border border-[#e8e0d0] transition-all duration-300 cursor-pointer;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.08);
+}
+
+.stat-card-3d:hover {
+  box-shadow: 0 12px 40px rgb(0 128 0 / 0.15);
+  transform: translateY(-4px);
+}
+
+/* Icon container 3D */
+.icon-3d {
+  @apply rounded-xl flex items-center justify-center;
+  box-shadow: 0 4px 15px rgb(0 128 0 / 0.3);
+}
+
+/* Badge 3D */
+.badge-3d {
+  @apply rounded-full px-3 py-1 text-xs font-semibold;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+/* Modal 3D */
+.modal-3d {
+  @apply bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0];
+  box-shadow: 0 25px 60px rgb(0 0 0 / 0.2);
+}
+
+/* Pagination button 3D */
+.pagination-3d {
+  @apply rounded-xl font-semibold transition-all duration-300;
+}
+
+.pagination-3d.active {
+  @apply bg-gradient-to-br from-[#008000] to-[#006600] text-white;
+  box-shadow: 0 4px 15px rgb(0 128 0 / 0.3);
+  transform: scale(1.1);
+}
+
+.pagination-3d:not(.active) {
+  @apply bg-gradient-to-br from-white to-[#f8f6f0] text-gray-700 border border-[#e0d8c8];
+}
+
+.pagination-3d:not(.active):hover {
+  @apply border-[#008000]/40;
+  box-shadow: 0 4px 15px rgb(0 0 0 / 0.1);
+  transform: translateY(-2px);
+}

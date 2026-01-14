@@ -376,15 +376,15 @@ export default function CustomersPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 bg-[#f6f2e8] min-h-screen">
+      <div className="p-6 space-y-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e2814]">Customer Management</h1>
+            <h1 className="text-3xl font-bold text-[#1e2814] drop-shadow-sm">Customer Management</h1>
             <p className="text-sm text-[#4c5535]">Control balances, credit limits, and receivables from a unified workspace.</p>
           </div>
           <button 
             onClick={handleNewCustomer}
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-user-add-line mr-2"></i>
             New Customer
@@ -441,10 +441,10 @@ export default function CustomersPage() {
           <div className="mb-2 text-sm text-gray-500">Loading customers...</div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[#ede7d7]">
+            <table className="min-w-full divide-y divide-[#e8e0d0]">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Customer
@@ -472,11 +472,11 @@ export default function CustomersPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#e8e0d0]">
                 {filteredCustomers.map((customer) => {
                   const rep = salesReps.find((r) => r.id === customer.salesRepId);
                   return (
-                    <tr key={customer.id} className="hover:bg-gray-50">
+                    <tr key={customer.id} className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{customer.name}</div>

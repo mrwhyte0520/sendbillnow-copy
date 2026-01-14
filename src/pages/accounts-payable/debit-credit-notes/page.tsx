@@ -168,7 +168,7 @@ export default function APDebitCreditNotesPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-[rgba(47,79,48,0.15)] p-6 space-y-4">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold" style={{ color: palette.greenDark }}>New Note</h2>
           </div>

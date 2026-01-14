@@ -2285,7 +2285,7 @@ export default function FinancialStatementsPage() {
         {/* Header */}
         <div className="flex justify-between items-center print-hidden">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Financial Statements</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Financial Statements</h1>
             <p className="text-gray-600">Generation and management of financial reports</p>
           </div>
           <div className="flex space-x-3">
@@ -2337,7 +2337,7 @@ export default function FinancialStatementsPage() {
 
         {/* Content */}
         {activeTab === 'statements' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold">Generated Financial Statements</h2>
@@ -2432,7 +2432,7 @@ export default function FinancialStatementsPage() {
         )}
 
         {activeTab === 'expenses' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
@@ -2709,7 +2709,7 @@ export default function FinancialStatementsPage() {
         )}
 
         {activeTab === 'costs' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
@@ -2908,7 +2908,7 @@ export default function FinancialStatementsPage() {
         )}
 
         {activeTab === 'balance' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               {/* Header con selector de período y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
@@ -3233,7 +3233,7 @@ export default function FinancialStatementsPage() {
         )}
 
         {activeTab === 'income' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               {/* Header con selector de período y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">
@@ -3585,7 +3585,7 @@ export default function FinancialStatementsPage() {
         )}
 
         {activeTab === 'cashflow' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
             <div className="p-6">
               {/* Header con selector de fechas y botón de descarga */}
               <div className="flex items-center justify-between gap-2 mb-4 print-hidden">

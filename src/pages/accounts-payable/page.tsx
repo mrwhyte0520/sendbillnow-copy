@@ -319,18 +319,18 @@ export default function AccountsPayablePage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-[#f7f3e8] min-h-screen p-6 rounded-2xl">
+      <div className="space-y-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen p-6 rounded-2xl">
         {/* Header */}
         <div>
           <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Operations</p>
-          <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Payable Command Center</h1>
+          <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounts Payable Command Center</h1>
           <p className="text-[#6b5c3b]">End-to-end supplier and payment management</p>
         </div>
 
         {/* A/P Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {apStats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+            <div key={index} className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-[#6b5c3b]">{stat.title}</p>

@@ -181,8 +181,7 @@ export default function CommissionReportPage() {
       row.commissionAmount.toLocaleString('es-DO', { maximumFractionDigits: 2 }),
     ]);
 
-    // @ts-expect-error - autotable está inyectado por el import de 'jspdf-autotable'
-    doc.autoTable({
+    (doc as any).autoTable({
       head: headers,
       body,
       startY: 38,
@@ -276,13 +275,13 @@ export default function CommissionReportPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 bg-[#F4ECDC] min-h-screen rounded-[32px] p-6">
+      <div className="space-y-8 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen rounded-[32px] p-6">
         {/* Header */}
         <div>
           <span className="inline-flex items-center text-xs font-semibold tracking-[0.2em] uppercase text-[#7A705A]">
             Performance
           </span>
-          <h1 className="text-3xl font-semibold text-[#2F3D2E] mt-2">Commission Report</h1>
+          <h1 className="text-3xl font-semibold text-[#2f3e1e] mt-2 drop-shadow-sm">Commission Report</h1>
           <p className="text-[#5F6652] max-w-2xl">
             Review sales by representative, store, and time period to calculate commissions with confidence.
           </p>

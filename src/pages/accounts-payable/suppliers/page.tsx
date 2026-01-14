@@ -706,11 +706,11 @@ export default function SuppliersPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-[#f8f4ec] min-h-screen p-6 rounded-xl">
+      <div className="space-y-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen p-6 rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#2f3c24]">Supplier Management</h1>
+            <h1 className="text-3xl font-bold text-[#2f3c24] drop-shadow-sm">Supplier Management</h1>
             <p className="text-[#5c6b42]">Supplier and vendor database</p>
           </div>
           <div className="flex space-x-3">
@@ -730,7 +730,7 @@ export default function SuppliersPage() {
             </button>
             <button 
               onClick={() => setShowModal(true)}
-              className="bg-[#3f4d2c] text-white px-4 py-2 rounded-lg hover:bg-[#2f3a1f] transition-colors whitespace-nowrap shadow-sm"
+              className="bg-gradient-to-br from-[#008000] to-[#006600] text-white px-6 py-3 rounded-xl shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
             >
               <i className="ri-add-line mr-2"></i>
               New Supplier
@@ -741,51 +741,51 @@ export default function SuppliersPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#dfe9c1] rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-truck-line text-xl text-[#3f4d2c]"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#dfe9c1] to-[#c8d9a5] rounded-xl flex items-center justify-center mr-4 shadow-lg">
+                <i className="ri-truck-line text-2xl text-[#3f4d2c]"></i>
               </div>
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Total Suppliers</p>
-                <p className="text-2xl font-bold text-[#2f3c24]">{suppliers.length}</p>
+                <p className="text-3xl font-bold text-[#2f3c24] drop-shadow-sm">{suppliers.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#e4eed0] rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-check-line text-xl text-[#4f5e35]"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#e4eed0] to-[#c8dbb0] rounded-xl flex items-center justify-center mr-4 shadow-lg">
+                <i className="ri-check-line text-2xl text-[#4f5e35]"></i>
               </div>
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Active</p>
-                <p className="text-2xl font-bold text-[#2f3c24]">
+                <p className="text-3xl font-bold text-[#2f3c24] drop-shadow-sm">
                   {suppliers.filter((s) => s.status === 'Activo' || s.status === 'Active').length}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#f3e2c0] rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-money-dollar-circle-line text-xl text-[#b3682f]"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#f3e2c0] to-[#e5d0a5] rounded-xl flex items-center justify-center mr-4 shadow-lg">
+                <i className="ri-money-dollar-circle-line text-2xl text-[#b3682f]"></i>
               </div>
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Total Balance</p>
-                <p className="text-2xl font-bold text-[#2f3c24]">
+                <p className="text-3xl font-bold text-[#2f3c24] drop-shadow-sm">
                    {suppliers.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-[#eadfee] rounded-lg flex items-center justify-center mr-4">
-                <i className="ri-credit-card-line text-xl text-[#6a4c5c]"></i>
+              <div className="w-14 h-14 bg-gradient-to-br from-[#eadfee] to-[#d8c8e0] rounded-xl flex items-center justify-center mr-4 shadow-lg">
+                <i className="ri-credit-card-line text-2xl text-[#6a4c5c]"></i>
               </div>
               <div>
                 <p className="text-sm font-medium text-[#4c5b36]">Available Credit</p>
-                <p className="text-2xl font-bold text-[#2f3c24]">
+                <p className="text-3xl font-bold text-[#2f3c24] drop-shadow-sm">
                    {suppliers.reduce((sum, s) => sum + (s.creditLimit - s.balance), 0).toLocaleString()}
                 </p>
               </div>
@@ -794,7 +794,7 @@ export default function SuppliersPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#4c5b36] mb-2">

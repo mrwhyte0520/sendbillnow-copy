@@ -105,38 +105,40 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#008000] to-[#008000] rounded-lg p-6 text-white shadow-lg">
-          <div className="flex items-center justify-between">
+        <div className="bg-gradient-to-br from-[#008000] to-[#006600] rounded-2xl p-8 text-white shadow-[0_8px_30px_rgb(0,128,0,0.3)] relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent"></div>
+          <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+          <div className="relative flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-              <p className="text-stone-200">Quick access panel to main modules</p>
+              <h1 className="text-4xl font-bold mb-2 drop-shadow-lg">Dashboard</h1>
+              <p className="text-white/80 text-lg">Quick access panel to main modules</p>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
+              className="flex items-center px-5 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 whitespace-nowrap border border-white/20"
             >
-              <i className="ri-logout-box-line mr-2"></i>
+              <i className="ri-logout-box-line mr-2 text-lg"></i>
               Sign Out
             </button>
           </div>
         </div>
 
         {/* Botones de Acceso Rápido */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Access</h2>
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-8">
+          <h2 className="text-2xl font-bold text-[#2f3e1e] mb-6 drop-shadow-sm">Quick Access</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-4">
             {quickAccessButtons.map((button) => (
               <button
                 key={button.name}
                 onClick={() => navigate(button.href)}
-                className="group relative flex flex-col items-center justify-center p-4 bg-white rounded-xl border-2 border-gray-200 hover:border-transparent transition-all duration-300 hover:shadow-xl hover:scale-105"
+                className="group relative flex flex-col items-center justify-center p-5 bg-gradient-to-br from-white to-[#f8f6f0] rounded-2xl border-2 border-[#e0d8c8] hover:border-[#008000]/30 transition-all duration-300 hover:shadow-[0_12px_30px_rgb(0,128,0,0.15)] hover:-translate-y-1"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${button.color} opacity-0 group-hover:opacity-100 rounded-xl transition-opacity duration-300`}></div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${button.color} opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-300`}></div>
                 <div className="relative z-10">
-                  <div className={`w-14 h-14 mb-3 rounded-full bg-gradient-to-br ${button.color} flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+                  <div className={`w-16 h-16 mb-3 rounded-2xl bg-gradient-to-br ${button.color} flex items-center justify-center text-white shadow-lg shadow-[#008000]/30 group-hover:shadow-xl group-hover:scale-110 transition-all duration-300`}>
                     <i className={`${button.icon} text-2xl`}></i>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-white text-center block transition-colors duration-300">
+                  <span className="text-sm font-semibold text-[#2f3e1e] group-hover:text-white text-center block transition-colors duration-300">
                     {button.name}
                   </span>
                 </div>
@@ -146,18 +148,20 @@ export default function DashboardPage() {
         </div>
 
         {/* Calendario */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">
               Calendar - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </h2>
-            <i className="ri-calendar-line text-2xl text-[#008000]"></i>
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] flex items-center justify-center shadow-lg shadow-[#008000]/30">
+              <i className="ri-calendar-line text-2xl text-white"></i>
+            </div>
           </div>
           
           <div className="grid grid-cols-7 gap-2">
             {/* Encabezados de días */}
             {weekDays.map((day) => (
-              <div key={day} className="text-center font-semibold text-gray-600 py-2 text-sm">
+              <div key={day} className="text-center font-bold text-[#7a8c45] py-3 text-sm uppercase tracking-wide">
                 {day}
               </div>
             ))}
@@ -166,12 +170,12 @@ export default function DashboardPage() {
             {getDaysInMonth(currentDate).map((day, index) => (
               <div
                 key={index}
-                className={`aspect-square flex items-center justify-center rounded-lg text-sm transition-all ${
+                className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 ${
                   day === null
                     ? 'bg-transparent'
                     : day === currentDate.getDate()
-                    ? 'bg-[#008000] text-white font-bold shadow-lg'
-                    : 'bg-stone-50 hover:bg-stone-100 text-stone-700 hover:text-[#008000] cursor-pointer'
+                    ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white font-bold shadow-lg shadow-[#008000]/30 scale-110'
+                    : 'bg-gradient-to-br from-[#f8f6f0] to-[#f0ece0] hover:from-[#e8e4d8] hover:to-[#e0dcd0] text-[#2f3e1e] hover:text-[#008000] cursor-pointer hover:shadow-md hover:-translate-y-0.5'
                 }`}
               >
                 {day}

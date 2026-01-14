@@ -132,10 +132,10 @@ export default function PaymentTermsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 bg-[#f6f2e8] min-h-screen space-y-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e2814]">Payment Terms</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Payment Terms</h1>
             <p className="text-sm text-[#4c5535]">Catalog of payment conditions for customers and vendors.</p>
           </div>
           <button
@@ -147,13 +147,13 @@ export default function PaymentTermsPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-[#e0d7c4]">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
           <div className="p-6 border-b border-[#e0d7c4]">
             <h3 className="text-lg font-semibold text-[#1e2814]">Payment Term List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[#ede7d7]">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Days</th>

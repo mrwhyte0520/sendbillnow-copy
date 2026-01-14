@@ -365,10 +365,10 @@ const PettyCashReportPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Reporte de Caja Chica</h1>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Reporte de Caja Chica</h1>
             <p className="text-gray-600">
               Relacion de movimientos (recibos de gastos) por reposicion y fondo de caja chica.
             </p>
@@ -398,7 +398,7 @@ const PettyCashReportPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-4 space-y-4">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-4 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900">Filtros</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>

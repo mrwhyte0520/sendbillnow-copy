@@ -388,7 +388,7 @@ export default function RecurringBillingPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6B6A5E]">Active Subscriptions</p>
@@ -402,7 +402,7 @@ export default function RecurringBillingPage() {
             </div>
           </div>
 
-          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6B6A5E]">Monthly Revenue</p>
@@ -419,7 +419,7 @@ export default function RecurringBillingPage() {
             </div>
           </div>
 
-          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6B6A5E]">Upcoming Invoices</p>
@@ -433,7 +433,7 @@ export default function RecurringBillingPage() {
             </div>
           </div>
 
-          <div className="bg-[#FBF7EF] rounded-xl shadow-sm border border-[#E6DDC7] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[#6B6A5E]">Total Subscriptions</p>

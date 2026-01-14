@@ -539,10 +539,10 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 bg-[#f8f4ec] min-h-screen p-6 rounded-xl">
+      <div className="space-y-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen p-6 rounded-xl">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-[#2f3c24]">Accounts Payable Reports</h1>
+          <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounts Payable Reports</h1>
           {companyName && (
             <p className="text-sm font-medium text-[#4c5b36]">{companyName}</p>
           )}

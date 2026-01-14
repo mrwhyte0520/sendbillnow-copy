@@ -285,11 +285,11 @@ export default function AccountsReceivablePage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 bg-[#f7f3e8] min-h-screen space-y-6 rounded-2xl">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6 rounded-2xl">
         <div className="flex justify-between items-center mb-6">
           <div>
             <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Collections</p>
-            <h1 className="text-3xl font-bold text-[#2f3e1e]">Accounts Receivable</h1>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Accounts Receivable</h1>
             <p className="text-[#6b5c3b] mt-1">Full receivables and customer management</p>
           </div>
         </div>
@@ -299,17 +299,17 @@ export default function AccountsReceivablePage() {
           {summaryCards.map((card, index) => (
             <div
               key={index}
-              className="p-6 rounded-2xl shadow-sm border border-[#e4d8c4] bg-white"
+              className="p-6 rounded-2xl border border-[#e8e0d0] bg-gradient-to-br from-white to-[#faf9f5] shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-[#6b5c3b]">{card.label}</p>
-                  <p className="text-2xl font-bold mt-1" style={{ color: card.valueColor }}>
+                  <p className="text-3xl font-bold mt-1 drop-shadow-sm" style={{ color: card.valueColor }}>
                     {card.value}
                   </p>
                 </div>
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
                   style={{ backgroundColor: card.iconBg }}
                 >
                   <i className={`${card.icon} text-2xl`} style={{ color: card.iconColor }}></i>
@@ -325,7 +325,7 @@ export default function AccountsReceivablePage() {
             <Link
               key={index}
               to={module.path}
-              className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6 hover:shadow-md transition-shadow duration-200 group"
+              className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300 group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div
@@ -353,7 +353,7 @@ export default function AccountsReceivablePage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+        <div className="mt-8 bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
           <div className="flex items-center gap-2 mb-4 text-[#6b5c3b]">
             <i className="ri-flashlight-line"></i>
             <h3 className="text-lg font-semibold text-[#2f3e1e]">Quick Actions</h3>
@@ -395,7 +395,7 @@ export default function AccountsReceivablePage() {
         </div>
 
         {/* Recent AR Journal Entries */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+        <div className="mt-8 bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-[#2f3e1e]">
               <i className="ri-book-2-line mr-2 text-[#2f3e1e]"></i>

@@ -358,7 +358,7 @@ export default function PaymentsPage() {
             </button>
             <button
               onClick={() => setShowModal(true)}
-              className="bg-[#3f4d2c] text-white px-4 py-2 rounded-lg hover:bg-[#2f3a1f] transition-colors whitespace-nowrap shadow-sm"
+              className="bg-gradient-to-br from-[#008000] to-[#006600] text-white px-6 py-3 rounded-xl shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
             >
               <i className="ri-add-line mr-2"></i>
               New Payment
@@ -368,7 +368,7 @@ export default function PaymentsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#dfe9c1] rounded-lg flex items-center justify-center mr-4">
                 <i className="ri-money-dollar-circle-line text-xl text-[#3f4d2c]"></i>
@@ -381,7 +381,7 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#f3e2c0] rounded-lg flex items-center justify-center mr-4">
                 <i className="ri-time-line text-xl text-[#b3682f]"></i>
@@ -394,7 +394,7 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#e4eed0] rounded-lg flex items-center justify-center mr-4">
                 <i className="ri-check-line text-xl text-[#4f5e35]"></i>
@@ -407,7 +407,7 @@ export default function PaymentsPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5] p-6">
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center">
               <div className="w-12 h-12 bg-[#f5c2b0] rounded-lg flex items-center justify-center mr-4">
                 <i className="ri-close-line text-xl text-[#7a2e1b]"></i>
@@ -474,13 +474,13 @@ export default function PaymentsPage() {
         </div>
 
         {/* Payments Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#d7ccb5]">
-          <div className="p-6 border-b border-[#d7ccb5] bg-[#fefaf1] rounded-t-lg">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
+          <div className="p-6 border-b border-[#e8e0d0] bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0] rounded-t-2xl">
             <h3 className="text-lg font-semibold text-[#2f3c24]">Payment List</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[#eadfca]">
-              <thead className="bg-[#f5ebd6]">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>

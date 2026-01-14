@@ -476,10 +476,10 @@ export default function CreditNotesPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen p-6 bg-[#f7f3e8]">
+      <div className="min-h-screen p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5]">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#2f3e1e]">Credit Notes</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Credit Notes</h1>
             <nav className="flex space-x-2 text-sm text-[#6b5c3b] mt-2">
               <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
@@ -488,7 +488,7 @@ export default function CreditNotesPage() {
           </div>
           <button 
             onClick={handleNewNote}
-            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2913] transition-colors whitespace-nowrap shadow-sm"
+            className="bg-gradient-to-br from-[#008000] to-[#006600] text-white px-6 py-3 rounded-xl shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-add-line mr-2"></i>
             New Credit Note

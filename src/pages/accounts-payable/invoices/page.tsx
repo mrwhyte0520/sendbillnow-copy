@@ -1551,25 +1551,25 @@ ${items
 
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6 bg-[#f7f3e8] min-h-screen rounded-2xl">
+      <div className="p-6 space-y-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen rounded-2xl">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Procurement</p>
-            <h1 className="text-3xl font-bold text-[#2f3e1e]">Supplier Invoices</h1>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Supplier Invoices</h1>
             <p className="text-[#6b5c3b] text-sm max-w-2xl">
               Register supplier invoices for the AP module, using payment terms and tax configuration per vendor.
             </p>
           </div>
           <button
             onClick={handleNewInvoice}
-            className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#1f2913] transition-colors shadow-sm"
+            className="bg-gradient-to-br from-[#008000] to-[#006600] text-white px-6 py-3 rounded-xl shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-add-line mr-2" />
             New Invoice
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-4 flex flex-col md:flex-row gap-4">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-4 flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#9b8a64]">
@@ -1599,7 +1599,7 @@ ${items
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] overflow-hidden">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
           <div className="px-4 py-3 border-b border-[#e4d8c4] flex items-center justify-between bg-[#f7f3e8]">
             <h2 className="text-sm font-semibold text-[#2f3e1e]">Registered invoices</h2>
             <span className="text-xs text-[#6b5c3b]">Total: {filteredInvoices.length}</span>
@@ -1611,7 +1611,7 @@ ${items
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[#e4d8c4] text-sm">
-                <thead className="bg-[#f7f3e8]">
+                <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                   <tr>
                     <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Invoice</th>
                     <th className="px-4 py-2 text-left font-semibold text-[#6b5c3b] uppercase text-xs">Supplier</th>

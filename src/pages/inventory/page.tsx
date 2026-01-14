@@ -950,7 +950,17 @@ export default function InventoryPage() {
     ),
   );
 
-  const warehouseBalances: any = {};
+  // Build warehouseBalances: { warehouseId: { itemId: quantity } }
+  const warehouseBalances: Record<string, Record<string, number>> = {};
+  items.forEach((item) => {
+    if (item.warehouse_id) {
+      const wid = String(item.warehouse_id);
+      if (!warehouseBalances[wid]) {
+        warehouseBalances[wid] = {};
+      }
+      warehouseBalances[wid][String(item.id)] = Number(item.current_stock) || 0;
+    }
+  });
   const totalProducts = items.length;
   const activeProducts = items.filter(item => item.is_active).length;
   const lowStockCount = items.filter(
@@ -996,22 +1006,22 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {dashboardStats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-[#eadfc6] bg-white/90 p-6 shadow-sm">
+          <div key={stat.label} className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl border border-[#e8e0d0] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.iconBg}`}>
-                <i className={`${stat.icon} ${stat.iconColor} text-xl`}></i>
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-lg ${stat.iconBg}`}>
+                <i className={`${stat.icon} ${stat.iconColor} text-2xl`}></i>
               </div>
               <div>
                 <p className="text-sm font-medium text-[#6b7a40]">{stat.label}</p>
-                <p className="text-2xl font-semibold text-[#2e3c21]">{stat.value}</p>
+                <p className="text-3xl font-bold text-[#2e3c21] drop-shadow-sm">{stat.value}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow p-6">
-        <h3 className="text-lg font-semibold text-[#2e3c21] mb-4">Financial Summary</h3>
+      <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-8">
+        <h3 className="text-xl font-bold text-[#2e3c21] mb-6 drop-shadow-sm">Financial Summary</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
             <p className="text-sm font-medium text-[#7b6e4f]">Total Cost Value (Average)</p>
@@ -1047,9 +1057,9 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#e8ddc7] bg-[#fdf6e7]">
-            <h3 className="text-lg font-semibold text-[#3b4d2d]">Low Stock Products</h3>
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
+          <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
+            <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Low Stock Products</h3>
           </div>
           <div className="p-6">
             {lowStockItems.length === 0 ? (
@@ -1059,7 +1069,7 @@ export default function InventoryPage() {
                 {lowStockItems.map(item => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 bg-[#fdeee9] border border-[#f3d4c8] rounded-lg"
+                    className="flex items-center justify-between p-4 bg-[#fdeee9] border border-[#f3d4c8] rounded-lg shadow-[0_2px_4px_rgb(0,0,0,0.1)] hover:shadow-[0_4px_8px_rgb(0,0,0,0.2)] transition-all duration-300"
                   >
                     <div>
                       <p className="font-medium text-[#2e3c21]">{item.name}</p>
@@ -1078,9 +1088,9 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#e8ddc7] bg-[#fdf6e7]">
-            <h3 className="text-lg font-semibold text-[#3b4d2d]">Recent Movements</h3>
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
+          <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
+            <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Recent Movements</h3>
           </div>
           <div className="p-6">
             {recentMovements.length === 0 ? (
@@ -2839,8 +2849,9 @@ export default function InventoryPage() {
                         const availableItems = originId
                           ? items.filter((it) => {
                               if (!it || !it.id) return false;
-                              const qty = Number(originBalances[String(it.id)] ?? 0) || 0;
-                              return qty > 0;
+                              const inWarehouse = String(it.warehouse_id) === String(originId);
+                              const qty = Number(it.current_stock) || 0;
+                              return inWarehouse && qty > 0;
                             })
                           : items;
 
@@ -2848,7 +2859,7 @@ export default function InventoryPage() {
                           (it) => String(it.id) === String(line.inventory_item_id),
                         );
                         const availableQty = selectedItem
-                          ? Number(originBalances[String(selectedItem.id)] ?? 0) || 0
+                          ? Number(selectedItem.current_stock) || 0
                           : 0;
 
                         return (
@@ -2859,8 +2870,11 @@ export default function InventoryPage() {
                                 value={line.inventory_item_id || ''}
                                 onChange={(e) => {
                                   const value = e.target.value;
+                                  // Auto-fill quantity with total stock when selecting product
+                                  const selected = availableItems.find((it) => String(it.id) === String(value));
+                                  const stockQty = selected ? String(Number(selected.current_stock) || 0) : '';
                                   setTransferLines((prev) =>
-                                    prev.map((ln, i) => (i === idx ? { ...ln, inventory_item_id: value } : ln)),
+                                    prev.map((ln, i) => (i === idx ? { ...ln, inventory_item_id: value, quantity: stockQty } : ln)),
                                   );
                                 }}
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
@@ -2868,29 +2882,22 @@ export default function InventoryPage() {
                                 <option value="">Select product</option>
                                 {availableItems.map((item) => (
                                   <option key={item.id} value={item.id}>
-                                    {item.name} ({item.sku})
+                                    {item.name} ({item.sku}) - Stock: {item.current_stock}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Quantity</label>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Units to Transfer</label>
                               <input
                                 type="number"
-                                step="1"
-                                min="0"
                                 value={line.quantity}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setTransferLines((prev) =>
-                                    prev.map((ln, i) => (i === idx ? { ...ln, quantity: value } : ln)),
-                                  );
-                                }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                readOnly
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
                               />
                               {selectedItem && (
-                                <p className="mt-1 text-xs text-gray-500">
-                                  Available in this warehouse: {availableQty}
+                                <p className="mt-1 text-xs text-green-600 font-medium">
+                                  All {availableQty} units will be transferred
                                 </p>
                               )}
                             </div>

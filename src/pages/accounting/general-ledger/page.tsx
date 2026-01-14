@@ -531,7 +531,7 @@ const GeneralLedgerPage: FC = () => {
     '';
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
       {/* Estilos de impresión */}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
 
@@ -546,7 +546,7 @@ const GeneralLedgerPage: FC = () => {
             Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">General Ledger</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">General Ledger</h1>
             <p className="text-gray-600">Account movements</p>
           </div>
         </div>

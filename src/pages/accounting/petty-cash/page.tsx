@@ -648,10 +648,10 @@ const PettyCashPage: React.FC = () => {
       <div className="space-y-6 p-6 bg-[#f7f3e8] min-h-screen">
 
         {/* Header */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Cash Management</p>
-            <h1 className="text-3xl font-bold text-[#2f3e1e]">Petty Cash</h1>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Petty Cash</h1>
             <p className="text-[#6b5c3b]">Manage small-expense funds and replenishments.</p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -703,7 +703,7 @@ const PettyCashPage: React.FC = () => {
               icon: 'ri-shopping-cart-line',
             },
           ].map((metric, idx) => (
-            <div key={metric.label} className="bg-white p-6 rounded-xl shadow-sm border border-[#e4d8c4]">
+            <div key={metric.label} className="bg-gradient-to-br from-white to-[#faf9f5] p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
               <div className="flex items-center">
                 <div className="p-2 rounded-lg bg-[#eef2ea] text-[#4b5f36]">
                   <i className={`${metric.icon} text-xl`}></i>

@@ -995,7 +995,7 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
     return (
       <div key={account.id}>
         {/* Desktop View */}
-        <div className="hidden md:flex items-stretch px-2 sm:px-4 py-2 border-b border-gray-100 hover:bg-gray-50">
+        <div className="hidden md:flex items-stretch px-2 sm:px-4 py-3 border-b border-[#e8e0d0] hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
           <div className="flex-1 grid grid-cols-[auto,auto,minmax(0,3fr),auto,auto,auto,auto,auto,auto] gap-x-6 items-start text-sm">
             <div className="flex items-center">
               <input
@@ -1268,8 +1268,8 @@ ACCNT	Gastos Operativos	Expense	Gastos operativos generales	5100`;
         </div>
 
         {/* Chart of Accounts */}
-        <div className="bg-white rounded-lg shadow-sm border" style={{ borderColor: theme.softBorder }}>
-          <div className="px-2 sm:px-4 py-2 border-b hidden md:block" style={{ borderColor: theme.softBorder, backgroundColor: theme.muted }}>
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
+          <div className="px-2 sm:px-4 py-3 border-b border-[#e8e0d0] hidden md:block bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
             <div className="grid grid-cols-[auto,auto,minmax(0,3fr),auto,auto,auto,auto,auto,auto] gap-x-6 text-xs font-semibold uppercase tracking-wide text-[#2f3a2f]">
               <div className="flex items-center">
                 <input

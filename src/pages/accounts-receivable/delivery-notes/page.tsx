@@ -324,7 +324,7 @@ export default function DeliveryNotesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button
@@ -336,7 +336,7 @@ export default function DeliveryNotesPage() {
             </button>
             <div className="h-6 w-px bg-gray-300" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Conduces / Notas de Entrega</h1>
+              <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Conduces / Notas de Entrega</h1>
               <nav className="flex space-x-2 text-sm text-gray-600 mt-2">
                 <Link to="/inventory" className="hover:text-blue-600">Inventario</Link>
                 <span>/</span>

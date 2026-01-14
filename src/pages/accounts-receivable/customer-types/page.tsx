@@ -92,10 +92,10 @@ export default function CustomerTypesPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 bg-[#f6f2e8] min-h-screen space-y-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1e2814]">Customer Types</h1>
+            <h1 className="text-2xl font-bold text-[#1e2814] drop-shadow-sm">Customer Types</h1>
             <nav className="flex flex-wrap items-center gap-2 text-sm text-[#4c5535] mt-2">
               <Link to="/accounts-receivable" className="hover:text-[#2f3e1e]">Accounts Receivable</Link>
               <span>/</span>
@@ -104,7 +104,7 @@ export default function CustomerTypesPage() {
           </div>
           <button
             onClick={handleNew}
-            className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-[#2f3e1e] text-white border border-[#1c250f] shadow-sm hover:bg-[#243015] transition-colors whitespace-nowrap"
+            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
           >
             <i className="ri-add-line mr-2"></i>
             New Type
@@ -115,10 +115,10 @@ export default function CustomerTypesPage() {
           <div className="mb-2 text-sm text-gray-500">Loading customer types...</div>
         )}
 
-        <div className="bg-white rounded-lg shadow-sm border border-[#e0d7c4]">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[#ede7d7]">
+            <table className="min-w-full divide-y divide-[#e8e0d0]">
+              <thead className="bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Fixed discount</th>
@@ -129,9 +129,9 @@ export default function CustomerTypesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-[#e8e0d0]">
                 {types.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
+                  <tr key={t.id} className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       <div>{t.name}</div>
                       {t.description && (

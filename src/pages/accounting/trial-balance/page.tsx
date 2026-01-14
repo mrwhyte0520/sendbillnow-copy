@@ -503,7 +503,7 @@ const TrialBalancePage: FC = () => {
     '';
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
       {/* Estilos de impresión */}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
 
@@ -518,7 +518,7 @@ const TrialBalancePage: FC = () => {
             Back to Accounting
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Trial Balance</h1>
+            <h1 className="text-2xl font-bold text-[#2f3e1e] drop-shadow-sm">Trial Balance</h1>
             <p className="text-gray-600">
               Balances by account with opening balance, period movements, and ending balance
             </p>
@@ -549,7 +549,7 @@ const TrialBalancePage: FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow mb-6 print:hidden">
+      <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] mb-6 print:hidden">
         <div className="p-6 border-b border-gray-200 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
