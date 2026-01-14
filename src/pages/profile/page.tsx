@@ -230,19 +230,26 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
-          <p className="mt-2 text-gray-600">Administra tu información personal y configuración de cuenta</p>
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Account</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">My Profile</h1>
+            <p className="mt-2 text-[#6b5c3b]">Manage your personal information and account settings</p>
+          </div>
+          <div className="flex items-center gap-2 text-[#6b5c3b] bg-white border border-[#e4d8c4] px-4 py-2 rounded-full shadow-sm">
+            <i className="ri-user-settings-line text-xl"></i>
+            <span className="text-sm font-medium">Settings</span>
+          </div>
         </div>
 
         {/* Message Alert */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg flex items-center ${
+          <div className={`mb-6 p-4 rounded-xl flex items-center ${
             message.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-[#e0e9cf] text-[#2f3e1e] border border-[#c6d4a8]' 
+              : 'bg-[#fef2f2] text-[#991b1b] border border-[#fecaca]'
           }`}>
             <i className={`${message.type === 'success' ? 'ri-check-line' : 'ri-error-warning-line'} text-xl mr-3`}></i>
             <span>{message.text}</span>
@@ -252,7 +259,7 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Profile Card */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] transition-all duration-300">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg mb-4">
                   <span className="text-3xl font-bold text-white">
@@ -306,7 +313,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="mt-6 bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-4">Estadísticas</h3>
               <div className="space-y-4">
                 {/* Estado del Plan */}

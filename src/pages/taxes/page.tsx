@@ -241,29 +241,36 @@ export default function TaxesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tax Management Module</h1>
-          <p className="text-gray-600">Complete tax compliance system for Dominican Republic</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Compliance</p>
+            <h1 className="text-3xl font-bold text-[#2f3e1e] drop-shadow-sm">Tax Management Module</h1>
+            <p className="text-[#6b5c3b] mt-1">Complete tax compliance system for Dominican Republic</p>
+          </div>
+          <div className="flex items-center gap-2 text-[#6b5c3b] bg-white border border-[#e4d8c4] px-4 py-2 rounded-full shadow-sm">
+            <i className="ri-government-line text-xl"></i>
+            <span className="text-sm font-medium">DGII Compliant</span>
+          </div>
         </div>
 
         {/* Tax Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {taxStatsDisplay.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div key={index} className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                  <p className="text-sm font-medium text-[#6b5c3b]">{stat.title}</p>
+                  <p className="text-2xl font-bold text-[#2f3e1e] mt-1">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-${stat.color}-100`}>
-                  <i className={`${stat.icon} text-xl text-${stat.color}-600`}></i>
+                <div className="w-12 h-12 rounded-xl bg-[#f3ecda] flex items-center justify-center">
+                  <i className={`${stat.icon} text-xl text-[#2f3e1e]`}></i>
                 </div>
               </div>
               <div className="mt-4">
-                <span className="text-sm font-medium text-green-600">{stat.change}</span>
-                <span className="text-sm text-gray-500 ml-1">vs previous month</span>
+                <span className="text-sm font-medium text-[#4f5f33]">{stat.change}</span>
+                <span className="text-sm text-[#6b5c3b] ml-1">vs previous month</span>
               </div>
             </div>
           ))}
@@ -272,17 +279,17 @@ export default function TaxesPage() {
         {/* Modules Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {modules.map((module, index) => (
-            <div key={index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer">
+            <div key={index} className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] hover:-translate-y-1 transition-all duration-300 cursor-pointer">
               <div className="flex items-center mb-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-${module.color}-100 mr-4`}>
-                  <i className={`${module.icon} text-xl text-${module.color}-600`}></i>
+                <div className="w-12 h-12 rounded-xl bg-[#f3ecda] flex items-center justify-center mr-4">
+                  <i className={`${module.icon} text-xl text-[#2f3e1e]`}></i>
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{module.title}</h3>
-              <p className="text-gray-600 mb-4 text-sm">{module.description}</p>
+              <h3 className="text-lg font-semibold text-[#2f3e1e] mb-2">{module.title}</h3>
+              <p className="text-[#6b5c3b] mb-4 text-sm">{module.description}</p>
               <button 
                 onClick={() => handleAccessModule(module.href)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="w-full bg-[#2f3e1e] text-white py-2.5 px-4 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
               >
                 Access
               </button>
@@ -292,24 +299,24 @@ export default function TaxesPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Fiscal Documents Status */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Fiscal Series Status</h3>
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
+            <div className="p-6 border-b border-[#e8e0d0]">
+              <h3 className="text-lg font-semibold text-[#2f3e1e]">Fiscal Series Status</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {fiscalDocuments.map((doc, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 bg-[#faf8f3] rounded-xl border border-[#e8e0d0]">
                     <div>
-                      <p className="font-medium text-gray-900">{doc.type}</p>
-                      <p className="text-sm text-gray-600">Series: {doc.series}</p>
-                      <p className="text-xs text-gray-500">Current: {doc.current}</p>
+                      <p className="font-medium text-[#2f3e1e]">{doc.type}</p>
+                      <p className="text-sm text-[#6b5c3b]">Series: {doc.series}</p>
+                      <p className="text-xs text-[#8b7355]">Current: {doc.current}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">{doc.remaining}</p>
-                      <p className="text-xs text-gray-500">available</p>
+                      <p className="font-semibold text-[#2f3e1e]">{doc.remaining}</p>
+                      <p className="text-xs text-[#8b7355]">available</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        doc.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        doc.status === 'Active' ? 'bg-[#e0e9cf] text-[#4f5f33]' : 'bg-[#f0ebe0] text-[#6b5c3b]'
                       }`}>
                         {doc.status}
                       </span>
@@ -317,8 +324,8 @@ export default function TaxesPage() {
                   </div>
                 ))}
                 {fiscalDocuments.length === 0 && (
-                  <div className="text-center text-gray-500 py-8">
-                    <i className="ri-file-shield-line text-4xl text-gray-300 mb-2"></i>
+                  <div className="text-center text-[#6b5c3b] py-8">
+                    <i className="ri-file-shield-line text-4xl text-[#d8cbb5] mb-2"></i>
                     <p>No fiscal series configured</p>
                   </div>
                 )}
@@ -326,7 +333,7 @@ export default function TaxesPage() {
               <div className="mt-4">
                 <button 
                   onClick={() => navigate('/taxes/ncf')}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                  className="w-full bg-[#2f3e1e] text-white py-2.5 px-4 rounded-lg hover:bg-[#1f2913] transition-colors shadow-sm"
                 >
                   Configure NCF Series
                 </button>
@@ -335,36 +342,36 @@ export default function TaxesPage() {
           </div>
 
           {/* Upcoming Deadlines */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Upcoming Tax Deadlines</h3>
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0]">
+            <div className="p-6 border-b border-[#e8e0d0]">
+              <h3 className="text-lg font-semibold text-[#2f3e1e]">Upcoming Tax Deadlines</h3>
             </div>
             <div className="p-6">
               <div className="space-y-4">
                 {upcomingDeadlines.map((deadline, index) => (
-                  <div key={index} className={`p-4 rounded-lg border ${
-                    deadline.priority === 'Urgent' ? 'bg-red-50 border-red-200' :
-                    deadline.priority === 'High' ? 'bg-orange-50 border-orange-200' :
-                    'bg-yellow-50 border-yellow-200'
+                  <div key={index} className={`p-4 rounded-xl border ${
+                    deadline.priority === 'Urgent' ? 'bg-[#fef2f2] border-[#fecaca]' :
+                    deadline.priority === 'High' ? 'bg-[#fff7ed] border-[#fed7aa]' :
+                    'bg-[#fefce8] border-[#fef08a]'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        deadline.priority === 'Urgent' ? 'bg-red-100 text-red-800' :
-                        deadline.priority === 'High' ? 'bg-orange-100 text-orange-800' :
-                        'bg-yellow-100 text-yellow-800'
+                        deadline.priority === 'Urgent' ? 'bg-[#fee2e2] text-[#991b1b]' :
+                        deadline.priority === 'High' ? 'bg-[#ffedd5] text-[#9a3412]' :
+                        'bg-[#fef9c3] text-[#854d0e]'
                       }`}>
                         {deadline.priority === 'Urgent' ? 'Urgent' :
                          deadline.priority === 'High' ? 'High' : 'Medium'}
                       </span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className="text-sm font-medium text-[#2f3e1e]">
                         {deadline.daysLeft === 0 ? 'Due Today' : `${deadline.daysLeft} days`}
                       </span>
                     </div>
-                    <p className="font-medium text-gray-900">{deadline.report}</p>
-                    <p className="text-sm text-gray-600">Due: {deadline.dueDate}</p>
+                    <p className="font-medium text-[#2f3e1e]">{deadline.report}</p>
+                    <p className="text-sm text-[#6b5c3b]">Due: {deadline.dueDate}</p>
                     <button 
                       onClick={() => handleGenerateReport(deadline.report)}
-                      className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm whitespace-nowrap"
+                      className="mt-3 w-full bg-[#7a2e1b] text-white py-2 px-4 rounded-lg hover:bg-[#5c1f12] transition-colors text-sm shadow-sm"
                     >
                       Generate Report
                     </button>

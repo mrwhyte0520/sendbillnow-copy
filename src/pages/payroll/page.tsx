@@ -70,14 +70,14 @@ interface PayrollEntry {
 }
 
 const palette = {
-  background: 'bg-[#f8f4ec]',
-  card: 'bg-white/90 border border-[#e0d7c9] shadow-sm',
-  heading: 'text-[#233022]',
-  subheading: 'text-[#5b5a50]',
-  accentIcon: 'bg-[#e4dac8] text-[#455139]',
-  primaryButton: 'bg-[#4b5b3f] text-white hover:bg-[#3c4a30]',
-  secondaryButton: 'bg-[#d8ccb6] text-[#2f2a1f] hover:bg-[#c9bca3]',
-  outlineButton: 'border border-[#c6b9a2] text-[#2f2a1f] hover:bg-[#efe6d8]',
+  background: 'bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5]',
+  card: 'bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl',
+  heading: 'text-[#2f3e1e]',
+  subheading: 'text-[#6b5c3b]',
+  accentIcon: 'bg-[#f3ecda] text-[#2f3e1e]',
+  primaryButton: 'bg-[#2f3e1e] text-white hover:bg-[#1f2913] shadow-sm',
+  secondaryButton: 'bg-[#f3ecda] text-[#2f3e1e] hover:bg-[#e8dfc9]',
+  outlineButton: 'border border-[#d8cbb5] text-[#2f3e1e] hover:bg-[#faf8f3]',
 };
 
 export default function PayrollPage() {
@@ -1851,8 +1851,15 @@ export default function PayrollPage() {
 
   return (
     <div className={`${palette.background} min-h-screen space-y-6 px-4 sm:px-6 lg:px-8 pt-6 pb-10`}>
-      <div className="flex justify-between items-center">
-        <h1 className={`text-3xl font-bold ${palette.heading}`}>Payroll Management</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Human Resources</p>
+          <h1 className={`text-3xl font-bold ${palette.heading} drop-shadow-sm`}>Payroll Management</h1>
+        </div>
+        <div className="flex items-center gap-2 text-[#6b5c3b] bg-white border border-[#e4d8c4] px-4 py-2 rounded-full shadow-sm">
+          <i className="ri-team-line text-xl"></i>
+          <span className="text-sm font-medium">Employee Portal</span>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1891,7 +1898,7 @@ export default function PayrollPage() {
       </div>
 
       {/* Navigation Buttons for Other Modules */}
-      <div className={`${palette.card} rounded-xl p-6`}>
+      <div className={`${palette.card} p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.12)] transition-all duration-300`}>
         <h3 className={`text-lg font-semibold mb-4 ${palette.heading}`}>More Payroll Modules</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <button
