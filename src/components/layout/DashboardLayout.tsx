@@ -44,8 +44,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [isOwner, setIsOwner] = useState(true); // Por defecto true hasta verificar
-  const SUPER_ADMIN_EMAIL = 'rolianaurora30@gmail.com';
-  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const SUPER_ADMIN_EMAILS = ['rolianaurora30@gmail.com', 'htcreportes@gmail.com'];
+  const isSuperAdmin = !!user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase());
   const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; moduleName: string; requiredPlan: string }>({
     show: false,
     moduleName: '',

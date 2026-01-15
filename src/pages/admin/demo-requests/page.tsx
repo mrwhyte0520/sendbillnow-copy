@@ -4,7 +4,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 
-const SUPER_ADMIN_EMAIL = 'rolianaurora30@gmail.com';
+const SUPER_ADMIN_EMAILS = ['rolianaurora30@gmail.com', 'htcreportes@gmail.com'];
 
 interface DemoRequest {
   id: string;
@@ -39,7 +39,7 @@ export default function AdminDemoRequestsPage() {
   const [generatedPassword, setGeneratedPassword] = useState('');
 
   // Verificar acceso super admin
-  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isSuperAdmin = !!user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   useEffect(() => {
     if (!isSuperAdmin && user) {
