@@ -284,7 +284,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="max-w-md mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {plans.filter(p => p.category === 'pos').map((plan, index) => (
               <div key={index} className="bg-white rounded-2xl shadow-lg shadow-black/10 overflow-hidden border border-gray-200 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/15 hover:border-[#008000]/30">
                 <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white text-center relative">

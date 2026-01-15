@@ -356,7 +356,7 @@ export default function PlansPage() {
             </h2>
             <p className="text-gray-600">A Complete Point of Sale Smart System, in one Stop! This help your Business Rise to the next level.</p>
           </div>
-          <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {posPlans.map(renderPlanCard)}
           </div>
         </div>
