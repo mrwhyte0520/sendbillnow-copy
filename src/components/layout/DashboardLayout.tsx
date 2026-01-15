@@ -656,7 +656,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
                   <p className="text-xs text-stone-500 truncate">
                     {currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')}
-                    {trialStatus === 'active' && !currentPlan && ` (${trialInfo.daysLeft}d left)`}
+                    {!currentPlan && trialStatus !== 'expired' && (
+                      trialInfo.daysLeft > 0
+                        ? ` (${trialInfo.daysLeft}d left)`
+                        : trialInfo.hoursLeft > 0
+                          ? ` (${trialInfo.hoursLeft}h left)`
+                          : trialInfo.minutesLeft > 0
+                            ? ` (${trialInfo.minutesLeft}m left)`
+                            : ''
+                    )}
                   </p>
                 </div>
               )}
