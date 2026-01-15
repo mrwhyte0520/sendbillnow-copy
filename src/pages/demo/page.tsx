@@ -2,43 +2,37 @@ import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 type FormValues = {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
-  businessName: string;
-  location: string;
-  businessType: string;
-  businessDescription: string;
+  company: string;
+  zipCode: string;
+  industry: string;
+  numberOfLocations: string;
 };
 
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
-const BUSINESS_TYPES = [
+const INDUSTRIES = [
   'Retail / Store',
-  'Restaurant / Food',
+  'Hardware Store',
   'Beauty / Salon',
   'Pharmacy',
   'Services',
   'Other',
 ];
 
-const BUSINESS_DESCRIPTIONS = [
-  'I need faster billing and checkout',
-  'I want to control inventory and purchases',
-  'I need reports (sales, margins, cash closing)',
-  'I want to centralize billing + POS in one system',
-  'Other',
-];
-
 export default function DemoPage() {
   const [values, setValues] = useState<FormValues>({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
-    businessName: '',
-    location: '',
-    businessType: '',
-    businessDescription: '',
+    company: '',
+    zipCode: '',
+    industry: '',
+    numberOfLocations: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -51,11 +45,16 @@ export default function DemoPage() {
   const validate = (v: FormValues) => {
     const next: FormErrors = {};
 
-    if (!v.fullName.trim()) next.fullName = 'Please enter your first and last name.';
+    if (!v.firstName.trim()) next.firstName = 'Please enter your first name.';
+    if (!v.lastName.trim()) next.lastName = 'Please enter your last name.';
     if (!v.email.trim()) next.email = 'Please enter your email.';
     if (v.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) next.email = 'Please enter a valid email.';
     if (!v.phone.trim()) next.phone = 'Please enter your phone number.';
-    if (!v.businessType.trim()) next.businessType = 'Please select a business type.';
+    if (!v.company.trim()) next.company = 'Please enter your company name.';
+    if (!v.zipCode.trim()) next.zipCode = 'Please enter your zip code.';
+    if (!v.industry.trim()) next.industry = 'Please select an industry.';
+    if (!v.numberOfLocations.trim()) next.numberOfLocations = 'Please enter the number of locations.';
+    if (v.numberOfLocations.trim() && !/^\d+$/.test(v.numberOfLocations.trim())) next.numberOfLocations = 'Please enter a valid number.';
 
     return next;
   };
@@ -93,14 +92,15 @@ export default function DemoPage() {
       return;
     }
 
+    const fullName = `${values.firstName.trim()} ${values.lastName.trim()}`.trim().slice(0, 140);
     const payload = {
-      full_name: values.fullName.trim().slice(0, 140),
+      full_name: fullName,
       email: values.email.trim().toLowerCase().slice(0, 254),
       phone: values.phone.trim().slice(0, 60),
-      business_name: values.businessName.trim() ? values.businessName.trim().slice(0, 160) : null,
-      location: values.location.trim() ? values.location.trim().slice(0, 140) : null,
-      business_type: values.businessType.trim().slice(0, 80),
-      description: values.businessDescription.trim() ? values.businessDescription.trim().slice(0, 200) : null,
+      business_name: values.company.trim().slice(0, 160),
+      location: values.zipCode.trim().slice(0, 140),
+      business_type: values.industry.trim().slice(0, 80),
+      description: `No. of Locations: ${values.numberOfLocations.trim()}`.slice(0, 200),
       message: null,
       honeypot: '',
     };
@@ -246,27 +246,77 @@ export default function DemoPage() {
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label htmlFor="fullName" className="block text-sm font-semibold text-[#1F2616]">
-                      First and last name*
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-semibold text-[#1F2616]">
+                      First name*
                     </label>
                     <input
-                      id="fullName"
-                      name="fullName"
+                      id="firstName"
+                      name="firstName"
                       type="text"
-                      value={values.fullName}
-                      onChange={onChange('fullName')}
+                      value={values.firstName}
+                      onChange={onChange('firstName')}
                       disabled={isFormDisabled}
-                      aria-invalid={Boolean(errors.fullName)}
-                      aria-describedby={errors.fullName ? 'fullName-error' : undefined}
+                      aria-invalid={Boolean(errors.firstName)}
+                      aria-describedby={errors.firstName ? 'firstName-error' : undefined}
                       className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
-                      placeholder="e.g., Ana Perez"
-                      autoComplete="name"
+                      placeholder="First name"
+                      autoComplete="given-name"
                       required
                     />
-                    {errors.fullName && (
-                      <p id="fullName-error" className="mt-1 text-sm text-[#8F3D3D]">
-                        {errors.fullName}
+                    {errors.firstName && (
+                      <p id="firstName-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.firstName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-semibold text-[#1F2616]">
+                      Last name*
+                    </label>
+                    <input
+                      id="lastName"
+                      name="lastName"
+                      type="text"
+                      value={values.lastName}
+                      onChange={onChange('lastName')}
+                      disabled={isFormDisabled}
+                      aria-invalid={Boolean(errors.lastName)}
+                      aria-describedby={errors.lastName ? 'lastName-error' : undefined}
+                      className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
+                      placeholder="Last name"
+                      autoComplete="family-name"
+                      required
+                    />
+                    {errors.lastName && (
+                      <p id="lastName-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.lastName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="company" className="block text-sm font-semibold text-[#1F2616]">
+                      Company*
+                    </label>
+                    <input
+                      id="company"
+                      name="company"
+                      type="text"
+                      value={values.company}
+                      onChange={onChange('company')}
+                      disabled={isFormDisabled}
+                      aria-invalid={Boolean(errors.company)}
+                      aria-describedby={errors.company ? 'company-error' : undefined}
+                      className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
+                      placeholder="Company"
+                      autoComplete="organization"
+                      required
+                    />
+                    {errors.company && (
+                      <p id="company-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.company}
                       </p>
                     )}
                   </div>
@@ -321,80 +371,83 @@ export default function DemoPage() {
                     )}
                   </div>
 
-                  <div className="sm:col-span-2">
-                    <label htmlFor="businessName" className="block text-sm font-semibold text-[#1F2616]">
-                      Business name
+                  <div>
+                    <label htmlFor="zipCode" className="block text-sm font-semibold text-[#1F2616]">
+                      Zip code*
                     </label>
                     <input
-                      id="businessName"
-                      name="businessName"
+                      id="zipCode"
+                      name="zipCode"
                       type="text"
-                      value={values.businessName}
-                      onChange={onChange('businessName')}
+                      value={values.zipCode}
+                      onChange={onChange('zipCode')}
                       disabled={isFormDisabled}
+                      aria-invalid={Boolean(errors.zipCode)}
+                      aria-describedby={errors.zipCode ? 'zipCode-error' : undefined}
                       className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
-                      placeholder="e.g., Corner Market"
-                      autoComplete="organization"
+                      placeholder="Zip code"
+                      autoComplete="postal-code"
+                      required
                     />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label htmlFor="location" className="block text-sm font-semibold text-[#1F2616]">
-                      Location (country/city)
-                    </label>
-                    <input
-                      id="location"
-                      name="location"
-                      type="text"
-                      value={values.location}
-                      onChange={onChange('location')}
-                      disabled={isFormDisabled}
-                      className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
-                      placeholder="e.g., Santo Domingo, DR"
-                      autoComplete="address-level2"
-                    />
+                    {errors.zipCode && (
+                      <p id="zipCode-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.zipCode}
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label htmlFor="businessType" className="block text-sm font-semibold text-[#1F2616]">
-                      Business type
+                    <label htmlFor="industry" className="block text-sm font-semibold text-[#1F2616]">
+                      Industry*
                     </label>
                     <select
-                      id="businessType"
-                      name="businessType"
-                      value={values.businessType}
-                      onChange={onChange('businessType')}
+                      id="industry"
+                      name="industry"
+                      value={values.industry}
+                      onChange={onChange('industry')}
                       disabled={isFormDisabled}
+                      aria-invalid={Boolean(errors.industry)}
+                      aria-describedby={errors.industry ? 'industry-error' : undefined}
                       className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
+                      required
                     >
                       <option value="">Select…</option>
-                      {BUSINESS_TYPES.map((t) => (
+                      {INDUSTRIES.map((t) => (
                         <option key={t} value={t}>
                           {t}
                         </option>
                       ))}
                     </select>
+                    {errors.industry && (
+                      <p id="industry-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.industry}
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label htmlFor="businessDescription" className="block text-sm font-semibold text-[#1F2616]">
-                      What best describes you?
+                    <label htmlFor="numberOfLocations" className="block text-sm font-semibold text-[#1F2616]">
+                      No of Locations*
                     </label>
-                    <select
-                      id="businessDescription"
-                      name="businessDescription"
-                      value={values.businessDescription}
-                      onChange={onChange('businessDescription')}
+                    <input
+                      id="numberOfLocations"
+                      name="numberOfLocations"
+                      type="text"
+                      inputMode="numeric"
+                      value={values.numberOfLocations}
+                      onChange={onChange('numberOfLocations')}
                       disabled={isFormDisabled}
-                      className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
-                    >
-                      <option value="">Select…</option>
-                      {BUSINESS_DESCRIPTIONS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                      aria-invalid={Boolean(errors.numberOfLocations)}
+                      aria-describedby={errors.numberOfLocations ? 'numberOfLocations-error' : undefined}
+                      className="mt-1 w-full rounded-lg border border-[#D8CBB5] bg-gradient-to-b from-white to-[#FDFBF3] px-3 py-2 text-[#1F2616] placeholder:text-[#6B6A61] shadow-[inset_0_2px_0_0_rgba(255,255,255,0.9)] focus:outline-none focus:ring-2 focus:ring-[#008000]/35 focus:border-[#008000] hover:shadow-[0_10px_28px_rgba(31,38,22,0.10)] transition"
+                      placeholder="e.g., 1"
+                      required
+                    />
+                    {errors.numberOfLocations && (
+                      <p id="numberOfLocations-error" className="mt-1 text-sm text-[#8F3D3D]">
+                        {errors.numberOfLocations}
+                      </p>
+                    )}
                   </div>
                 </div>
 

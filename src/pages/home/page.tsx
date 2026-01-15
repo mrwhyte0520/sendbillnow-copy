@@ -106,12 +106,6 @@ export default function HomePage() {
                 Pricing
               </button>
               <Link to="/auth/login" className="text-[#008000] hover:text-[#006B00] cursor-pointer transition-colors">Sign In</Link>
-              <Link 
-                to="/auth/register" 
-                className="bg-[#008000] text-white px-4 py-2 rounded-lg whitespace-nowrap cursor-pointer shadow-md shadow-[#008000]/20 border border-[#006B00]/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-[#008000]/25 active:translate-y-0"
-              >
-                Free Trial
-              </Link>
             </div>
             <div className="md:hidden">
               <button className="text-gray-600 hover:text-gray-900 cursor-pointer transition-colors">
@@ -139,10 +133,10 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
-                  to="/auth/register"
+                  to="/auth/login"
                   className="bg-[#008000] text-white px-8 py-4 rounded-lg text-center font-semibold whitespace-nowrap cursor-pointer shadow-lg shadow-[#008000]/25 border border-[#006B00]/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#008000]/30 active:translate-y-0"
                 >
-                  Start Free Trial
+                  Sign In
                 </Link>
                 <Link
                   to="/demo"
@@ -223,10 +217,10 @@ export default function HomePage() {
                         Request Free Demo
                       </Link>
                       <Link
-                        to="/auth/register"
+                        to="/auth/login"
                         className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold bg-[#F6F0DE] text-gray-900 border border-[#D8CBB5] hover:bg-[#EFE6CF] transition-colors"
                       >
-                        Start Free Trial
+                        Sign In
                       </Link>
                     </div>
                   </div>
@@ -351,10 +345,10 @@ export default function HomePage() {
             to run sales, payments, inventory, and reporting in real time.
           </p>
           <Link 
-            to="/auth/register" 
+            to="/auth/login" 
             className="bg-white text-[#008000] px-8 py-4 rounded-lg font-bold text-lg inline-block cursor-pointer shadow-xl shadow-black/20 border border-white/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 active:translate-y-0"
           >
-            Start 15-Day Free Trial
+            Sign In
           </Link>
         </div>
       </section>
