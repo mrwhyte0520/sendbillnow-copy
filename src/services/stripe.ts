@@ -21,7 +21,8 @@ export const PLAN_PRICES_MONTHLY = {
   'plus': 19999,                 // USD $199.99
   'facturacion-simple': 1999,    // USD $19.99
   'facturacion-premium': 4999,   // USD $49.99
-  'pos-premium': 12999           // USD $129.99
+  'pos-basic': 9999,             // USD $99.99
+  'pos-premium': 39999           // USD $399.99
 };
 
 export const PLAN_PRICES_ANNUAL = {
@@ -30,7 +31,8 @@ export const PLAN_PRICES_ANNUAL = {
   'plus': 155988,                // USD $1,559.88
   'facturacion-simple': 10788,   // USD $107.88
   'facturacion-premium': 23988,  // USD $239.88
-  'pos-premium': 71988           // USD $719.88
+  'pos-basic': 83992,            // USD $839.92
+  'pos-premium': 335992          // USD $3,359.92
 };
 
 export const PLAN_NAMES = {
@@ -39,6 +41,7 @@ export const PLAN_NAMES = {
   'plus': 'PLUS',
   'facturacion-simple': 'Facturación Simple',
   'facturacion-premium': 'Facturación Premium',
+  'pos-basic': 'POS Basic',
   'pos-premium': 'POS Premium'
 };
 

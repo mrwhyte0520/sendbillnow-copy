@@ -35,6 +35,19 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
       ]
     },
     {
+      id: 'pos-basic',
+      name: 'POS Basic',
+      description: 'Essential POS features for small businesses',
+      icon: 'ri-store-2-line',
+      color: 'from-lime-500 to-lime-600',
+      features: [
+        '1 User',
+        'Full POS system',
+        '1 inventory warehouse',
+        'Unlimited products'
+      ]
+    },
+    {
       id: 'pos-premium',
       name: 'POS Premium',
       description: 'Complete solution for point of sale',
@@ -43,7 +56,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
       features: [
         '30 Users',
         'Full POS system',
-        '2 warehouses',
+        'Unlimited inventory warehouses',
         'Unlimited products'
       ],
       popular: true

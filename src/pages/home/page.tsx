@@ -33,6 +33,24 @@ export default function HomePage() {
 
   const plans = [
     {
+      name: 'Basic Plan',
+      priceMonthly: 99.99,
+      priceAnnual: 839.92,
+      description: 'Essential POS features for small businesses',
+      features: [
+        'Full dashboard',
+        'POS system',
+        '1 user',
+        'Unlimited products',
+        '1 inventory warehouse',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours'
+      ],
+      popular: false,
+      category: 'pos'
+    },
+    {
       name: 'Premium Plan',
       priceMonthly: 399.99,
       priceAnnual: 3359.92,
@@ -42,7 +60,7 @@ export default function HomePage() {
         'POS system',
         '30 users',
         'Unlimited products',
-        '2 inventory warehouses',
+        'Unlimited inventory warehouses',
         'Customer management',
         '2,000 electronic invoices',
         'Backup every 48 hours'

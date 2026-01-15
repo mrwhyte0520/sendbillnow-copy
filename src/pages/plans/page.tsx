@@ -39,6 +39,27 @@ export default function PlansPage() {
 
   const plans: Plan[] = [
     {
+      id: 'pos-basic',
+      name: 'Basic Plan',
+      priceMonthly: 99.99,
+      priceAnnual: 839.92,
+      description: 'Essential POS features for small businesses',
+      features: [
+        'Full dashboard',
+        'POS system',
+        '1 user',
+        'Unlimited products',
+        '1 inventory warehouse',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours'
+      ],
+      popular: false,
+      color: 'from-lime-500 to-lime-600',
+      icon: 'ri-store-2-line',
+      category: 'pos'
+    },
+    {
       id: 'pos-premium',
       name: 'Premium Plan',
       priceMonthly: 399.99,
@@ -49,7 +70,7 @@ export default function PlansPage() {
         'POS system',
         '30 users',
         'Unlimited products',
-        '2 inventory warehouses',
+        'Unlimited inventory warehouses',
         'Customer management',
         '2,000 electronic invoices',
         'Backup every 48 hours'

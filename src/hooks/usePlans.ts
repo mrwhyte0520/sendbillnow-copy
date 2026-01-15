@@ -306,6 +306,7 @@ export function usePlans() {
       'plus': 199.99,
       'facturacion-simple': 19.99,
       'facturacion-premium': 29.99,
+      'pos-basic': 99.99,
       'pos-premium': 399.99
     };
     return prices[planId] || 0;
@@ -338,6 +339,26 @@ export function usePlans() {
         'Nómina completa',
         'Análisis financiero avanzado',
         'Usuarios ilimitados'
+      ],
+      'pos-basic': [
+        'Full dashboard',
+        'POS system',
+        '1 user',
+        'Unlimited products',
+        '1 inventory warehouse',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours'
+      ],
+      'pos-premium': [
+        'Full dashboard',
+        'POS system',
+        '30 users',
+        'Unlimited products',
+        'Unlimited inventory warehouses',
+        'Customer management',
+        '2,000 electronic invoices',
+        'Backup every 48 hours'
       ]
     };
     return features[planId] || [];
