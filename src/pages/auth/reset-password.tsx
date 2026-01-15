@@ -31,13 +31,13 @@ export default function ResetPassword() {
     setLoading(true);
 
     if (!email) {
-      setError('Por favor ingresa tu correo electrónico');
+      setError('Please enter your email address.');
       setLoading(false);
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Por favor ingresa un email válido');
+      setError('Please enter a valid email.');
       setLoading(false);
       return;
     }
@@ -54,7 +54,7 @@ export default function ResetPassword() {
       setSuccess(true);
       setLoading(false);
     } catch (err: any) {
-      setError('Error al enviar el correo. Por favor intenta de nuevo.');
+      setError('We could not send the email. Please try again.');
       setLoading(false);
     }
   };
@@ -65,19 +65,19 @@ export default function ResetPassword() {
     setLoading(true);
 
     if (!newPassword || !confirmPassword) {
-      setError('Por favor completa todos los campos');
+      setError('Please complete all the fields.');
       setLoading(false);
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
+      setError('Password must be at least 6 characters.');
       setLoading(false);
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
+      setError('Passwords do not match.');
       setLoading(false);
       return;
     }
@@ -96,35 +96,35 @@ export default function ResetPassword() {
         navigate('/auth/login');
       }, 2000);
     } catch (err: any) {
-      setError('Error al actualizar la contraseña. Por favor intenta de nuevo.');
+      setError('We could not update your password. Please try again.');
       setLoading(false);
     }
   };
 
   if (success && !isResetMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#FDFBF3] via-white to-[#E7F2D9] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-[#008000]/10 rounded-full mb-6">
               <i className="ri-mail-send-line text-4xl text-[#008000]"></i>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Correo Enviado!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Email sent!</h2>
             <p className="text-gray-600 mb-6">
-              Hemos enviado un enlace de recuperación a <strong>{email}</strong>
+              We sent a recovery link to <strong>{email}</strong>
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-800">
+            <div className="bg-[#E7F2D9] border border-[#C7E5A8] rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#335322]">
                 <i className="ri-information-line mr-2"></i>
-                Por favor revisa tu bandeja de entrada y haz clic en el enlace para restablecer tu contraseña.
+                Please check your inbox and click the link to reset your password.
               </p>
             </div>
             <Link
               to="/auth/login"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] transition-all whitespace-nowrap"
             >
               <i className="ri-arrow-left-line mr-2"></i>
-              Volver al Inicio de Sesión
+              Back to sign in
             </Link>
           </div>
         </div>
@@ -134,25 +134,25 @@ export default function ResetPassword() {
 
   if (success && isResetMode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#FDFBF3] via-white to-[#E7F2D9] flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-[#008000]/10 rounded-full mb-6">
               <i className="ri-check-line text-4xl text-[#008000]"></i>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">¡Contraseña Actualizada!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Password updated!</h2>
             <p className="text-gray-600 mb-6">
-              Tu contraseña ha sido actualizada exitosamente.
+              Your password was updated successfully.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Serás redirigido al inicio de sesión en unos segundos...
+              You will be redirected to the sign-in page in a few seconds…
             </p>
             <Link
               to="/auth/login"
-              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all whitespace-nowrap"
+              className="inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] transition-all whitespace-nowrap"
             >
               <i className="ri-login-box-line mr-2"></i>
-              Ir a Iniciar Sesión
+              Go to sign in
             </Link>
           </div>
         </div>
@@ -161,21 +161,21 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#FDFBF3] via-white to-[#E7F2D9] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Logo y título */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#0A8A0A] to-[#006B00] rounded-2xl mb-4">
               <i className={`${isResetMode ? 'ri-lock-password-line' : 'ri-lock-unlock-line'} text-3xl text-white`}></i>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {isResetMode ? 'Nueva Contraseña' : 'Recuperar Contraseña'}
+              {isResetMode ? 'Create new password' : 'Reset your password'}
             </h1>
             <p className="text-gray-600">
               {isResetMode
-                ? 'Ingresa tu nueva contraseña'
-                : 'Te enviaremos un enlace para restablecer tu contraseña'}
+                ? 'Enter your new password'
+                : 'We will send you a link to reset your password'}
             </p>
           </div>
 
@@ -192,7 +192,7 @@ export default function ResetPassword() {
             <form onSubmit={handleRequestReset} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Correo Electrónico
+                  Email address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -203,8 +203,8 @@ export default function ResetPassword() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="tu@email.com"
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
+                    placeholder="you@email.com"
                     disabled={loading}
                   />
                 </div>
@@ -213,17 +213,17 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+                className="w-full bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#097509] hover:to-[#005300] focus:outline-none focus:ring-2 focus:ring-[#008000]/60 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
               >
                 {loading ? (
                   <>
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
-                    Enviando...
+                    Sending…
                   </>
                 ) : (
                   <>
                     <i className="ri-mail-send-line mr-2"></i>
-                    Enviar Enlace de Recuperación
+                    Send recovery link
                   </>
                 )}
               </button>
@@ -232,7 +232,7 @@ export default function ResetPassword() {
             <form onSubmit={handleUpdatePassword} className="space-y-6">
               <div>
                 <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nueva Contraseña
+                  New password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -244,7 +244,7 @@ export default function ResetPassword() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="Minimum 6 characters"
                     disabled={loading}
                   />
                   <button
@@ -260,7 +260,7 @@ export default function ResetPassword() {
 
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirmar Contraseña
+                  Confirm password
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -272,7 +272,7 @@ export default function ResetPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Repite tu contraseña"
+                    placeholder="Repeat your password"
                     disabled={loading}
                   />
                   <button
@@ -289,17 +289,17 @@ export default function ResetPassword() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+                className="w-full bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#097509] hover:to-[#005300] focus:outline-none focus:ring-2 focus:ring-[#008000]/60 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
               >
                 {loading ? (
                   <>
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
-                    Actualizando...
+                    Updating…
                   </>
                 ) : (
                   <>
                     <i className="ri-check-line mr-2"></i>
-                    Actualizar Contraseña
+                    Update password
                   </>
                 )}
               </button>
@@ -310,10 +310,10 @@ export default function ResetPassword() {
           <div className="mt-6 text-center">
             <Link
               to="/auth/login"
-              className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors inline-flex items-center whitespace-nowrap"
+              className="text-sm font-semibold text-[#0A8A0A] hover:text-[#056105] transition-colors inline-flex items-center whitespace-nowrap"
             >
               <i className="ri-arrow-left-line mr-1"></i>
-              Volver al Inicio de Sesión
+              Back to sign in
             </Link>
           </div>
         </div>
@@ -321,7 +321,7 @@ export default function ResetPassword() {
         {/* Footer */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            © 2024 Sistema Contable. Todos los derechos reservados.
+            © {new Date().getFullYear()} Send Bill Now. All rights reserved.
           </p>
         </div>
       </div>
