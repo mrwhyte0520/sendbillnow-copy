@@ -152,6 +152,15 @@ export default async function handler(req, res) {
 async function sendCredentialsEmail(email, fullName, password, trialDays) {
   // Option 1: Use Resend if available
   const resendApiKey = process.env.RESEND_API_KEY;
+  const resendFrom = (process.env.RESEND_FROM && String(process.env.RESEND_FROM).trim())
+    ? String(process.env.RESEND_FROM).trim()
+    : 'Send Bill Now <onboarding@resend.dev>';
+  const resendReplyTo = (process.env.RESEND_REPLY_TO && String(process.env.RESEND_REPLY_TO).trim())
+    ? String(process.env.RESEND_REPLY_TO).trim()
+    : null;
+  const publicBaseUrl = (process.env.PUBLIC_BASE_URL && String(process.env.PUBLIC_BASE_URL).trim())
+    ? String(process.env.PUBLIC_BASE_URL).trim().replace(/\/$/, '')
+    : 'https://sendbillnow.com';
   
   if (resendApiKey) {
     const response = await fetch('https://api.resend.com/emails', {
@@ -161,8 +170,9 @@ async function sendCredentialsEmail(email, fullName, password, trialDays) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Send Bill Now <noreply@sendbillnow.com>',
+        from: resendFrom,
         to: [email],
+        ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
         subject: 'Welcome to Send Bill Now - Your Account is Ready!',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -183,7 +193,7 @@ async function sendCredentialsEmail(email, fullName, password, trialDays) {
               <p style="font-size: 14px; color: #666;">For security, we recommend changing your password after your first login.</p>
               
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://sendbillnow.com/auth/login" style="background: #008000; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                <a href="${publicBaseUrl}/auth/login" style="background: #008000; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
                   Login to Your Account
                 </a>
               </div>
@@ -201,8 +211,15 @@ async function sendCredentialsEmail(email, fullName, password, trialDays) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to send email via Resend');
+      const errorText = await response.text().catch(() => '');
+      let errorData = null;
+      try {
+        errorData = errorText ? JSON.parse(errorText) : null;
+      } catch {
+        errorData = errorText;
+      }
+      console.error('Resend error response:', errorData);
+      throw new Error((errorData && errorData.message) || 'Failed to send email via Resend');
     }
     
     return true;
