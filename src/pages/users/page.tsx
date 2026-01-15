@@ -35,6 +35,8 @@ const MODULE_LABELS: Record<string, string> = {
 export default function UsersPage() {
   const { user } = useAuth();
 
+  const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee'>('roles');
+
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePerms, setRolePerms] = useState<RolePermission[]>([]);
@@ -334,7 +336,7 @@ export default function UsersPage() {
     }
   };
 
-  const deleteUser = async (userId: string, userRoleId: string) => {
+  const deleteUser = async (_userId: string, userRoleId: string) => {
     if (!user?.id || !isOwner) return;
     if (!confirm('¿Eliminar este usuario? Se eliminará su acceso al sistema.')) return;
     try {
@@ -359,6 +361,15 @@ export default function UsersPage() {
     perms: permissions.map(p => ({ perm: p, checked: rolePerms.some(rp => rp.role_id === r.id && rp.permission_id === p.id) }))
   })), [roles, permissions, rolePerms]);
 
+  const employeeForms = useMemo(
+    () => [
+      { title: 'Formulario 1', path: '/formulario1.pdf' },
+      { title: 'Formulario 2', path: '/formulario2.pdf' },
+      { title: 'Formulario 3', path: '/formulario3.pdf' },
+    ],
+    []
+  );
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 bg-[#F8F3E7] min-h-full">
@@ -369,197 +380,281 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* Roles */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
-          <div className="flex flex-col md:flex-row md:items-end gap-3">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
-              <input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Ex. Supervisor" />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input value={newRoleDesc} onChange={e => setNewRoleDesc(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Optional" />
-            </div>
-            <button 
-              onClick={addRole} 
-              disabled={!isOwner}
-              className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#566738]/30"
-            >
-              Create Role
-            </button>
-          </div>
-
-          <div className="mt-6 overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permissions by module</th>
-                  <th className="px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {grid.map(row => (
-                  <tr key={row.role.id}>
-                    <td className="px-4 py-2 align-top">
-                      <div className="font-medium text-gray-900">{row.role.name}</div>
-                      <div className="text-xs text-gray-500">{row.role.description || '—'}</div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {row.perms.map(({ perm, checked }) => (
-                          <label key={perm.id} className="inline-flex items-center gap-2 text-sm">
-                            <input 
-                              type="checkbox" 
-                              checked={checked} 
-                              onChange={(e) => toggleRolePerm(row.role.id, perm.id, e.target.checked)} 
-                              disabled={!isOwner}
-                              className={!isOwner ? 'cursor-not-allowed opacity-50' : ''}
-                            />
-                            <span className={!isOwner ? 'text-gray-400' : ''}>{MODULE_LABELS[perm.module] || perm.module}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {!isOwner && (
-                        <div className="text-xs text-gray-500 mt-2">
-                          Solo el usuario principal puede modificar permisos
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <button 
-                        onClick={() => deleteRole(row.role.id)} 
-                        disabled={!isOwner}
-                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {roles.length === 0 && (
-                  <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">No roles yet</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Create User */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Create User</h3>
-            {!isOwner && (
-              <span className="text-xs text-gray-500">Only the primary account owner can create users</span>
-            )}
-          </div>
-          <div className="flex flex-col md:flex-row gap-3 md:items-end">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={newUserEmail}
-                onChange={e => setNewUserEmail(e.target.value)}
-                disabled={!isOwner}
-                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="usuario@gmail.com"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={newUserPassword}
-                onChange={e => setNewUserPassword(e.target.value)}
-                disabled={!isOwner}
-                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder="At least 6 characters"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-              <select
-                value={newUserRoleId}
-                onChange={e => setNewUserRoleId(e.target.value)}
-                disabled={!isOwner}
-                className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">Select…</option>
-                {roles.map(r => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-            </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-2">
+          <div className="flex flex-wrap gap-2">
             <button
-              onClick={createUser}
-              disabled={!isOwner || creatingUser || !newUserEmail || !newUserPassword || !newUserRoleId}
-              className="px-4 py-2 bg-[#3E4D2C] text-white rounded-lg hover:bg-[#2D3A1C] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#3E4D2C]/30"
+              type="button"
+              onClick={() => setActiveDepartment('roles')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeDepartment === 'roles'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/30'
+                  : 'bg-[#FBF8EE] text-[#3E4D2C] border border-[#E2D6BD] hover:bg-[#F4EEDC]'
+              }`}
             >
-              {creatingUser ? 'Creating…' : 'Create User'}
+              Roles
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveDepartment('employee')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeDepartment === 'employee'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/30'
+                  : 'bg-[#FBF8EE] text-[#3E4D2C] border border-[#E2D6BD] hover:bg-[#F4EEDC]'
+              }`}
+            >
+              Employee
             </button>
           </div>
         </div>
 
-        {/* Users with assigned roles */}
-        <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
-          <h3 className="text-lg font-semibold mb-4">Users with Assigned Roles</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {usersWithRoles.map(u => (
-                  <tr key={u.id}>
-                    <td className="px-4 py-2 text-sm text-gray-700">{u.email}</td>
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                        {u.role_name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-sm">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        u.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {u.status === 'active' ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => toggleUserStatus(u.id, u.status)}
-                          disabled={!isOwner}
-                          className={`px-3 py-1 text-xs rounded ${
-                            u.status === 'active'
-                              ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          {u.status === 'active' ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                          onClick={() => deleteUser(u.id, u.user_role_id)}
-                          disabled={!isOwner}
-                          className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Delete
-                        </button>
+        {activeDepartment === 'employee' ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+            <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
+              <div>
+                <h3 className="text-lg font-semibold text-[#1F2618]">Employee</h3>
+                <p className="text-sm text-[#5B6844]">
+                  Keep these forms ready to share with applicants.
+                </p>
+              </div>
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Employee Forms')}&body=${encodeURIComponent(
+                  employeeForms.map(f => `${f.title}: ${window.location.origin}${f.path}`).join('\n')
+                )}`}
+                className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap shadow shadow-[#566738]/30"
+              >
+                Email forms
+              </a>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-6">
+              {employeeForms.map((form) => (
+                <div key={form.title} className="rounded-2xl border border-[#E0E7C8] overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#FBF8EE] border-b border-[#E2D6BD]">
+                    <div className="font-semibold text-[#1F2618]">{form.title}</div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={form.path}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 text-sm rounded-lg bg-white border border-[#E2D6BD] hover:bg-[#F4EEDC]"
+                      >
+                        Open
+                      </a>
+                      <a
+                        href={form.path}
+                        download
+                        className="px-3 py-1.5 text-sm rounded-lg bg-white border border-[#E2D6BD] hover:bg-[#F4EEDC]"
+                      >
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                  <div className="bg-white">
+                    <object data={form.path} type="application/pdf" className="w-full h-[70vh]">
+                      <div className="p-4 text-sm text-gray-600">
+                        Preview not available. Use the Open button to view the PDF.
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {usersWithRoles.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">No users assigned</td></tr>
-                )}
-              </tbody>
-            </table>
+                    </object>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Roles */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+              <div className="flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
+                  <input value={newRoleName} onChange={e => setNewRoleName(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Ex. Supervisor" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <input value={newRoleDesc} onChange={e => setNewRoleDesc(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-[#FBF8EE]" placeholder="Optional" />
+                </div>
+                <button 
+                  onClick={addRole} 
+                  disabled={!isOwner}
+                  className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#566738]/30"
+                >
+                  Create Role
+                </button>
+              </div>
+
+              <div className="mt-6 overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permissions by module</th>
+                      <th className="px-4 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {grid.map(row => (
+                      <tr key={row.role.id}>
+                        <td className="px-4 py-2 align-top">
+                          <div className="font-medium text-gray-900">{row.role.name}</div>
+                          <div className="text-xs text-gray-500">{row.role.description || '—'}</div>
+                        </td>
+                        <td className="px-4 py-2">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {row.perms.map(({ perm, checked }) => (
+                              <label key={perm.id} className="inline-flex items-center gap-2 text-sm">
+                                <input 
+                                  type="checkbox" 
+                                  checked={checked} 
+                                  onChange={(e) => toggleRolePerm(row.role.id, perm.id, e.target.checked)} 
+                                  disabled={!isOwner}
+                                  className={!isOwner ? 'cursor-not-allowed opacity-50' : ''}
+                                />
+                                <span className={!isOwner ? 'text-gray-400' : ''}>{MODULE_LABELS[perm.module] || perm.module}</span>
+                              </label>
+                            ))}
+                          </div>
+                          {!isOwner && (
+                            <div className="text-xs text-gray-500 mt-2">
+                              Solo el usuario principal puede modificar permisos
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <button 
+                            onClick={() => deleteRole(row.role.id)} 
+                            disabled={!isOwner}
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {roles.length === 0 && (
+                      <tr><td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">No roles yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Create User */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Create User</h3>
+                {!isOwner && (
+                  <span className="text-xs text-gray-500">Only the primary account owner can create users</span>
+                )}
+              </div>
+              <div className="flex flex-col md:flex-row gap-3 md:items-end">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={newUserEmail}
+                    onChange={e => setNewUserEmail(e.target.value)}
+                    disabled={!isOwner}
+                    className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="usuario@gmail.com"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                  <input
+                    type="password"
+                    value={newUserPassword}
+                    onChange={e => setNewUserPassword(e.target.value)}
+                    disabled={!isOwner}
+                    className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder="At least 6 characters"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select
+                    value={newUserRoleId}
+                    onChange={e => setNewUserRoleId(e.target.value)}
+                    disabled={!isOwner}
+                    className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select…</option>
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={createUser}
+                  disabled={!isOwner || creatingUser || !newUserEmail || !newUserPassword || !newUserRoleId}
+                  className="px-4 py-2 bg-[#3E4D2C] text-white rounded-lg hover:bg-[#2D3A1C] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed shadow shadow-[#3E4D2C]/30"
+                >
+                  {creatingUser ? 'Creating…' : 'Create User'}
+                </button>
+              </div>
+            </div>
+
+            {/* Users with assigned roles */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+              <h3 className="text-lg font-semibold mb-4">Users with Assigned Roles</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {usersWithRoles.map(u => (
+                      <tr key={u.id}>
+                        <td className="px-4 py-2 text-sm text-gray-700">{u.email}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                            {u.role_name}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            u.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {u.status === 'active' ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => toggleUserStatus(u.id, u.status)}
+                              disabled={!isOwner}
+                              className={`px-3 py-1 text-xs rounded ${
+                                u.status === 'active'
+                                  ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                            </button>
+                            <button
+                              onClick={() => deleteUser(u.id, u.user_role_id)}
+                              disabled={!isOwner}
+                              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {usersWithRoles.length === 0 && (
+                      <tr><td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-500">No users assigned</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );

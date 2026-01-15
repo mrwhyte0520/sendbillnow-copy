@@ -8,7 +8,9 @@ async function postWebnotiPlanPurchaseEvent() {
     const accessToken = data?.session?.access_token;
     if (!accessToken) return;
 
-    await fetch('/api/webnoti/event', {
+    const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+
+    await fetch(`${apiBase}/api/webnoti/event`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -372,34 +374,11 @@ export function usePlans() {
     // Marcar que el trial fue usado
     localStorage.setItem('contard_trial_used', 'true');
     
-    // Guardar el plan seleccionado para el trial
-    const plan: Plan = {
-      id: planId,
-      name: getPlanNameFromId(planId),
-      price: 0, // Gratis durante trial
-      features: [],
-      active: false, // No activo hasta que pague
-      color: 'from-blue-500 to-blue-600',
-      icon: 'ri-gift-line'
-    };
-    
     localStorage.setItem('contard_trial_plan', planId);
     
     setTrialInfo(newTrialInfo);
     
     return { success: true };
-  };
-
-  const getPlanNameFromId = (planId: string): string => {
-    const names: Record<string, string> = {
-      'pyme': 'PYME',
-      'pro': 'PRO',
-      'plus': 'PLUS',
-      'facturacion-simple': 'Facturación Simple',
-      'facturacion-premium': 'Facturación Premium',
-      'pos-premium': 'POS Premium'
-    };
-    return names[planId] || planId;
   };
 
   return {

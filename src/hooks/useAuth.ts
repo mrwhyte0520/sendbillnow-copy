@@ -4,7 +4,9 @@ import type { User } from '@supabase/supabase-js';
 
 async function postWebnotiEvent(accessToken: string, event: 'login' | 'register') {
   try {
-    await fetch('/api/webnoti/event', {
+    const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+
+    await fetch(`${apiBase}/api/webnoti/event`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

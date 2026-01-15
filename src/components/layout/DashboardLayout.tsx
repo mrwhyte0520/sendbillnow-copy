@@ -44,6 +44,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [isOwner, setIsOwner] = useState(true); // Por defecto true hasta verificar
+  const SUPER_ADMIN_EMAIL = 'rolianaurora30@gmail.com';
+  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
   const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; moduleName: string; requiredPlan: string }>({
     show: false,
     moduleName: '',
@@ -353,6 +355,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Opening Balances', href: '/settings/opening-balances' },
         { name: 'Inventory', href: '/settings/inventory' },
         { name: 'Backups', href: '/settings/backup' }
+      ]
+    }] : []),
+    // 15. Admin (super admin only)
+    ...(isSuperAdmin ? [{
+      name: 'Admin',
+      href: '/admin/demo-requests',
+      icon: 'ri-admin-line',
+      current: location.pathname.startsWith('/admin'),
+      submenu: [
+        { name: 'Demo Requests', href: '/admin/demo-requests' }
       ]
     }] : [])
   ];

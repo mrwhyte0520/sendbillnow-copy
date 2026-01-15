@@ -17,7 +17,7 @@ interface Plan {
   popular: boolean;
   color: string;
   icon: string;
-  category: 'contabilidad' | 'facturacion' | 'pos';
+  category: 'contabilidad' | 'pos';
 }
 
 export default function PlansPage() {
@@ -38,52 +38,12 @@ export default function PlansPage() {
   } = usePlans();
 
   const plans: Plan[] = [
-    // Existing plans
-    {
-      id: 'facturacion-simple',
-      name: 'Simple Invoicing',
-      priceMonthly: 19.99,
-      priceAnnual: 167.92,
-      description: 'Ideal for businesses starting with basic invoicing',
-      features: [
-        '1 user',
-        '100 invoices per month',
-        'Quotations',
-        '2 invoice templates',
-        'Credit/debit notes',
-        'Basic reports'
-      ],
-      popular: false,
-      color: 'from-teal-500 to-teal-600',
-      icon: 'ri-file-text-line',
-      category: 'facturacion'
-    },
-    {
-      id: 'facturacion-premium',
-      name: 'Premium Invoicing',
-      priceMonthly: 29.99,
-      priceAnnual: 251.92,
-      description: 'For companies that need higher invoicing capacity',
-      features: [
-        '8 users',
-        '500 invoices per month',
-        'Quotations',
-        '2 invoice templates',
-        '1 inventory warehouse',
-        'Credit/debit notes',
-        'Comprehensive reports'
-      ],
-      popular: false,
-      color: 'from-indigo-500 to-indigo-600',
-      icon: 'ri-file-list-3-line',
-      category: 'facturacion'
-    },
     {
       id: 'pos-premium',
-      name: 'POS Premium',
+      name: 'Premium Plan',
       priceMonthly: 399.99,
       priceAnnual: 3359.92,
-      description: 'Complete solution for retail points of sale and business management',
+      description: 'Complete POS System, Inventory Control and Payroll Management, all in one Stop',
       features: [
         'Full dashboard',
         'POS system',
@@ -114,7 +74,7 @@ export default function PlansPage() {
   };
 
   const getPeriodLabel = () => {
-    return billingPeriod === 'monthly' ? '/month' : '/year';
+    return billingPeriod === 'monthly' ? '/monthly' : '/yearly';
   };
 
   const getSavingsPercent = (plan: Plan) => {
@@ -170,7 +130,6 @@ export default function PlansPage() {
 
   const trialStatus = getTrialStatus();
   const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
-  const facturacionPlans = plans.filter(p => p.category === 'facturacion');
   const posPlans = plans.filter(p => p.category === 'pos');
 
   const formatTimeLeft = () => {
@@ -208,19 +167,15 @@ export default function PlansPage() {
           <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
           {billingPeriod === 'monthly' ? (
             <div className="flex items-baseline justify-center mb-2">
-              <span className="text-sm">USD $</span>
-              <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceMonthly)}</span>
-              <span className="text-sm">/month</span>
+              <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
             </div>
           ) : (
             <div className="mb-2">
               <div className="text-sm line-through opacity-60 mb-1">
-                USD ${formatMoney(plan.priceMonthly * 12)}/year
+                ${formatMoney(plan.priceMonthly * 12)}/yearly
               </div>
               <div className="flex items-baseline justify-center">
-                <span className="text-sm">USD $</span>
-                <span className="text-3xl font-bold mx-1">{formatMoney(plan.priceAnnual)}</span>
-                <span className="text-sm">/year</span>
+                <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
               </div>
               <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
                 30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
@@ -371,28 +326,14 @@ export default function PlansPage() {
           </div>
         )}
 
-        {/* Facturación Plans Section */}
-        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              <i className="ri-file-text-line mr-2 text-blue-600"></i>
-              Invoicing Plans
-            </h2>
-            <p className="text-gray-600">Quoting and invoicing solutions</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {facturacionPlans.map(renderPlanCard)}
-          </div>
-        </div>
-
         {/* POS Plans Section */}
         <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               <i className="ri-store-2-line mr-2 text-purple-600"></i>
-              POS Plans for Businesses
+              Smart POS Price Plans for your Business
             </h2>
-            <p className="text-gray-600">Complete solution for retail points of sale and business management</p>
+            <p className="text-gray-600">A Complete Point of Sale Smart System, in one Stop! This help your Business Rise to the next level.</p>
           </div>
           <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
             {posPlans.map(renderPlanCard)}
@@ -420,11 +361,11 @@ export default function PlansPage() {
                   <i className={`${selectedPlanData.icon} text-3xl mb-2`}></i>
                   <h4 className="text-lg font-bold">{selectedPlanData.name}</h4>
                   <div className="text-2xl font-bold">
-                    USD ${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
+                    ${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
                   </div>
                   {billingPeriod === 'annual' && getSavingsPercent(selectedPlanData) > 0 && (
                     <div className="text-sm mt-1 bg-white/20 px-3 py-1 rounded-full inline-block">
-                      Save {getSavingsPercent(selectedPlanData)}% annually
+                      Save {getSavingsPercent(selectedPlanData)}%
                     </div>
                   )}
                 </div>

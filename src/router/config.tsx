@@ -43,6 +43,7 @@ import PayrollEmployeeExitsPage from '../pages/payroll/employee-exits/page';
 const PublicDocumentPage = lazy(() => import('../pages/public-document/page'));
 
 const HomePage = lazy(() => import('../pages/home/page'));
+const DemoPage = lazy(() => import('../pages/demo/page'));
 const DashboardPage = lazy(() => import('../pages/dashboard/page'));
 const StatisticsPage = lazy(() => import('../pages/statistics/page'));
 const AccountingPage = lazy(() => import('../pages/accounting/page'));
@@ -86,6 +87,9 @@ const DocumentPage = lazy(() => import('../pages/document/page'));
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/page'));
 const CompanySettingsPage = lazy(() => import('../pages/settings/company/page'));
+
+// Admin Pages
+const AdminDemoRequestsPage = lazy(() => import('../pages/admin/demo-requests/page'));
 const OpeningBalancesPage = lazy(() => import('../pages/settings/opening-balances/page'));
 const UsersSettingsPage = lazy(() => import('../pages/settings/users/page'));
 const AccountingSettingsPage = lazy(() => import('../pages/settings/accounting/page'));
@@ -143,7 +147,6 @@ const RevaluationPage = lazy(() => import('../pages/fixed-assets/revaluation/pag
 const AssetDisposalPage = lazy(() => import('../pages/fixed-assets/disposal/page'));
 
 // Banks independent module pages
-const BanksModuleHomePage = lazy(() => import('../pages/banks-module/index'));
 const BankAccountsPage = lazy(() => import('../pages/banks-module/bank-accounts'));
 const BankAccountTypesPage = lazy(() => import('../pages/banks-module/account-types'));
 const BankDepositsPage = lazy(() => import('../pages/banks-module/deposits'));
@@ -164,6 +167,10 @@ const routes: RouteObject[] = [
   {
     path: '/',
     element: <HomePage />
+  },
+  {
+    path: '/demo',
+    element: <DemoPage />
   },
   {
     path: '/public/document/:type/:token',
@@ -695,6 +702,11 @@ const routes: RouteObject[] = [
   {
     path: '/settings/stores',
     element: <ProtectedRoute><StoresPage /></ProtectedRoute>
+  },
+  // Admin Routes (Super Admin only)
+  {
+    path: '/admin/demo-requests',
+    element: <ProtectedRoute><AdminDemoRequestsPage /></ProtectedRoute>
   },
   // Auth Routes
   {
