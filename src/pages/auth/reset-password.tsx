@@ -16,6 +16,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [recoverySessionReady, setRecoverySessionReady] = useState(true);
+  const [isValidatingRecoveryLink, setIsValidatingRecoveryLink] = useState(false);
   const [recoveryValidationNonce, setRecoveryValidationNonce] = useState(0);
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export default function ResetPassword() {
 
     if (!accessToken || !refreshToken) {
       setRecoverySessionReady(false);
+      setIsValidatingRecoveryLink(false);
       setError('Your recovery link is missing required tokens. Please request a new link.');
       return;
     }
@@ -50,9 +52,11 @@ export default function ResetPassword() {
       if (cancelled) return;
       setError('We could not validate your recovery link (timeout). Please request a new link and try again.');
       setRecoverySessionReady(false);
+      setIsValidatingRecoveryLink(false);
     }, 10000);
 
     setRecoverySessionReady(false);
+    setIsValidatingRecoveryLink(true);
     supabase.auth
       .setSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(({ error }) => {
@@ -61,15 +65,18 @@ export default function ResetPassword() {
         if (error) {
           setError(error.message);
           setRecoverySessionReady(false);
+          setIsValidatingRecoveryLink(false);
           return;
         }
         setRecoverySessionReady(true);
+        setIsValidatingRecoveryLink(false);
       })
       .catch((err: any) => {
         window.clearTimeout(timeoutId);
         if (cancelled) return;
         setError(err?.message || 'We could not validate your recovery link. Please request a new one.');
         setRecoverySessionReady(false);
+        setIsValidatingRecoveryLink(false);
       });
     return () => {
       cancelled = true;
@@ -341,7 +348,7 @@ export default function ResetPassword() {
 
               <button
                 type="submit"
-                disabled={loading || !recoverySessionReady}
+                disabled={loading || isValidatingRecoveryLink || !recoverySessionReady}
                 className="w-full bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#097509] hover:to-[#005300] focus:outline-none focus:ring-2 focus:ring-[#008000]/60 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
               >
                 {loading ? (
@@ -349,7 +356,7 @@ export default function ResetPassword() {
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
                     Updating…
                   </>
-                ) : !recoverySessionReady ? (
+                ) : isValidatingRecoveryLink ? (
                   <>
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
                     Validating link…
@@ -362,7 +369,7 @@ export default function ResetPassword() {
                 )}
               </button>
 
-              {isResetMode && !recoverySessionReady && (
+              {isResetMode && !recoverySessionReady && !isValidatingRecoveryLink && (
                 <button
                   type="button"
                   onClick={() => {
