@@ -236,6 +236,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: 'ri-bar-chart-2-line',
       current: location.pathname === '/statistics'
     },
+    // CONTADOR Module
+    {
+      name: 'Contador',
+      href: '/contador',
+      icon: 'ri-calculator-line',
+      current: location.pathname.startsWith('/contador'),
+      submenu: [
+        { name: 'Staff Report', href: '/contador/staff-report' },
+        { name: 'Caja & Finanza', href: '/contador/caja-finanza' },
+        { name: 'Nómina', href: '/contador/nomina' },
+        { name: 'Compra & Proveedores', href: '/contador/compra-proveedores' },
+        { name: 'Products', href: '/contador/products' },
+        { name: 'Inventario', href: '/contador/inventario' },
+        { name: 'Devoluciones', href: '/contador/devoluciones' },
+        { name: 'Reportes', href: '/contador/reportes' },
+      ]
+    },
     // Accounts Receivable
     {
       name: 'Accounts Receivable',

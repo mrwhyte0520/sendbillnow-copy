@@ -46,6 +46,17 @@ const HomePage = lazy(() => import('../pages/home/page'));
 const DemoPage = lazy(() => import('../pages/demo/page'));
 const DashboardPage = lazy(() => import('../pages/dashboard/page'));
 const StatisticsPage = lazy(() => import('../pages/statistics/page'));
+
+// Contador Pages
+const ContadorStaffReportPage = lazy(() => import('../pages/contador/staff-report/page'));
+const ContadorCajaFinanzaPage = lazy(() => import('../pages/contador/caja-finanza/page'));
+const ContadorNominaPage = lazy(() => import('../pages/contador/nomina/page'));
+const ContadorCompraProveedoresPage = lazy(() => import('../pages/contador/compra-proveedores/page'));
+const ContadorProductsPage = lazy(() => import('../pages/contador/products/page'));
+const ContadorInventarioPage = lazy(() => import('../pages/contador/inventario/page'));
+const ContadorDevolucionesPage = lazy(() => import('../pages/contador/devoluciones/page'));
+const ContadorReportesPage = lazy(() => import('../pages/contador/reportes/page'));
+
 const AccountingPage = lazy(() => import('../pages/accounting/page'));
 const ChartAccountsPage = lazy(() => import('../pages/accounting/chart-accounts/page'));
 
@@ -191,6 +202,39 @@ const routes: RouteObject[] = [
   {
     path: '/statistics',
     element: <StatisticsPage />
+  },
+  // CONTADOR Module Routes
+  {
+    path: '/contador/staff-report',
+    element: <ProtectedRoute><ContadorStaffReportPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/caja-finanza',
+    element: <ProtectedRoute><ContadorCajaFinanzaPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/nomina',
+    element: <ProtectedRoute><ContadorNominaPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/compra-proveedores',
+    element: <ProtectedRoute><ContadorCompraProveedoresPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/products',
+    element: <ProtectedRoute><ContadorProductsPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/inventario',
+    element: <ProtectedRoute><ContadorInventarioPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/devoluciones',
+    element: <ProtectedRoute><ContadorDevolucionesPage /></ProtectedRoute>
+  },
+  {
+    path: '/contador/reportes',
+    element: <ProtectedRoute><ContadorReportesPage /></ProtectedRoute>
   },
   {
     path: '/profile',
