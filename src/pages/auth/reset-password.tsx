@@ -16,6 +16,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [recoverySessionReady, setRecoverySessionReady] = useState(true);
+  const [recoveryValidationNonce, setRecoveryValidationNonce] = useState(0);
 
   useEffect(() => {
     // Verificar si hay un hash de recuperación en la URL
@@ -44,10 +45,19 @@ export default function ResetPassword() {
       return;
     }
 
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      setError('We could not validate your recovery link (timeout). Please request a new link and try again.');
+      setRecoverySessionReady(false);
+    }, 10000);
+
     setRecoverySessionReady(false);
     supabase.auth
       .setSession({ access_token: accessToken, refresh_token: refreshToken })
       .then(({ error }) => {
+        window.clearTimeout(timeoutId);
+        if (cancelled) return;
         if (error) {
           setError(error.message);
           setRecoverySessionReady(false);
@@ -56,10 +66,16 @@ export default function ResetPassword() {
         setRecoverySessionReady(true);
       })
       .catch((err: any) => {
+        window.clearTimeout(timeoutId);
+        if (cancelled) return;
         setError(err?.message || 'We could not validate your recovery link. Please request a new one.');
         setRecoverySessionReady(false);
       });
-  }, []);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [recoveryValidationNonce]);
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,6 +361,20 @@ export default function ResetPassword() {
                   </>
                 )}
               </button>
+
+              {isResetMode && !recoverySessionReady && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setRecoveryValidationNonce((v) => v + 1);
+                  }}
+                  disabled={loading}
+                  className="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Retry validation
+                </button>
+              )}
             </form>
           )}
 
