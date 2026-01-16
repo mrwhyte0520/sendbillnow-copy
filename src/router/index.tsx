@@ -23,6 +23,9 @@ export function AppRoutes() {
   const location = useLocation();
   const { user, loading } = useAuth();
 
+  const publicRoutes = ['/auth/login', '/auth/register', '/auth/reset-password', '/'];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+
   useEffect(() => {
     window.REACT_APP_NAVIGATE = navigate;
     navigateResolver(window.REACT_APP_NAVIGATE);
@@ -30,9 +33,6 @@ export function AppRoutes() {
 
   useEffect(() => {
     if (!loading && false) {
-      const publicRoutes = ['/auth/login', '/auth/register', '/auth/reset-password', '/'];
-      const isPublicRoute = publicRoutes.includes(location.pathname);
-
       if (!user && !isPublicRoute) {
         // Usuario no autenticado intentando acceder a ruta protegida
         navigate('/auth/login', { replace: true });
@@ -49,7 +49,7 @@ export function AppRoutes() {
     }
   }, [user, loading, location.pathname, navigate]);
 
-  if (loading) {
+  if (loading && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
