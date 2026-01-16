@@ -48,6 +48,7 @@ const DashboardPage = lazy(() => import('../pages/dashboard/page'));
 const StatisticsPage = lazy(() => import('../pages/statistics/page'));
 
 // Contador Pages
+const ContadorPage = lazy(() => import('../pages/contador/page'));
 const ContadorStaffReportPage = lazy(() => import('../pages/contador/staff-report/page'));
 const ContadorCajaFinanzaPage = lazy(() => import('../pages/contador/caja-finanza/page'));
 const ContadorNominaPage = lazy(() => import('../pages/contador/nomina/page'));
@@ -204,6 +205,10 @@ const routes: RouteObject[] = [
     element: <StatisticsPage />
   },
   // CONTADOR Module Routes
+  {
+    path: '/contador',
+    element: <ProtectedRoute><ContadorPage /></ProtectedRoute>
+  },
   {
     path: '/contador/staff-report',
     element: <ProtectedRoute><ContadorStaffReportPage /></ProtectedRoute>

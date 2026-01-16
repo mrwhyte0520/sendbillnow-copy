@@ -236,21 +236,21 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       icon: 'ri-bar-chart-2-line',
       current: location.pathname === '/statistics'
     },
-    // CONTADOR Module
+    // ACCOUNTING MODULE (CONTADOR – USA)
     {
-      name: 'Contador',
+      name: 'Accounting',
       href: '/contador',
       icon: 'ri-calculator-line',
       current: location.pathname.startsWith('/contador'),
       submenu: [
         { name: 'Staff Report', href: '/contador/staff-report' },
-        { name: 'Caja & Finanza', href: '/contador/caja-finanza' },
-        { name: 'Nómina', href: '/contador/nomina' },
-        { name: 'Compra & Proveedores', href: '/contador/compra-proveedores' },
+        { name: 'Cash & Finance', href: '/contador/caja-finanza' },
+        { name: 'Payroll', href: '/contador/nomina' },
+        { name: 'Purchases & Vendors', href: '/contador/compra-proveedores' },
         { name: 'Products', href: '/contador/products' },
-        { name: 'Inventario', href: '/contador/inventario' },
-        { name: 'Devoluciones', href: '/contador/devoluciones' },
-        { name: 'Reportes', href: '/contador/reportes' },
+        { name: 'Inventory', href: '/contador/inventario' },
+        { name: 'Returns', href: '/contador/devoluciones' },
+        { name: 'Financial Reports', href: '/contador/reportes' },
       ]
     },
     // Accounts Receivable
