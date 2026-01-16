@@ -18,8 +18,9 @@ export default function ResetPassword() {
   useEffect(() => {
     // Verificar si hay un hash de recuperación en la URL
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get('type');
-    
+    const searchParams = new URLSearchParams(window.location.search);
+    const type = hashParams.get('type') || searchParams.get('type');
+
     if (type === 'recovery') {
       setIsResetMode(true);
     }
