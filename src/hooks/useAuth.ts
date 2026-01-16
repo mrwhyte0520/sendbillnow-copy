@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
+function getAuthRedirectUrl() {
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : '';
+  return origin ? `${origin}/auth/reset-password` : undefined;
+}
+
 async function postWebnotiEvent(accessToken: string, event: 'login' | 'register') {
   try {
     const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
@@ -101,6 +108,7 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      const redirectTo = getAuthRedirectUrl();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -108,7 +116,7 @@ export const useAuth = () => {
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: "https://prueba3-contabi-5kna2.vercel.app/auth/reset-password",
+          ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
         },
       });
 
@@ -157,9 +165,8 @@ export const useAuth = () => {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://prueba3-contabi-5kna2.vercel.app/auth/reset-password",
-      });
+      const redirectTo = getAuthRedirectUrl();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
 
       if (error) throw error;
 
