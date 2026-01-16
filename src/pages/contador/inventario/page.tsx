@@ -119,8 +119,8 @@ export default function ContadorInventarioPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-stack-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-stack-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Items</p>
@@ -130,38 +130,46 @@ export default function ContadorInventarioPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-money-dollar-circle-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Value</p>
-                <p className="text-2xl font-bold text-green-600">${stats.totalValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalValue.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <i className="ri-error-warning-line text-xl text-yellow-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-error-warning-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Low Stock</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.lowStock}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.lowStock}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <i className="ri-close-circle-line text-xl text-red-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-close-circle-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Out of Stock</p>
-                <p className="text-2xl font-bold text-red-600">{stats.outOfStock}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.outOfStock}</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008000]"></div>
+            <span className="ml-3 text-gray-600">Loading inventory...</span>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -216,9 +224,9 @@ export default function ContadorInventarioPage() {
                         <td className="px-4 py-3 text-right font-medium text-[#008000]">${item.totalValue.toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            item.status === 'in-stock' ? 'bg-green-100 text-green-700' :
-                            item.status === 'low-stock' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
+                            item.status === 'in-stock' ? 'bg-[#008000]/15 text-[#006600]' :
+                            item.status === 'low-stock' ? 'bg-[#008000]/10 text-[#006600]' :
+                            'bg-[#008000]/5 text-[#006600]'
                           }`}>
                             {item.status === 'in-stock' ? 'In Stock' : item.status === 'low-stock' ? 'Low Stock' : 'Out of Stock'}
                           </span>
@@ -249,9 +257,9 @@ export default function ContadorInventarioPage() {
                         <td className="px-4 py-3 text-gray-600">{mov.date}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            mov.type === 'in' ? 'bg-green-100 text-green-700' :
-                            mov.type === 'out' ? 'bg-blue-100 text-blue-700' :
-                            'bg-orange-100 text-orange-700'
+                            mov.type === 'in' ? 'bg-[#008000]/15 text-[#006600]' :
+                            mov.type === 'out' ? 'bg-[#008000]/10 text-[#006600]' :
+                            'bg-[#008000]/5 text-[#006600]'
                           }`}>
                             {mov.type === 'in' ? 'Stock In' : mov.type === 'out' ? 'Stock Out' : 'Adjustment'}
                           </span>

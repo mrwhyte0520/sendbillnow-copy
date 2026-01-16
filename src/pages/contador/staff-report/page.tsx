@@ -205,8 +205,8 @@ export default function ContadorStaffReportPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-team-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-team-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Employees</p>
@@ -216,34 +216,34 @@ export default function ContadorStaffReportPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-user-follow-line text-xl text-green-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-user-follow-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Active</p>
-                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.active}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <i className="ri-user-unfollow-line text-xl text-red-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-user-unfollow-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Inactive</p>
-                <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.inactive}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-calendar-check-line text-xl text-purple-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-calendar-check-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Avg. Attendance</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.avgAttendance}%</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.avgAttendance}%</p>
               </div>
             </div>
           </div>

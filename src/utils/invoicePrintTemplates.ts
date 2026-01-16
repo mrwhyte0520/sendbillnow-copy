@@ -30,8 +30,8 @@ interface CompanyData {
   logo?: string;
 }
 
-const GREEN = '#008000';
-const GREEN_LIGHT = '#e6f2e6';
+const BLUE = '#0d3b66';
+const BLUE_LIGHT = '#e6eef5';
 
 export function generateInvoiceHtml(
   invoice: InvoiceData,
@@ -39,7 +39,7 @@ export function generateInvoiceHtml(
   company: CompanyData,
   templateType: InvoiceTemplateType
 ): string {
-  const docTitle = templateType === 'quotation' ? 'QUOTATION' : 'INVOICE';
+  const docTitle = templateType === 'quotation' ? 'ESTIMATED COST' : 'INVOICE';
 
   if (templateType === 'simple') {
     return generateSimpleTemplate(invoice, customer, company, docTitle);
@@ -58,7 +58,7 @@ function generateSimpleTemplate(
 ): string {
   // Generate rows with alternating colors
   const coloredRows = (invoice.items || []).map((item, idx) => 
-    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
   ).join('');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
@@ -66,35 +66,35 @@ function generateSimpleTemplate(
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
 .invoice{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
-.logo-section h1{font-size:22px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+.logo-section h1{font-size:22px;color:${BLUE};margin-bottom:6px;font-weight:700;}
 .logo-section p{font-size:11px;color:#666;margin:3px 0;}
 .invoice-info{text-align:right;}
-.invoice-info h2{font-size:28px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.invoice-info h2{font-size:32px;color:${BLUE};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
 .invoice-info p{font-size:11px;color:#666;margin:4px 0;}
 .invoice-info strong{color:#333;}
-.customer-section{padding:20px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};}
-.customer-section h3{font-size:13px;color:${GREEN};margin-bottom:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+.customer-section{padding:20px 28px;background:${BLUE_LIGHT};border-bottom:3px solid ${BLUE};}
+.customer-section h3{font-size:13px;color:${BLUE};margin-bottom:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 .customer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .customer-grid p{font-size:12px;color:#333;}
-.customer-grid strong{color:${GREEN};}
+.customer-grid strong{color:${BLUE};}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 th:nth-child(3),th:nth-child(5){text-align:right;}
 th:nth-child(4){text-align:center;}
-.totals{padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;background:#fafafa;border-top:2px solid ${GREEN};}
+.totals{padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;background:#fafafa;border-top:2px solid ${BLUE};}
 .notes{flex:1;padding-right:40px;}
-.notes h4{font-size:11px;color:${GREEN};margin-bottom:10px;text-transform:uppercase;font-weight:700;}
-.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:14px;min-height:70px;font-size:11px;color:#666;background:#fff;}
-.summary{min-width:260px;background:#fff;border-radius:8px;padding:16px;border:2px solid ${GREEN_LIGHT};}
+.notes h4{font-size:11px;color:${BLUE};margin-bottom:10px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:14px;min-height:70px;font-size:11px;color:#666;background:#fff;}
+.summary{min-width:260px;background:#fff;border-radius:8px;padding:16px;border:2px solid ${BLUE_LIGHT};}
 .summary-row{display:flex;justify-content:space-between;padding:10px 0;font-size:13px;border-bottom:1px solid #eee;}
 .summary-row span:first-child{color:#666;}
 .summary-row span:last-child{font-weight:600;color:#333;}
-.summary-row.total{border-top:3px solid ${GREEN};border-bottom:none;font-weight:700;font-size:18px;margin-top:10px;padding-top:14px;background:${GREEN_LIGHT};margin:-16px;margin-top:10px;padding:14px 16px;border-radius:0 0 6px 6px;}
-.summary-row.total span:first-child{color:${GREEN};}
-.summary-row.total span:last-child{color:${GREEN};}
-.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.customer-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}}
+.summary-row.total{border-top:3px solid ${BLUE};border-bottom:none;font-weight:700;font-size:18px;margin-top:10px;padding-top:14px;background:${BLUE_LIGHT};margin:-16px;margin-top:10px;padding:14px 16px;border-radius:0 0 6px 6px;}
+.summary-row.total span:first-child{color:${BLUE};}
+.summary-row.total span:last-child{color:${BLUE};}
+.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
@@ -107,7 +107,7 @@ th:nth-child(4){text-align:center;}
     </div>
     <div class="invoice-info">
       <h2>${docTitle}</h2>
-      <p><strong>Invoice No.:</strong> ${invoice.invoiceNumber}</p>
+      <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
@@ -115,7 +115,7 @@ th:nth-child(4){text-align:center;}
     </div>
   </div>
   <div class="customer-section">
-    <h3>Customer Information</h3>
+    <h3>CUSTOMER</h3>
     <div class="customer-grid">
       <p><strong>Name:</strong> ${customer.name}</p>
       <p><strong>Email:</strong> ${customer.email || '-'}</p>
@@ -148,7 +148,7 @@ function generateDetailedTemplate(
 ): string {
   // Generate rows with alternating colors
   const coloredRows = (invoice.items || []).map((item, idx) => 
-    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
   ).join('');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
@@ -156,41 +156,41 @@ function generateDetailedTemplate(
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
 .invoice{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
-.logo-section h1{font-size:20px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+.logo-section h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
 .logo-section p{font-size:10px;color:#666;margin:3px 0;}
 .invoice-info{text-align:right;}
-.invoice-info h2{font-size:26px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.invoice-info h2{font-size:30px;color:${BLUE};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
 .invoice-info p{font-size:10px;color:#666;margin:4px 0;}
 .invoice-info strong{color:#333;}
-.customer-section{padding:20px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};}
-.customer-section h3{font-size:12px;color:${GREEN};margin-bottom:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+.customer-section{padding:20px 28px;background:${BLUE_LIGHT};border-bottom:3px solid ${BLUE};}
+.customer-section h3{font-size:12px;color:${BLUE};margin-bottom:12px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 .customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .customer-grid p{font-size:11px;color:#333;margin:3px 0;}
-.customer-grid strong{color:${GREEN};}
+.customer-grid strong{color:${BLUE};}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 th:nth-child(3),th:nth-child(5){text-align:right;}
 th:nth-child(4){text-align:center;}
-.totals{padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;background:#fafafa;border-top:2px solid ${GREEN};}
+.totals{padding:20px 28px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;background:#fafafa;border-top:2px solid ${BLUE};}
 .notes{flex:1;}
-.notes h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
-.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
-.summary{min-width:220px;background:#fff;border-radius:8px;padding:14px;border:2px solid ${GREEN_LIGHT};}
+.notes h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
+.summary{min-width:220px;background:#fff;border-radius:8px;padding:14px;border:2px solid ${BLUE_LIGHT};}
 .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px solid #eee;}
 .summary-row span:first-child{color:#666;}
 .summary-row span:last-child{font-weight:600;color:#333;}
-.summary-row.total{border-top:3px solid ${GREEN};border-bottom:none;font-weight:700;font-size:16px;margin-top:8px;padding-top:12px;background:${GREEN_LIGHT};margin:-14px;margin-top:8px;padding:12px 14px;border-radius:0 0 6px 6px;}
-.summary-row.total span{color:${GREEN};}
+.summary-row.total{border-top:3px solid ${BLUE};border-bottom:none;font-weight:700;font-size:16px;margin-top:8px;padding-top:12px;background:${BLUE_LIGHT};margin:-14px;margin-top:8px;padding:12px 14px;border-radius:0 0 6px 6px;}
+.summary-row.total span{color:${BLUE};}
 .terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
-.terms h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
-.terms-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
+.terms h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.terms-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:60px;font-size:10px;color:#666;background:#fff;}
 .signature{padding:20px 28px;border-top:1px solid #e5e7eb;background:#fafafa;}
-.signature h4{font-size:12px;color:${GREEN};margin-bottom:14px;font-weight:700;}
-.signature-line{border-bottom:2px solid ${GREEN};width:220px;margin-bottom:6px;}
-.signature p{font-size:11px;color:${GREEN};font-weight:600;}
-.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.customer-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}}
+.signature h4{font-size:12px;color:${BLUE};margin-bottom:14px;font-weight:700;}
+.signature-line{border-bottom:2px solid ${BLUE};width:220px;margin-bottom:6px;}
+.signature p{font-size:11px;color:${BLUE};font-weight:600;}
+.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
@@ -203,14 +203,14 @@ th:nth-child(4){text-align:center;}
     </div>
     <div class="invoice-info">
       <h2>${docTitle}</h2>
-      <p><strong>Invoice No.:</strong> ${invoice.invoiceNumber}</p>
+      <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <div class="customer-section">
-    <h3>Customer Information</h3>
+    <h3>CUSTOMER</h3>
     <div class="customer-grid">
       <div>
         <p><strong>Name:</strong> ${customer.name}</p>
@@ -250,42 +250,42 @@ function generateQuotationTemplate(
 ): string {
   // Generate rows with alternating colors
   const quoteRows = (invoice.items || []).map((item, idx) => 
-    `<tr style="background:${idx % 2 === 0 ? '#fff' : GREEN_LIGHT};"><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;">${item.quantity}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${GREEN};">${formatAmount(item.total)}</td></tr>`
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:center;font-weight:600;">${item.quantity}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:14px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
   ).join('');
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Quote ${invoice.invoiceNumber}</title>
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Estimate ${invoice.invoiceNumber}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
 .quote{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${GREEN};}
-.logo-section h1{font-size:20px;color:${GREEN};margin-bottom:6px;font-weight:700;}
+.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+.logo-section h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
 .logo-section p{font-size:10px;color:#666;margin:3px 0;}
 .quote-info{text-align:right;}
-.quote-info h2{font-size:26px;color:${GREEN};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+.quote-info h2{font-size:26px;color:${BLUE};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
 .quote-info p{font-size:10px;color:#666;margin:4px 0;}
 .quote-info strong{color:#333;}
-.meta-section{padding:16px 28px;background:${GREEN_LIGHT};border-bottom:3px solid ${GREEN};display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.meta-section{padding:16px 28px;background:${BLUE_LIGHT};border-bottom:3px solid ${BLUE};display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .meta-section p{font-size:11px;color:#333;}
-.meta-section strong{color:${GREEN};font-size:12px;}
+.meta-section strong{color:${BLUE};font-size:12px;}
 table{width:100%;border-collapse:collapse;}
-th{background:${GREEN};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 th:nth-child(1){text-align:center;}
 th:nth-child(3),th:nth-child(4){text-align:right;}
-.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);padding:16px 28px;background:#fafafa;border-top:3px solid ${GREEN};border-bottom:1px solid #e5e7eb;}
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);padding:16px 28px;background:#fafafa;border-top:3px solid ${BLUE};border-bottom:1px solid #e5e7eb;}
 .summary-bar div{text-align:center;padding:8px;}
 .summary-bar span{display:block;font-size:10px;color:#666;text-transform:uppercase;margin-bottom:4px;font-weight:600;}
 .summary-bar strong{font-size:14px;color:#333;}
-.summary-bar .total{background:${GREEN_LIGHT};border-radius:8px;margin:-8px;padding:16px;}
-.summary-bar .total strong{color:${GREEN};font-size:16px;}
+.summary-bar .total{background:${BLUE_LIGHT};border-radius:8px;margin:-8px;padding:16px;}
+.summary-bar .total strong{color:${BLUE};font-size:16px;}
 .notes{padding:18px 28px;}
-.notes h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
-.notes-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:50px;font-size:10px;color:#666;background:#fff;}
+.notes h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.notes-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:50px;font-size:10px;color:#666;background:#fff;}
 .terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
-.terms h4{font-size:10px;color:${GREEN};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
-.terms-box{border:2px solid ${GREEN_LIGHT};border-radius:8px;padding:12px;min-height:70px;font-size:10px;color:#666;background:#fff;}
-.footer{padding:20px 28px;background:${GREEN};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{box-shadow:none!important;border-radius:0!important;}th{background:${GREEN}!important;color:#fff!important;}.meta-section{background:${GREEN_LIGHT}!important;}.footer{background:${GREEN}!important;color:#fff!important;}.summary-bar .total{background:${GREEN_LIGHT}!important;}}
+.terms h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+.terms-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:70px;font-size:10px;color:#666;background:#fff;}
+.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.meta-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}.summary-bar .total{background:${BLUE_LIGHT}!important;}}
 </style></head><body>
 <div class="quote">
   <div class="header">
@@ -297,16 +297,16 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
       ${company.phone ? `<p>${company.phone}</p>` : ''}
     </div>
     <div class="quote-info">
-      <h2>QUOTATION</h2>
-      <p><strong>Quote No.:</strong> ${invoice.invoiceNumber}</p>
-      <p><strong>Quote Date:</strong> ${formatDate(invoice.date)}</p>
+      <h2>ESTIMATED COST</h2>
+      <p><strong>Estimate No.:</strong> ${invoice.invoiceNumber}</p>
+      <p><strong>Estimate Date:</strong> ${formatDate(invoice.date)}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <div class="meta-section">
     <p><strong>Customer:</strong><br/>${customer.name}<br/>${customer.document || '-'}</p>
     <p><strong>Created By:</strong><br/>Admin</p>
-    <p><strong>Status:</strong><br/><span style="background:${GREEN_LIGHT};color:${GREEN};padding:4px 10px;border-radius:12px;font-weight:700;font-size:10px;">Pending</span></p>
+    <p><strong>Status:</strong><br/><span style="background:${BLUE_LIGHT};color:${BLUE};padding:4px 10px;border-radius:12px;font-weight:700;font-size:10px;">Pending</span></p>
   </div>
   <table>
     <thead><tr><th>QTY</th><th>DESCRIPTION</th><th>UNIT PRICE</th><th>AMOUNT</th></tr></thead>
@@ -316,7 +316,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
     <div><span>SUBTOTAL:</span><strong>${formatAmount(invoice.subtotal)}</strong></div>
     <div><span>SALES TAX:</span><strong>${formatAmount(invoice.tax)}</strong></div>
     <div><span>TERMS:</span><strong>Net 30</strong></div>
-    <div class="total"><span>TOTAL QUOTE:</span><strong>${formatAmount(invoice.amount)}</strong></div>
+    <div class="total"><span>TOTAL ESTIMATE:</span><strong>${formatAmount(invoice.amount)}</strong></div>
   </div>
   <div class="notes"><h4>NOTE:</h4><div class="notes-box"></div></div>
   <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box"></div></div>

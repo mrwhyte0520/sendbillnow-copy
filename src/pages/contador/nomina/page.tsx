@@ -193,12 +193,12 @@ export default function ContadorNominaPage() {
         </div>
 
         {/* Compliance Banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="bg-[#008000]/5 border border-[#008000]/20 rounded-lg p-4 mb-6">
           <div className="flex items-start gap-3">
-            <i className="ri-shield-check-line text-xl text-blue-600 mt-0.5"></i>
+            <i className="ri-shield-check-line text-xl text-[#008000] mt-0.5"></i>
             <div>
-              <p className="font-medium text-blue-900">IRS & DOL Compliant</p>
-              <p className="text-sm text-blue-700">All calculations follow federal and state tax guidelines including FICA (Social Security 6.2% + Medicare 1.45%).</p>
+              <p className="font-medium text-[#2f3e1e]">IRS & DOL Compliant</p>
+              <p className="text-sm text-[#2f3e1e]/80">All calculations follow federal and state tax guidelines including FICA (Social Security 6.2% + Medicare 1.45%).</p>
             </div>
           </div>
         </div>
@@ -207,8 +207,8 @@ export default function ContadorNominaPage() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-team-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-team-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Employees</p>
@@ -218,45 +218,45 @@ export default function ContadorNominaPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-money-dollar-circle-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Gross</p>
-                <p className="text-2xl font-bold text-green-600">${stats.totalGross.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalGross.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-bank-card-line text-xl text-purple-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-bank-card-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Net</p>
-                <p className="text-2xl font-bold text-purple-600">${stats.totalNet.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalNet.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-government-line text-xl text-orange-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-government-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">FICA Total</p>
-                <p className="text-2xl font-bold text-orange-600">${stats.totalFICA.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalFICA.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-time-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.pending}</p>
               </div>
             </div>
           </div>
@@ -342,9 +342,9 @@ export default function ContadorNominaPage() {
                         <td className="px-4 py-3 text-right font-bold text-[#008000]">${record.netPay.toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            record.status === 'paid' ? 'bg-green-100 text-green-700' :
-                            record.status === 'processed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
+                            record.status === 'paid' ? 'bg-[#008000]/15 text-[#006600]' :
+                            record.status === 'processed' ? 'bg-[#008000]/10 text-[#006600]' :
+                            'bg-[#008000]/5 text-[#006600]'
                           }`}>
                             {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                           </span>

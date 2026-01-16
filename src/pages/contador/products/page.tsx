@@ -99,8 +99,8 @@ export default function ContadorProductsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-shopping-bag-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-shopping-bag-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Active Products</p>
@@ -110,38 +110,46 @@ export default function ContadorProductsPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <i className="ri-money-dollar-circle-line text-xl text-green-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-money-dollar-circle-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">${stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalRevenue.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <i className="ri-percent-line text-xl text-purple-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-percent-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Avg. Margin</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.avgMargin}%</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.avgMargin}%</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-stack-line text-xl text-orange-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-stack-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Units Sold</p>
-                <p className="text-2xl font-bold text-orange-600">{stats.totalUnitsSold}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.totalUnitsSold}</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008000]"></div>
+            <span className="ml-3 text-gray-600">Loading products...</span>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

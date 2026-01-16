@@ -10,7 +10,7 @@ interface InvoiceTypeModalProps {
   title?: string;
 }
 
-const BRAND_GREEN = '#008000';
+const BRAND_BLUE = '#0d3b66';
 
 export default function InvoiceTypeModal({
   isOpen,
@@ -33,7 +33,7 @@ export default function InvoiceTypeModal({
         <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
           <div className="flex justify-between mb-1">
             <div className="font-bold text-[7px]">LOGO</div>
-            <div className="text-right font-bold" style={{ color: BRAND_GREEN }}>INVOICE</div>
+            <div className="text-right font-bold" style={{ color: BRAND_BLUE }}>INVOICE</div>
           </div>
           <div className="border-t border-gray-200 my-1"></div>
           <div className="mb-1">Customer: ___</div>
@@ -63,7 +63,7 @@ export default function InvoiceTypeModal({
         <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
           <div className="flex justify-between mb-1">
             <div className="font-bold text-[7px]">LOGO</div>
-            <div className="text-right font-bold" style={{ color: BRAND_GREEN }}>INVOICE</div>
+            <div className="text-right font-bold" style={{ color: BRAND_BLUE }}>INVOICE</div>
           </div>
           <div className="border-t border-gray-200 my-1"></div>
           <div className="grid grid-cols-2 gap-1 mb-1">
@@ -96,7 +96,7 @@ export default function InvoiceTypeModal({
     },
     {
       id: 'quotation' as InvoiceTemplateType,
-      name: documentType === 'supplier_invoice' ? 'Purchase Order' : 'Quotation',
+      name: documentType === 'supplier_invoice' ? 'Purchase Order' : 'Estimate',
       description: documentType === 'supplier_invoice' 
         ? 'Purchase order format for suppliers' 
         : 'Quote format with terms and validity',
@@ -105,8 +105,8 @@ export default function InvoiceTypeModal({
         <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
           <div className="flex justify-between mb-1">
             <div className="font-bold text-[7px]">LOGO</div>
-            <div className="text-right font-bold" style={{ color: BRAND_GREEN }}>
-              {documentType === 'supplier_invoice' ? 'PURCHASE ORDER' : 'QUOTATION'}
+            <div className="text-right font-bold" style={{ color: BRAND_BLUE }}>
+              {documentType === 'supplier_invoice' ? 'PURCHASE ORDER' : 'ESTIMATE'}
             </div>
           </div>
           <div className="border-t border-gray-200 my-1"></div>
@@ -155,7 +155,7 @@ export default function InvoiceTypeModal({
           {/* Header */}
           <div 
             className="p-6 text-center text-white"
-            style={{ background: `linear-gradient(135deg, ${BRAND_GREEN} 0%, #006600 100%)` }}
+            style={{ background: `linear-gradient(135deg, #008000 0%, #006600 100%)` }}
           >
             <div className="w-16 h-16 mx-auto bg-white/20 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
               <i className="ri-printer-line text-3xl text-white"></i>
@@ -182,7 +182,7 @@ export default function InvoiceTypeModal({
                   {selectedType === template.id && (
                     <div 
                       className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: BRAND_GREEN }}
+                      style={{ backgroundColor: '#008000' }}
                     >
                       <i className="ri-check-line text-white text-sm"></i>
                     </div>
@@ -224,7 +224,7 @@ export default function InvoiceTypeModal({
               <button
                 onClick={handleConfirm}
                 className="px-5 py-2.5 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
-                style={{ backgroundColor: BRAND_GREEN }}
+                style={{ backgroundColor: '#008000' }}
               >
                 <i className="ri-printer-line"></i>
                 Print {templates.find(t => t.id === selectedType)?.name}

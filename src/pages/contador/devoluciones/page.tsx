@@ -122,8 +122,8 @@ export default function ContadorDevolucionesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <i className="ri-arrow-go-back-line text-xl text-blue-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-arrow-go-back-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Returns</p>
@@ -133,38 +133,46 @@ export default function ContadorDevolucionesPage() {
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <i className="ri-refund-2-line text-xl text-red-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-refund-2-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Refunded</p>
-                <p className="text-2xl font-bold text-red-600">${stats.totalRefunded.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">${stats.totalRefunded.toFixed(2)}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <i className="ri-time-line text-xl text-yellow-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-time-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Pending</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pendingReturns}</p>
+                <p className="text-2xl font-bold text-[#008000]">{stats.pendingReturns}</p>
               </div>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <i className="ri-line-chart-line text-xl text-orange-600"></i>
+              <div className="p-2 bg-[#008000]/10 rounded-lg">
+                <i className="ri-line-chart-line text-xl text-[#008000]"></i>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Revenue Impact</p>
-                <p className="text-2xl font-bold text-orange-600">-${stats.revenueImpact.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-[#008000]">-${stats.revenueImpact.toFixed(2)}</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#008000]"></div>
+            <span className="ml-3 text-gray-600">Loading returns...</span>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -218,7 +226,7 @@ export default function ContadorDevolucionesPage() {
                         <td className="px-4 py-3 text-gray-600">{ret.date}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            ret.type === 'customer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            ret.type === 'customer' ? 'bg-[#008000]/10 text-[#006600]' : 'bg-[#008000]/10 text-[#006600]'
                           }`}>
                             {ret.type === 'customer' ? 'Customer' : 'Vendor'}
                           </span>
@@ -230,9 +238,9 @@ export default function ContadorDevolucionesPage() {
                         <td className="px-4 py-3 text-gray-600">{ret.reason}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            ret.status === 'refunded' ? 'bg-green-100 text-green-700' :
-                            ret.status === 'processed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
+                            ret.status === 'refunded' ? 'bg-[#008000]/15 text-[#006600]' :
+                            ret.status === 'processed' ? 'bg-[#008000]/10 text-[#006600]' :
+                            'bg-[#008000]/5 text-[#006600]'
                           }`}>
                             {ret.status.charAt(0).toUpperCase() + ret.status.slice(1)}
                           </span>

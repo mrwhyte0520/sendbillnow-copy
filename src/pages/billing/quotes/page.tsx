@@ -142,7 +142,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
   const save = async () => {
     try {
       if (!userId) {
-        toast.error('You must sign in to create a quotation');
+        toast.error('You must sign in to create an estimate');
         return;
       }
       if (!customerId) {
@@ -181,11 +181,11 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         .map(it => ({ description: it.description, quantity: it.quantity, price: it.price, total: it.total }));
 
       await quotesService.create(userId, quotePayload, linePayloads);
-      toast.success('Quotation created successfully');
+      toast.success('Estimate created successfully');
       onSaved();
     } catch (e) {
       console.error(e);
-      toast.error('The quotation could not be created');
+      toast.error('The estimate could not be created');
     }
   };
 
@@ -237,12 +237,12 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Quotation Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Estimate Name</label>
           <input
             type="text"
             value={project}
             onChange={e => setProject(e.target.value)}
-            placeholder="Descriptive name for the quotation"
+            placeholder="Descriptive name for the estimate"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -1342,7 +1342,7 @@ export default function QuotesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Sales Quotations</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Sales Estimates</h1>
             <p className="text-gray-600">Manage commercial proposals and track opportunities</p>
           </div>
           <div className="flex space-x-3">
@@ -1368,7 +1368,7 @@ export default function QuotesPage() {
           <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6 hover:shadow-[0_12px_40px_rgb(0,128,0,0.15)] hover:-translate-y-1 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Quotations</p>
+                <p className="text-sm font-medium text-gray-600">Total Estimates</p>
 
                 <p className="text-2xl font-bold text-gray-900 mt-1">{quotes.length}</p>
               </div>
