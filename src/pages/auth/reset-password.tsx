@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function ResetPassword() {
   const [isResetMode, setIsResetMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [recoverySessionReady, setRecoverySessionReady] = useState(true);
 
   useEffect(() => {
     // Verificar si hay un hash de recuperación en la URL
@@ -24,6 +26,39 @@ export default function ResetPassword() {
     if (type === 'recovery') {
       setIsResetMode(true);
     }
+  }, []);
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const searchParams = new URLSearchParams(window.location.search);
+
+    const type = hashParams.get('type') || searchParams.get('type');
+    if (type !== 'recovery') return;
+
+    const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+
+    if (!accessToken || !refreshToken) {
+      setRecoverySessionReady(false);
+      setError('Your recovery link is missing required tokens. Please request a new link.');
+      return;
+    }
+
+    setRecoverySessionReady(false);
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ error }) => {
+        if (error) {
+          setError(error.message);
+          setRecoverySessionReady(false);
+          return;
+        }
+        setRecoverySessionReady(true);
+      })
+      .catch((err: any) => {
+        setError(err?.message || 'We could not validate your recovery link. Please request a new one.');
+        setRecoverySessionReady(false);
+      });
   }, []);
 
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -93,6 +128,7 @@ export default function ResetPassword() {
       }
 
       setSuccess(true);
+      setLoading(false);
       setTimeout(() => {
         navigate('/auth/login');
       }, 2000);
@@ -289,13 +325,18 @@ export default function ResetPassword() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !recoverySessionReady}
                 className="w-full bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white py-3 px-4 rounded-lg font-semibold hover:from-[#097509] hover:to-[#005300] focus:outline-none focus:ring-2 focus:ring-[#008000]/60 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
               >
                 {loading ? (
                   <>
                     <i className="ri-loader-4-line animate-spin mr-2"></i>
                     Updating…
+                  </>
+                ) : !recoverySessionReady ? (
+                  <>
+                    <i className="ri-loader-4-line animate-spin mr-2"></i>
+                    Validating link…
                   </>
                 ) : (
                   <>
