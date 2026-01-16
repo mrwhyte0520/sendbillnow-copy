@@ -298,7 +298,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
     </div>
     <div class="quote-info">
       <h2>ESTIMATED COST</h2>
-      <p><strong>Estimate No.:</strong> ${invoice.invoiceNumber}</p>
+      <p><strong>Estimate #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Estimate Date:</strong> ${formatDate(invoice.date)}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
