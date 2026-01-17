@@ -99,11 +99,7 @@ export default function ReceiptsPage() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-[#e3edd3] text-[#2f3e1e]';
-      case 'cancelled': return 'bg-[#f6d6ce] text-[#7a2e1b]';
-      default: return 'bg-[#ede7d7] text-[#4c5535]';
-    }
+    return 'bg-[#001B9E] text-white';
   };
 
   const getStatusName = (status: string) => {

@@ -1533,15 +1533,7 @@ ${items
   });
 
   const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'approved':
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
-    }
+    return 'bg-[#001B9E] text-white';
   };
 
   const inputBaseClass =

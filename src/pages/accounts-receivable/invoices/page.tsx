@@ -285,14 +285,7 @@ export default function InvoicesPage() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'bg-[#e4f1e4] text-[#315231]';
-      case 'partial': return 'bg-[#fff3d6] text-[#7a5510]';
-      case 'pending': return 'bg-[#e3e8dd] text-[#374537]';
-      case 'overdue': return 'bg-[#fde2de] text-[#8a2a1c]';
-      case 'cancelled': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    return 'bg-[#008000] text-white';
   };
 
   const getStatusName = (status: string) => {
@@ -805,7 +798,10 @@ export default function InvoicesPage() {
 
         const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
         const companyRnc =
-          (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
+          (companyInfo as any)?.rnc ||
+          (companyInfo as any)?.tax_id ||
+          (companyInfo as any)?.ruc ||
+          '';
 
         const amountText = formatAmount(effectivePayment);
 
@@ -1332,7 +1328,6 @@ export default function InvoicesPage() {
                       {Array.from(
                         new Set(
                           (ncfSeries || [])
-
                             .filter((s: any) => s.status === 'active')
                             .map((s: any) => String(s.document_type)),
                         ),
@@ -2053,7 +2048,7 @@ export default function InvoicesPage() {
                       setShowViewInvoiceModal(false);
                       handleRegisterPayment(selectedInvoice);
                     }}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                     <i className="ri-money-dollar-circle-line"></i>
                     Register Payment
@@ -2068,7 +2063,7 @@ export default function InvoicesPage() {
                 </button>
                 <button
                   onClick={() => handleExportInvoiceExcel(selectedInvoice.id)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
                   <i className="ri-file-excel-2-line"></i>
                   Excel

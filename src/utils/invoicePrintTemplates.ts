@@ -30,8 +30,8 @@ interface CompanyData {
   logo?: string;
 }
 
-const BLUE = '#0d3b66';
-const BLUE_LIGHT = '#e6eef5';
+const BLUE = '#001B9E';
+const BLUE_LIGHT = '#e6e9f7';
 
 export function generateInvoiceHtml(
   invoice: InvoiceData,
@@ -316,7 +316,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
     <div><span>SUBTOTAL:</span><strong>${formatAmount(invoice.subtotal)}</strong></div>
     <div><span>SALES TAX:</span><strong>${formatAmount(invoice.tax)}</strong></div>
     <div><span>TERMS:</span><strong>Net 30</strong></div>
-    <div class="total"><span>TOTAL ESTIMATE:</span><strong>${formatAmount(invoice.amount)}</strong></div>
+    <div class="total"><span>ESTIMATED COST:</span><strong>${formatAmount(invoice.amount)}</strong></div>
   </div>
   <div class="notes"><h4>NOTE:</h4><div class="notes-box"></div></div>
   <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box"></div></div>

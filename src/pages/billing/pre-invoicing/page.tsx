@@ -87,16 +87,16 @@ export default function PreInvoicingPage() {
   const [itemsError, setItemsError] = useState('');
 
   const statusChipClasses: Record<UiQuote['status'], string> = {
-    pending: 'bg-[#f0e0ba] text-[#6b5b2e]',
-    under_review: 'bg-[#e2e4b7] text-[#3f4a2f]',
-    approved: 'bg-[#cbd3b0] text-[#2d3520]',
-    rejected: 'bg-[#f5d5cf] text-[#5e2c2c]',
-    expired: 'bg-[#ddd5c0] text-[#4f4b3f]',
-    invoiced: 'bg-[#9fb28a] text-white',
+    pending: 'bg-[#001B9E] text-white',
+    under_review: 'bg-[#001B9E] text-white',
+    approved: 'bg-[#001B9E] text-white',
+    rejected: 'bg-[#001B9E] text-white',
+    expired: 'bg-[#001B9E] text-white',
+    invoiced: 'bg-[#001B9E] text-white',
   };
 
   const getStatusColor = (status: UiQuote['status']) =>
-    statusChipClasses[status] ?? 'bg-[#ddd5c0] text-[#4f4b3f]';
+    statusChipClasses[status] ?? 'bg-[#001B9E] text-white';
 
   const getStatusText = (status: UiQuote['status']) => {
     switch (status) {

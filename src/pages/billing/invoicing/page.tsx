@@ -460,15 +460,15 @@ export default function InvoicingPage() {
   }, [user?.id]);
 
   const STATUS_BADGE_CLASSES: Record<UiInvoice['status'], string> = {
-    paid: 'bg-[#DDE7D0] text-[#2F3D2E]',
-    pending: 'bg-[#F3E9C8] text-[#7A705A]',
-    overdue: 'bg-[#F7D8CF] text-[#7C392C]',
-    draft: 'bg-[#E5E2D9] text-[#7A705A]',
-    cancelled: 'bg-[#E0D8C5] text-[#7A705A]',
+    paid: 'bg-[#001B9E] text-white',
+    pending: 'bg-[#001B9E] text-white',
+    overdue: 'bg-[#001B9E] text-white',
+    draft: 'bg-[#001B9E] text-white',
+    cancelled: 'bg-[#001B9E] text-white',
   };
 
   const getStatusBadgeClasses = (status: UiInvoice['status']) =>
-    STATUS_BADGE_CLASSES[status] || 'bg-[#E5E2D9] text-[#7A705A]';
+    STATUS_BADGE_CLASSES[status] || 'bg-[#001B9E] text-white';
 
   const getStatusText = (status: string) => {
     switch (status) {
