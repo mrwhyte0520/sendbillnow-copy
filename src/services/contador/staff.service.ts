@@ -9,6 +9,7 @@ export interface Role {
   user_id: string;
   name: string;
   description: string | null;
+  base_salary: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,9 +26,11 @@ export interface Employee {
   termination_date: string | null;
   status: 'active' | 'inactive' | 'terminated';
   default_role_id: string | null;
+  department_id?: string | null;
   created_at: string;
   updated_at: string;
   role?: Role;
+  department?: { id: string; name: string } | null;
 }
 
 export interface EmployeeRoleHistory {
@@ -56,6 +59,15 @@ export interface TimeClockEntry {
   employee?: Employee;
 }
 
+export interface Department {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CreateEmployeePayload {
   user_id: string;
   employee_no: string;
@@ -66,6 +78,7 @@ export interface CreateEmployeePayload {
   hire_date: string;
   status?: 'active' | 'inactive' | 'terminated';
   default_role_id?: string | null;
+  department_id?: string | null;
 }
 
 export interface UpdateEmployeePayload {
@@ -78,12 +91,14 @@ export interface UpdateEmployeePayload {
   termination_date?: string | null;
   status?: 'active' | 'inactive' | 'terminated';
   default_role_id?: string | null;
+  department_id?: string | null;
 }
 
 export interface CreateRolePayload {
   user_id: string;
   name: string;
   description?: string | null;
+  base_salary: number;
 }
 
 export interface CreateTimeClockPayload {
@@ -94,6 +109,12 @@ export interface CreateTimeClockPayload {
   clock_out?: string | null;
   break_minutes?: number;
   source?: 'pos' | 'mobile' | 'admin' | 'kiosk';
+}
+
+export interface CreateDepartmentPayload {
+  user_id: string;
+  name: string;
+  description?: string | null;
 }
 
 // =============================================================================
@@ -131,7 +152,7 @@ export const rolesService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Role;
   },
 
   async update(id: string, payload: Partial<CreateRolePayload>): Promise<Role> {
@@ -143,7 +164,7 @@ export const rolesService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as Role;
   },
 
   async delete(id: string): Promise<void> {
@@ -157,43 +178,197 @@ export const rolesService = {
 };
 
 // =============================================================================
+// DEPARTMENTS SERVICE
+// =============================================================================
+
+export const departmentsService = {
+  async list(userId: string): Promise<Department[]> {
+    try {
+      const { data, error } = await supabase
+        .from('contador_departments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name');
+
+      if (error) throw error;
+      return (data || []) as Department[];
+    } catch (error: any) {
+      // If the table doesn't exist yet in this installation, don't break the UI.
+      // Return empty list and allow the user to create the table in Supabase.
+      const msg = String(error?.message || '');
+      if (msg.toLowerCase().includes('contador_departments') || msg.toLowerCase().includes('relation')) {
+        return [];
+      }
+      return [];
+    }
+  },
+
+  async create(payload: CreateDepartmentPayload): Promise<Department> {
+    const { data, error } = await supabase
+      .from('contador_departments')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Department;
+  },
+
+  async update(id: string, payload: Partial<CreateDepartmentPayload>): Promise<Department> {
+    const { data, error } = await supabase
+      .from('contador_departments')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Department;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('contador_departments')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+};
+
+// =============================================================================
 // EMPLOYEES SERVICE
 // =============================================================================
 
 export const employeesService = {
   async list(userId: string, filters?: { status?: string }): Promise<Employee[]> {
-    let query = supabase
-      .from('contador_employees')
-      .select(`
-        *,
+    const runQuery = async (includeSalary: boolean, includeDepartment: boolean) => {
+      let query = supabase
+        .from('contador_employees')
+        .select(
+          `${`
+        *
+      `}
+      ${includeSalary
+        ? `,
+        role:contador_roles(id, name, base_salary)
+      `
+        : `,
         role:contador_roles(id, name)
-      `)
-      .eq('user_id', userId)
-      .order('last_name')
-      .order('first_name');
+      `}
+      ${includeDepartment
+        ? `,
+        department:contador_departments(id, name)
+      `
+        : ''}`,
+        )
+        .eq('user_id', userId)
+        .order('last_name')
+        .order('first_name');
 
-    if (filters?.status) {
-      query = query.eq('status', filters.status);
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      return await query;
+    };
+
+    // Try full select: role + base_salary + department
+    const first = await runQuery(true, true);
+    if (!first.error) return (first.data || []) as any;
+
+    const msg = String((first.error as any)?.message || '').toLowerCase();
+
+    // If base_salary missing, retry without it (keep department)
+    if ((first.error as any)?.code === 'PGRST204' || msg.includes('base_salary') || msg.includes("could not find the 'base_salary'")) {
+      const retry = await runQuery(false, true);
+      if (!retry.error) return (retry.data || []) as any;
     }
 
-    const { data, error } = await query;
+    // If department relation/table/column missing (or FK relationship not defined), retry without department
+    if (
+      (first.error as any)?.code === 'PGRST205' ||
+      (first.error as any)?.code === 'PGRST200' ||
+      msg.includes('contador_departments') ||
+      msg.includes('department') ||
+      msg.includes('relationship') ||
+      msg.includes('could not find a relationship')
+    ) {
+      const retry = await runQuery(true, false);
+      if (!retry.error) return (retry.data || []) as any;
+      // And if base_salary is also missing in this retry, fallback further
+      const msg2 = String((retry.error as any)?.message || '').toLowerCase();
+      if ((retry.error as any)?.code === 'PGRST204' || msg2.includes('base_salary')) {
+        const retry2 = await runQuery(false, false);
+        if (retry2.error) throw retry2.error;
+        return (retry2.data || []) as any;
+      }
+      throw retry.error;
+    }
 
-    if (error) throw error;
-    return data || [];
+    // Last resort: minimal select
+    const fallback = await runQuery(false, false);
+    if (fallback.error) throw fallback.error;
+    return (fallback.data || []) as any;
   },
 
   async getById(id: string): Promise<Employee | null> {
-    const { data, error } = await supabase
-      .from('contador_employees')
-      .select(`
-        *,
+    const runQuery = async (includeSalary: boolean, includeDepartment: boolean) => {
+      return await supabase
+        .from('contador_employees')
+        .select(
+          `${`
+        *
+      `}
+      ${includeSalary
+        ? `,
+        role:contador_roles(id, name, description, base_salary)
+      `
+        : `,
         role:contador_roles(id, name, description)
-      `)
-      .eq('id', id)
-      .single();
+      `}
+      ${includeDepartment
+        ? `,
+        department:contador_departments(id, name)
+      `
+        : ''}`,
+        )
+        .eq('id', id)
+        .single();
+    };
 
-    if (error) throw error;
-    return data;
+    const first = await runQuery(true, true);
+    if (!first.error) return first.data as any;
+
+    const msg = String((first.error as any)?.message || '').toLowerCase();
+
+    if ((first.error as any)?.code === 'PGRST204' || msg.includes('base_salary')) {
+      const retry = await runQuery(false, true);
+      if (!retry.error) return (retry.data || null) as any;
+    }
+
+    if (
+      (first.error as any)?.code === 'PGRST205' ||
+      (first.error as any)?.code === 'PGRST200' ||
+      msg.includes('contador_departments') ||
+      msg.includes('department') ||
+      msg.includes('relationship') ||
+      msg.includes('could not find a relationship')
+    ) {
+      const retry = await runQuery(true, false);
+      if (!retry.error) return (retry.data || null) as any;
+      const msg2 = String((retry.error as any)?.message || '').toLowerCase();
+      if ((retry.error as any)?.code === 'PGRST204' || msg2.includes('base_salary')) {
+        const retry2 = await runQuery(false, false);
+        if (retry2.error) throw retry2.error;
+        return (retry2.data || null) as any;
+      }
+      throw retry.error;
+    }
+
+    const fallback = await runQuery(false, false);
+    if (fallback.error) throw fallback.error;
+    return (fallback.data || null) as any;
   },
 
   async create(payload: CreateEmployeePayload): Promise<Employee> {

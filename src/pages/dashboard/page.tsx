@@ -55,19 +55,17 @@ export default function DashboardPage() {
   // Botones de acceso rápido con sus módulos correspondientes
   const allQuickAccessButtons = [
     { name: 'User', icon: 'ri-user-add-line', href: '/users', color: 'from-[#008000] to-[#008000]', module: 'users' },
-    { name: 'New Customer', icon: 'ri-user-smile-line', href: '/customers', color: 'from-[#008000] to-[#008000]', module: 'customers' },
+    { name: 'New Customer', icon: 'ri-user-smile-line', href: '/accounts-receivable/customers', color: 'from-[#008000] to-[#008000]', module: 'customers' },
     { name: 'New Supplier', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-[#008000] to-[#008000]', module: 'accounts-payable' },
     { name: 'New Invoice', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
     { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos', color: 'from-[#008000] to-[#008000]', module: 'pos' },
     { name: 'Cash Closing', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
     { name: 'Sales', icon: 'ri-bar-chart-box-line', href: '/billing/sales-reports', color: 'from-[#008000] to-[#008000]', module: 'billing' },
-    { name: 'Products', icon: 'ri-shopping-bag-line', href: '/products', color: 'from-[#008000] to-[#008000]', module: 'products' },
+    { name: 'Products', icon: 'ri-shopping-bag-line', href: '/inventory?tab=products', color: 'from-[#008000] to-[#008000]', module: 'products' },
     { name: 'Inventory', icon: 'ri-archive-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Entries', icon: 'ri-download-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Transfers', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Location', icon: 'ri-building-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Payroll', icon: 'ri-wallet-line', href: '/payroll', color: 'from-[#008000] to-[#008000]', module: 'payroll' },
+    { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory/reports', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Location', icon: 'ri-building-line', href: '/billing/stores', color: 'from-[#008000] to-[#008000]', module: 'billing' },
+    { name: 'Payroll', icon: 'ri-wallet-line', href: '/contador/nomina', color: 'from-[#008000] to-[#008000]', module: 'payroll' },
   ];
 
   // Filtrar botones según permisos del usuario

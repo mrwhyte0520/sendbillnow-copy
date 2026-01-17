@@ -103,8 +103,8 @@ export const cashDrawersService = {
       .from('contador_cash_drawers')
       .select(`
         *,
-        opened_by_employee:employees!cash_drawers_opened_by_fkey(id, first_name, last_name),
-        closed_by_employee:employees!cash_drawers_closed_by_fkey(id, first_name, last_name)
+        opened_by_employee:contador_employees!contador_cash_drawers_opened_by_fkey(id, first_name, last_name),
+        closed_by_employee:contador_employees!contador_cash_drawers_closed_by_fkey(id, first_name, last_name)
       `)
       .eq('user_id', companyId)
       .order('created_at', { ascending: false });
@@ -124,8 +124,8 @@ export const cashDrawersService = {
       .from('contador_cash_drawers')
       .select(`
         *,
-        opened_by_employee:employees!cash_drawers_opened_by_fkey(id, first_name, last_name),
-        closed_by_employee:employees!cash_drawers_closed_by_fkey(id, first_name, last_name)
+        opened_by_employee:contador_employees!contador_cash_drawers_opened_by_fkey(id, first_name, last_name),
+        closed_by_employee:contador_employees!contador_cash_drawers_closed_by_fkey(id, first_name, last_name)
       `)
       .eq('id', id)
       .single();
@@ -254,7 +254,7 @@ export const cashTransactionsService = {
       .from('contador_cash_transactions')
       .select(`
         *,
-        created_by_employee:employees(id, first_name, last_name)
+        created_by_employee:contador_employees!contador_cash_transactions_created_by_fkey(id, first_name, last_name)
       `)
       .eq('user_id', companyId)
       .order('created_at', { ascending: false });
@@ -375,7 +375,7 @@ export const expensesService = {
       .select(`
         *,
         vendor:vendors(id, name),
-        created_by_employee:employees(id, first_name, last_name)
+        created_by_employee:contador_employees!contador_expenses_created_by_fkey(id, first_name, last_name)
       `)
       .eq('user_id', companyId)
       .order('expense_date', { ascending: false });
@@ -405,7 +405,7 @@ export const expensesService = {
       .select(`
         *,
         vendor:vendors(id, name),
-        created_by_employee:employees(id, first_name, last_name)
+        created_by_employee:contador_employees!contador_expenses_created_by_fkey(id, first_name, last_name)
       `)
       .eq('id', id)
       .single();

@@ -1317,8 +1317,8 @@ export default function POSPage() {
                 onChange={(e) => setViewMode(e.target.value as 'simple' | 'normal' | 'custom')}
                 className="px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-[#008000]/20 focus:border-[#008000] shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
               >
-                <option value="simple">Simple</option>
-                <option value="normal">Normal</option>
+                <option value="simple">Simplified</option>
+                <option value="normal">Common</option>
                 <option value="custom">Custom</option>
               </select>
               {/* Modelo Button - Configure extras for Custom mode */}
@@ -1328,15 +1328,18 @@ export default function POSPage() {
                 className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
               >
                 <i className="ri-settings-3-line mr-2 text-[#7a8c45]"></i>
-                Modelo
+                Model
               </button>
               <button
                 type="button"
                 onClick={() => setCartOpen(prev => !prev)}
-                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-[#008000] to-[#006600] border-2 border-[#006600] rounded-xl hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/25 hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-white shadow-md"
+                className="relative inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-[#008000] to-[#006600] border-2 border-[#006600] rounded-xl hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/25 hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-white shadow-md"
               >
                 <i className="ri-shopping-cart-line mr-2"></i>
                 {cartOpen ? 'Hide cart' : 'Show cart'}
+                {cart.length > 0 && !cartOpen && (
+                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
               </button>
             </div>
           </div>

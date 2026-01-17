@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { payrollRunsService, payrollItemsService } from '../../../services/contador/payroll.service';
+import { payrollRunsService, payrollItemsService, payProfilesService } from '../../../services/contador/payroll.service';
 import type { PayrollRun, PayrollItem } from '../../../services/contador/payroll.service';
 import { employeesService } from '../../../services/contador/staff.service';
 import { formatMoney } from '../../../utils/numberFormat';
@@ -31,6 +31,10 @@ export default function ContadorNominaPage() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
   const [activeEmployeesCount, setActiveEmployeesCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [runPeriodStart, setRunPeriodStart] = useState('');
+  const [runPeriodEnd, setRunPeriodEnd] = useState('');
+  const [runPayDate, setRunPayDate] = useState('');
+  const [estimatedRunTotal, setEstimatedRunTotal] = useState(0);
 
   const runOptions = useMemo(() => {
     return (payrollRuns || []).map((r) => {
@@ -96,6 +100,80 @@ export default function ContadorNominaPage() {
   };
 
   useEffect(() => {
+    const calculateEstimatedTotal = async () => {
+      if (!user?.id) return;
+      if (!showRunPayroll) return;
+      if (!runPeriodStart || !runPeriodEnd) {
+        setEstimatedRunTotal(0);
+        return;
+      }
+
+      try {
+        const start = new Date(runPeriodStart);
+        const end = new Date(runPeriodEnd);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+          setEstimatedRunTotal(0);
+          return;
+        }
+
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const days = Math.max(1, Math.floor((end.getTime() - start.getTime()) / msPerDay) + 1);
+
+        const [activeEmployees, profiles] = await Promise.all([
+          employeesService.list(user.id, { status: 'active' }),
+          payProfilesService.list(user.id).catch(() => []),
+        ]);
+
+        const profileByEmployee = new Map<string, any>();
+        (profiles || []).forEach((p: any) => {
+          if (p?.employee_id) profileByEmployee.set(String(p.employee_id), p);
+        });
+
+        const weeklyHoursAssumption = 40;
+        const weeks = days / 7;
+
+        const total = (activeEmployees || []).reduce((sum: number, emp: any) => {
+          const profile = profileByEmployee.get(String(emp.id));
+
+          // Prefer explicit pay profile
+          if (profile?.pay_type === 'salary') {
+            const salary = Number(profile.salary_amount || 0);
+            if (salary > 0) {
+              const freq = String(profile.salary_frequency || '').toLowerCase();
+              if (freq === 'weekly') return sum + salary * weeks;
+              if (freq === 'biweekly') return sum + salary * (days / 14);
+              if (freq === 'semimonthly') return sum + salary * (days / 15);
+              if (freq === 'monthly') return sum + salary * (days / 30);
+              // Unknown frequency: assume monthly
+              return sum + salary * (days / 30);
+            }
+          }
+
+          if (profile?.pay_type === 'hourly') {
+            const rate = Number(profile.hourly_rate || 0);
+            if (rate > 0) {
+              return sum + rate * weeklyHoursAssumption * weeks;
+            }
+          }
+
+          // Fallback: role base salary (assume monthly, prorated)
+          const roleSalary = Number((emp as any)?.role?.base_salary || 0);
+          if (roleSalary > 0) return sum + roleSalary * (days / 30);
+
+          return sum;
+        }, 0);
+
+        setEstimatedRunTotal(Number.isFinite(total) ? total : 0);
+      } catch (e) {
+        console.error('Error calculating estimated payroll total:', e);
+        setEstimatedRunTotal(0);
+      }
+    };
+
+    calculateEstimatedTotal();
+  }, [user?.id, showRunPayroll, runPeriodStart, runPeriodEnd]);
+
+  useEffect(() => {
     const loadRunItems = async () => {
       if (!user?.id) return;
       if (!selectedRunId) return;
@@ -143,10 +221,6 @@ export default function ContadorNominaPage() {
     totalFICA,
     pending: payrollRecords.filter(r => r.status === 'pending').length,
   };
-
-  const [runPeriodStart, setRunPeriodStart] = useState('');
-  const [runPeriodEnd, setRunPeriodEnd] = useState('');
-  const [runPayDate, setRunPayDate] = useState('');
 
   const handleCreateRun = async () => {
     if (!user?.id) return;
@@ -488,7 +562,7 @@ export default function ContadorNominaPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-2">This will process payroll for:</p>
                   <p className="font-medium">{stats.totalEmployees} employees</p>
-                  <p className="text-sm text-gray-500">Estimated total: {formatMoney(stats.totalGross)}</p>
+                  <p className="text-sm text-gray-500">Estimated total: {formatMoney(estimatedRunTotal)}</p>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">

@@ -3419,7 +3419,10 @@ export const chartAccountsService = {
       const { data: lines, error: linesError } = await supabase
         .from('journal_entry_lines')
         .select('account_id, debit_amount, credit_amount, journal_entries!inner(status, user_id)')
-        .eq('journal_entries.user_id', tenantId)
+        // NOTE: In some environments `journal_entries.user_id` is `text` while `tenantId` is a UUID.
+        // PostgREST infers UUID type from the literal and Postgres rejects `text = uuid`.
+        // Force the literal to be treated as text.
+        .filter('journal_entries.user_id', 'eq', `${tenantId}::text`)
         .eq('journal_entries.status', 'posted');
 
       if (linesError) {
@@ -8703,7 +8706,7 @@ export const invoicesService = {
 
       // Intentar registrar asiento contable para la factura (best-effort)
       try {
-        const shouldPostToLedger = String((invoiceData as any).status || '') !== 'draft';
+        const shouldPostToLedger = false;
 
         if (shouldPostToLedger) {
           const settings = await accountingSettingsService.get(tenantId);
@@ -9470,6 +9473,41 @@ export const receiptsService = {
         .select('*')
         .single();
       if (error) throw error;
+
+      // Best-effort: si el recibo es en efectivo, registrarlo en Cash & Finance
+      try {
+        const paymentMethod = String((data as any)?.payment_method || '').toLowerCase();
+        const amount = Number((data as any)?.amount || 0);
+        const currency = String((data as any)?.currency || 'USD');
+
+        if ((paymentMethod === 'cash' || paymentMethod === 'efectivo') && amount > 0) {
+          const { data: openDrawer, error: drawerError } = await supabase
+            .from('contador_cash_drawers')
+            .select('id')
+            .eq('user_id', tenantId)
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!drawerError && openDrawer?.id) {
+            await supabase.from('contador_cash_transactions').insert({
+              user_id: tenantId,
+              drawer_id: String(openDrawer.id),
+              type: 'sale_cash_in',
+              amount,
+              currency,
+              reference_type: 'receipt',
+              reference_id: String((data as any).id),
+              description: String((data as any)?.concept || (data as any)?.receipt_number || 'Receipt cash payment'),
+              created_by: null,
+            });
+          }
+        }
+      } catch (cashError) {
+        console.warn('[receiptsService.create] Could not create cash transaction:', cashError);
+      }
+
       return data;
     } catch (error) {
       console.error('receiptsService.create error', error);
@@ -11804,7 +11842,7 @@ export const customerPaymentsService = {
         .select(`
           *,
           customers (name),
-          invoices (invoice_number),
+          invoices (invoice_number, currency),
           bank_accounts (chart_account_id, bank_name, account_number)
         `)
         .eq('user_id', tenantId)
@@ -11841,7 +11879,7 @@ export const customerPaymentsService = {
         .select(`
           *,
           customers (name),
-          invoices (invoice_number),
+          invoices (invoice_number, currency),
           bank_accounts (chart_account_id, bank_name, account_number)
         `)
         .single();
@@ -11858,6 +11896,41 @@ export const customerPaymentsService = {
         });
       } catch (approvalError) {
         console.error('Error creating approval request for customer payment:', approvalError);
+      }
+
+      // Best-effort: si el pago es en efectivo, registrarlo en Cash & Finance
+      try {
+        const paymentMethod = String((data as any)?.payment_method || '').toLowerCase();
+        const invoiceId = (data as any)?.invoice_id ? String((data as any).invoice_id) : '';
+        const amount = Number((data as any)?.amount || 0);
+        const currency = String((data as any)?.invoices?.currency || 'USD');
+
+        if ((paymentMethod === 'cash' || paymentMethod === 'efectivo') && invoiceId && amount > 0) {
+          const { data: openDrawer, error: drawerError } = await supabase
+            .from('contador_cash_drawers')
+            .select('id')
+            .eq('user_id', tenantId)
+            .eq('status', 'open')
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (!drawerError && openDrawer?.id) {
+            await supabase.from('contador_cash_transactions').insert({
+              user_id: tenantId,
+              drawer_id: String(openDrawer.id),
+              type: 'sale_cash_in',
+              amount,
+              currency,
+              reference_type: 'customer_payment',
+              reference_id: String((data as any).id),
+              description: `Invoice payment ${(data as any)?.invoices?.invoice_number || invoiceId}`,
+              created_by: null,
+            });
+          }
+        }
+      } catch (cashError) {
+        console.warn('[customerPaymentsService.create] Could not create cash transaction:', cashError);
       }
 
       return data;

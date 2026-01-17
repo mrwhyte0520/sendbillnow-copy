@@ -2,7 +2,16 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { cashDrawersService, cashTransactionsService } from '../../../services/contador/cash.service';
+import { employeesService } from '../../../services/contador/staff.service';
 import type { CashDrawer, CashTransaction } from '../../../services/contador/cash.service';
+import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
+
+// Importación dinámica de jsPDF para evitar errores de compilación
+const loadJsPDF = async () => {
+  const jsPDF = await import('jspdf');
+  await import('jspdf-autotable');
+  return jsPDF.default;
+};
 
 interface TransactionDisplay {
   id: string;
@@ -19,6 +28,13 @@ export default function ContadorCajaFinanzaPage() {
   const [activeTab, setActiveTab] = useState<'drawer' | 'transactions' | 'summary'>('drawer');
   const [currentDrawer, setCurrentDrawer] = useState<CashDrawer | null>(null);
   const [transactions, setTransactions] = useState<TransactionDisplay[]>([]);
+  const [dailySummary, setDailySummary] = useState<{
+    sales: number;
+    drops: number;
+    paidOuts: number;
+    refunds: number;
+    netCash: number;
+  } | null>(null);
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showAddTransaction, setShowAddTransaction] = useState(false);
@@ -31,6 +47,32 @@ export default function ContadorCajaFinanzaPage() {
     amount: 0,
     description: '',
   });
+
+  const ensureCurrentEmployeeId = async (): Promise<string> => {
+    if (!user?.id) throw new Error('user.id required');
+
+    const existing = await employeesService.list(user.id, { status: 'active' });
+    if (existing?.[0]?.id) return existing[0].id;
+
+    const fullName = String((user.user_metadata as any)?.full_name || '').trim();
+    const parts = fullName.split(/\s+/).filter(Boolean);
+    const firstName = parts[0] || 'Admin';
+    const lastName = parts.slice(1).join(' ') || 'User';
+    const employeeNo = `ADM-${user.id.slice(0, 6)}`;
+    const hireDate = new Date().toISOString().slice(0, 10);
+
+    const created = await employeesService.create({
+      user_id: user.id,
+      employee_no: employeeNo,
+      first_name: firstName,
+      last_name: lastName,
+      email: user.email || null,
+      hire_date: hireDate,
+      status: 'active',
+    });
+
+    return created.id;
+  };
 
   const drawerStatus = currentDrawer?.status === 'open' ? 'open' : 'closed';
 
@@ -48,19 +90,31 @@ export default function ContadorCajaFinanzaPage() {
       const drawer = await cashDrawersService.getOpenDrawer(user.id);
       setCurrentDrawer(drawer);
 
+      setTransactions([]);
+      setDailySummary(null);
+
       if (drawer) {
+        setOpeningAmount(drawer.opening_cash || 0);
         // Load transactions for this drawer
         const txs = await cashTransactionsService.list(user.id, { drawerId: drawer.id });
+
+        const inflowTypes: CashTransaction['type'][] = ['sale_cash_in', 'opening_adjustment'];
+        const isInflow = (t: CashTransaction['type']) => inflowTypes.includes(t);
+
         const mapped: TransactionDisplay[] = txs.map((tx: CashTransaction) => ({
           id: tx.id,
-          type: tx.amount >= 0 ? 'in' : 'out',
+          type: isInflow(tx.type) ? 'in' : 'out',
           category: tx.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
           description: tx.description || tx.type,
-          amount: Math.abs(tx.amount),
+          amount: Number(tx.amount) || 0,
           date: new Date(tx.created_at).toLocaleDateString(),
           time: new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }));
         setTransactions(mapped);
+
+        const drawerDate = new Date(drawer.opened_at || drawer.created_at).toISOString().slice(0, 10);
+        const summary = await cashTransactionsService.getDailySummary(user.id, drawerDate);
+        setDailySummary(summary);
       }
     } catch (error) {
       console.error('Error loading cash data:', error);
@@ -73,10 +127,11 @@ export default function ContadorCajaFinanzaPage() {
     if (!user?.id) return;
     setSaving(true);
     try {
+      const employeeId = await ensureCurrentEmployeeId();
       await cashDrawersService.open({
         user_id: user.id,
         drawer_name: 'Main Drawer',
-        opened_by: user.id,
+        opened_by: employeeId,
         opening_cash: openingAmount,
       });
       setShowOpenModal(false);
@@ -93,8 +148,9 @@ export default function ContadorCajaFinanzaPage() {
     if (!currentDrawer) return;
     setSaving(true);
     try {
+      const employeeId = await ensureCurrentEmployeeId();
       await cashDrawersService.close(currentDrawer.id, {
-        closed_by: user?.id || '',
+        closed_by: employeeId,
         closing_cash_counted: closingCount,
       });
       setShowCloseModal(false);
@@ -115,7 +171,7 @@ export default function ContadorCajaFinanzaPage() {
         user_id: user.id,
         drawer_id: currentDrawer.id,
         type: txFormData.type,
-        amount: txFormData.amount,
+        amount: Math.abs(txFormData.amount),
         description: txFormData.description || null,
       });
       setShowAddTransaction(false);
@@ -128,15 +184,195 @@ export default function ContadorCajaFinanzaPage() {
       setSaving(false);
     }
   };
-  const totalIn = transactions.filter(t => t.type === 'in').reduce((acc, t) => acc + t.amount, 0);
-  const totalOut = transactions.filter(t => t.type === 'out').reduce((acc, t) => acc + t.amount, 0);
-  const expectedBalance = openingAmount + totalIn - totalOut;
+
+  const txByCategory = transactions.reduce(
+    (acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + (Number(t.amount) || 0);
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  const totalIn = transactions
+    .filter((t) => t.type === 'in')
+    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+  const totalOut = transactions
+    .filter((t) => t.type === 'out')
+    .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+  const openingCash = currentDrawer?.opening_cash ?? openingAmount;
+  const expectedBalance = openingCash + totalIn - totalOut;
 
   const stats = {
-    opening: openingAmount,
+    opening: openingCash,
     cashIn: totalIn,
     cashOut: totalOut,
     expected: expectedBalance,
+  };
+
+  const openedAtLabel = currentDrawer?.opened_at
+    ? new Date(currentDrawer.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
+
+  const handlePrintReport = async () => {
+    if (drawerStatus !== 'open' || !currentDrawer) {
+      alert('Open a drawer first to print a report');
+      return;
+    }
+
+    const reportDate = new Date(currentDrawer.opened_at || currentDrawer.created_at).toLocaleDateString();
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Cash Drawer Report</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
+.sheet{max-width:900px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
+.header{padding:22px 26px;background:linear-gradient(135deg,#008000 0%,#006600 100%);color:#fff;text-align:center;}
+.header h1{font-size:22px;font-weight:800;letter-spacing:0.5px;}
+.header p{margin-top:6px;font-size:12px;opacity:0.9;}
+.section{padding:18px 26px;}
+.meta{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#333;font-size:12px;}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;}
+.card{border:1px solid #e5e7eb;border-radius:10px;padding:12px;background:#fafafa;}
+.card .label{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:0.4px;}
+.card .value{margin-top:6px;font-size:18px;font-weight:800;color:#111;}
+.value.green{color:#008000;}
+.value.red{color:#c81e1e;}
+table{width:100%;border-collapse:collapse;margin-top:16px;}
+th{background:#008000;color:#fff;padding:12px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.4px;}
+td{padding:10px;border-bottom:1px solid #e5e7eb;font-size:12px;color:#111;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.footer{padding:14px 26px;background:#0b1f14;color:#fff;text-align:center;font-size:12px;font-weight:700;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.sheet{box-shadow:none!important;border-radius:0!important;}}
+</style>
+</head><body>
+<div class="sheet">
+  <div class="header">
+    <h1>Cash Drawer Report</h1>
+    <p>Date: ${reportDate} • Drawer: ${currentDrawer.drawer_name || 'Main Drawer'} • Opened: ${openedAtLabel || '--:--'}</p>
+  </div>
+  <div class="section">
+    <div class="meta">
+      <div><strong>Status:</strong> OPEN</div>
+      <div><strong>Drawer ID:</strong> ${currentDrawer.id}</div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="label">Opening Amount</div><div class="value">$${stats.opening.toFixed(2)}</div></div>
+      <div class="card"><div class="label">Cash In</div><div class="value green">+$${stats.cashIn.toFixed(2)}</div></div>
+      <div class="card"><div class="label">Cash Out</div><div class="value red">-$${stats.cashOut.toFixed(2)}</div></div>
+      <div class="card"><div class="label">Expected Balance</div><div class="value green">$${stats.expected.toFixed(2)}</div></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:110px;">Time</th>
+          <th style="width:110px;">Type</th>
+          <th style="width:180px;">Category</th>
+          <th>Description</th>
+          <th style="width:120px;text-align:right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(transactions || [])
+          .map((tx) => {
+            const sign = tx.type === 'in' ? '+' : '-';
+            return `<tr>
+              <td>${tx.time}</td>
+              <td>${tx.type === 'in' ? 'Cash In' : 'Cash Out'}</td>
+              <td>${tx.category}</td>
+              <td>${(tx.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+              <td class="num">${sign}$${Number(tx.amount || 0).toFixed(2)}</td>
+            </tr>`;
+          })
+          .join('')}
+      </tbody>
+    </table>
+  </div>
+  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
+</div>
+<script>window.onload=function(){window.print();};</script>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) {
+      alert('Could not open print window');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  };
+
+  const handleExportPdf = async () => {
+    if (drawerStatus !== 'open' || !currentDrawer) {
+      alert('Open a drawer first to export a report');
+      return;
+    }
+
+    try {
+      const jsPDF = await loadJsPDF();
+      const doc = new jsPDF();
+      const pdfStyles = getPdfTableStyles();
+
+      const reportDate = new Date(currentDrawer.opened_at || currentDrawer.created_at).toLocaleDateString();
+      const startY = await addPdfBrandedHeader(doc as any, 'Cash Drawer Report', {
+        subtitle: `Date: ${reportDate} | Drawer: ${currentDrawer.drawer_name || 'Main Drawer'} | Opened: ${openedAtLabel || '--:--'}`,
+      });
+
+      const summaryRows = [
+        ['Opening Amount', `$${stats.opening.toFixed(2)}`],
+        ['Cash In', `+$${stats.cashIn.toFixed(2)}`],
+        ['Cash Out', `-$${stats.cashOut.toFixed(2)}`],
+        ['Expected Balance', `$${stats.expected.toFixed(2)}`],
+      ];
+
+      (doc as any).autoTable({
+        startY,
+        head: [['Metric', 'Value']],
+        body: summaryRows,
+        theme: 'grid',
+        styles: pdfStyles.styles,
+        headStyles: pdfStyles.headStyles,
+        alternateRowStyles: pdfStyles.alternateRowStyles,
+        columnStyles: {
+          0: { cellWidth: 90 },
+          1: { halign: 'right' },
+        },
+      });
+
+      const txRows = (transactions || []).map((tx) => [
+        tx.time,
+        tx.type === 'in' ? 'Cash In' : 'Cash Out',
+        tx.category,
+        tx.description,
+        `${tx.type === 'in' ? '+' : '-'}$${Number(tx.amount || 0).toFixed(2)}`,
+      ]);
+
+      const nextY = ((doc as any).lastAutoTable?.finalY || startY) + 10;
+
+      (doc as any).autoTable({
+        startY: nextY,
+        head: [['Time', 'Type', 'Category', 'Description', 'Amount']],
+        body: txRows,
+        theme: 'grid',
+        styles: pdfStyles.styles,
+        headStyles: pdfStyles.headStyles,
+        alternateRowStyles: pdfStyles.alternateRowStyles,
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 90 },
+          4: { halign: 'right', cellWidth: 25 },
+        },
+      });
+
+      doc.save(`cash_drawer_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Error exporting cash drawer PDF:', e);
+      alert('Could not export PDF');
+    }
   };
 
   return (
@@ -184,25 +420,27 @@ export default function ContadorCajaFinanzaPage() {
         </div>
 
         {/* Drawer Status Banner */}
-        <div className={`rounded-lg p-4 mb-6 ${drawerStatus === 'open' ? 'bg-green-50 border border-green-200' : 'bg-gray-100 border border-gray-200'}`}>
+        <div className={`rounded-lg p-4 mb-6 ${drawerStatus === 'open' ? 'bg-[#008000] border border-[#006B00]' : 'bg-gray-100 border border-gray-200'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-full ${drawerStatus === 'open' ? 'bg-green-100' : 'bg-gray-200'}`}>
-                <i className={`ri-safe-2-line text-xl ${drawerStatus === 'open' ? 'text-green-600' : 'text-gray-500'}`}></i>
+              <div className={`p-2 rounded-full ${drawerStatus === 'open' ? 'bg-white/15' : 'bg-gray-200'}`}>
+                <i className={`ri-safe-2-line text-xl ${drawerStatus === 'open' ? 'text-white' : 'text-gray-500'}`}></i>
               </div>
               <div>
-                <p className="font-medium text-gray-900">
-                  Cash Drawer: <span className={drawerStatus === 'open' ? 'text-green-600' : 'text-gray-500'}>{drawerStatus === 'open' ? 'OPEN' : 'CLOSED'}</span>
+                <p className={`font-semibold ${drawerStatus === 'open' ? 'text-white' : 'text-gray-900'}`}>
+                  Cash Drawer: <span className={drawerStatus === 'open' ? 'text-white' : 'text-gray-500'}>{drawerStatus === 'open' ? 'OPEN' : 'CLOSED'}</span>
                 </p>
-                <p className="text-sm text-gray-500">
-                  {drawerStatus === 'open' ? `Opened at 8:00 AM • Opening: $${openingAmount.toFixed(2)}` : 'No active session'}
+                <p className={`text-sm ${drawerStatus === 'open' ? 'text-white/90' : 'text-gray-500'}`}>
+                  {drawerStatus === 'open'
+                    ? `Opened at ${openedAtLabel || '--:--'} • Opening: $${stats.opening.toFixed(2)}`
+                    : 'No active session'}
                 </p>
               </div>
             </div>
             {drawerStatus === 'open' && (
               <div className="text-right">
-                <p className="text-sm text-gray-500">Expected Balance</p>
-                <p className="text-2xl font-bold text-[#008000]">${stats.expected.toFixed(2)}</p>
+                <p className="text-sm text-white/90">Expected Balance</p>
+                <p className="text-2xl font-extrabold text-white">${stats.expected.toFixed(2)}</p>
               </div>
             )}
           </div>
@@ -332,11 +570,11 @@ export default function ContadorCajaFinanzaPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Sales</span>
-                        <span className="font-medium text-green-600">+$634.75</span>
+                        <span className="font-medium text-green-600">+${(dailySummary?.sales ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Deposits</span>
-                        <span className="font-medium text-green-600">+$0.00</span>
+                        <span className="text-gray-500">Adjustments</span>
+                        <span className="font-medium text-green-600">+${(txByCategory['Opening Adjustment'] || 0).toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-2 flex justify-between font-medium">
                         <span>Total In</span>
@@ -352,11 +590,15 @@ export default function ContadorCajaFinanzaPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Expenses</span>
-                        <span className="font-medium text-red-600">-$45.00</span>
+                        <span className="font-medium text-red-600">-${(dailySummary?.paidOuts ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Withdrawals</span>
-                        <span className="font-medium text-red-600">-$300.00</span>
+                        <span className="text-gray-500">Cash Drops</span>
+                        <span className="font-medium text-red-600">-${(dailySummary?.drops ?? 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Refunds</span>
+                        <span className="font-medium text-red-600">-${(dailySummary?.refunds ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="border-t pt-2 flex justify-between font-medium">
                         <span>Total Out</span>
@@ -393,11 +635,17 @@ export default function ContadorCajaFinanzaPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button
+                    onClick={handlePrintReport}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-printer-line"></i>
                     Print Report
                   </button>
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button
+                    onClick={handleExportPdf}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-download-line"></i>
                     Export PDF
                   </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId } from '../../services/database';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
 
@@ -9,6 +9,7 @@ import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
 
 export default function InventoryPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
@@ -49,6 +50,16 @@ export default function InventoryPage() {
   const [transferLines, setTransferLines] = useState<any[]>([
     { inventory_item_id: '', quantity: '', notes: '' },
   ]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '');
+    const tab = String(params.get('tab') || '').toLowerCase();
+    const normalized = tab === 'items' ? 'products' : tab;
+    const allowed = new Set(['dashboard', 'products', 'movements', 'entries', 'transfers', 'warehouses', 'reports']);
+    if (allowed.has(normalized)) {
+      setActiveTab(normalized);
+    }
+  }, [location.search]);
 
   const getWarehouseStats = (warehouseId: string) => {
     const wid = String(warehouseId || '');
@@ -179,7 +190,7 @@ export default function InventoryPage() {
       let itemsData = [];
       let movementsData = [];
 
-      if (activeTab === 'items' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
+      if (activeTab === 'products' || activeTab === 'dashboard' || activeTab === 'warehouses' || activeTab === 'transfers') {
         try {
           itemsData = await inventoryService.getItems(user!.id);
           if (!itemsData || itemsData.length === 0) {
@@ -843,7 +854,7 @@ export default function InventoryPage() {
 
   // Export functions
   const exportToExcel = async () => {
-    const isItemsTab = activeTab === 'items';
+    const isItemsTab = activeTab === 'products';
     const dataToExport = isItemsTab ? filteredItems : filteredMovements;
 
     if (!dataToExport || dataToExport.length === 0) {

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { employeesService, rolesService } from '../../../services/contador/staff.service';
-import type { Role } from '../../../services/contador/staff.service';
+import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { employeesService, rolesService, departmentsService, employeeRoleHistoryService } from '../../../services/contador/staff.service';
+import type { Role, Department } from '../../../services/contador/staff.service';
 
 interface EmployeeDisplay {
   id: string;
+  employee_no?: string;
   name: string;
   position: string;
   department: string;
@@ -19,15 +21,24 @@ interface EmployeeDisplay {
 
 export default function ContadorStaffReportPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'employees' | 'attendance' | 'performance'>('employees');
+  const [activeTab, setActiveTab] = useState<'employees' | 'roles' | 'departments'>('employees');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [showAddDepartmentModal, setShowAddDepartmentModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [employees, setEmployees] = useState<EmployeeDisplay[]>([]);
+  const [employeesDb, setEmployeesDb] = useState<any[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [historyEmployeeName, setHistoryEmployeeName] = useState('');
+  const [roleHistory, setRoleHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [roleSaving, setRoleSaving] = useState(false);
+  const [departmentSaving, setDepartmentSaving] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -36,9 +47,16 @@ export default function ContadorStaffReportPage() {
     phone: '',
     hire_date: new Date().toISOString().split('T')[0],
     default_role_id: '',
+    department_id: '',
   });
 
   const [roleForm, setRoleForm] = useState({
+    name: '',
+    description: '',
+    base_salary: '',
+  });
+
+  const [departmentForm, setDepartmentForm] = useState({
     name: '',
     description: '',
   });
@@ -54,14 +72,18 @@ export default function ContadorStaffReportPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [emps, rls] = await Promise.all([
+      const [emps, rls, deps] = await Promise.all([
         employeesService.list(user.id),
         rolesService.list(user.id),
+        departmentsService.list(user.id),
       ]);
+
+      setEmployeesDb(emps as any[]);
 
       // Mapear empleados al formato de display
       const mapped: EmployeeDisplay[] = emps.map(emp => ({
         id: emp.id,
+        employee_no: emp.employee_no,
         name: `${emp.first_name} ${emp.last_name}`,
         position: emp.role?.name || 'N/A',
         department: emp.role?.name || 'General',
@@ -75,6 +97,7 @@ export default function ContadorStaffReportPage() {
 
       setEmployees(mapped);
       setRoles(rls);
+      setDepartments(deps);
     } catch (error) {
       console.error('Error loading staff data:', error);
     } finally {
@@ -82,23 +105,121 @@ export default function ContadorStaffReportPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const todayIso = new Date().toISOString().slice(0, 10);
+
+      if (activeTab === 'employees') {
+        const rows = (employeesDb || []).map((e: any) => ({
+          employee_no: e.employee_no || '',
+          first_name: e.first_name || '',
+          last_name: e.last_name || '',
+          role: (e.role as any)?.name || '',
+          hire_date: e.hire_date || '',
+          status: e.status || '',
+          email: e.email || '',
+          phone: e.phone || '',
+        }));
+
+        const headers = [
+          { key: 'employee_no', title: 'Employee #' },
+          { key: 'first_name', title: 'First Name' },
+          { key: 'last_name', title: 'Last Name' },
+          { key: 'role', title: 'Role' },
+          { key: 'hire_date', title: 'Hire Date' },
+          { key: 'status', title: 'Status' },
+          { key: 'email', title: 'Email' },
+          { key: 'phone', title: 'Phone' },
+        ];
+
+        await exportToExcelWithHeaders(rows, headers, `staff_employees_${todayIso}`, 'Employees');
+        return;
+      }
+
+      if (activeTab === 'roles') {
+        const rows = (roles || []).map((r: any) => ({
+          name: r.name || '',
+          base_salary: typeof r.base_salary === 'number' ? r.base_salary : '',
+          description: r.description || '',
+        }));
+
+        const headers = [
+          { key: 'name', title: 'Role' },
+          { key: 'base_salary', title: 'Salary' },
+          { key: 'description', title: 'Description' },
+        ];
+
+        await exportToExcelWithHeaders(rows, headers, `staff_roles_${todayIso}`, 'Roles');
+        return;
+      }
+
+      const rows = (departments || []).map((d: any) => ({
+        name: d.name || '',
+        description: d.description || '',
+      }));
+
+      const headers = [
+        { key: 'name', title: 'Department' },
+        { key: 'description', title: 'Description' },
+      ];
+
+      await exportToExcelWithHeaders(rows, headers, `staff_departments_${todayIso}`, 'Departments');
+    } catch (error) {
+      console.error('Error exporting staff report:', error);
+      alert('Error exporting');
+    }
+  };
+
+  const handleAddDepartment = async () => {
+    if (!user?.id || !departmentForm.name.trim()) return;
+    setDepartmentSaving(true);
+    try {
+      await departmentsService.create({
+        user_id: user.id,
+        name: departmentForm.name.trim(),
+        description: departmentForm.description.trim() ? departmentForm.description.trim() : null,
+      });
+
+      const deps = await departmentsService.list(user.id);
+      setDepartments(deps);
+      setShowAddDepartmentModal(false);
+      setDepartmentForm({ name: '', description: '' });
+    } catch (error) {
+      console.error('Error adding department:', error);
+      alert('Error adding department');
+    } finally {
+      setDepartmentSaving(false);
+    }
+  };
+
   const handleAddRole = async () => {
     if (!user?.id || !roleForm.name.trim()) return;
+    const salary = Number(roleForm.base_salary);
+    if (!Number.isFinite(salary) || salary <= 0) {
+      alert('Enter a valid salary amount');
+      return;
+    }
     setRoleSaving(true);
     try {
       await rolesService.create({
         user_id: user.id,
         name: roleForm.name.trim(),
         description: roleForm.description.trim() ? roleForm.description.trim() : null,
+        base_salary: salary,
       });
 
       const rls = await rolesService.list(user.id);
       setRoles(rls);
       setShowAddRoleModal(false);
-      setRoleForm({ name: '', description: '' });
+      setRoleForm({ name: '', description: '', base_salary: '' });
     } catch (error) {
       console.error('Error adding role:', error);
-      alert('Error adding role');
+      const msg = String((error as any)?.message || '');
+      if (msg.toLowerCase().includes('base_salary') || msg.toLowerCase().includes('could not find')) {
+        alert('Database missing required column: contador_roles.base_salary. Add this column in Supabase to create roles with salary.');
+      } else {
+        alert('Error adding role');
+      }
     } finally {
       setRoleSaving(false);
     }
@@ -108,17 +229,32 @@ export default function ContadorStaffReportPage() {
     if (!user?.id || !formData.first_name || !formData.last_name || !formData.employee_no) return;
     setSaving(true);
     try {
-      await employeesService.create({
-        user_id: user.id,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        employee_no: formData.employee_no,
-        email: formData.email || null,
-        phone: formData.phone || null,
-        hire_date: formData.hire_date,
-        default_role_id: formData.default_role_id || null,
-      });
+      if (editingEmployeeId) {
+        await employeesService.update(editingEmployeeId, {
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          employee_no: formData.employee_no,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          hire_date: formData.hire_date,
+          default_role_id: formData.default_role_id || null,
+          department_id: formData.department_id || null,
+        });
+      } else {
+        await employeesService.create({
+          user_id: user.id,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          employee_no: formData.employee_no,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          hire_date: formData.hire_date,
+          default_role_id: formData.default_role_id || null,
+          department_id: formData.department_id || null,
+        });
+      }
       setShowAddModal(false);
+      setEditingEmployeeId(null);
       setFormData({
         first_name: '',
         last_name: '',
@@ -127,11 +263,17 @@ export default function ContadorStaffReportPage() {
         phone: '',
         hire_date: new Date().toISOString().split('T')[0],
         default_role_id: '',
+        department_id: '',
       });
       await loadData();
     } catch (error) {
       console.error('Error adding employee:', error);
-      alert('Error adding employee');
+      const msg = String((error as any)?.message || '').toLowerCase();
+      if (msg.includes('department_id') || msg.includes('contador_departments') || msg.includes('relationship')) {
+        alert('Database missing Department setup. Ensure contador_departments table exists and contador_employees.department_id column + FK are created in Supabase.');
+      } else {
+        alert('Error adding employee');
+      }
     } finally {
       setSaving(false);
     }
@@ -139,6 +281,8 @@ export default function ContadorStaffReportPage() {
 
   const handleToggleStatus = async (empId: string, currentStatus: string) => {
     try {
+      const next = currentStatus === 'active' ? 'inactive' : 'active';
+      if (!confirm(`Change status to ${next}?`)) return;
       if (currentStatus === 'active') {
         await employeesService.update(empId, { status: 'inactive' });
       } else {
@@ -150,15 +294,53 @@ export default function ContadorStaffReportPage() {
     }
   };
 
+  const openEditEmployee = (empId: string) => {
+    const emp = (employeesDb || []).find((e: any) => String(e.id) === String(empId));
+    if (!emp) return;
+
+    setEditingEmployeeId(String(empId));
+    setFormData({
+      first_name: emp.first_name || '',
+      last_name: emp.last_name || '',
+      employee_no: emp.employee_no || '',
+      email: emp.email || '',
+      phone: emp.phone || '',
+      hire_date: emp.hire_date || new Date().toISOString().split('T')[0],
+      default_role_id: emp.default_role_id || '',
+      department_id: emp.department_id || '',
+    });
+    setShowAddModal(true);
+  };
+
+  const openHistory = async (empId: string) => {
+    try {
+      const emp = (employeesDb || []).find((e: any) => String(e.id) === String(empId));
+      setHistoryEmployeeName(emp ? `${emp.first_name || ''} ${emp.last_name || ''}`.trim() : 'Employee');
+      setShowHistoryModal(true);
+      setHistoryLoading(true);
+      const rows = await employeeRoleHistoryService.listByEmployee(empId);
+      setRoleHistory(rows || []);
+    } catch (error) {
+      console.error('Error loading role history:', error);
+      setRoleHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const filteredEmployees = employees.filter(emp => 
     filterStatus === 'all' ? true : emp.status === filterStatus
   );
 
-  const stats = {
-    total: employees.length,
-    active: employees.filter(e => e.status === 'active').length,
-    inactive: employees.filter(e => e.status === 'inactive').length,
-    avgAttendance: Math.round(employees.filter(e => e.status === 'active').reduce((acc, e) => acc + e.attendance, 0) / employees.filter(e => e.status === 'active').length),
+  const getEmployeeDepartmentName = (employeeId: string) => {
+    const emp = (employeesDb || []).find((e: any) => String(e.id) === String(employeeId));
+    const embedded = (emp as any)?.department?.name;
+    if (embedded) return String(embedded);
+
+    const deptId = (emp as any)?.department_id ? String((emp as any).department_id) : '';
+    if (!deptId) return '';
+    const dep = (departments || []).find((d) => String(d.id) === deptId);
+    return dep?.name ? String(dep.name) : '';
   };
 
   return (
@@ -176,6 +358,13 @@ export default function ContadorStaffReportPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowAddDepartmentModal(true)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2"
+            >
+              <i className="ri-building-2-line"></i>
+              Add Department
+            </button>
             <button
               onClick={() => setShowAddRoleModal(true)}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2"
@@ -201,62 +390,14 @@ export default function ContadorStaffReportPage() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#008000]/10 rounded-lg">
-                <i className="ri-team-line text-xl text-[#008000]"></i>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Employees</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#008000]/10 rounded-lg">
-                <i className="ri-user-follow-line text-xl text-[#008000]"></i>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Active</p>
-                <p className="text-2xl font-bold text-[#008000]">{stats.active}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#008000]/10 rounded-lg">
-                <i className="ri-user-unfollow-line text-xl text-[#008000]"></i>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Inactive</p>
-                <p className="text-2xl font-bold text-[#008000]">{stats.inactive}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-[#008000]/10 rounded-lg">
-                <i className="ri-calendar-check-line text-xl text-[#008000]"></i>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Avg. Attendance</p>
-                <p className="text-2xl font-bold text-[#008000]">{stats.avgAttendance}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="border-b border-gray-200">
             <div className="flex">
               {[
                 { id: 'employees', label: 'Employee List', icon: 'ri-user-line' },
-                { id: 'attendance', label: 'Time & Attendance', icon: 'ri-time-line' },
-                { id: 'performance', label: 'Performance', icon: 'ri-bar-chart-line' },
+                { id: 'roles', label: 'Roles List', icon: 'ri-shield-user-line' },
+                { id: 'departments', label: 'Departments', icon: 'ri-building-2-line' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -287,7 +428,10 @@ export default function ContadorStaffReportPage() {
                 <option value="inactive">Inactive Only</option>
               </select>
               <div className="flex-1"></div>
-              <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              >
                 <i className="ri-download-line"></i>
                 Export
               </button>
@@ -319,21 +463,29 @@ export default function ContadorStaffReportPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-gray-600">{emp.position}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.department}</td>
+                        <td className="px-4 py-3 text-gray-600">{getEmployeeDepartmentName(emp.id) || emp.department}</td>
                         <td className="px-4 py-3 text-gray-600">{emp.hireDate}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            emp.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            emp.status === 'active' ? 'bg-gray-100 text-gray-700' : 'bg-red-100 text-red-700'
                           }`}>
                             {emp.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <button className="p-1 hover:bg-gray-100 rounded" title="Edit">
+                            <button
+                              onClick={() => openEditEmployee(emp.id)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                              title="Edit"
+                            >
                               <i className="ri-edit-line text-gray-500"></i>
                             </button>
-                            <button className="p-1 hover:bg-gray-100 rounded" title="View History">
+                            <button
+                              onClick={() => openHistory(emp.id)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                              title="View History"
+                            >
                               <i className="ri-history-line text-gray-500"></i>
                             </button>
                             <button 
@@ -352,41 +504,27 @@ export default function ContadorStaffReportPage() {
               </div>
             )}
 
-            {/* Attendance Tab */}
-            {activeTab === 'attendance' && (
+            {/* Roles List Tab */}
+            {activeTab === 'roles' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Employee</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Hours Worked</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Attendance %</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salary</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {filteredEmployees.filter(e => e.status === 'active').map((emp) => (
-                      <tr key={emp.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">{emp.name}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.hoursWorked} hrs</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full ${emp.attendance >= 95 ? 'bg-green-500' : emp.attendance >= 85 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                                style={{ width: `${emp.attendance}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm text-gray-600">{emp.attendance}%</span>
-                          </div>
+                    {roles.map((role) => (
+                      <tr key={role.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{role.name}</td>
+                        <td className="px-4 py-3 text-right text-gray-900">
+                          {typeof (role as any).base_salary === 'number'
+                            ? `$${Number((role as any).base_salary).toFixed(2)}`
+                            : 'N/A'}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            emp.attendance >= 95 ? 'bg-green-100 text-green-700' : emp.attendance >= 85 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {emp.attendance >= 95 ? 'Excellent' : emp.attendance >= 85 ? 'Good' : 'Needs Improvement'}
-                          </span>
-                        </td>
+                        <td className="px-4 py-3 text-gray-600">{role.description || ''}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -394,39 +532,25 @@ export default function ContadorStaffReportPage() {
               </div>
             )}
 
-            {/* Performance Tab */}
-            {activeTab === 'performance' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredEmployees.filter(e => e.status === 'active').map((emp) => (
-                  <div key={emp.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#008000]/10 rounded-full flex items-center justify-center">
-                          <span className="text-lg font-medium text-[#008000]">{emp.name.charAt(0)}</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{emp.name}</p>
-                          <p className="text-sm text-gray-500">{emp.position}</p>
-                        </div>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        emp.attendance >= 95 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {emp.attendance >= 95 ? 'Top Performer' : 'On Track'}
-                      </span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Attendance</span>
-                        <span className="font-medium">{emp.attendance}%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Hours This Month</span>
-                        <span className="font-medium">{emp.hoursWorked} hrs</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+            {/* Departments Tab */}
+            {activeTab === 'departments' && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Department</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {departments.map((dept) => (
+                      <tr key={dept.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-900">{dept.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{dept.description || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -437,8 +561,14 @@ export default function ContadorStaffReportPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Add New Employee</h2>
-                <button onClick={() => setShowAddModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <h2 className="text-xl font-bold text-gray-900">{editingEmployeeId ? 'Edit Employee' : 'Add New Employee'}</h2>
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingEmployeeId(null);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
                   <i className="ri-close-line text-xl"></i>
                 </button>
               </div>
@@ -494,6 +624,19 @@ export default function ContadorStaffReportPage() {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                  <select
+                    value={formData.department_id}
+                    onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent"
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                   <select 
                     value={formData.default_role_id}
@@ -517,7 +660,13 @@ export default function ContadorStaffReportPage() {
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowAddModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingEmployeeId(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
                   Cancel
                 </button>
                 <button 
@@ -525,7 +674,53 @@ export default function ContadorStaffReportPage() {
                   disabled={saving || !formData.first_name || !formData.last_name || !formData.employee_no}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : 'Add Employee'}
+                  {saving ? 'Saving...' : (editingEmployeeId ? 'Save Changes' : 'Add Employee')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showHistoryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Role History - {historyEmployeeName}</h2>
+                <button onClick={() => setShowHistoryModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+
+              {historyLoading ? (
+                <div className="py-8 text-gray-600">Loading...</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Effective From</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Effective To</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {(roleHistory || []).map((h: any) => (
+                        <tr key={h.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-900">{(h.role as any)?.name || ''}</td>
+                          <td className="px-4 py-3 text-gray-600">{h.effective_from || ''}</td>
+                          <td className="px-4 py-3 text-gray-600">{h.effective_to || ''}</td>
+                          <td className="px-4 py-3 text-gray-600">{h.note || ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-6">
+                <button onClick={() => setShowHistoryModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Close
                 </button>
               </div>
             </div>
@@ -552,6 +747,16 @@ export default function ContadorStaffReportPage() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salary *</label>
+                  <input
+                    type="number"
+                    value={roleForm.base_salary}
+                    onChange={(e) => setRoleForm({ ...roleForm, base_salary: e.target.value })}
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
                     value={roleForm.description}
@@ -567,10 +772,55 @@ export default function ContadorStaffReportPage() {
                 </button>
                 <button
                   onClick={handleAddRole}
-                  disabled={roleSaving || !roleForm.name.trim()}
+                  disabled={roleSaving || !roleForm.name.trim() || !String(roleForm.base_salary).trim()}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] disabled:opacity-50"
                 >
                   {roleSaving ? 'Saving...' : 'Add Role'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAddDepartmentModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">Add New Department</h2>
+                <button onClick={() => setShowAddDepartmentModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                  <i className="ri-close-line text-xl"></i>
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Department Name *</label>
+                  <input
+                    type="text"
+                    value={departmentForm.name}
+                    onChange={(e) => setDepartmentForm({ ...departmentForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={departmentForm.description}
+                    onChange={(e) => setDepartmentForm({ ...departmentForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowAddDepartmentModal(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddDepartment}
+                  disabled={departmentSaving || !departmentForm.name.trim()}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] disabled:opacity-50"
+                >
+                  {departmentSaving ? 'Saving...' : 'Add Department'}
                 </button>
               </div>
             </div>

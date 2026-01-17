@@ -261,7 +261,7 @@ export const payProfilesService = {
       .from('contador_employee_pay_profiles')
       .select(`
         *,
-        employee:employees(id, first_name, last_name, employee_no)
+        employee:contador_employees(id, first_name, last_name, employee_no)
       `)
       .eq('user_id', companyId);
 
