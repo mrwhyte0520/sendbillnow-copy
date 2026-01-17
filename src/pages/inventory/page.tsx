@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, resolveTenantId } from '../../services/database';
+import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId } from '../../services/database';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
@@ -17,6 +17,7 @@ export default function InventoryPage() {
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [warehouseEntries, setWarehouseEntries] = useState<any[]>([]);
   const [warehouseTransfers, setWarehouseTransfers] = useState<any[]>([]);
   const [entryInvoices, setEntryInvoices] = useState<any[]>([]);
@@ -72,6 +73,7 @@ export default function InventoryPage() {
       loadData();
       loadWarehouses();
       loadStores();
+      loadSuppliers();
       setAccounts([]);
       setAccountingSettings(null);
     } else {
@@ -96,30 +98,20 @@ export default function InventoryPage() {
           return;
         }
 
-        // Real sales = sum of invoice lines associated with inventory items (not services)
+        // Real sales = sum of posted invoice totals for this tenant
+        // (Avoid invoice_lines joins which may not exist in some environments)
         const { data, error } = await supabase
-          .from('invoice_lines')
-          .select(`
-            quantity,
-            unit_price,
-            line_total,
-            item_id,
-            inventory_items ( item_type ),
-            invoices!inner ( user_id )
-          `)
-          .eq('invoices.user_id', tenantId);
+          .from('invoices')
+          .select('total_amount,status')
+          .eq('user_id', tenantId);
 
         if (error) throw error;
 
-        const total = (data || [])
-          .filter((ln: any) => ln?.item_id && ln?.inventory_items?.item_type !== 'service')
-          .reduce((sum: number, ln: any) => {
-            const lineTotal = Number(ln?.line_total ?? 0) || 0;
-            if (lineTotal) return sum + lineTotal;
-            const qty = Number(ln?.quantity ?? 0) || 0;
-            const unit = Number(ln?.unit_price ?? 0) || 0;
-            return sum + (qty * unit);
-          }, 0);
+        const total = (data || []).reduce((sum: number, inv: any) => {
+          const st = String(inv?.status || '').toLowerCase();
+          if (st === 'draft' || st === 'cancelled' || st === 'cancelada') return sum;
+          return sum + (Number(inv?.total_amount ?? 0) || 0);
+        }, 0);
 
         setRealSalesTotal(total);
       } catch (e) {
@@ -271,6 +263,20 @@ export default function InventoryPage() {
     } catch (error) {
       console.error('Error loading stores:', error);
       setStores([]);
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      if (!user?.id) {
+        setSuppliers([]);
+        return;
+      }
+      const data = await suppliersService.getAll(user.id);
+      setSuppliers(data || []);
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+      setSuppliers([]);
     }
   };
 
@@ -459,6 +465,15 @@ export default function InventoryPage() {
             item_type: formData.item_type || 'inventory',
             is_commissionable: formData.is_commissionable !== false,
             warehouse_id: formData.warehouse_id || null,
+            product_type: formData.product_type || 'unit',
+            quantity_per_type: Number.isFinite(Number(formData.quantity_per_type))
+              ? Math.round(Number(formData.quantity_per_type))
+              : 1,
+            vendor_id: formData.vendor_id || null,
+            unit_price: Number(formData.unit_price) || 0,
+            box_price: Number(formData.box_price) || 0,
+            pallet_price: Number(formData.pallet_price) || 0,
+            package_price: Number(formData.package_price) || 0,
           };
 
           // If there's a user, try to save to database
@@ -539,6 +554,82 @@ export default function InventoryPage() {
             console.error('Error updating current stock for manual inventory movement', stockError);
           }
         }
+      } else if (modalType === 'add_to_inventory') {
+        // Add to Inventory - update product stock and create movement
+        if (!user) {
+          alert('You must be logged in to add inventory');
+          return;
+        }
+
+        if (!formData.item_id) {
+          alert('Please select a product');
+          return;
+        }
+
+        const addQty = parseInt(formData.add_quantity) || 0;
+        if (addQty <= 0) {
+          alert('Please enter a valid quantity to add');
+          return;
+        }
+
+        const currentStock = Number(formData.current_stock) || 0;
+        const totalStock = currentStock + addQty;
+        const maxStock = Number(formData.maximum_stock) || 0;
+
+        // Warning if exceeds maximum (but allow to proceed)
+        if (maxStock > 0 && totalStock > maxStock) {
+          if (!confirm(`Warning: Total stock (${totalStock}) will exceed maximum stock (${maxStock}). Do you want to continue?`)) {
+            return;
+          }
+        }
+
+        try {
+          // Get the price based on entry type
+          const entryType = formData.entry_type || 'unit';
+          const entryPrice = entryType === 'unit' ? (Number(formData.unit_price) || 0) :
+            entryType === 'box' || entryType === 'mixed_box' ? (Number(formData.box_price) || 0) :
+            entryType === 'pallet' || entryType === 'mixed_pallet' ? (Number(formData.pallet_price) || 0) :
+            (Number(formData.package_price) || 0);
+
+          // Update product stock and prices
+          await inventoryService.updateItem(user.id, formData.item_id, {
+            current_stock: totalStock,
+            vendor_id: formData.vendor_id || null,
+            unit_price: Number(formData.unit_price) || 0,
+            box_price: Number(formData.box_price) || 0,
+            pallet_price: Number(formData.pallet_price) || 0,
+            package_price: Number(formData.package_price) || 0,
+            last_entry_date: formData.entry_date || new Date().toISOString().split('T')[0],
+          });
+
+          // Create inventory movement
+          await inventoryService.createMovement(user.id, {
+            item_id: formData.item_id,
+            movement_type: 'entry',
+            quantity: addQty,
+            unit_cost: entryPrice,
+            total_cost: addQty * entryPrice,
+            movement_date: formData.entry_date || new Date().toISOString().slice(0, 10),
+            notes: formData.entry_notes || `Inventory entry - ${entryType}`,
+          });
+
+          // Update local state
+          setItems((prev) => {
+            const next = Array.isArray(prev) ? [...prev] : [];
+            const idx = next.findIndex((it) => String(it.id) === String(formData.item_id));
+            if (idx >= 0) {
+              next[idx] = { ...next[idx], current_stock: totalStock };
+            }
+            return next;
+          });
+
+          alert(`Successfully added ${addQty} units to inventory. New stock: ${totalStock}`);
+          skipReloadAfterSave = true;
+        } catch (err: any) {
+          console.error('Error adding to inventory:', err);
+          alert(`Error adding to inventory: ${err?.message || 'check console for details'}`);
+          return;
+        }
       } else if (modalType === 'warehouse') {
         if (selectedItem && selectedItem.id) {
           await settingsService.updateWarehouse(selectedItem.id, {
@@ -597,7 +688,7 @@ export default function InventoryPage() {
           status: 'draft',
         };
 
-        const linesPayload = validLines.map((l, index) => ({
+        const linesPayload = validLines.map((l) => ({
           inventory_item_id: l.inventory_item_id,
           quantity: l.quantity,
           unit_cost: l.unit_cost,
@@ -711,7 +802,7 @@ export default function InventoryPage() {
           return;
         }
       }
-      
+
       handleCloseModal();
       if (user && !skipReloadAfterSave) {
         await loadData();
@@ -731,7 +822,7 @@ export default function InventoryPage() {
 
   const handleDelete = async (id: any) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
-    
+
     try {
       if (user) {
         await inventoryService.deleteItem(id);
@@ -1160,6 +1251,13 @@ export default function InventoryPage() {
           >
             <i className="ri-add-line mr-2"></i>
             Add Product
+          </button>
+          <button
+            onClick={() => handleOpenModal('add_to_inventory')}
+            className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
+          >
+            <i className="ri-stack-line mr-2"></i>
+            Add to Inventory
           </button>
         </div>
       </div>
@@ -1931,7 +2029,9 @@ export default function InventoryPage() {
                       ? 'Warehouse Entry'
                       : modalType === 'warehouse_transfer'
                         ? 'Warehouse Transfer'
-                        : 'Inventory Management'}
+                        : modalType === 'add_to_inventory'
+                          ? 'Add to Inventory'
+                          : 'Inventory Management'}
             </h3>
             <button
               type="button"
@@ -2001,6 +2101,52 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Type
+                    </label>
+                    <select
+                      value={formData.product_type || 'unit'}
+                      onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                    >
+                      <option value="unit">Unit</option>
+                      <option value="box">Box</option>
+                      <option value="mixed_box">Mixed Box</option>
+                      <option value="mixed_pallet">Mixed Pallets</option>
+                      <option value="package">Package</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity per Type
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.quantity_per_type ?? 1}
+                      onChange={(e) => setFormData({ ...formData, quantity_per_type: parseInt(e.target.value) || 1 })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="E.g.: 24 for box of 24"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Vendor / Supplier
+                    </label>
+                    <select
+                      value={formData.vendor_id || ''}
+                      onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value || null })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                    >
+                      <option value="">Select vendor</option>
+                      {suppliers.map((sup: any) => (
+                        <option key={sup.id} value={sup.id}>
+                          {sup.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Unit of Measure
                     </label>
                     <input
@@ -2047,7 +2193,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Stock
+                      Initial Stock
                     </label>
                     <input
                       type="number" min="0"
@@ -2122,6 +2268,68 @@ export default function InventoryPage() {
                       onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                </div>
+
+                {/* Pricing by Type Section */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i className="ri-price-tag-3-line text-green-600"></i>
+                    Pricing by Type
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Unit Price
+                      </label>
+                      <input
+                        type="number" min="0"
+                        step="0.01"
+                        value={formData.unit_price ?? ''}
+                        onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Box Price
+                      </label>
+                      <input
+                        type="number" min="0"
+                        step="0.01"
+                        value={formData.box_price ?? ''}
+                        onChange={(e) => setFormData({ ...formData, box_price: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Pallet Price
+                      </label>
+                      <input
+                        type="number" min="0"
+                        step="0.01"
+                        value={formData.pallet_price ?? ''}
+                        onChange={(e) => setFormData({ ...formData, pallet_price: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Package Price
+                      </label>
+                      <input
+                        type="number" min="0"
+                        step="0.01"
+                        value={formData.package_price ?? ''}
+                        onChange={(e) => setFormData({ ...formData, package_price: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -2498,6 +2706,272 @@ export default function InventoryPage() {
                     />
                   </div>
                 </div>
+              </>
+            )}
+
+            {modalType === 'add_to_inventory' && (
+              <>
+                {/* Product Selection */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Select Product *
+                    </label>
+                    <select
+                      value={formData.item_id || ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const selected = items.find((it) => String(it.id) === String(selectedId));
+                        if (selected) {
+                          const defaultUnitPrice = selected.unit_price || selected.cost_price || selected.selling_price || 0;
+                          const defaultBoxPrice = selected.box_price || (selected.quantity_per_type ? (defaultUnitPrice * Number(selected.quantity_per_type || 1)) : 0) || 0;
+                          const defaultPalletPrice = selected.pallet_price || selected.cost_price || selected.selling_price || 0;
+                          const defaultPackagePrice = selected.package_price || (selected.quantity_per_type ? (defaultUnitPrice * Number(selected.quantity_per_type || 1)) : 0) || 0;
+                          setFormData({
+                            ...formData,
+                            item_id: selectedId,
+                            product_name: selected.name,
+                            sku: selected.sku,
+                            category: selected.category,
+                            warehouse_id: selected.warehouse_id,
+                            vendor_id: selected.vendor_id,
+                            image_url: selected.image_url,
+                            current_stock: selected.current_stock || 0,
+                            minimum_stock: selected.minimum_stock || 0,
+                            maximum_stock: selected.maximum_stock || 0,
+                            product_type: selected.product_type || 'unit',
+                            quantity_per_type: selected.quantity_per_type || 1,
+                            unit_price: defaultUnitPrice,
+                            box_price: defaultBoxPrice,
+                            pallet_price: defaultPalletPrice,
+                            package_price: defaultPackagePrice,
+                            add_quantity: 0,
+                            entry_type: selected.product_type || 'unit',
+                          });
+                        }
+                      }}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+                      required
+                    >
+                      <option value="">Select a product to add inventory</option>
+                      {items.filter((it) => it.item_type === 'inventory' || !it.item_type).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.sku} - {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {formData.item_id && (
+                  <>
+                    {/* Product Info Display */}
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-start gap-4">
+                        {formData.image_url && (
+                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-white flex-shrink-0">
+                            <img
+                              src={formData.image_url}
+                              alt={formData.product_name || 'Product'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <p className="text-xs text-gray-500">SKU</p>
+                            <p className="font-medium text-gray-900">{formData.sku}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Product Name</p>
+                            <p className="font-medium text-gray-900">{formData.product_name}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Category</p>
+                            <p className="font-medium text-gray-900">{formData.category || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Warehouse</p>
+                            <p className="font-medium text-gray-900">
+                              {warehouses.find((w) => w.id === formData.warehouse_id)?.name || '-'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Entry Type */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Entry Type *
+                        </label>
+                        <select
+                          value={formData.entry_type || 'unit'}
+                          onChange={(e) => setFormData({ ...formData, entry_type: e.target.value })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+                        >
+                          <option value="unit">Unit</option>
+                          <option value="box">Box</option>
+                          <option value="mixed_box">Mixed Box</option>
+                          <option value="pallet">Pallet Price</option>
+                          <option value="mixed_pallet">Mixed Pallets</option>
+                          <option value="package">Package</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Vendor / Supplier
+                        </label>
+                        <select
+                          value={formData.vendor_id || ''}
+                          onChange={(e) => setFormData({ ...formData, vendor_id: e.target.value || null })}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+                        >
+                          <option value="">Select vendor</option>
+                          {suppliers.map((sup: any) => (
+                            <option key={sup.id} value={sup.id}>
+                              {sup.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i className="ri-stack-line text-green-600"></i>
+                        Stock Calculation
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Actual Stock
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.current_stock ?? 0}
+                            readOnly
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 font-bold text-lg"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Add to Stock *
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formData.add_quantity ?? ''}
+                            onChange={(e) => {
+                              const addQty = parseInt(e.target.value) || 0;
+                              const totalStock = (Number(formData.current_stock) || 0) + addQty;
+                              setFormData({ ...formData, add_quantity: e.target.value, total_stock: totalStock });
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 font-bold text-lg"
+                            placeholder="Enter quantity"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Total Stock
+                          </label>
+                          <input
+                            type="number"
+                            value={formData.total_stock ?? (Number(formData.current_stock) || 0)}
+                            readOnly
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 font-bold text-lg"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                        <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                          <i className="ri-alert-line text-yellow-600"></i>
+                          <span className="text-sm text-yellow-800">
+                            <strong>Minimum Stock:</strong> {formData.minimum_stock ?? 0}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <i className="ri-information-line text-blue-600"></i>
+                          <span className="text-sm text-blue-800">
+                            <strong>Maximum Stock:</strong> {formData.maximum_stock ?? 0}
+                          </span>
+                        </div>
+                      </div>
+
+                      {formData.total_stock !== undefined && formData.maximum_stock > 0 && formData.total_stock > formData.maximum_stock && (
+                        <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200 flex items-center gap-2">
+                          <i className="ri-error-warning-line text-red-600"></i>
+                          <span className="text-sm text-red-800">
+                            <strong>Warning:</strong> Total stock ({formData.total_stock}) exceeds maximum stock ({formData.maximum_stock})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="border-t pt-4">
+                      <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <i className="ri-price-tag-3-line text-green-600"></i>
+                        Entry Price ({formData.entry_type === 'unit' ? 'Unit' : formData.entry_type === 'box' ? 'Box' : formData.entry_type === 'pallet' ? 'Pallet Price' : formData.entry_type === 'mixed_pallet' ? 'Mixed Pallets' : formData.entry_type === 'package' ? 'Package' : 'Mixed Box'})
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {formData.entry_type === 'unit' ? 'Unit Price' : formData.entry_type === 'box' ? 'Box Price' : formData.entry_type === 'pallet' || formData.entry_type === 'mixed_pallet' ? 'Pallet Price' : formData.entry_type === 'package' ? 'Package Price' : 'Mixed Box Price'}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={
+                              formData.entry_type === 'unit' ? (formData.unit_price ?? '') :
+                              formData.entry_type === 'box' ? (formData.box_price ?? '') :
+                              formData.entry_type === 'pallet' || formData.entry_type === 'mixed_pallet' ? (formData.pallet_price ?? '') :
+                              formData.entry_type === 'package' ? (formData.package_price ?? '') :
+                              (formData.box_price ?? '')
+                            }
+                            onChange={(e) => {
+                              const priceField = formData.entry_type === 'unit' ? 'unit_price' :
+                                formData.entry_type === 'box' || formData.entry_type === 'mixed_box' ? 'box_price' :
+                                formData.entry_type === 'pallet' || formData.entry_type === 'mixed_pallet' ? 'pallet_price' : 'package_price';
+                              setFormData({ ...formData, [priceField]: e.target.value });
+                            }}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Entry Date
+                          </label>
+                          <input
+                            type="date"
+                            value={formData.entry_date || new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setFormData({ ...formData, entry_date: e.target.value })}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Notes
+                      </label>
+                      <textarea
+                        value={formData.entry_notes || ''}
+                        onChange={(e) => setFormData({ ...formData, entry_notes: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                        rows={2}
+                        placeholder="Additional notes about this inventory entry"
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 

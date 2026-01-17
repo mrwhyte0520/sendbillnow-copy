@@ -5433,21 +5433,46 @@ export const inventoryService = {
       const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...cleanItem } = itemData;
 
       // 1) Actualizar
-      const { data: updated, error } = await supabase
-        .from('inventory_items')
-        .update(cleanItem)
-        .eq('id', itemId)
-        .eq('user_id', tenantId)
-        .select('id')
-        .maybeSingle();
+      const extractMissingColumn = (err: any): string | null => {
+        const msg = String(err?.message || '');
+        const match = msg.match(/Could not find the '([^']+)' column/i);
+        return match?.[1] || null;
+      };
 
-      if (error) {
-        console.error('[DEBUG updateItem] Supabase error:', error);
-        throw error;
-      }
-      if (!updated) {
-        console.warn('inventoryService.updateItem: item not found', itemId);
-        return null;
+      let updatePayload: any = { ...cleanItem };
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const { error } = await supabase
+          .from('inventory_items')
+          .update(updatePayload)
+          .eq('id', itemId)
+          .eq('user_id', tenantId);
+
+        if (!error) break;
+
+        // If schema cache doesn't know about a column yet (migration not applied), remove and retry.
+        const code = (error as any)?.code;
+        const missingColumn = extractMissingColumn(error);
+
+        console.error('[DEBUG updateItem] Supabase error:', {
+          code,
+          message: (error as any)?.message,
+          details: (error as any)?.details,
+          hint: (error as any)?.hint,
+          missingColumn,
+          payloadKeys: Object.keys(updatePayload || {}),
+        });
+
+        if (code === 'PGRST204' && missingColumn && Object.prototype.hasOwnProperty.call(updatePayload, missingColumn)) {
+          delete updatePayload[missingColumn];
+          continue;
+        }
+
+        const wrapped: any = new Error(describeSupabaseError(error));
+        wrapped.code = (error as any)?.code;
+        wrapped.details = (error as any)?.details;
+        wrapped.hint = (error as any)?.hint;
+        wrapped.original = error;
+        throw wrapped;
       }
 
       // Reconsultar para devolver el registro completo
@@ -5457,6 +5482,11 @@ export const inventoryService = {
         .eq('id', itemId)
         .eq('user_id', tenantId)
         .maybeSingle();
+
+      if (!full) {
+        console.warn('inventoryService.updateItem: item not found', itemId);
+        return null;
+      }
 
       if (fetchError) {
         console.error('inventoryService.updateItem fetchError:', fetchError);
