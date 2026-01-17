@@ -66,7 +66,7 @@ export default function DashboardPage() {
     { name: 'Inventory Reports', icon: 'ri-line-chart-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
     { name: 'Entries', icon: 'ri-download-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
     { name: 'Transfers', icon: 'ri-arrow-left-right-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
-    { name: 'Warehouse', icon: 'ri-building-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
+    { name: 'Location', icon: 'ri-building-line', href: '/inventory', color: 'from-[#008000] to-[#008000]', module: 'inventory' },
     { name: 'Payroll', icon: 'ri-wallet-line', href: '/payroll', color: 'from-[#008000] to-[#008000]', module: 'payroll' },
   ];
 

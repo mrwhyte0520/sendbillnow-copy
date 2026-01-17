@@ -648,7 +648,7 @@ export default function InventoryPage() {
         await loadWarehouses();
       } else if (modalType === 'warehouse_entry') {
         if (!user) {
-          alert('You must be logged in to register warehouse entries');
+          alert('You must be logged in to register location entries');
           return;
         }
 
@@ -656,7 +656,6 @@ export default function InventoryPage() {
           .map((l) => ({
             ...l,
             quantity: Number(l.quantity) || 0,
-            unit_cost: l.unit_cost !== '' ? Number(l.unit_cost) || 0 : null,
           }))
           .filter((l) => l.inventory_item_id && l.quantity > 0);
 
@@ -700,24 +699,24 @@ export default function InventoryPage() {
           await warehouseEntriesService.post(user.id, created.entry.id);
           const data = await warehouseEntriesService.getAll(user.id);
           setWarehouseEntries(data || []);
-          alert('Warehouse entry registered successfully');
+          alert('Location entry registered successfully');
         } catch (err: any) {
           console.error('Error creating warehouse entry:', err);
-          alert(`Error registering warehouse entry: ${err?.message || 'check console for more details'}`);
+          alert(`Error registering location entry: ${err?.message || 'check console for more details'}`);
           return;
         }
       } else if (modalType === 'warehouse_transfer') {
         if (!user) {
-          alert('You must be logged in to register warehouse transfers');
+          alert('You must be logged in to register location transfers');
           return;
         }
 
         if (!formData.from_warehouse_id || !formData.to_warehouse_id) {
-          alert('You must select source and destination warehouses');
+          alert('You must select source and destination locations');
           return;
         }
         if (formData.from_warehouse_id === formData.to_warehouse_id) {
-          alert('Source and destination warehouses cannot be the same');
+          alert('Source and destination locations cannot be the same');
           return;
         }
 
@@ -769,7 +768,7 @@ export default function InventoryPage() {
 
         if (overRequested.length > 0) {
           alert(
-            'Cannot transfer more than available quantity in source warehouse for:\n' +
+            'Cannot transfer more than available quantity in source location for:\n' +
               overRequested.join('\n'),
           );
           return;
@@ -795,10 +794,10 @@ export default function InventoryPage() {
           await warehouseTransfersService.post(user.id, created.transfer.id);
           const data = await warehouseTransfersService.getAll(user.id);
           setWarehouseTransfers(data || []);
-          alert('Warehouse transfer registered successfully');
+          alert('Location transfer registered successfully');
         } catch (err: any) {
           console.error('Error creating warehouse transfer:', err);
-          alert(`Error registering warehouse transfer: ${err?.message || 'check console for more details'}`);
+          alert(`Error registering location transfer: ${err?.message || 'check console for more details'}`);
           return;
         }
       }
@@ -1080,7 +1079,7 @@ export default function InventoryPage() {
       iconColor: 'text-[#b7422a]',
     },
     {
-      label: 'Warehouses',
+      label: 'Locations',
       value: warehouses.length.toLocaleString('en-US'),
       icon: 'ri-building-line',
       iconBg: 'bg-[#f2e7ce]',
@@ -1505,7 +1504,7 @@ export default function InventoryPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store / Warehouse
+              Store / Location
             </label>
             <select
               value={movementStoreFilter}
@@ -1524,7 +1523,7 @@ export default function InventoryPage() {
               onChange={(e) => setMovementWarehouseFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
             >
-              <option value="">All warehouses</option>
+              <option value="">All locations</option>
               {warehouses.map((wh) => (
                 <option key={wh.id} value={wh.id}>
                   {wh.name}
@@ -1617,7 +1616,7 @@ export default function InventoryPage() {
   const renderWarehouseEntriesTab = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Warehouse Entries</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Location Entries</h3>
         <button
           onClick={() => handleOpenModal('warehouse_entry')}
           className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
@@ -1634,7 +1633,7 @@ export default function InventoryPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. No.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issuer</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
@@ -1699,7 +1698,7 @@ export default function InventoryPage() {
           </table>
           {warehouseEntries.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No warehouse entries found</p>
+              <p className="text-gray-500">No location entries found</p>
             </div>
           )}
         </div>
@@ -1710,7 +1709,7 @@ export default function InventoryPage() {
   const renderWarehouseTransfersTab = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h3 className="text-lg font-semibold text-gray-900">Warehouse Transfers</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Location Transfers</h3>
         <button
           onClick={() => handleOpenModal('warehouse_transfer')}
           className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
@@ -1727,8 +1726,8 @@ export default function InventoryPage() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doc. No.</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source Warehouse</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dest. Warehouse</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dest. Location</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -1782,7 +1781,7 @@ export default function InventoryPage() {
           </table>
           {warehouseTransfers.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No warehouse transfers found</p>
+              <p className="text-gray-500">No location transfers found</p>
             </div>
           )}
         </div>
@@ -1793,13 +1792,13 @@ export default function InventoryPage() {
   const renderWarehouses = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Warehouse Management</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Location Management</h3>
         <button
           onClick={() => handleOpenModal('warehouse')}
           className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
         >
           <i className="ri-add-line mr-2"></i>
-          New Warehouse
+          New Location
         </button>
       </div>
 
@@ -2003,7 +2002,7 @@ export default function InventoryPage() {
             </p>
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-500">Warehouses</p>
+            <p className="text-sm font-medium text-gray-500">Locations</p>
             <p className="text-2xl font-bold text-indigo-600">{warehouses.length}</p>
           </div>
         </div>
@@ -2024,11 +2023,11 @@ export default function InventoryPage() {
                 : modalType === 'movement'
                   ? 'Inventory Movement'
                   : modalType === 'warehouse'
-                    ? (selectedItem ? 'Edit Warehouse' : 'New Warehouse')
+                    ? (selectedItem ? 'Edit Location' : 'New Location')
                     : modalType === 'warehouse_entry'
-                      ? 'Warehouse Entry'
+                      ? 'Location Entry'
                       : modalType === 'warehouse_transfer'
-                        ? 'Warehouse Transfer'
+                        ? 'Location Transfer'
                         : modalType === 'add_to_inventory'
                           ? 'Add to Inventory'
                           : 'Inventory Management'}
@@ -2204,7 +2203,7 @@ export default function InventoryPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Warehouse
+                      Location
                     </label>
                     <select
                       value={formData.warehouse_id || (warehouses[0]?.id ?? '')}
@@ -2214,7 +2213,7 @@ export default function InventoryPage() {
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                     >
                       {warehouses.length === 0 && (
-                        <option value="">No warehouses configured</option>
+                        <option value="">No locations configured</option>
                       )}
                       {warehouses.map((wh) => (
                         <option key={wh.id} value={wh.id}>
@@ -2421,6 +2420,7 @@ export default function InventoryPage() {
                     Accounting Accounts
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                     {formData.item_type === 'inventory' || !formData.item_type ? (
                       <>
                         <div>
@@ -2791,7 +2791,7 @@ export default function InventoryPage() {
                             <p className="font-medium text-gray-900">{formData.category || '-'}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500">Warehouse</p>
+                            <p className="text-xs text-gray-500">Location</p>
                             <p className="font-medium text-gray-900">
                               {warehouses.find((w) => w.id === formData.warehouse_id)?.name || '-'}
                             </p>
@@ -2993,14 +2993,14 @@ export default function InventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Receiving Warehouse *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Receiving Location *</label>
                       <select
                         value={formData.warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Select warehouse</option>
+                        <option value="">Select location</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -3245,14 +3245,14 @@ export default function InventoryPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Source Warehouse *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Source Location *</label>
                       <select
                         value={formData.from_warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, from_warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Select warehouse</option>
+                        <option value="">Select location</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -3261,14 +3261,14 @@ export default function InventoryPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Destination Warehouse *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Destination Location *</label>
                       <select
                         value={formData.to_warehouse_id || ''}
                         onChange={(e) => setFormData({ ...formData, to_warehouse_id: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
                         required
                       >
-                        <option value="">Select warehouse</option>
+                        <option value="">Select location</option>
                         {warehouses.map((wh) => (
                           <option key={wh.id} value={wh.id}>
                             {wh.name}
@@ -3427,7 +3427,7 @@ export default function InventoryPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Warehouse Name *
+                    Location Name *
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -3441,7 +3441,7 @@ export default function InventoryPage() {
                       type="button"
                       onClick={() => {
                         const index = (warehouses?.length || 0) + 1;
-                        const suggested = `Warehouse ${index}`;
+                        const suggested = `Location ${index}`;
                         setFormData({ ...formData, name: suggested });
                       }}
                       className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
@@ -3459,7 +3459,7 @@ export default function InventoryPage() {
                     value={formData.location || ''}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Address or warehouse zone"
+                    placeholder="Address or location zone"
                   />
                 </div>
                 <div>
@@ -3471,7 +3471,7 @@ export default function InventoryPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    placeholder="Warehouse description"
+                    placeholder="Location description"
                   />
                 </div>
               </div>
@@ -3536,8 +3536,8 @@ export default function InventoryPage() {
             { id: 'entries', label: 'Entries', icon: 'ri-download-line' },
 
             { id: 'transfers', label: 'Transfers', icon: 'ri-swap-line' },
-            { id: 'warehouses', label: 'Warehouses', icon: 'ri-building-line' },
-            { id: 'reports', label: 'Reports', icon: 'ri-file-chart-line' }
+            { id: 'warehouses', label: 'Locations', icon: 'ri-building-line' },
+            { id: 'reports', label: 'Reports', icon: 'ri-file-chart-line' },
           ].map((tab) => (
             <button
               key={tab.id}

@@ -151,7 +151,7 @@ export default function InventorySettingsPage() {
 
     try {
       if (limits.warehouses !== -1 && warehouses.length >= limits.warehouses) {
-        alert(`You've reached the limit of ${limits.warehouses} warehouse(s) for your plan.`);
+        alert(`You've reached the limit of ${limits.warehouses} location(s) for your plan.`);
         setLoading(false);
         return;
       }
@@ -164,7 +164,7 @@ export default function InventorySettingsPage() {
         inventory_account_id: newWarehouse.inventoryAccountId || null,
         active: true,
       });
-      setMessage({ type: 'success', text: 'Warehouse created successfully' });
+      setMessage({ type: 'success', text: 'Location created successfully' });
 
       setShowModal(false);
       setNewWarehouse({
@@ -177,7 +177,7 @@ export default function InventorySettingsPage() {
       });
       loadWarehouses();
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error creating the warehouse' });
+      setMessage({ type: 'error', text: 'Error creating the location' });
     } finally {
       setLoading(false);
     }
@@ -198,7 +198,7 @@ export default function InventorySettingsPage() {
               <p className="text-sm uppercase tracking-wide text-[#6b5c3b]">Operations</p>
               <h1 className="text-3xl font-bold text-[#2f3e1e]">Inventory Configuration</h1>
               <p className="text-[#6b5c3b] mt-1">
-                Configure valuation methods, tracking preferences, and default warehouses.
+                Configure valuation methods, tracking preferences, and default locations.
               </p>
             </div>
             <button
@@ -242,14 +242,14 @@ export default function InventorySettingsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#4a3c23] mb-2">
-                  Default Warehouse
+                  Default Location
                 </label>
                 <select
                   value={settings.default_warehouse || ''}
                   onChange={(e) => handleInputChange('default_warehouse', e.target.value)}
                   className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
                 >
-                  <option value="">Select a warehouse</option>
+                  <option value="">Select a location</option>
                   {warehouses.map((warehouse) => (
                     <option key={warehouse.id} value={warehouse.id}>
                       {warehouse.name}
@@ -423,16 +423,16 @@ export default function InventorySettingsPage() {
           </div>
         </div>
 
-        {/* Warehouses Table */}
+        {/* Locations Table */}
         <div className="bg-white rounded-lg shadow-sm border border-[#e4d8c4]">
           <div className="p-6 border-b border-[#e4d8c4] flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#2f3e1e]">Warehouses</h2>
+            <h2 className="text-lg font-semibold text-[#2f3e1e]">Locations</h2>
             <button
               onClick={() => setShowModal(true)}
               className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2a15] flex items-center space-x-2"
             >
               <i className="ri-add-line"></i>
-              <span>New Warehouse</span>
+              <span>New Location</span>
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -485,116 +485,116 @@ export default function InventorySettingsPage() {
             </table>
           </div>
         </div>
-      </div>
 
-      {/* New Warehouse Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md border border-[#e4d8c4]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#2f3e1e]">New Warehouse</h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-[#6b5c3b] hover:text-[#2f3e1e]"
-              >
-                <i className="ri-close-line text-xl"></i>
-              </button>
-            </div>
-            <form onSubmit={handleCreateWarehouse} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newWarehouse.name}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Location *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newWarehouse.location}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={newWarehouse.description}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  value={newWarehouse.address}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  value={newWarehouse.phone}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, phone: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                  Inventory account
-                </label>
-                <select
-                  value={newWarehouse.inventoryAccountId}
-                  onChange={(e) => setNewWarehouse(prev => ({ ...prev, inventoryAccountId: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                >
-                  <option value="">Select an account</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.code} - {acc.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
+        {/* New Location Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md border border-[#e4d8c4]">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">New Location</h3>
                 <button
-                  type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg hover:bg-[#f3e7cf]"
+                  className="text-[#6b5c3b] hover:text-[#2f3e1e]"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2a15] disabled:opacity-50"
-                >
-                  {loading ? 'Creating...' : 'Create Warehouse'}
+                  <i className="ri-close-line text-xl"></i>
                 </button>
               </div>
-            </form>
+              <form onSubmit={handleCreateWarehouse} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newWarehouse.name}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Location *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newWarehouse.location}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={newWarehouse.description}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={newWarehouse.address}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, address: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={newWarehouse.phone}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, phone: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
+                    Inventory account
+                  </label>
+                  <select
+                    value={newWarehouse.inventoryAccountId}
+                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, inventoryAccountId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                  >
+                    <option value="">Select an account</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.code} - {acc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg hover:bg-[#f3e7cf]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2a15] disabled:opacity-50"
+                  >
+                    {loading ? 'Creating...' : 'Create Location'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </DashboardLayout>
   );
 }
