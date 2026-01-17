@@ -340,7 +340,7 @@ export default function AssetTypesPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

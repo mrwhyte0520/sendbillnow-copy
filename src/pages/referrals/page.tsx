@@ -89,12 +89,12 @@ export default function ReferralsPage() {
   };
 
   const handleShareTwitter = () => {
-    const text = encodeURIComponent(`Try ContaBird, the best accounting software! Use my referral link: ${referralLink}`);
+    const text = encodeURIComponent(`Try SendBillNow, the best accounting software! Use my referral link: ${referralLink}`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
   const handleShareWhatsApp = () => {
-    const text = encodeURIComponent(`Try ContaBird, the best accounting software! Use my referral link: ${referralLink}`);
+    const text = encodeURIComponent(`Try SendBillNow, the best accounting software! Use my referral link: ${referralLink}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
   };
 

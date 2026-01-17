@@ -179,7 +179,7 @@ export default function ReportIT1Page() {
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       (companyInfo as any)?.rnc ||
@@ -420,7 +420,7 @@ export default function ReportIT1Page() {
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       (companyInfo as any)?.rnc ||
@@ -582,7 +582,7 @@ Cumple con las normativas de la DGII
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       (companyInfo as any)?.rnc ||

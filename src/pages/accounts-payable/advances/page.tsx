@@ -353,7 +353,7 @@ export default function AdvancesPage() {
   };
 
   const handlePrintAdvanceLegacy = async (advance: SupplierAdvance) => {
-    let companyName = 'ContaBi';
+    let companyName = '';
     let companyRnc = '';
     let companyPhone = '';
     let companyEmail = '';
@@ -361,7 +361,7 @@ export default function AdvancesPage() {
     try {
       const info = await settingsService.getCompanyInfo();
       if (info) {
-        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+        companyName = (info as any).name || (info as any).company_name || '';
         companyRnc = (info as any).rnc || (info as any).ruc || (info as any).tax_id || '';
         companyPhone = (info as any).phone || '';
         companyEmail = (info as any).email || '';
@@ -501,11 +501,11 @@ export default function AdvancesPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info) {
-        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+        companyName = (info as any).name || (info as any).company_name || '';
       }
     } catch {
       // usar default

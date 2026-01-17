@@ -305,7 +305,7 @@ export default function CashClosingPage() {
       // Pie de página
       const pageHeight = doc.internal.pageSize.height;
       doc.setFontSize(10);
-      doc.text('Generated automatically by ContaBi', 20, pageHeight - 20);
+      doc.text('Generated automatically by ', 20, pageHeight - 20);
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, pageHeight - 10);
 
       // Descargar el PDF

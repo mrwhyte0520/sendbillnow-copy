@@ -852,7 +852,7 @@ export default function InventoryPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
@@ -945,7 +945,7 @@ export default function InventoryPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

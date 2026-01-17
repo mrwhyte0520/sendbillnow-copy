@@ -537,7 +537,7 @@ const GeneralJournalPage = () => {
       const companyName =
         (companyInfo as any)?.name ||
         (companyInfo as any)?.company_name ||
-        'ContaBi';
+        '';
 
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('General Journal');
@@ -923,10 +923,10 @@ const GeneralJournalPage = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Estilos de impresión */}
+      {/* Estilos de impresiï¿½n */}
       <style dangerouslySetInnerHTML={{ __html: printStyles }} />
 
-      {/* Título para impresión (solo visible al imprimir) */}
+      {/* Tï¿½tulo para impresiï¿½n (solo visible al imprimir) */}
       {companyNameForPrint && (
         <div className="hidden print:block print-title">{companyNameForPrint}</div>
       )}
@@ -935,7 +935,7 @@ const GeneralJournalPage = () => {
         Generated on {formatDate(new Date())} {(dateFrom || dateTo) && ` - Period: ${dateFrom ? formatDate(dateFrom) : 'Start'} to ${dateTo ? formatDate(dateTo) : 'End'}`}
       </div>
 
-      {/* Header con botón de regreso */}
+      {/* Header con botï¿½n de regreso */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-4">
           <button
@@ -1143,7 +1143,7 @@ const GeneralJournalPage = () => {
             <thead className="bg-gray-50" style={{ backgroundColor: theme.muted }}>
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Número
+                  Nï¿½mero
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Fecha
@@ -1152,13 +1152,13 @@ const GeneralJournalPage = () => {
                   Proveedor
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Descripción
+                  Descripciï¿½n
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Débito
+                  Dï¿½bito
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
-                  Crédito
+                  Crï¿½dito
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style={{ color: theme.softText }}>
                   Estado
@@ -1305,12 +1305,12 @@ const GeneralJournalPage = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descripción
+                  Descripciï¿½n
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descripción del asiento contable"
+                  placeholder="Descripciï¿½n del asiento contable"
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1319,7 +1319,7 @@ const GeneralJournalPage = () => {
               {/* Entry Lines */}
               <div className="mb-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Líneas del Asiento</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Lï¿½neas del Asiento</h3>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -1330,13 +1330,13 @@ const GeneralJournalPage = () => {
                           Cuenta
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Descripción
+                          Descripciï¿½n
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Débito
+                          Dï¿½bito
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          Crédito
+                          Crï¿½dito
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                           Acciones
@@ -1365,7 +1365,7 @@ const GeneralJournalPage = () => {
                               type="text"
                               value={line.description}
                               onChange={(e) => updateLine(index, 'description', e.target.value)}
-                              placeholder="Descripción de la línea"
+                              placeholder="Descripciï¿½n de la lï¿½nea"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                           </td>
@@ -1432,7 +1432,7 @@ const GeneralJournalPage = () => {
                             className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors inline-flex items-center"
                           >
                             <i className="ri-add-line mr-2"></i>
-                            Agregar Línea
+                            Agregar Lï¿½nea
                           </button>
                         </td>
                       </tr>
@@ -1485,7 +1485,7 @@ const GeneralJournalPage = () => {
                     {companyInfo?.name || companyInfo?.company_name || 'Diario General'}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Período: {dateFrom ? formatDate(dateFrom) : 'Inicio'} - {dateTo ? formatDate(dateTo) : 'Fin'}
+                    Perï¿½odo: {dateFrom ? formatDate(dateFrom) : 'Inicio'} - {dateTo ? formatDate(dateTo) : 'Fin'}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -1510,13 +1510,13 @@ const GeneralJournalPage = () => {
                 <table className="min-w-full border border-gray-200 rounded-lg">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Número</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nï¿½mero</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proveedor</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Débito</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crédito</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descripciï¿½n</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Dï¿½bito</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Crï¿½dito</th>
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Estado</th>
                     </tr>
                   </thead>
@@ -1565,11 +1565,11 @@ const GeneralJournalPage = () => {
                   <div className="text-2xl font-bold text-blue-900">{sortedEntries.length}</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm text-green-600 font-medium">Total Débitos</div>
+                  <div className="text-sm text-green-600 font-medium">Total Dï¿½bitos</div>
                   <div className="text-2xl font-bold text-green-900">{formatAmount(totalDebitsFiltered)}</div>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-sm text-red-600 font-medium">Total Créditos</div>
+                  <div className="text-sm text-red-600 font-medium">Total Crï¿½ditos</div>
                   <div className="text-2xl font-bold text-red-900">{formatAmount(totalCreditsFiltered)}</div>
                 </div>
               </div>
@@ -1599,7 +1599,7 @@ const GeneralJournalPage = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Información General</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Informaciï¿½n General</h3>
                   <div className="space-y-3">
                     <div>
                       <span className="text-sm font-medium text-gray-500">Fecha:</span>

@@ -140,7 +140,7 @@ export default function CommissionReportPage() {
   const handleExportPdf = async () => {
     if (!rows || rows.length === 0) return;
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
@@ -204,7 +204,7 @@ export default function CommissionReportPage() {
       commissionAmount: row.commissionAmount,
     }));
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

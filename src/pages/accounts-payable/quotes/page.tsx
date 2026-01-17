@@ -353,7 +353,7 @@ export default function QuotesPage() {
         doc.internal.pageSize.width - 50,
         doc.internal.pageSize.height - 10,
       );
-      doc.text('ContaBi • Quote Requests', 20, doc.internal.pageSize.height - 10);
+      doc.text('SendBillNow • Quote Requests', 20, doc.internal.pageSize.height - 10);
     }
 
     doc.save(`quote-requests-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -365,11 +365,11 @@ export default function QuotesPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info) {
-        companyName = (info as any).name || (info as any).company_name || 'ContaBi';
+        companyName = (info as any).name || (info as any).company_name || '';
       }
     } catch {
       // usar default

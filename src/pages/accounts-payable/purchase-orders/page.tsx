@@ -498,7 +498,7 @@ export default function PurchaseOrdersPage() {
       doc.setPage(i);
       doc.setFontSize(10);
       doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
-      doc.text('ContaBi · Purchase Orders', 20, doc.internal.pageSize.height - 10);
+      doc.text('SendBillNow · Purchase Orders', 20, doc.internal.pageSize.height - 10);
     }
 
     doc.save(`purchase-orders-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -513,7 +513,7 @@ export default function PurchaseOrdersPage() {
     const headerCompanyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const headerCompanyRnc =
       (companyInfo as any)?.rnc ||
@@ -711,7 +711,7 @@ export default function PurchaseOrdersPage() {
   };
 
   const printOrderLegacy = async (order: any) => {
-    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
     const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
     const companyPhone = (companyInfo as any)?.phone || '';
     const companyEmail = (companyInfo as any)?.email || '';
@@ -906,7 +906,7 @@ export default function PurchaseOrdersPage() {
   };
 
   const handleExportOrderExcel = async (order: any) => {
-    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
     const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
 
     const supplier = suppliers.find((s: any) => String(s.id) === String(order.supplierId));

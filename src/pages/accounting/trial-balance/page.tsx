@@ -395,7 +395,7 @@ const TrialBalancePage: FC = () => {
       const companyName =
         (companyInfo as any)?.name ||
         (companyInfo as any)?.company_name ||
-        'ContaBi';
+        '';
 
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Balanza de Comprobación');

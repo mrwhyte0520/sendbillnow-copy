@@ -955,7 +955,7 @@ export default function APInvoicesPage() {
       const supplierPhone = String((supplier as any)?.phone || '').trim();
       const supplierEmail = String((supplier as any)?.email || '').trim();
       const supplierAddress = String((supplier as any)?.address || '').trim();
-      const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+      const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
       const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
       const companyPhone = (companyInfo as any)?.phone || '';
       const companyEmail = (companyInfo as any)?.email || '';
@@ -1190,7 +1190,7 @@ ${items
       const supplierPhone = String((supplier as any)?.phone || '').trim();
       const supplierEmail = String((supplier as any)?.email || '').trim();
       const supplierAddress = String((supplier as any)?.address || '').trim();
-      const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+      const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
       const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
 
       const workbook = new ExcelJS.Workbook();

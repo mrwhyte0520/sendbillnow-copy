@@ -234,7 +234,7 @@ export default function DebitNotesPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

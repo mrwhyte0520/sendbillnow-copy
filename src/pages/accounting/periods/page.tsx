@@ -232,7 +232,7 @@ const AccountingPeriodsPage: FC = () => {
         [30, 14, 14, 12, 12, 10, 18, 18, 14, 20],
         {
           title: 'Accounting Periods',
-          companyName: 'ContaBi'
+          companyName: ''
         }
       );
     } catch (error) {

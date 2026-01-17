@@ -397,7 +397,7 @@ export default function InventoryPhysicalResultPage() {
       const companyName =
         (companyInfo?.name as string) ||
         (companyInfo?.company_name as string) ||
-        'ContaBi';
+        '';
       const title = `${companyName} - Reporte de Inventario Físico`;
       await exportToPdf(data, columns, 'reporte_inventario_fisico', title, 'l');
     } catch (error) {

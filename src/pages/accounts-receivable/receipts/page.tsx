@@ -345,7 +345,7 @@ export default function ReceiptsPage() {
   };
 
   const exportToExcel = async () => {
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
@@ -663,7 +663,7 @@ export default function ReceiptsPage() {
     const customerEmail = customer?.email || '';
     const customerAddress = customer?.address || '';
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     let companyRnc = '';
     try {
       const info = await settingsService.getCompanyInfo();
@@ -741,7 +741,7 @@ export default function ReceiptsPage() {
   };
 
   const handleExportReceiptExcel = async (receipt: Receipt) => {
-    let companyName = 'ContaBi';
+    let companyName = '';
     let companyRnc = '';
     try {
       const info = await settingsService.getCompanyInfo();

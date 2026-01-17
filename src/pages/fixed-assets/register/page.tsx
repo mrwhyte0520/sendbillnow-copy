@@ -407,7 +407,7 @@ export default function AssetRegisterPage() {
       return;
     }
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
 

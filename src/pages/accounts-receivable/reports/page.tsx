@@ -286,7 +286,7 @@ export default function ReportsPage() {
   const companyName =
     (companyInfo as any)?.name ||
     (companyInfo as any)?.company_name ||
-    'ContaBi';
+    '';
 
   const handleCloseReportPreview = () => {
     setShowReportPreviewModal(false);

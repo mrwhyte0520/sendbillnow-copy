@@ -160,7 +160,7 @@ export default function ReturnsPage() {
       const companyName =
         (companyInfo as any)?.name ||
         (companyInfo as any)?.company_name ||
-        'ContaBi';
+        '';
 
       const companyRnc =
         (companyInfo as any)?.rnc ||

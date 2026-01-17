@@ -50,7 +50,7 @@ export default function PaymentsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [companyName, setCompanyName] = useState('ContaBi');
+  const [companyName, setCompanyName] = useState('');
   const [companyRnc, setCompanyRnc] = useState('');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
@@ -659,7 +659,7 @@ export default function PaymentsPage() {
         const receiptNo = (createdReceipt as any)?.receipt_number || receiptNumber;
         const receiptDate = (createdReceipt as any)?.receipt_date || paymentDate;
 
-        let companyName = 'ContaBi';
+        let companyName = '';
         let companyRnc = '';
         try {
           const info = await settingsService.getCompanyInfo();

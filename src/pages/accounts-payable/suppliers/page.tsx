@@ -532,7 +532,7 @@ export default function SuppliersPage() {
 
     // Company header
 
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
@@ -627,7 +627,7 @@ export default function SuppliersPage() {
   };
 
   const exportToExcel = async () => {
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

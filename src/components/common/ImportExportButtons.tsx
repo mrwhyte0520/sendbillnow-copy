@@ -17,7 +17,7 @@ export function ImportExportButtons<T>({
   data, 
   columns, 
   fileName, 
-  companyName = 'ContaBi',
+  companyName = '',
   onImport,
   disabled = false
 }: ImportExportButtonsProps<T>) {

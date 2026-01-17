@@ -106,7 +106,7 @@ export default function DocumentPage() {
     })();
   }, [id, normalizedType, user?.id]);
 
-  const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+  const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
   const companyRnc = (companyInfo as any)?.ruc || (companyInfo as any)?.tax_id || (companyInfo as any)?.rnc || '';
 
   const buildHtml = () => {

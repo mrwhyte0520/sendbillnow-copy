@@ -361,7 +361,7 @@ export default function ReportsPage() {
     const sheetName = isAging ? 'Aging' : 'Payments';
     const worksheet = workbook.addWorksheet(sheetName);
 
-    const headerCompanyName = companyName || 'ContaBi';
+    const headerCompanyName = companyName || '';
     const today = new Date().toLocaleDateString('en-US');
     const periodLabel = `${startDate} - ${endDate}`;
 

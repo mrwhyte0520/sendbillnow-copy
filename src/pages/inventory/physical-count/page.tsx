@@ -223,7 +223,7 @@ export default function InventoryPhysicalCountPage() {
       const companyName =
         (companyInfo?.name as string) ||
         (companyInfo?.company_name as string) ||
-        'ContaBi';
+        '';
       const title = `${companyName} - Toma de Inventario Físico`;
       await exportToPdf(data, columns, 'toma_inventario_fisico', title);
     } catch (error) {

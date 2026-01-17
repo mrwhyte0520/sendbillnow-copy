@@ -392,7 +392,7 @@ export default function InventoryCostRevaluationPage() {
       const companyName =
         (companyInfo?.name as string) ||
         (companyInfo?.company_name as string) ||
-        'ContaBi';
+        '';
       const title = `${companyName} - Revalorización de Costos de Inventario`;
       await exportToPdf(data, columns, 'revalorizacion_costos_inventario', title, 'l');
     } catch (error) {

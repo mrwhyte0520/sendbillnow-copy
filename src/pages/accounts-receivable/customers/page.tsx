@@ -221,7 +221,7 @@ export default function CustomersPage() {
   };
 
   const exportToExcel = async () => {
-    let companyName = 'ContaBi';
+    let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {

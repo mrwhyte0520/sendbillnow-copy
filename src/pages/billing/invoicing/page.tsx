@@ -669,7 +669,7 @@ export default function InvoicingPage() {
     const printCustomerEmail = fullCustomer?.email || invoice.customerEmail || '';
     const printCustomerAddress = fullCustomer?.address || invoice.customerAddress || '';
 
-    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+    const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
     const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
     const companyPhone = (companyInfo as any)?.phone || '';
     const companyEmail = (companyInfo as any)?.email || '';
@@ -857,7 +857,7 @@ export default function InvoicingPage() {
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       (companyInfo as any)?.rnc ||
@@ -1074,7 +1074,7 @@ export default function InvoicingPage() {
     const headerCompanyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     worksheet.addRow([headerCompanyName]);
     worksheet.getRow(1).font = { bold: true, size: 14 };

@@ -872,7 +872,7 @@ export default function QuotesPage() {
     const companyName =
       companyInfo?.name ||
       companyInfo?.company_name ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       companyInfo?.rnc ||

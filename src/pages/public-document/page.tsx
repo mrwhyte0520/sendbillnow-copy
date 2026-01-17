@@ -97,7 +97,7 @@ export default function PublicDocumentPage() {
       (doc.company as any)?.name ||
       header.company_name ||
       header.companyName ||
-      'ContaBi';
+      '';
 
     const companyRnc =
       (doc.company as any)?.rnc ||

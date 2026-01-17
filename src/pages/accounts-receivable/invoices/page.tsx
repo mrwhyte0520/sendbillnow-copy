@@ -417,7 +417,7 @@ export default function InvoicesPage() {
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
 
     const statusText =
       statusFilter === 'all' ? 'All' : getStatusName(statusFilter as Invoice['status']);
@@ -536,7 +536,7 @@ export default function InvoicesPage() {
     const companyName =
       (companyInfo as any)?.name ||
       (companyInfo as any)?.company_name ||
-      'ContaBi';
+      '';
     const companyRnc =
       (companyInfo as any)?.rnc ||
       (companyInfo as any)?.tax_id ||
@@ -796,7 +796,7 @@ export default function InvoicesPage() {
 
         const receiptNo = (createdReceipt as any)?.receipt_number || receiptNumber;
 
-        const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'ContaBi';
+        const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
         const companyRnc =
           (companyInfo as any)?.rnc ||
           (companyInfo as any)?.tax_id ||
