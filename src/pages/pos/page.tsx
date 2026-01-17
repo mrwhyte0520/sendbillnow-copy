@@ -1338,7 +1338,12 @@ export default function POSPage() {
                 <i className="ri-shopping-cart-line mr-2"></i>
                 {cartOpen ? 'Hide cart' : 'Show cart'}
                 {cart.length > 0 && !cartOpen && (
-                  <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white"></span>
+                  <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] leading-none font-bold text-white">
+                    {(() => {
+                      const count = cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
+                      return count > 99 ? '99+' : String(count);
+                    })()}
+                  </span>
                 )}
               </button>
             </div>
