@@ -1349,17 +1349,40 @@ export default function POSPage() {
             </div>
           </div>
           
-          {/* Search */}
+          {/* Search with barcode scanner support */}
           <div className="relative mb-4">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <i className="ri-search-line text-[#7a8c45] text-lg"></i>
+              <i className="ri-barcode-line text-[#7a8c45] text-lg"></i>
             </div>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchTerm.trim()) {
+                  e.preventDefault();
+                  const term = searchTerm.trim().toLowerCase();
+                  // Find product by exact barcode or SKU match first
+                  let matchedProduct = products.find(
+                    (p) => p.barcode === searchTerm.trim() || p.sku.toLowerCase() === term
+                  );
+                  // Fallback: partial match on barcode/sku
+                  if (!matchedProduct) {
+                    matchedProduct = products.find(
+                      (p) => p.barcode.includes(searchTerm.trim()) || p.sku.toLowerCase().includes(term)
+                    );
+                  }
+                  if (matchedProduct) {
+                    addToCart(matchedProduct, 1);
+                    setSearchTerm('');
+                    toast.success(`Added "${matchedProduct.name}" to cart`);
+                  } else {
+                    toast.error('Product not found with that barcode/SKU');
+                  }
+                }
+              }}
               className="block w-full pl-12 pr-4 py-3.5 bg-gradient-to-r from-white to-[#faf9f5] border-2 border-[#e0d8c8] rounded-xl focus:ring-2 focus:ring-[#008000]/20 focus:border-[#008000] text-sm shadow-[inset_0_2px_4px_rgb(0,0,0,0.04)] transition-all duration-300 placeholder:text-gray-400"
-              placeholder="Search products..."
+              placeholder="Scan barcode or search products..."
             />
           </div>
 
@@ -1937,14 +1960,35 @@ export default function POSPage() {
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="flex-1 relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i className="ri-search-line text-gray-400"></i>
+              <i className="ri-barcode-line text-gray-400"></i>
             </div>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchTerm.trim()) {
+                  e.preventDefault();
+                  const term = searchTerm.trim().toLowerCase();
+                  let matchedProduct = products.find(
+                    (p) => p.barcode === searchTerm.trim() || p.sku.toLowerCase() === term
+                  );
+                  if (!matchedProduct) {
+                    matchedProduct = products.find(
+                      (p) => p.barcode.includes(searchTerm.trim()) || p.sku.toLowerCase().includes(term)
+                    );
+                  }
+                  if (matchedProduct) {
+                    addToCart(matchedProduct, 1);
+                    setSearchTerm('');
+                    toast.success(`Added "${matchedProduct.name}" to cart`);
+                  } else {
+                    toast.error('Product not found with that barcode/SKU');
+                  }
+                }
+              }}
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              placeholder="Search by name, SKU or barcode..."
+              placeholder="Scan barcode or search..."
             />
           </div>
           <div className="w-full md:w-60">
