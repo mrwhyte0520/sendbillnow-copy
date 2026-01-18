@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { resolveTenantId } from '../../../services/database';
+import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils'
 import { employeesService, rolesService, departmentsService, employeeRoleHistoryService } from '../../../services/contador/staff.service';
 import type { Role, Department } from '../../../services/contador/staff.service';
 
@@ -72,10 +73,12 @@ export default function ContadorStaffReportPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
       const [emps, rls, deps] = await Promise.all([
-        employeesService.list(user.id),
-        rolesService.list(user.id),
-        departmentsService.list(user.id),
+        employeesService.list(tenantId),
+        rolesService.list(tenantId),
+        departmentsService.list(tenantId),
       ]);
 
       setEmployeesDb(emps as any[]);

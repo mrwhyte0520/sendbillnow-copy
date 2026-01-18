@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { chartAccountsService } from '../database';
 
 // =============================================================================
 // TYPES
@@ -459,7 +460,7 @@ export const taxRatesService = {
 };
 
 // =============================================================================
-// REPORT GENERATION SERVICE
+// REPORT GENERATION SERVICE - Uses real journal entries and chart of accounts
 // =============================================================================
 
 export const reportGeneratorService = {
@@ -468,105 +469,96 @@ export const reportGeneratorService = {
     startDate: string,
     endDate: string
   ): Promise<ProfitAndLossReport> {
-    const { data: transactions } = await supabase
-      .from('contador_cash_transactions')
-      .select('type, amount')
-      .eq('user_id', companyId)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+    try {
+      // Use the existing chartAccountsService which queries real journal entries
+      const result = await chartAccountsService.generateIncomeStatement(companyId, startDate, endDate);
 
-    let salesRevenue = 0;
-    let expensesCashOut = 0;
-    let refundsCashOut = 0;
+      // Map income accounts to revenue categories
+      const revenue = (result.income || []).map((acc: any) => ({
+        category: acc.name || 'Revenue',
+        amount: acc.balance || 0,
+      })).filter((r: any) => r.amount > 0);
 
-    for (const tx of transactions || []) {
-      switch (tx.type) {
-        case 'sale_cash_in':
-          salesRevenue += tx.amount;
-          break;
-        case 'paid_out_expense':
-          expensesCashOut += tx.amount;
-          break;
-        case 'refund_cash_out':
-          refundsCashOut += tx.amount;
-          break;
-      }
+      // Combine costs and expenses
+      const expenses = [
+        ...(result.costs || []).map((acc: any) => ({
+          category: acc.name || 'Cost of Goods Sold',
+          amount: acc.balance || 0,
+        })),
+        ...(result.expenses || []).map((acc: any) => ({
+          category: acc.name || 'Expense',
+          amount: acc.balance || 0,
+        })),
+      ].filter((e: any) => e.amount > 0);
+
+      return {
+        period: { start: startDate, end: endDate },
+        revenue: revenue.length > 0 ? revenue : [{ category: 'Sales', amount: 0 }],
+        totalRevenue: result.totalIncome || 0,
+        expenses: expenses.length > 0 ? expenses : [{ category: 'Expenses', amount: 0 }],
+        totalExpenses: (result.totalCosts || 0) + (result.totalExpenses || 0),
+        netIncome: result.netIncome || 0,
+      };
+    } catch (error) {
+      console.error('generateProfitAndLoss error:', error);
+      return {
+        period: { start: startDate, end: endDate },
+        revenue: [{ category: 'Sales', amount: 0 }],
+        totalRevenue: 0,
+        expenses: [{ category: 'Expenses', amount: 0 }],
+        totalExpenses: 0,
+        netIncome: 0,
+      };
     }
-
-    const expenses = [
-      { category: 'Expenses', amount: expensesCashOut },
-      { category: 'Refunds', amount: refundsCashOut },
-    ].filter((e) => e.amount !== 0);
-
-    const totalRevenue = salesRevenue;
-    const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-    return {
-      period: { start: startDate, end: endDate },
-      revenue: [{ category: 'Sales', amount: salesRevenue }],
-      totalRevenue,
-      expenses,
-      totalExpenses,
-      netIncome: totalRevenue - totalExpenses,
-    };
   },
 
   async generateBalanceSheet(
     companyId: string,
     asOfDate: string
   ): Promise<BalanceSheetReport> {
-    // Get cash balance
-    const { data: drawers } = await supabase
-      .from('contador_cash_drawers')
-      .select('closing_cash_counted')
-      .eq('user_id', companyId)
-      .eq('status', 'closed');
+    try {
+      // Use the existing chartAccountsService which queries real chart of accounts
+      const result = await chartAccountsService.generateBalanceSheet(companyId, asOfDate);
 
-    const cashBalance = (drawers || []).reduce((sum, d) => sum + (d.closing_cash_counted || 0), 0);
+      // Map assets
+      const assets = (result.assets || []).map((acc: any) => ({
+        name: acc.name || 'Asset',
+        amount: acc.balance || 0,
+      })).filter((a: any) => a.amount > 0);
 
-    // Get inventory value from core inventory_items
-    const { data: inventory } = await supabase
-      .from('inventory_items')
-      .select('current_stock, cost')
-      .eq('user_id', companyId);
+      // Map liabilities
+      const liabilities = (result.liabilities || []).map((acc: any) => ({
+        name: acc.name || 'Liability',
+        amount: acc.balance || 0,
+      })).filter((l: any) => l.amount > 0);
 
-    const inventoryValue = (inventory || []).reduce((sum, i: any) => {
-      const cost = i.cost || 0;
-      const qty = i.current_stock || 0;
-      return sum + qty * cost;
-    }, 0);
+      // Map equity
+      const equity = (result.equity || []).map((acc: any) => ({
+        name: acc.name || 'Equity',
+        amount: acc.balance || 0,
+      })).filter((e: any) => e.amount > 0);
 
-    // Get AP balance from core ap_invoices
-    const { data: apData } = await supabase
-      .from('ap_invoices')
-      .select('balance_amount')
-      .eq('user_id', companyId)
-      .in('status', ['pending', 'partial']);
-
-    const apBalance = (apData || []).reduce((sum, b: any) => sum + (b.balance_amount || 0), 0);
-
-    const assets = [
-      { name: 'Cash', amount: cashBalance },
-      { name: 'Inventory', amount: inventoryValue },
-    ];
-
-    const liabilities = [
-      { name: 'Accounts Payable', amount: apBalance },
-    ];
-
-    const totalAssets = assets.reduce((sum, a) => sum + a.amount, 0);
-    const totalLiabilities = liabilities.reduce((sum, l) => sum + l.amount, 0);
-    const totalEquity = totalAssets - totalLiabilities;
-
-    return {
-      asOfDate,
-      assets,
-      totalAssets,
-      liabilities,
-      totalLiabilities,
-      equity: [{ name: 'Retained Earnings', amount: totalEquity }],
-      totalEquity,
-    };
+      return {
+        asOfDate,
+        assets: assets.length > 0 ? assets : [{ name: 'Total Assets', amount: 0 }],
+        totalAssets: result.totalAssets || 0,
+        liabilities: liabilities.length > 0 ? liabilities : [{ name: 'Total Liabilities', amount: 0 }],
+        totalLiabilities: result.totalLiabilities || 0,
+        equity: equity.length > 0 ? equity : [{ name: 'Retained Earnings', amount: result.totalEquity || 0 }],
+        totalEquity: result.totalEquity || 0,
+      };
+    } catch (error) {
+      console.error('generateBalanceSheet error:', error);
+      return {
+        asOfDate,
+        assets: [{ name: 'Total Assets', amount: 0 }],
+        totalAssets: 0,
+        liabilities: [{ name: 'Total Liabilities', amount: 0 }],
+        totalLiabilities: 0,
+        equity: [{ name: 'Retained Earnings', amount: 0 }],
+        totalEquity: 0,
+      };
+    }
   },
 
   async generateCashFlow(
@@ -574,68 +566,45 @@ export const reportGeneratorService = {
     startDate: string,
     endDate: string
   ): Promise<CashFlowReport> {
-    // Get cash transactions
-    const { data: transactions } = await supabase
-      .from('contador_cash_transactions')
-      .select('type, amount')
-      .eq('user_id', companyId)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate);
+    try {
+      // Use the existing chartAccountsService which queries real journal entries
+      const result = await chartAccountsService.generateCashFlowStatement(companyId, startDate, endDate);
 
-    let salesCashIn = 0;
-    let expensesCashOut = 0;
-    let refundsCashOut = 0;
+      const operating = [
+        { description: 'Net Operating Cash', amount: result.operatingCashFlow || 0 },
+      ];
 
-    for (const tx of transactions || []) {
-      switch (tx.type) {
-        case 'sale_cash_in':
-          salesCashIn += tx.amount;
-          break;
-        case 'paid_out_expense':
-          expensesCashOut += tx.amount;
-          break;
-        case 'refund_cash_out':
-          refundsCashOut += tx.amount;
-          break;
-      }
+      const investing = [
+        { description: 'Net Investing Cash', amount: result.investingCashFlow || 0 },
+      ];
+
+      const financing = [
+        { description: 'Net Financing Cash', amount: result.financingCashFlow || 0 },
+      ];
+
+      return {
+        period: { start: startDate, end: endDate },
+        operating,
+        totalOperating: result.operatingCashFlow || 0,
+        investing,
+        totalInvesting: result.investingCashFlow || 0,
+        financing,
+        totalFinancing: result.financingCashFlow || 0,
+        netChange: result.netCashFlow || 0,
+      };
+    } catch (error) {
+      console.error('generateCashFlow error:', error);
+      return {
+        period: { start: startDate, end: endDate },
+        operating: [{ description: 'Net Operating Cash', amount: 0 }],
+        totalOperating: 0,
+        investing: [{ description: 'Net Investing Cash', amount: 0 }],
+        totalInvesting: 0,
+        financing: [{ description: 'Net Financing Cash', amount: 0 }],
+        totalFinancing: 0,
+        netChange: 0,
+      };
     }
-
-    // Get vendor payments
-    const { data: vendorPayments } = await supabase
-      .from('contador_vendor_payments')
-      .select('amount')
-      .eq('user_id', companyId)
-      .gte('payment_date', startDate)
-      .lte('payment_date', endDate);
-
-    const vendorPaymentsTotal = (vendorPayments || []).reduce((sum, p) => sum + p.amount, 0);
-
-    const operating = [
-      { description: 'Cash from Sales', amount: salesCashIn },
-      { description: 'Cash Paid for Expenses', amount: -expensesCashOut },
-      { description: 'Cash Refunds', amount: -refundsCashOut },
-    ];
-
-    const investing: { description: string; amount: number }[] = [];
-
-    const financing = [
-      { description: 'Payments to Vendors', amount: -vendorPaymentsTotal },
-    ];
-
-    const totalOperating = operating.reduce((sum, o) => sum + o.amount, 0);
-    const totalInvesting = investing.reduce((sum, i) => sum + i.amount, 0);
-    const totalFinancing = financing.reduce((sum, f) => sum + f.amount, 0);
-
-    return {
-      period: { start: startDate, end: endDate },
-      operating,
-      totalOperating,
-      investing,
-      totalInvesting,
-      financing,
-      totalFinancing,
-      netChange: totalOperating + totalInvesting + totalFinancing,
-    };
   },
 
   async generateSalesTaxReport(
@@ -643,33 +612,75 @@ export const reportGeneratorService = {
     startDate: string,
     endDate: string
   ): Promise<SalesTaxReport> {
-    // Get jurisdictions with rates
-    const jurisdictions = await taxJurisdictionsService.list(companyId);
-    const byJurisdiction: SalesTaxReport['byJurisdiction'] = [];
+    try {
+      // Get invoices with tax data from the period
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('subtotal, tax_amount, status')
+        .eq('user_id', companyId)
+        .gte('invoice_date', startDate)
+        .lte('invoice_date', endDate)
+        .in('status', ['paid', 'partial', 'sent']);
 
-    for (const jurisdiction of jurisdictions) {
-      const rate = await taxRatesService.getCurrentRate(jurisdiction.id);
+      if (error) throw error;
 
-      // In a real implementation, you'd join with sales data by jurisdiction
-      // For now, we'll use placeholder data
-      const taxableSales = 0;
-      const taxCollected = taxableSales * rate;
+      const totalTaxableSales = (invoices || []).reduce((sum, inv: any) => 
+        sum + (Number(inv.subtotal) || 0), 0);
+      const totalTaxCollected = (invoices || []).reduce((sum, inv: any) => 
+        sum + (Number(inv.tax_amount) || 0), 0);
 
-      byJurisdiction.push({
-        jurisdiction: jurisdiction.name,
-        state: jurisdiction.state,
-        taxableSales,
-        taxRate: rate * 100,
-        taxCollected,
-      });
+      // Calculate average tax rate
+      const avgTaxRate = totalTaxableSales > 0 
+        ? (totalTaxCollected / totalTaxableSales) * 100 
+        : 0;
+
+      // Get jurisdictions if configured
+      const jurisdictions = await taxJurisdictionsService.list(companyId);
+      const byJurisdiction: SalesTaxReport['byJurisdiction'] = [];
+
+      if (jurisdictions.length > 0) {
+        for (const jurisdiction of jurisdictions) {
+          const rate = await taxRatesService.getCurrentRate(jurisdiction.id);
+          byJurisdiction.push({
+            jurisdiction: jurisdiction.name,
+            state: jurisdiction.state,
+            taxableSales: totalTaxableSales / jurisdictions.length,
+            taxRate: rate * 100,
+            taxCollected: totalTaxCollected / jurisdictions.length,
+          });
+        }
+      } else {
+        // Default single jurisdiction with aggregated data
+        byJurisdiction.push({
+          jurisdiction: 'Total',
+          state: '-',
+          taxableSales: totalTaxableSales,
+          taxRate: avgTaxRate,
+          taxCollected: totalTaxCollected,
+        });
+      }
+
+      return {
+        period: { start: startDate, end: endDate },
+        byJurisdiction,
+        totalTaxableSales,
+        totalTaxCollected,
+      };
+    } catch (error) {
+      console.error('generateSalesTaxReport error:', error);
+      return {
+        period: { start: startDate, end: endDate },
+        byJurisdiction: [{
+          jurisdiction: 'Total',
+          state: '-',
+          taxableSales: 0,
+          taxRate: 0,
+          taxCollected: 0,
+        }],
+        totalTaxableSales: 0,
+        totalTaxCollected: 0,
+      };
     }
-
-    return {
-      period: { start: startDate, end: endDate },
-      byJurisdiction,
-      totalTaxableSales: byJurisdiction.reduce((sum, j) => sum + j.taxableSales, 0),
-      totalTaxCollected: byJurisdiction.reduce((sum, j) => sum + j.taxCollected, 0),
-    };
   },
 
   async saveSnapshot(

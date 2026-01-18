@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { resolveTenantId } from '../../../services/database';
 import { balancesService, movementsService } from '../../../services/contador/inventory.service';
 import type { InventoryBalance, InventoryMovement } from '../../../services/contador/inventory.service';
+import { settingsService } from '../../../services/database';
+import { exportToExcelWithHeaders, exportToPdf } from '../../../utils/exportImportUtils';
 
 interface InventoryItem {
   id: string;
@@ -10,6 +13,7 @@ interface InventoryItem {
   sku: string;
   quantity: number;
   minStock: number;
+  warehouse: string;
   unitCost: number;
   totalValue: number;
   status: 'in-stock' | 'low-stock' | 'out-of-stock';
@@ -28,7 +32,6 @@ export default function ContadorInventarioPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'levels' | 'movements' | 'valuation' | 'alerts'>('levels');
   const [valuationMethod, setValuationMethod] = useState<'fifo' | 'lifo' | 'average'>('fifo');
-  const [showAdjustment, setShowAdjustment] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +46,11 @@ export default function ContadorInventarioPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
       const [balances, mvts] = await Promise.all([
-        balancesService.list(user.id),
-        movementsService.list(user.id),
+        balancesService.list(tenantId),
+        movementsService.list(tenantId),
       ]);
 
       const mappedInventory: InventoryItem[] = balances.map((b: InventoryBalance) => {
@@ -61,6 +66,7 @@ export default function ContadorInventarioPage() {
           sku: b.product?.sku || '',
           quantity: qty,
           minStock: b.reorder_level,
+          warehouse: b.location?.name || 'N/A',
           unitCost: cost,
           totalValue: qty * cost,
           status,
@@ -92,6 +98,100 @@ export default function ContadorInventarioPage() {
     outOfStock: inventory.filter(i => i.status === 'out-of-stock').length,
   };
 
+  const handleExportExcel = async () => {
+    if (inventory.length === 0) {
+      alert('No hay datos para exportar');
+      return;
+    }
+
+    let companyName: string | undefined;
+    try {
+      const info = await settingsService.getCompanyInfo();
+      if (info && (info as any)) {
+        const resolvedName = (info as any).name || (info as any).company_name || (info as any).legal_name;
+        if (resolvedName) companyName = String(resolvedName);
+      }
+    } catch (error) {
+      console.error('Error getting company info for inventory valuation Excel:', error);
+    }
+
+    const rows = inventory.map((i) => ({
+      product: i.name,
+      sku: i.sku,
+      warehouse: i.warehouse,
+      stock: i.quantity,
+      min_stock: i.minStock,
+      unit_cost: i.unitCost,
+      total_value: i.totalValue,
+      status: i.status,
+    }));
+
+    const headers = [
+      { key: 'product', title: 'Product' },
+      { key: 'sku', title: 'SKU' },
+      { key: 'warehouse', title: 'Warehouse' },
+      { key: 'stock', title: 'Stock' },
+      { key: 'min_stock', title: 'Min Stock' },
+      { key: 'unit_cost', title: 'Unit Cost' },
+      { key: 'total_value', title: 'Total Value' },
+      { key: 'status', title: 'Status' },
+    ];
+
+    const fileBase = `contador_inventory_valuation_${new Date().toISOString().split('T')[0]}`;
+    const title = `Inventory Valuation (${valuationMethod.toUpperCase()})`;
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
+
+    exportToExcelWithHeaders(rows, headers, fileBase, 'Valuation', undefined, {
+      title,
+      companyName,
+      headerStyle: 'dgii_606',
+      periodText,
+    });
+  };
+
+  const handleExportPdf = async () => {
+    if (inventory.length === 0) {
+      alert('No hay datos para exportar');
+      return;
+    }
+
+    const columns = [
+      { key: 'product', label: 'Product' },
+      { key: 'sku', label: 'SKU' },
+      { key: 'warehouse', label: 'Warehouse' },
+      { key: 'stock', label: 'Stock' },
+      { key: 'min_stock', label: 'Min Stock' },
+      { key: 'unit_cost', label: 'Unit Cost' },
+      { key: 'total_value', label: 'Total Value' },
+      { key: 'status', label: 'Status' },
+    ];
+
+    const data = inventory.map((i) => ({
+      product: i.name,
+      sku: i.sku,
+      warehouse: i.warehouse,
+      stock: i.quantity,
+      min_stock: i.minStock,
+      unit_cost: i.unitCost,
+      total_value: i.totalValue,
+      status: i.status,
+    }));
+
+    let companyName = '';
+    try {
+      const info = await settingsService.getCompanyInfo();
+      if (info && (info as any)) {
+        companyName = String((info as any).name || (info as any).company_name || (info as any).legal_name || '');
+      }
+    } catch (error) {
+      console.error('Error getting company info for inventory valuation PDF:', error);
+    }
+
+    const fileBase = `contador_inventory_valuation_${new Date().toISOString().split('T')[0]}`;
+    const title = `${companyName ? `${companyName} - ` : ''}Inventory Valuation (${valuationMethod.toUpperCase()})`;
+    await exportToPdf(data, columns, fileBase, title, 'l');
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6">
@@ -106,13 +206,6 @@ export default function ContadorInventarioPage() {
               <p className="text-gray-600">Inventory Management – US Standard</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAdjustment(true)}
-            className="px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] flex items-center gap-2"
-          >
-            <i className="ri-add-line"></i>
-            Adjust Inventory
-          </button>
         </div>
 
         {/* Stats Cards */}
@@ -321,11 +414,17 @@ export default function ContadorInventarioPage() {
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button
+                    onClick={handleExportPdf}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-file-pdf-line"></i>
                     Export PDF
                   </button>
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button
+                    onClick={handleExportExcel}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-file-excel-line"></i>
                     Export Excel
                   </button>
@@ -336,43 +435,51 @@ export default function ContadorInventarioPage() {
             {/* Alerts Tab */}
             {activeTab === 'alerts' && (
               <div className="space-y-4">
-                {inventory.filter(i => i.status === 'out-of-stock').length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-red-800 mb-2 flex items-center gap-2">
-                      <i className="ri-close-circle-line"></i>
-                      Out of Stock ({inventory.filter(i => i.status === 'out-of-stock').length})
-                    </h3>
-                    <div className="space-y-2">
-                      {inventory.filter(i => i.status === 'out-of-stock').map((item) => (
-                        <div key={item.id} className="flex items-center justify-between bg-white rounded p-3">
-                          <span className="font-medium text-gray-900">{item.name}</span>
-                          <button className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
-                            Reorder Now
-                          </button>
-                        </div>
-                      ))}
+                {inventory.filter(i => i.status === 'low-stock').length > 0 ? (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
+                      <div className="font-semibold text-gray-900 flex items-center gap-2">
+                        <i className="ri-error-warning-line text-[#008000]"></i>
+                        Low Stock Alerts
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {inventory.filter(i => i.status === 'low-stock').length}
+                      </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-white">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Product</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">SKU</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Stock</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Min</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Warehouse</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Severity</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {inventory.filter(i => i.status === 'low-stock').map((item) => (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
+                              <td className="px-4 py-3 text-gray-600">{item.sku}</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-900">{item.quantity}</td>
+                              <td className="px-4 py-3 text-right text-gray-600">{item.minStock}</td>
+                              <td className="px-4 py-3 text-gray-600">{item.warehouse}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  Warning
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                )}
-                {inventory.filter(i => i.status === 'low-stock').length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
-                      <i className="ri-error-warning-line"></i>
-                      Low Stock ({inventory.filter(i => i.status === 'low-stock').length})
-                    </h3>
-                    <div className="space-y-2">
-                      {inventory.filter(i => i.status === 'low-stock').map((item) => (
-                        <div key={item.id} className="flex items-center justify-between bg-white rounded p-3">
-                          <div>
-                            <span className="font-medium text-gray-900">{item.name}</span>
-                            <span className="text-sm text-gray-500 ml-2">({item.quantity} left, min: {item.minStock})</span>
-                          </div>
-                          <button className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700">
-                            Reorder
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                ) : (
+                  <div className="py-10 text-center text-gray-500">
+                    No low stock alerts.
                   </div>
                 )}
               </div>
@@ -380,50 +487,6 @@ export default function ContadorInventarioPage() {
           </div>
         </div>
 
-        {/* Adjustment Modal */}
-        {showAdjustment && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Inventory Adjustment</h2>
-                <button onClick={() => setShowAdjustment(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]">
-                    <option>Select product...</option>
-                    {inventory.map(item => (
-                      <option key={item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adjustment Type</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]">
-                    <option>Add Stock</option>
-                    <option>Remove Stock</option>
-                    <option>Set Quantity</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                  <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                  <textarea className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" rows={2}></textarea>
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowAdjustment(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium">Save Adjustment</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

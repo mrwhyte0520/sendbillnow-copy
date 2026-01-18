@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { resolveTenantId } from '../../../services/database';
 import { cashDrawersService, cashTransactionsService } from '../../../services/contador/cash.service';
 import { employeesService } from '../../../services/contador/staff.service';
 import type { CashDrawer, CashTransaction } from '../../../services/contador/cash.service';
@@ -86,8 +87,10 @@ export default function ContadorCajaFinanzaPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
       // Get open drawer for today
-      const drawer = await cashDrawersService.getOpenDrawer(user.id);
+      const drawer = await cashDrawersService.getOpenDrawer(tenantId);
       setCurrentDrawer(drawer);
 
       setTransactions([]);
@@ -96,7 +99,7 @@ export default function ContadorCajaFinanzaPage() {
       if (drawer) {
         setOpeningAmount(drawer.opening_cash || 0);
         // Load transactions for this drawer
-        const txs = await cashTransactionsService.list(user.id, { drawerId: drawer.id });
+        const txs = await cashTransactionsService.list(tenantId, { drawerId: drawer.id });
 
         const inflowTypes: CashTransaction['type'][] = ['sale_cash_in', 'opening_adjustment'];
         const isInflow = (t: CashTransaction['type']) => inflowTypes.includes(t);
@@ -113,7 +116,7 @@ export default function ContadorCajaFinanzaPage() {
         setTransactions(mapped);
 
         const drawerDate = new Date(drawer.opened_at || drawer.created_at).toISOString().slice(0, 10);
-        const summary = await cashTransactionsService.getDailySummary(user.id, drawerDate);
+        const summary = await cashTransactionsService.getDailySummary(tenantId, drawerDate);
         setDailySummary(summary);
       }
     } catch (error) {

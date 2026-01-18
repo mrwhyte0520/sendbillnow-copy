@@ -30,6 +30,12 @@ export default function InventoryPage() {
   const [modalType, setModalType] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [showEmptyWarehouseModal, setShowEmptyWarehouseModal] = useState(false);
+  const [emptyWarehouseSource, setEmptyWarehouseSource] = useState<any>(null);
+  const [emptyWarehouseTargetId, setEmptyWarehouseTargetId] = useState('');
+  const [emptyingWarehouse, setEmptyingWarehouse] = useState(false);
+  const [showViewWarehouseModal, setShowViewWarehouseModal] = useState(false);
+  const [viewWarehouse, setViewWarehouse] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const transferNumberRequestRef = useRef(0);
 
@@ -224,35 +230,6 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDeleteWarehouseProducts = async (warehouse: any) => {
-    const productsInWarehouse = items.filter((item) => item.warehouse_id === warehouse.id);
-    const productCount = productsInWarehouse.length;
-
-    if (productCount === 0) {
-      alert('This warehouse has no assigned products.');
-      return;
-    }
-
-    if (!confirm(`Permanently delete the ${productCount} products from this warehouse? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      for (const product of productsInWarehouse) {
-        await inventoryService.deleteItem(product.id);
-      }
-
-      if (user) {
-        await loadData();
-      }
-      await loadWarehouses();
-      alert('Products deleted from warehouse successfully');
-    } catch (error) {
-      console.error('Error deleting warehouse products:', error);
-      alert('Could not delete all products from warehouse');
-    }
-  };
-
   const loadWarehouses = async () => {
     try {
       const data = await settingsService.getWarehouses();
@@ -265,10 +242,7 @@ export default function InventoryPage() {
 
   const loadStores = async () => {
     try {
-      if (!user?.id) {
-        setStores([]);
-        return;
-      }
+      if (!user?.id) return;
       const data = await storesService.getAll(user.id);
       setStores(data || []);
     } catch (error) {
@@ -279,10 +253,7 @@ export default function InventoryPage() {
 
   const loadSuppliers = async () => {
     try {
-      if (!user?.id) {
-        setSuppliers([]);
-        return;
-      }
+      if (!user?.id) return;
       const data = await suppliersService.getAll(user.id);
       setSuppliers(data || []);
     } catch (error) {
@@ -291,542 +262,137 @@ export default function InventoryPage() {
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDeleteWarehouse = async (warehouse: any) => {
+    if (!warehouse?.id) return;
+    const stats = getWarehouseStats(warehouse.id);
+    const name = String(warehouse?.name || 'this location');
+
+    if (stats.products > 0) {
+      alert(
+        `You cannot delete this location because it has ${stats.products} product(s).\n\n` +
+        `Please transfer the products to another location first (use the Empty button).`
+      );
+      return;
+    }
+
+    if (!confirm(`Permanently delete ${name}? This action cannot be undone.`)) {
+      return;
+    }
+
     try {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      if (!user?.id) {
-        alert('You must be logged in to upload product images');
-        return;
-      }
-
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `${user.id}/products/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error('Error uploading product image to Supabase Storage:', uploadError);
-        alert('Could not upload product image');
-        return;
-      }
-
-      const { data: publicData } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(fileName);
-
-      const publicUrl = publicData?.publicUrl;
-      if (!publicUrl) {
-        alert('Could not get public URL for image');
-        return;
-      }
-
-      setFormData((prev: any) => ({ ...prev, image_url: publicUrl }));
-    } catch (error) {
-      console.error('handleImageUpload error', error);
-      alert('An error occurred while processing the image');
-    }
-  };
-
-  const handleOpenModal = (type: string, item: any = null) => {
-    setModalType(type);
-    setSelectedItem(item);
-
-    const baseForm: any = item ? { ...item } : {};
-
-    if (!item && type === 'item' && !baseForm.warehouse_id && warehouses.length > 0) {
-      baseForm.warehouse_id = warehouses[0].id;
-    }
-
-    if (!item && type === 'warehouse_entry') {
-      baseForm.document_date = new Date().toISOString().slice(0, 10);
-      baseForm.source_type = '';
-      if (warehouses.length > 0) {
-        baseForm.warehouse_id = warehouses[0].id;
-      }
-      setWarehouseEntryLines([{ inventory_item_id: '', quantity: '', unit_cost: '', notes: '' }]);
-    }
-
-    if (!item && type === 'warehouse_transfer') {
-      baseForm.transfer_date = new Date().toISOString().slice(0, 10);
-      if (warehouses.length > 0) {
-        baseForm.from_warehouse_id = warehouses[0].id;
-        baseForm.to_warehouse_id = warehouses.length > 1 ? warehouses[1].id : warehouses[0].id;
-      }
-      setTransferLines([{ inventory_item_id: '', quantity: '', notes: '' }]);
-    }
-
-    if (!item && type === 'item') {
-      const timestamp = Date.now().toString().slice(-6);
-      const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-      setFormData((prev: any) => ({ ...prev, sku: `INV-${timestamp}-${random}` }));
-    }
-
-    setFormData(baseForm);
-
-    setShowModal(true);
-
-    // Pre-fill document number for internal transfers (editable)
-    if (!item && type === 'warehouse_transfer' && user?.id) {
-      const requestId = Date.now();
-      transferNumberRequestRef.current = requestId;
-
-      (async () => {
-        try {
-          const tenantId = await resolveTenantId(user.id);
-          if (!tenantId) return;
-
-          const { data: nextNum, error: nextNumError } = await supabase.rpc(
-            'peek_document_number',
-            {
-              p_tenant_id: tenantId,
-              p_doc_key: 'warehouse_transfer',
-              p_prefix: 'TRF',
-              p_padding: 6,
-            },
-          );
-
-          if (nextNumError) throw nextNumError;
-          if (transferNumberRequestRef.current !== requestId) return;
-
-          if (typeof nextNum === 'string' && nextNum.trim().length > 0) {
-            setFormData((prev: any) => {
-              const current = typeof prev?.document_number === 'string' ? prev.document_number.trim() : '';
-              if (current.length > 0) return prev;
-              return { ...prev, document_number: nextNum };
-            });
-          }
-        } catch (err) {
-          // If RPC doesn't exist yet or fails, leave editable blank
-          console.warn('Could not prefill warehouse transfer document number:', err);
-        }
-      })();
-    }
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setModalType('');
-    setSelectedItem(null);
-    setFormData({});
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      let skipReloadAfterSave = false;
-
-      if (modalType === 'item') {
-        if (user) {
-          // Basic numeric validations
-          const errors: string[] = [];
-
-          const numCurrent = Number(formData.current_stock);
-          const numMin = Number(formData.minimum_stock);
-          const numMax = Number(formData.maximum_stock);
-          const numCost = Number(formData.cost_price);
-          const numSelling = Number(formData.selling_price);
-
-          if (numCurrent < 0) errors.push('Current stock cannot be negative.');
-          if (numMin < 0) errors.push('Minimum stock cannot be negative.');
-          if (numMax < 0) errors.push('Maximum stock cannot be negative.');
-          if (numCost < 0) errors.push('Purchase price cannot be negative.');
-          if (numSelling < 0) errors.push('Selling price cannot be negative.');
-
-          if (errors.length > 0) {
-            alert(errors.join('\n'));
-            return;
-          }
-
-          // Validation: maximum stock cannot be less than current stock for inventory products
-          const rawCurrentStock = numCurrent;
-          const rawMaximumStock = numMax;
-          const currentStock = Number.isFinite(rawCurrentStock) ? Math.round(rawCurrentStock) : 0;
-          const maximumStock = Number.isFinite(rawMaximumStock) ? Math.round(rawMaximumStock) : 0;
-
-          if (
-            (formData.item_type === 'inventory' || !formData.item_type) &&
-            Number.isFinite(rawCurrentStock) &&
-            Number.isFinite(rawMaximumStock) &&
-            maximumStock < currentStock
-          ) {
-            alert('Maximum stock cannot be less than current stock.');
-            return;
-          }
-
-          // Normalize numeric fields before saving
-          const normalizedItem = {
-            ...formData,
-            current_stock: Number.isFinite(Number(formData.current_stock))
-              ? Math.round(Number(formData.current_stock))
-              : 0,
-            minimum_stock: Number.isFinite(Number(formData.minimum_stock))
-              ? Math.round(Number(formData.minimum_stock))
-              : 0,
-            maximum_stock: Number.isFinite(Number(formData.maximum_stock))
-              ? Math.round(Number(formData.maximum_stock))
-              : 0,
-            cost_price: Number(formData.cost_price) || 0,
-            selling_price: Number(formData.selling_price) || 0,
-            item_type: formData.item_type || 'inventory',
-            is_commissionable: formData.is_commissionable !== false,
-            warehouse_id: formData.warehouse_id || null,
-            product_type: formData.product_type || 'unit',
-            quantity_per_type: Number.isFinite(Number(formData.quantity_per_type))
-              ? Math.round(Number(formData.quantity_per_type))
-              : 1,
-            vendor_id: formData.vendor_id || null,
-            unit_price: Number(formData.unit_price) || 0,
-            box_price: Number(formData.box_price) || 0,
-            pallet_price: Number(formData.pallet_price) || 0,
-            package_price: Number(formData.package_price) || 0,
-          };
-
-          // If there's a user, try to save to database
-          if (selectedItem) {
-            const result = await inventoryService.updateItem(user!.id, selectedItem.id, normalizedItem);
-
-            if (result) {
-              setItems((prev) => {
-                const next = Array.isArray(prev) ? [...prev] : [];
-                const idx = next.findIndex((it: any) => String(it?.id) === String(result?.id));
-                if (idx >= 0) next[idx] = { ...next[idx], ...result };
-                else next.unshift(result);
-                return next;
-              });
-            }
-          } else {
-            const created = await inventoryService.createItem(user!.id, {
-              ...normalizedItem,
-              sku: formData.sku || `SKU${Date.now()}`,
-              is_active: formData.is_active !== false
-            });
-
-            if (created) {
-              setItems((prev) => {
-                const next = Array.isArray(prev) ? [...prev] : [];
-                next.unshift(created);
-                return next;
-              });
-            }
-          }
-
-          // Avoid immediate reload: may bring stale data and overwrite local state
-          skipReloadAfterSave = true;
-        }
-      } else if (modalType === 'movement') {
-        if (user) {
-          const movementDate = formData.movement_date || new Date().toISOString().split('T')[0];
-          const rawQuantity = Number(formData.quantity) || 0;
-          const quantity = Number.isFinite(rawQuantity) ? Math.round(rawQuantity) : 0;
-          const unitCost = Number(formData.unit_cost) || 0;
-          const totalCost = quantity * unitCost;
-
-          // Don't send account_id to inventory_movements table (only used for journal entry)
-          const { account_id, warehouse_id: _ignoredWarehouse, ...movementRest } = formData;
-
-          const createdMovement = await inventoryService.createMovement(user!.id, {
-            ...movementRest,
-            quantity,
-            movement_date: movementDate,
-            total_cost: totalCost,
-          });
-
-          // Update current stock of affected product consistent with the movement
-          try {
-            const item = items.find((it) => String(it.id) === String(formData.item_id));
-            if (item && formData.movement_type) {
-              const currentStock = Number(item.current_stock ?? 0) || 0;
-              let newStock = currentStock;
-
-              if (formData.movement_type === 'entry') {
-                newStock = currentStock + quantity;
-              } else if (formData.movement_type === 'exit') {
-                newStock = currentStock - quantity;
-              } else if (formData.movement_type === 'adjustment') {
-                // Adjustments can be positive (increase) or negative (decrease)
-                // User indicates if positive or negative with adjustment_direction
-                const isPositive = formData.adjustment_direction !== 'negative';
-                newStock = isPositive ? currentStock + quantity : currentStock - quantity;
-              }
-
-              if (newStock < 0) newStock = 0;
-
-              await inventoryService.updateItem(item.id, {
-                current_stock: newStock,
-              });
-            }
-          } catch (stockError) {
-            console.error('Error updating current stock for manual inventory movement', stockError);
-          }
-        }
-      } else if (modalType === 'add_to_inventory') {
-        // Add to Inventory - update product stock and create movement
-        if (!user) {
-          alert('You must be logged in to add inventory');
-          return;
-        }
-
-        if (!formData.item_id) {
-          alert('Please select a product');
-          return;
-        }
-
-        const addQty = parseInt(formData.add_quantity) || 0;
-        if (addQty <= 0) {
-          alert('Please enter a valid quantity to add');
-          return;
-        }
-
-        const currentStock = Number(formData.current_stock) || 0;
-        const totalStock = currentStock + addQty;
-        const maxStock = Number(formData.maximum_stock) || 0;
-
-        // Warning if exceeds maximum (but allow to proceed)
-        if (maxStock > 0 && totalStock > maxStock) {
-          if (!confirm(`Warning: Total stock (${totalStock}) will exceed maximum stock (${maxStock}). Do you want to continue?`)) {
-            return;
-          }
-        }
-
-        try {
-          // Get the price based on entry type
-          const entryType = formData.entry_type || 'unit';
-          const entryPrice = entryType === 'unit' ? (Number(formData.unit_price) || 0) :
-            entryType === 'box' || entryType === 'mixed_box' ? (Number(formData.box_price) || 0) :
-            entryType === 'pallet' || entryType === 'mixed_pallet' ? (Number(formData.pallet_price) || 0) :
-            (Number(formData.package_price) || 0);
-
-          // Update product stock and prices
-          await inventoryService.updateItem(user.id, formData.item_id, {
-            current_stock: totalStock,
-            vendor_id: formData.vendor_id || null,
-            unit_price: Number(formData.unit_price) || 0,
-            box_price: Number(formData.box_price) || 0,
-            pallet_price: Number(formData.pallet_price) || 0,
-            package_price: Number(formData.package_price) || 0,
-            last_entry_date: formData.entry_date || new Date().toISOString().split('T')[0],
-          });
-
-          // Create inventory movement
-          await inventoryService.createMovement(user.id, {
-            item_id: formData.item_id,
-            movement_type: 'entry',
-            quantity: addQty,
-            unit_cost: entryPrice,
-            total_cost: addQty * entryPrice,
-            movement_date: formData.entry_date || new Date().toISOString().slice(0, 10),
-            notes: formData.entry_notes || `Inventory entry - ${entryType}`,
-          });
-
-          // Update local state
-          setItems((prev) => {
-            const next = Array.isArray(prev) ? [...prev] : [];
-            const idx = next.findIndex((it) => String(it.id) === String(formData.item_id));
-            if (idx >= 0) {
-              next[idx] = { ...next[idx], current_stock: totalStock };
-            }
-            return next;
-          });
-
-          alert(`Successfully added ${addQty} units to inventory. New stock: ${totalStock}`);
-          skipReloadAfterSave = true;
-        } catch (err: any) {
-          console.error('Error adding to inventory:', err);
-          alert(`Error adding to inventory: ${err?.message || 'check console for details'}`);
-          return;
-        }
-      } else if (modalType === 'warehouse') {
-        if (selectedItem && selectedItem.id) {
-          await settingsService.updateWarehouse(selectedItem.id, {
-            name: formData.name,
-            location: formData.location,
-            description: formData.description || null,
-          });
-        } else {
-          await settingsService.createWarehouse({
-            name: formData.name,
-            location: formData.location,
-            description: formData.description || null,
-            active: true,
-          });
-        }
-        await loadWarehouses();
-      } else if (modalType === 'warehouse_entry') {
-        if (!user) {
-          alert('You must be logged in to register location entries');
-          return;
-        }
-
-        const validLines = warehouseEntryLines
-          .map((l) => ({
-            ...l,
-            quantity: Number(l.quantity) || 0,
-          }))
-          .filter((l) => l.inventory_item_id && l.quantity > 0);
-
-        if (validLines.length === 0) {
-          alert('You must add at least one line with valid quantity and selected item');
-          return;
-        }
-
-        const extraRefs: string[] = [];
-        if (formData.related_invoice_id) {
-          extraRefs.push(`Related invoice: ${formData.related_invoice_id}`);
-        }
-        if (formData.related_delivery_note_id) {
-          extraRefs.push(`Related delivery note: ${formData.related_delivery_note_id}`);
-        }
-        const fullDescription = [formData.description, extraRefs.length ? extraRefs.join(' | ') : null]
-          .filter(Boolean)
-          .join(' | ');
-
-        const entryPayload: any = {
-          warehouse_id: formData.warehouse_id,
-          source_type: formData.source_type || null,
-          related_invoice_id: formData.related_invoice_id || null,
-          related_delivery_note_id: formData.related_delivery_note_id || null,
-          issuer_name: formData.issuer_name || null,
-          document_number: formData.document_number || null,
-          document_date: formData.document_date || new Date().toISOString().slice(0, 10),
-          description: fullDescription || null,
-          status: 'draft',
-        };
-
-        const linesPayload = validLines.map((l) => ({
-          inventory_item_id: l.inventory_item_id,
-          quantity: l.quantity,
-          unit_cost: l.unit_cost,
-          notes: l.notes || null,
-        }));
-
-        try {
-          const created = await warehouseEntriesService.create(user.id, entryPayload, linesPayload);
-          await warehouseEntriesService.post(user.id, created.entry.id);
-          const data = await warehouseEntriesService.getAll(user.id);
-          setWarehouseEntries(data || []);
-          alert('Location entry registered successfully');
-        } catch (err: any) {
-          console.error('Error creating warehouse entry:', err);
-          alert(`Error registering location entry: ${err?.message || 'check console for more details'}`);
-          return;
-        }
-      } else if (modalType === 'warehouse_transfer') {
-        if (!user) {
-          alert('You must be logged in to register location transfers');
-          return;
-        }
-
-        if (!formData.from_warehouse_id || !formData.to_warehouse_id) {
-          alert('You must select source and destination locations');
-          return;
-        }
-        if (formData.from_warehouse_id === formData.to_warehouse_id) {
-          alert('Source and destination locations cannot be the same');
-          return;
-        }
-
-        const validLines = transferLines
-          .map((l) => ({
-            ...l,
-            quantity: Number(l.quantity) || 0,
-          }))
-          .filter((l) => l.inventory_item_id && l.quantity > 0);
-
-        if (validLines.length === 0) {
-          alert('You must add at least one line with valid quantity and selected item');
-          return;
-        }
-
-        const overRequested: string[] = [];
-        const aggregatedByItem: any = {};
-
-        for (const line of validLines) {
-          const item = items.find((it) => String(it.id) === String(line.inventory_item_id));
-          if (!item) continue;
-
-          if (
-            formData.from_warehouse_id &&
-            String(item.warehouse_id) !== String(formData.from_warehouse_id)
-          ) {
-            continue;
-          }
-
-          const id = String(item.id);
-          const requestedSoFar = aggregatedByItem[id]?.requested || 0;
-          const qty = Number(line.quantity) || 0;
-          const available = Number(item.current_stock ?? 0) || 0;
-
-          aggregatedByItem[id] = {
-            requested: requestedSoFar + qty,
-            available,
-            name: item.name || '',
-          };
-        }
-
-        Object.values(aggregatedByItem).forEach((entry: any) => {
-          if (entry.requested > entry.available) {
-            overRequested.push(
-              `${entry.name || 'Product'}: requested ${entry.requested}, available ${entry.available}`,
-            );
-          }
-        });
-
-        if (overRequested.length > 0) {
-          alert(
-            'Cannot transfer more than available quantity in source location for:\n' +
-              overRequested.join('\n'),
-          );
-          return;
-        }
-
-        const transferPayload: any = {
-          from_warehouse_id: formData.from_warehouse_id,
-          to_warehouse_id: formData.to_warehouse_id,
-          transfer_date: formData.transfer_date || new Date().toISOString().slice(0, 10),
-          document_number: formData.document_number || null,
-          description: formData.description || null,
-          status: 'draft',
-        };
-
-        const linesPayload = validLines.map((l) => ({
-          inventory_item_id: l.inventory_item_id,
-          quantity: l.quantity,
-          notes: l.notes || null,
-        }));
-
-        try {
-          const created = await warehouseTransfersService.create(user.id, transferPayload, linesPayload);
-          await warehouseTransfersService.post(user.id, created.transfer.id);
-          const data = await warehouseTransfersService.getAll(user.id);
-          setWarehouseTransfers(data || []);
-          alert('Location transfer registered successfully');
-        } catch (err: any) {
-          console.error('Error creating warehouse transfer:', err);
-          alert(`Error registering location transfer: ${err?.message || 'check console for more details'}`);
-          return;
-        }
-      }
-
-      handleCloseModal();
-      if (user && !skipReloadAfterSave) {
+      await settingsService.deleteWarehouse(warehouse.id);
+      await loadWarehouses();
+      if (user?.id) {
         await loadData();
       }
     } catch (error: any) {
-      console.error('Error saving data:', error);
-      const parts = [
-        error?.message ? String(error.message) : null,
-        error?.code ? `code: ${String(error.code)}` : null,
-        error?.details ? `details: ${String(error.details)}` : null,
-        error?.hint ? `hint: ${String(error.hint)}` : null,
-      ].filter(Boolean);
-      const msg = parts.length > 0 ? parts.join('\n') : 'Check console for more details.';
-      alert(`Error saving data:\n${msg}`);
+      console.error('Error deleting warehouse:', error);
+      const msg = String(error?.message || 'Error deleting location');
+      const isConflict = msg.toLowerCase().includes('still referenced') || msg.toLowerCase().includes('cannot delete');
+      if (isConflict) {
+        const ok = confirm(
+          `${msg}\n\n` +
+          `This location has movement history, so it cannot be permanently deleted.\n` +
+          `Do you want to deactivate it instead? (It will be hidden from the list)`
+        );
+        if (ok) {
+          try {
+            await settingsService.updateWarehouse(warehouse.id, { ...warehouse, active: false });
+            await loadWarehouses();
+            if (user?.id) {
+              await loadData();
+            }
+            return;
+          } catch (deErr: any) {
+            console.error('Error deactivating warehouse:', deErr);
+            alert(deErr?.message || 'Error deactivating location');
+            return;
+          }
+        }
+      }
+      alert(msg);
+      return;
+    }
+  };
+
+  const handleOpenEmptyWarehouse = (warehouse: any) => {
+    if (!warehouse?.id) return;
+    const stats = getWarehouseStats(warehouse.id);
+    if (stats.products <= 0) {
+      alert('This location has no products to transfer.');
+      return;
+    }
+    setEmptyWarehouseSource(warehouse);
+    setEmptyWarehouseTargetId('');
+    setShowEmptyWarehouseModal(true);
+  };
+
+  const handleConfirmEmptyWarehouse = async () => {
+    if (!user?.id) return;
+    if (!emptyWarehouseSource?.id) return;
+    if (!emptyWarehouseTargetId) {
+      alert('Please select a destination location.');
+      return;
+    }
+    if (String(emptyWarehouseTargetId) === String(emptyWarehouseSource.id)) {
+      alert('Destination location must be different from the source location.');
+      return;
+    }
+
+    const productsInSource = (Array.isArray(items) ? items : [])
+      .filter((it: any) => String(it?.warehouse_id ?? '') === String(emptyWarehouseSource.id))
+      .map((it: any) => ({
+        id: String(it?.id || ''),
+        name: String(it?.name || ''),
+        qty: Number(it?.current_stock) || 0,
+      }))
+      .filter((it: any) => it.id && it.qty > 0);
+
+    if (productsInSource.length === 0) {
+      alert('This location has no stock to transfer.');
+      setShowEmptyWarehouseModal(false);
+      setEmptyWarehouseSource(null);
+      setEmptyWarehouseTargetId('');
+      return;
+    }
+
+    setEmptyingWarehouse(true);
+    try {
+      const sourceName = String(emptyWarehouseSource?.name || 'Source');
+      const dest = warehouses.find((w: any) => String(w?.id) === String(emptyWarehouseTargetId));
+      const destName = String(dest?.name || 'Destination');
+
+      const transferPayload: any = {
+        from_warehouse_id: emptyWarehouseSource.id,
+        to_warehouse_id: emptyWarehouseTargetId,
+        transfer_date: new Date().toISOString().slice(0, 10),
+        description: `Empty location: ${sourceName} -> ${destName}`,
+        status: 'draft',
+      };
+
+      const linesPayload = productsInSource.map((p: any) => ({
+        inventory_item_id: p.id,
+        quantity: p.qty,
+        notes: `Empty location transfer: ${p.name}`,
+      }));
+
+      const created = await warehouseTransfersService.create(user.id, transferPayload, linesPayload);
+      await warehouseTransfersService.post(user.id, created.transfer.id);
+
+      const data = await warehouseTransfersService.getAll(user.id);
+      setWarehouseTransfers(data || []);
+      await loadData();
+      await loadWarehouses();
+
+      setShowEmptyWarehouseModal(false);
+      setEmptyWarehouseSource(null);
+      setEmptyWarehouseTargetId('');
+      alert('Location emptied successfully. You can now delete it.');
+    } catch (err: any) {
+      console.error('Error emptying warehouse:', err);
+      alert(`Error transferring products: ${err?.message || 'check console for details'}`);
+    } finally {
+      setEmptyingWarehouse(false);
     }
   };
 
@@ -850,6 +416,140 @@ export default function InventoryPage() {
     const sku = `INV-${timestamp}-${random}`;
     setFormData((prev: any) => ({ ...prev, sku }));
     return sku;
+  };
+
+  const handleOpenModal = (type: string, data?: any) => {
+    setModalType(type);
+    setSelectedItem(data || null);
+    setFormData(data || {});
+    if (type === 'warehouse_entry') {
+      setWarehouseEntryLines([{ inventory_item_id: '', quantity: '', unit_cost: '', notes: '' }]);
+    }
+    if (type === 'warehouse_transfer') {
+      setTransferLines([{ inventory_item_id: '', quantity: '', notes: '' }]);
+    }
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalType('');
+    setSelectedItem(null);
+    setFormData({});
+    setWarehouseEntryLines([{ inventory_item_id: '', quantity: '', unit_cost: '', notes: '' }]);
+    setTransferLines([{ inventory_item_id: '', quantity: '', notes: '' }]);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev: any) => ({ ...prev, image_url: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error uploading image');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+
+    try {
+      if (modalType === 'item') {
+        if (selectedItem?.id) {
+          await inventoryService.updateItem(selectedItem.id, formData);
+        } else {
+          const sku = formData.sku || await generateSKU();
+          await inventoryService.createItem(user.id, { ...formData, sku });
+        }
+        await loadData();
+      } else if (modalType === 'movement') {
+        await inventoryService.createMovement(user.id, {
+          inventory_item_id: formData.item_id || formData.inventory_item_id,
+          movement_type: formData.movement_type || 'entry',
+          quantity: Number(formData.quantity) || 0,
+          unit_cost: Number(formData.unit_cost) || 0,
+          reference: formData.reference || '',
+          notes: formData.notes || '',
+          movement_date: formData.movement_date || new Date().toISOString().slice(0, 10),
+        });
+        await loadData();
+      } else if (modalType === 'warehouse') {
+        if (selectedItem?.id) {
+          await settingsService.updateWarehouse(selectedItem.id, formData);
+        } else {
+          await settingsService.createWarehouse(formData);
+        }
+        await loadWarehouses();
+      } else if (modalType === 'warehouse_entry') {
+        const validLines = warehouseEntryLines.filter((l: any) => l.inventory_item_id && Number(l.quantity) > 0);
+        if (validLines.length === 0) {
+          alert('Please add at least one item with quantity');
+          return;
+        }
+        await warehouseEntriesService.create(user.id, {
+          warehouse_id: formData.warehouse_id,
+          supplier_id: formData.supplier_id || null,
+          entry_date: formData.entry_date || new Date().toISOString().slice(0, 10),
+          reference: formData.reference || '',
+          notes: formData.notes || '',
+        }, validLines);
+        const data = await warehouseEntriesService.getAll(user.id);
+        setWarehouseEntries(data || []);
+        await loadData();
+      } else if (modalType === 'warehouse_transfer') {
+        const validLines = transferLines.filter((l: any) => l.inventory_item_id && Number(l.quantity) > 0);
+        if (validLines.length === 0) {
+          alert('Please add at least one item with quantity');
+          return;
+        }
+        if (!formData.from_warehouse_id || !formData.to_warehouse_id) {
+          alert('Please select source and destination locations');
+          return;
+        }
+        if (formData.from_warehouse_id === formData.to_warehouse_id) {
+          alert('Source and destination must be different');
+          return;
+        }
+        const created = await warehouseTransfersService.create(user.id, {
+          from_warehouse_id: formData.from_warehouse_id,
+          to_warehouse_id: formData.to_warehouse_id,
+          transfer_date: formData.transfer_date || new Date().toISOString().slice(0, 10),
+          description: formData.description || '',
+          status: 'draft',
+        }, validLines);
+        // Auto-post the transfer to actually move inventory
+        await warehouseTransfersService.post(user.id, created.transfer.id);
+        const data = await warehouseTransfersService.getAll(user.id);
+        setWarehouseTransfers(data || []);
+        await loadData();
+        await loadWarehouses();
+      } else if (modalType === 'add_to_inventory') {
+        if (!formData.inventory_item_id || !formData.quantity) {
+          alert('Please select a product and enter quantity');
+          return;
+        }
+        await inventoryService.createMovement(user.id, {
+          inventory_item_id: formData.inventory_item_id,
+          movement_type: 'entry',
+          quantity: Number(formData.quantity) || 0,
+          unit_cost: Number(formData.unit_cost) || 0,
+          reference: formData.reference || 'Manual Entry',
+          notes: formData.notes || '',
+          movement_date: new Date().toISOString().slice(0, 10),
+        });
+        await loadData();
+      }
+      handleCloseModal();
+    } catch (error: any) {
+      console.error('Error submitting:', error);
+      alert(error?.message || 'Error saving. Please try again.');
+    }
   };
 
   // Export functions
@@ -1158,7 +858,7 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300">
           <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
             <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Low Stock Products</h3>
           </div>
@@ -1189,7 +889,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] transition-all duration-300">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300">
           <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
             <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Recent Movements</h3>
           </div>
@@ -1818,32 +1518,65 @@ export default function InventoryPage() {
           const stats = getWarehouseStats(warehouse.id);
           return (
             <div key={warehouse.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
-                  <i className="ri-building-line text-[#008000]"></i>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
+                    <i className="ri-building-line text-[#008000]"></i>
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 ml-3">{warehouse.name}</h4>
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 ml-3">{warehouse.name}</h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewWarehouse(warehouse);
+                      setShowViewWarehouseModal(true);
+                    }}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-blue-50"
+                    title="View products"
+                  >
+                    <i className="ri-eye-line text-blue-600"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEmptyWarehouse(warehouse)}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                    title="Empty (transfer all products)"
+                  >
+                    <i className="ri-inbox-unarchive-line text-gray-700"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenModal('warehouse', warehouse)}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                    title="Edit"
+                  >
+                    <i className="ri-edit-line text-gray-700"></i>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteWarehouse(warehouse)}
+                    className="p-2 rounded-lg border border-gray-200 hover:bg-red-50"
+                    title="Delete"
+                  >
+                    <i className="ri-delete-bin-line text-red-600"></i>
+                  </button>
+                </div>
               </div>
               <p className="text-sm text-gray-500 mb-2">{warehouse.location}</p>
               <p className="text-xs text-gray-400 mb-4">{warehouse.description}</p>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Products:</span>
-                  <span className="font-medium text-[#008000]">
-                    {stats.products}
-                  </span>
+                  <span className="font-medium text-[#008000]">{stats.products}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Total Stock:</span>
-                  <span className="font-medium text-[#008000]">
-                    {stats.stockTotal}
-                  </span>
+                  <span className="font-medium text-[#008000]">{stats.stockTotal}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Total Value:</span>
-                  <span className="font-medium text-[#008000]">
-                    ${stats.valueTotal.toLocaleString('es-DO')}
-                  </span>
+                  <span className="font-medium text-[#008000]">${stats.valueTotal.toLocaleString('es-DO')}</span>
                 </div>
               </div>
             </div>
@@ -3440,26 +3173,13 @@ export default function InventoryPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Location Name *
                   </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const index = (warehouses?.length || 0) + 1;
-                        const suggested = `Location ${index}`;
-                        setFormData({ ...formData, name: suggested });
-                      }}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-200 transition-colors whitespace-nowrap text-sm"
-                    >
-                      Generate
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3580,6 +3300,157 @@ export default function InventoryPage() {
 
       {/* Modal */}
       {renderModal()}
+
+      {showEmptyWarehouseModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Empty Location</h2>
+              <button
+                onClick={() => {
+                  if (emptyingWarehouse) return;
+                  setShowEmptyWarehouseModal(false);
+                  setEmptyWarehouseSource(null);
+                  setEmptyWarehouseTargetId('');
+                }}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Source:
+                <span className="font-semibold text-gray-900"> {emptyWarehouseSource?.name || ''}</span>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Destination Location *</label>
+                <select
+                  value={emptyWarehouseTargetId}
+                  onChange={(e) => setEmptyWarehouseTargetId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]"
+                >
+                  <option value="">Select destination</option>
+                  {warehouses
+                    .filter((w: any) => String(w?.id) !== String(emptyWarehouseSource?.id))
+                    .map((w: any) => (
+                      <option key={w.id} value={w.id}>
+                        {w.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                This will transfer ALL products/stock from the source location to the selected destination.
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  if (emptyingWarehouse) return;
+                  setShowEmptyWarehouseModal(false);
+                  setEmptyWarehouseSource(null);
+                  setEmptyWarehouseTargetId('');
+                }}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
+                disabled={emptyingWarehouse}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmEmptyWarehouse}
+                disabled={emptyingWarehouse || !emptyWarehouseTargetId}
+                className="flex-1 bg-[#008000] text-white py-2 px-4 rounded-lg font-medium hover:bg-[#006600] disabled:opacity-50"
+              >
+                {emptyingWarehouse ? 'Transferring...' : 'Transfer All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showViewWarehouseModal && viewWarehouse && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Products in: {viewWarehouse?.name || 'Location'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowViewWarehouseModal(false);
+                  setViewWarehouse(null);
+                }}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <i className="ri-close-line text-xl"></i>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {(() => {
+                const productsInWarehouse = (Array.isArray(items) ? items : [])
+                  .filter((it: any) => String(it?.warehouse_id ?? '') === String(viewWarehouse?.id));
+                
+                if (productsInWarehouse.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-gray-500">
+                      <i className="ri-inbox-line text-4xl mb-2"></i>
+                      <p>No products in this location</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stock</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Cost</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {productsInWarehouse.map((item: any) => {
+                        const stock = Number(item?.current_stock) || 0;
+                        const cost = Number(item?.cost_price) || 0;
+                        const value = stock * cost;
+                        return (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-sm text-gray-600">{item.sku || 'N/A'}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-900">{stock}</td>
+                            <td className="px-4 py-3 text-sm text-right text-gray-600">${cost.toLocaleString('es-DO')}</td>
+                            <td className="px-4 py-3 text-sm text-right font-medium text-[#008000]">${value.toLocaleString('es-DO')}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+
+            <div className="p-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowViewWarehouseModal(false);
+                  setViewWarehouse(null);
+                }}
+                className="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

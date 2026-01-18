@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { resolveTenantId } from '../../../services/database';
 import { salesReturnsService, vendorReturnsService } from '../../../services/contador/returns.service';
 import type { SalesReturn, VendorReturn } from '../../../services/contador/returns.service';
+import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
+import { exportToPdf } from '../../../utils/exportImportUtils';
+import { settingsService } from '../../../services/database';
 
 interface Return {
   id: string;
@@ -23,36 +27,55 @@ export default function ContadorDevolucionesPage() {
   const [showNewReturn, setShowNewReturn] = useState(false);
   const [returns, setReturns] = useState<Return[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+
+  // New Return form state
+  const [formType, setFormType] = useState<'customer' | 'vendor'>('customer');
+  const [formReference, setFormReference] = useState('');
+  const [formAmount, setFormAmount] = useState('');
+  const [formReason, setFormReason] = useState('Defective');
 
   useEffect(() => {
     if (user?.id) {
       loadData();
+      loadCompanyInfo();
     }
   }, [user?.id]);
+
+  const loadCompanyInfo = async () => {
+    if (!user?.id) return;
+    try {
+      const info = await settingsService.getCompanyInfo(user.id);
+      setCompanyName(info?.name || 'Company');
+    } catch { /* ignore */ }
+  };
 
   const loadData = async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
       const [salesRets, vendorRets] = await Promise.all([
-        salesReturnsService.list(user.id),
-        vendorReturnsService.list(user.id),
+        salesReturnsService.list(tenantId),
+        vendorReturnsService.list(tenantId),
       ]);
 
-      const mappedSales: Return[] = salesRets.map((r: SalesReturn) => ({
+      const mappedSales: Return[] = salesRets.map((r: SalesReturn & { customer_name?: string; status?: string }) => ({
         id: r.return_number,
         date: r.return_date,
         type: 'customer' as const,
         reference: r.sale_id || '',
-        customerVendor: r.customer_id || 'Walk-in',
+        customerVendor: r.customer_name || r.customer_id || 'Walk-in',
         product: 'Multiple',
         quantity: 1,
         amount: r.total_refund,
         reason: r.reason || '',
-        status: 'refunded' as const,
+        status: r.status === 'applied' ? 'refunded' : r.status === 'pending' ? 'pending' : 'processed',
       }));
 
-      const mappedVendor: Return[] = vendorRets.map((r: VendorReturn) => ({
+      const mappedVendor: Return[] = vendorRets.map((r: VendorReturn & { total_amount?: number }) => ({
         id: r.vendor_return_number,
         date: r.return_date,
         type: 'vendor' as const,
@@ -60,7 +83,7 @@ export default function ContadorDevolucionesPage() {
         customerVendor: (r as any).vendor?.name || 'Unknown',
         product: 'Multiple',
         quantity: 1,
-        amount: 0,
+        amount: r.total_amount || 0,
         reason: r.memo || '',
         status: r.status === 'credited' ? 'refunded' : r.status === 'received' ? 'processed' : 'pending',
       }));
@@ -93,6 +116,102 @@ export default function ContadorDevolucionesPage() {
     totalRefunded: returns.filter(r => r.status === 'refunded').reduce((acc, r) => acc + r.amount, 0),
     pendingReturns: returns.filter(r => r.status === 'pending').length,
     revenueImpact: customerReturns.reduce((acc, r) => acc + r.amount, 0),
+  };
+
+  const handleCreateReturn = async () => {
+    if (!user?.id) return;
+    if (!formAmount || Number(formAmount) <= 0) return;
+
+    setCreating(true);
+    try {
+      const noteNumber = `RET-${Date.now().toString(36).toUpperCase()}`;
+      const result = await salesReturnsService.create(user.id, {
+        note_number: noteNumber,
+        note_date: new Date().toISOString().split('T')[0],
+        total_amount: Number(formAmount),
+        reason: formReason,
+        invoice_id: formReference || undefined,
+      });
+
+      if (result) {
+        setShowNewReturn(false);
+        setFormReference('');
+        setFormAmount('');
+        setFormReason('Defective');
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error creating return:', error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    const dataToExport = activeTab === 'customer' ? customerReturns :
+                         activeTab === 'vendor' ? vendorReturns : returns;
+
+    const rows = dataToExport.map(r => ({
+      return_number: r.id,
+      date: r.date,
+      type: r.type === 'customer' ? 'Customer' : 'Vendor',
+      customer_vendor: r.customerVendor,
+      amount: r.amount.toFixed(2),
+      reason: r.reason,
+      status: r.status.charAt(0).toUpperCase() + r.status.slice(1),
+    }));
+
+    const headers = [
+      { key: 'return_number', title: 'Return #' },
+      { key: 'date', title: 'Date' },
+      { key: 'type', title: 'Type' },
+      { key: 'customer_vendor', title: 'Customer/Vendor' },
+      { key: 'amount', title: 'Amount' },
+      { key: 'reason', title: 'Reason' },
+      { key: 'status', title: 'Status' },
+    ];
+
+    await exportToExcelWithHeaders(
+      rows,
+      headers,
+      `Returns_${new Date().toISOString().split('T')[0]}`,
+      'Returns',
+      [15, 12, 12, 25, 12, 20, 12],
+      { title: 'Returns Report', companyName }
+    );
+  };
+
+  const handleExportPdf = async () => {
+    const dataToExport = activeTab === 'customer' ? customerReturns :
+                         activeTab === 'vendor' ? vendorReturns : returns;
+
+    const data = dataToExport.map(r => ({
+      return_number: r.id,
+      date: r.date,
+      type: r.type === 'customer' ? 'Customer' : 'Vendor',
+      customer_vendor: r.customerVendor,
+      amount: r.amount,
+      reason: r.reason,
+      status: r.status.charAt(0).toUpperCase() + r.status.slice(1),
+    }));
+
+    const columns = [
+      { key: 'return_number', label: 'Return #' },
+      { key: 'date', label: 'Date' },
+      { key: 'type', label: 'Type' },
+      { key: 'customer_vendor', label: 'Customer/Vendor' },
+      { key: 'amount', label: 'Amount' },
+      { key: 'reason', label: 'Reason' },
+      { key: 'status', label: 'Status' },
+    ];
+
+    await exportToPdf(
+      data,
+      columns,
+      `Returns_${new Date().toISOString().split('T')[0]}`,
+      `${companyName} - Returns Report`,
+      'l'
+    );
   };
 
   return (
@@ -261,6 +380,24 @@ export default function ContadorDevolucionesPage() {
                     ))}
                   </tbody>
                 </table>
+                
+                {/* Export buttons for data tabs */}
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button 
+                    onClick={handleExportPdf}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <i className="ri-file-pdf-line"></i>
+                    Export PDF
+                  </button>
+                  <button 
+                    onClick={handleExportExcel}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <i className="ri-file-excel-line"></i>
+                    Export Excel
+                  </button>
+                </div>
               </div>
             )}
 
@@ -314,11 +451,17 @@ export default function ContadorDevolucionesPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button 
+                    onClick={handleExportPdf}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-file-pdf-line"></i>
                     Export PDF
                   </button>
-                  <button className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2">
+                  <button 
+                    onClick={handleExportExcel}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+                  >
                     <i className="ri-file-excel-line"></i>
                     Export Excel
                   </button>
@@ -341,44 +484,67 @@ export default function ContadorDevolucionesPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Return Type</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]">
-                    <option>Customer Return</option>
-                    <option>Vendor Return</option>
+                  <select 
+                    value={formType}
+                    onChange={(e) => setFormType(e.target.value as 'customer' | 'vendor')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]"
+                  >
+                    <option value="customer">Customer Return</option>
+                    <option value="vendor">Vendor Return</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Original Invoice/PO</label>
-                  <input type="text" placeholder="INV-XXXX or PO-XXXX" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Original Invoice/PO (optional)</label>
+                  <input 
+                    type="text" 
+                    placeholder="INV-XXXX or PO-XXXX" 
+                    value={formReference}
+                    onChange={(e) => setFormReference(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" 
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-                    <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]">
-                    <option>Defective</option>
-                    <option>Wrong item</option>
-                    <option>Not as described</option>
-                    <option>Damaged in shipping</option>
-                    <option>Changed mind</option>
-                    <option>Other</option>
+                  <select 
+                    value={formReason}
+                    onChange={(e) => setFormReason(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]"
+                  >
+                    <option value="Defective">Defective</option>
+                    <option value="Wrong item">Wrong item</option>
+                    <option value="Not as described">Not as described</option>
+                    <option value="Damaged in shipping">Damaged in shipping</option>
+                    <option value="Changed mind">Changed mind</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
               <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowNewReturn(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium">Create Return</button>
+                <button 
+                  onClick={() => setShowNewReturn(false)} 
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  disabled={creating}
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleCreateReturn}
+                  disabled={creating || !formAmount || Number(formAmount) <= 0}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium disabled:opacity-50"
+                >
+                  {creating ? 'Creating...' : 'Create Return'}
+                </button>
               </div>
             </div>
           </div>

@@ -32,7 +32,8 @@ export interface PurchaseOrder {
   po_number: string;
   vendor_id: string;
   order_date: string;
-  status: 'draft' | 'sent' | 'received' | 'cancelled';
+  expected_date?: string | null;
+  status: 'draft' | 'sent' | 'approved' | 'received' | 'cancelled';
   subtotal: number;
   tax: number;
   total: number;
@@ -188,10 +189,11 @@ export const purchaseOrdersService = {
       po_number: po.po_number || '',
       vendor_id: po.supplier_id,
       order_date: po.order_date,
+      expected_date: po.expected_date ?? null,
       status: po.status || 'draft',
-      subtotal: po.subtotal || 0,
-      tax: po.tax || 0,
-      total: po.total || po.subtotal || 0,
+      subtotal: po.subtotal ?? 0,
+      tax: po.tax_amount ?? 0,
+      total: po.total_amount ?? po.total ?? (po.subtotal ?? 0) + (po.tax_amount ?? 0),
       created_by: null,
       created_at: po.created_at,
       vendor: po.suppliers ? { id: po.suppliers.id, user_id: po.user_id, name: po.suppliers.legal_name || '', email: null, phone: null, address1: null, address2: null, city: null, state: null, zip: null, tax_id: null, status: 'active' as const, created_at: '', updated_at: '' } : undefined,

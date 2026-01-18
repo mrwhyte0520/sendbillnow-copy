@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
-import { apInvoicesService, chartAccountsService, invoicesService } from '../../services/database';
+import { apInvoicesService, chartAccountsService, invoicesService, resolveTenantId } from '../../services/database';
 import { formatMoney } from '../../utils/numberFormat';
 import { employeesService } from '../../services/contador/staff.service';
 import { cashTransactionsService } from '../../services/contador/cash.service';
@@ -33,6 +33,9 @@ export default function ContadorPage() {
     const loadStats = async () => {
       if (!user?.id) return;
 
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+
       try {
         const now = new Date();
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -41,10 +44,10 @@ export default function ContadorPage() {
         const toDate = end.toISOString().slice(0, 10);
 
         const [incomeStmt, invoices, apInvoices, employeesCount] = await Promise.all([
-          chartAccountsService.generateIncomeStatement(user.id, fromDate, toDate),
-          invoicesService.getAll(user.id),
-          apInvoicesService.getAll(user.id),
-          employeesService.getActiveCount(user.id),
+          chartAccountsService.generateIncomeStatement(tenantId, fromDate, toDate),
+          invoicesService.getAll(tenantId),
+          apInvoicesService.getAll(tenantId),
+          employeesService.getActiveCount(tenantId),
         ]);
 
         setMonthlyRevenue(Number(incomeStmt?.totalIncome || 0));
@@ -84,7 +87,7 @@ export default function ContadorPage() {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const tomorrowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-        const txs = await cashTransactionsService.list(user.id, {
+        const txs = await cashTransactionsService.list(tenantId, {
           startDate: todayStart.toISOString(),
           endDate: tomorrowStart.toISOString(),
         });
@@ -110,7 +113,7 @@ export default function ContadorPage() {
       }
 
       try {
-        const runs = await payrollRunsService.list(user.id, { year: new Date().getFullYear() });
+        const runs = await payrollRunsService.list(tenantId, { year: new Date().getFullYear() });
         const upcoming = (runs || [])
           .filter((r) => !!r.pay_date)
           .sort((a, b) => new Date(a.pay_date).getTime() - new Date(b.pay_date).getTime())
@@ -129,10 +132,10 @@ export default function ContadorPage() {
 
       try {
         const [vends, prods, balances, pendingReturns] = await Promise.all([
-          vendorsService.list(user.id),
-          productsService.list(user.id),
-          balancesService.list(user.id),
-          returnsService.listPending(user.id),
+          vendorsService.list(tenantId),
+          productsService.list(tenantId),
+          balancesService.list(tenantId),
+          returnsService.listPending(tenantId),
         ]);
 
         setActiveVendors((vends || []).filter((v: any) => String(v?.status || '').toLowerCase() === 'active').length);

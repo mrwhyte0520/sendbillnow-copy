@@ -133,10 +133,15 @@ export const balancesService = {
       location_id: item.warehouse_id || '',
       product_id: item.id,
       qty_on_hand: item.current_stock || 0,
-      reorder_level: item.reorder_point || 0,
+      reorder_level: item.minimum_stock ?? item.reorder_point ?? item.reorder_level ?? 0,
       updated_at: item.updated_at,
       location: item.warehouse ? { id: item.warehouse.id, user_id: item.user_id, name: item.warehouse.name, address: null, created_at: '' } : undefined,
-      product: { id: item.id, sku: item.sku || '', name: item.name, cost: item.cost || 0 },
+      product: {
+        id: item.id,
+        sku: item.sku || '',
+        name: item.name,
+        cost: item.average_cost ?? item.cost_price ?? item.cost ?? 0,
+      },
     }));
 
     if (filters?.lowStock) {

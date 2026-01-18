@@ -88,12 +88,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       try {
         if (!profilePanelOpen || !user?.id) return;
 
-        const { data, error } = await supabase
+        const tenantId = await resolveTenantId(user.id);
+        const isOwnerUser = tenantId === user.id;
+
+        // Fetch current user profile
+        const { data: currentData, error: currentError } = await supabase
           .from('users')
           .select('*')
           .eq('id', user.id)
-          .single();
-        if (error || !data) return;
+          .maybeSingle();
+
+        // Fetch owner profile when sub-user
+        const { data: ownerData } = !isOwnerUser && tenantId
+          ? await supabase
+              .from('users')
+              .select('*')
+              .eq('id', tenantId)
+              .maybeSingle()
+          : { data: null } as any;
+
+        const data = currentError ? null : (currentData || null);
+        if (!data) return;
 
         let companyFromSettings: string | undefined;
         try {
@@ -111,16 +126,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           console.error('Error getting company information for My Profile:', e);
         }
 
+        // For sub-users, show owner company/info while keeping the sub-user identity (email/name)
+        const ownerInfo = ownerData || null;
         setUserProfile(prev => ({
           ...prev,
           email: data.email || user.email || prev.email,
           fullName: data.full_name || prev.fullName || (user.email?.split('@')[0] ?? ''),
-          phone: data.phone || prev.phone,
-          company: data.company || companyFromSettings || prev.company,
-          position: data.position || prev.position,
-          address: data.address || prev.address,
-          city: data.city || prev.city,
-          country: data.country || prev.country || 'República Dominicana',
+          phone: (ownerInfo?.phone || data.phone || prev.phone),
+          company: (ownerInfo?.company || data.company || companyFromSettings || prev.company),
+          position: (ownerInfo?.position || data.position || prev.position),
+          address: (ownerInfo?.address || data.address || prev.address),
+          city: (ownerInfo?.city || data.city || prev.city),
+          country: (ownerInfo?.country || data.country || prev.country || 'República Dominicana'),
         }));
       } catch (error) {
         console.error('Error loading profile in DashboardLayout:', error);
@@ -139,7 +156,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setIsOwner(tenantId === user.id);
       } catch (error) {
         console.error('Error verificando si es owner:', error);
-        setIsOwner(false);
+        // Fail-open for owners: keep previous value to avoid intermittent blocks
+        setIsOwner(prev => prev);
       }
     };
     checkIfOwner();
@@ -183,10 +201,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           setAllowedModules(modules);
           return;
         }
-        const { data: ur } = await supabase.from('user_roles').select('*').eq('user_id', user.id);
-        const roleIds = (ur || []).map((r: any) => r.role_id);
+        // Try resolve roles by user id, and fallback to email (support invite-by-email rows)
+        const ownerId = await resolveTenantId(user.id);
+        let roleIds: string[] = [];
+        const { data: urById } = await supabase.from('user_roles').select('*').eq('user_id', user.id);
+        roleIds = (urById || []).map((r: any) => r.role_id);
+        if (roleIds.length === 0 && user.email) {
+          const { data: urByEmail } = await supabase.from('user_roles').select('*').eq('user_id', user.email);
+          roleIds = (urByEmail || []).map((r: any) => r.role_id);
+        }
         if (roleIds.length === 0) { setAllowedModules(new Set()); return; }
-        const { data: rp } = await supabase.from('role_permissions').select('permission_id').in('role_id', roleIds);
+
+        // IMPORTANT: role_permissions is tenant-scoped; filter by owner_user_id to satisfy RLS
+        const rpQuery = supabase
+          .from('role_permissions')
+          .select('permission_id')
+          .in('role_id', roleIds);
+        const { data: rp } = ownerId ? await rpQuery.eq('owner_user_id', ownerId) : await rpQuery;
         const permIds = (rp || []).map((r: any) => r.permission_id);
         if (permIds.length === 0) { setAllowedModules(new Set()); return; }
         const { data: perms } = await supabase.from('permissions').select('*').in('id', permIds).eq('action', 'access');
@@ -400,19 +431,44 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const hasSubmenu = item.submenu && item.submenu.length > 0;
     const isExpanded = expandedMenus.includes(item.href);
 
-    // RBAC filter: allow all if allowedModules is null (loading) or empty (no RBAC configured)
-    const rbacOff = allowedModules === null || allowedModules.size === 0;
-    const moduleOf = (href: string) => (href.split('/').filter(Boolean)[0] || 'dashboard');
-    const itemAllowed = rbacOff || allowedModules!.has(moduleOf(item.href));
+    // RBAC filter:
+    // - null => loading (show minimal items)
+    // - empty Set => no permissions (show minimal items)
+    // Map href segments to permission module names (handle mismatches like contador → accounting)
+    const MODULE_MAP: Record<string, string> = {
+      'contador': 'accounting',
+    };
+    const moduleOf = (href: string) => {
+      const segment = href.split('/').filter(Boolean)[0] || 'dashboard';
+      return MODULE_MAP[segment] || segment;
+    };
+    const minimalAllowed = new Set(['dashboard', 'profile', 'plans']);
+    const currentModule = moduleOf(item.href);
+
+    // Owners should always see all modules; RBAC filtering is for sub-users only
+    const allowByRbac = isOwner
+      ? true
+      : (allowedModules && allowedModules.size > 0
+          ? allowedModules.has(currentModule)
+          : minimalAllowed.has(currentModule));
+
+    const itemAllowed = allowByRbac;
     if (!itemAllowed) return null;
 
     const submenu = hasSubmenu
-      ? item.submenu.filter((s: any) => rbacOff || allowedModules!.has(moduleOf(s.href)))
+      ? item.submenu.filter((s: any) => {
+          const sm = moduleOf(s.href);
+          return isOwner
+            ? true
+            : (allowedModules && allowedModules.size > 0
+                ? allowedModules.has(sm)
+                : minimalAllowed.has(sm));
+        })
       : null;
     const hasFilteredSubmenu = submenu && submenu.length > 0;
 
     // Verificar si el módulo está restringido por plan
-    const isPlanRestricted = !canAccessRoute(item.href);
+    const isPlanRestricted = !isOwner && !canAccessRoute(item.href);
     const requiredPlan = isPlanRestricted ? getRequiredPlanForRoute(item.href) : '';
 
     // Handler para items restringidos

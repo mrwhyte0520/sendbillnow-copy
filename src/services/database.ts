@@ -74,25 +74,81 @@ const describeSupabaseError = (error: any) => {
 };
 
 // Resolve tenant owner id for a given user (owner or subuser)
+// IMPORTANT: Always returns a string to match text columns in DB
 export const resolveTenantId = async (userId: string | null | undefined): Promise<string | null> => {
   if (!userId) return null;
+  const userIdStr = String(userId); // Ensure string for text column compatibility
   try {
-    const { data, error } = await supabase
+    const { data: preferOwner } = await supabase
       .from('user_roles')
       .select('owner_user_id')
-      .eq('user_id', userId)
+      .eq('user_id', userIdStr)
+      .not('owner_user_id', 'is', null)
+      .neq('owner_user_id', userIdStr)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!error && (data as any)?.owner_user_id) {
-      return (data as any).owner_user_id as string;
+    if ((preferOwner as any)?.owner_user_id) {
+      return String((preferOwner as any).owner_user_id);
+    }
+
+    const { data } = await supabase
+      .from('user_roles')
+      .select('owner_user_id')
+      .eq('user_id', userIdStr)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if ((data as any)?.owner_user_id) {
+      return String((data as any).owner_user_id); // Ensure string
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', userIdStr)
+      .maybeSingle();
+
+    const email = (profile as any)?.email ? String((profile as any).email) : null;
+    if (email) {
+      const { data: preferOwnerByEmail } = await supabase
+        .from('user_roles')
+        .select('owner_user_id')
+        .eq('user_id', email)
+        .not('owner_user_id', 'is', null)
+        .neq('owner_user_id', userIdStr)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if ((preferOwnerByEmail as any)?.owner_user_id) {
+        return String((preferOwnerByEmail as any).owner_user_id);
+      }
+
+      const { data: byEmail } = await supabase
+        .from('user_roles')
+        .select('owner_user_id')
+        .eq('user_id', email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if ((byEmail as any)?.owner_user_id) {
+        return String((byEmail as any).owner_user_id);
+      }
     }
   } catch (err) {
     console.warn('resolveTenantId failed:', (err as any)?.message ?? err);
   }
   // If no mapping is found, the user is its own tenant
-  return userId;
+  return userIdStr;
+};
+
+// Helper to ensure userId is always a string for DB queries (text columns)
+export const toTextId = (id: string | null | undefined): string => {
+  return id ? String(id) : '';
 };
 
 /* ==========================================================
@@ -3419,10 +3475,7 @@ export const chartAccountsService = {
       const { data: lines, error: linesError } = await supabase
         .from('journal_entry_lines')
         .select('account_id, debit_amount, credit_amount, journal_entries!inner(status, user_id)')
-        // NOTE: In some environments `journal_entries.user_id` is `text` while `tenantId` is a UUID.
-        // PostgREST infers UUID type from the literal and Postgres rejects `text = uuid`.
-        // Force the literal to be treated as text.
-        .filter('journal_entries.user_id', 'eq', `${tenantId}::text`)
+        .eq('journal_entries.user_id', tenantId)
         .eq('journal_entries.status', 'posted');
 
       if (linesError) {
@@ -5985,25 +6038,135 @@ export const warehouseTransfersService = {
 
       const { data: lines, error: linesError } = await supabase
         .from('warehouse_transfer_lines')
-        .select(`
-          *,
-          inventory_items (
-            id,
-            name
-          )
-        `)
+        .select('*')
         .eq('transfer_id', transfer.id);
 
       if (linesError) throw linesError;
       if (!lines || lines.length === 0) throw new Error('Warehouse transfer has no lines');
 
+      const fromWarehouseId = String((transfer as any).from_warehouse_id || '');
+      const toWarehouseId = String((transfer as any).to_warehouse_id || '');
+      if (!fromWarehouseId || !toWarehouseId) {
+        throw new Error('Warehouse transfer missing from/to warehouse');
+      }
+
       for (const rawLine of lines as any[]) {
-        const invItem = rawLine.inventory_items as any | null;
         const rawQty = Number(rawLine.quantity) || 0;
         const qty = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
+        if (qty <= 0) continue;
 
-        if (!invItem || qty <= 0) continue;
+        // Fetch inventory item directly by ID (more reliable than FK join)
+        const inventoryItemId = rawLine.inventory_item_id || rawLine.item_id;
+        if (!inventoryItemId) {
+          console.warn('warehouseTransfersService.post: line missing inventory_item_id', rawLine);
+          continue;
+        }
 
+        const { data: invItem, error: invItemError } = await supabase
+          .from('inventory_items')
+          .select('*')
+          .eq('id', inventoryItemId)
+          .maybeSingle();
+
+        if (invItemError || !invItem) {
+          console.warn('warehouseTransfersService.post: could not find inventory item', { inventoryItemId, error: invItemError });
+          continue;
+        }
+
+        // Ensure source item belongs to the source warehouse
+        const sourceWarehouseId = String(invItem.warehouse_id || '');
+        if (sourceWarehouseId && sourceWarehouseId !== fromWarehouseId) {
+          // If data is inconsistent, skip adjustment to avoid corrupting stock
+          console.warn('warehouseTransfersService.post: line item warehouse_id does not match transfer source', {
+            transferId: transfer.id,
+            fromWarehouseId,
+            itemId: invItem.id,
+            itemWarehouseId: sourceWarehouseId,
+          });
+          continue;
+        }
+
+        const currentSourceStock = Number(invItem.current_stock) || 0;
+
+        // 1) Resolve destination item (if it already exists)
+        let destItem: any | null = null;
+        const sku = String(invItem.sku || '').trim();
+        if (sku) {
+          const { data: foundDest } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('user_id', tenantId)
+            .eq('warehouse_id', toWarehouseId)
+            .eq('sku', sku)
+            .maybeSingle();
+          destItem = foundDest || null;
+        }
+
+        if (!destItem) {
+          // Fallback: by name if SKU missing
+          const name = String(invItem.name || '').trim();
+          if (name) {
+            const { data: foundDestByName } = await supabase
+              .from('inventory_items')
+              .select('*')
+              .eq('user_id', tenantId)
+              .eq('warehouse_id', toWarehouseId)
+              .eq('name', name)
+              .maybeSingle();
+            destItem = foundDestByName || null;
+          }
+        }
+
+        // 2) Apply transfer safely
+        // If this line is moving ALL stock of this item and the destination item doesn't exist,
+        // move the record by changing warehouse_id (avoids UNIQUE conflicts on SKU).
+        if (!destItem?.id && qty >= currentSourceStock && currentSourceStock > 0) {
+          await inventoryService.updateItem(userId, String(invItem.id), {
+            warehouse_id: toWarehouseId,
+          });
+        } else {
+          // Ensure destination update/insert succeeds BEFORE subtracting from source
+          if (destItem?.id) {
+            const currentDestStock = Number(destItem.current_stock) || 0;
+            await inventoryService.updateItem(userId, String(destItem.id), {
+              current_stock: currentDestStock + qty,
+            });
+          } else {
+            // Create a new record in destination warehouse, cloning fields
+            const {
+              id: _id,
+              user_id: _user_id,
+              created_at: _created_at,
+              updated_at: _updated_at,
+              warehouse_id: _warehouse_id,
+              current_stock: _current_stock,
+              ...clone
+            } = invItem;
+
+            await inventoryService.createItem(userId, {
+              ...clone,
+              warehouse_id: toWarehouseId,
+              current_stock: qty,
+            });
+          }
+
+          // Now subtract from source
+          const newSourceStock = Math.max(0, currentSourceStock - qty);
+          await inventoryService.updateItem(userId, String(invItem.id), {
+            current_stock: newSourceStock,
+          });
+
+          // If source is now empty, delete the row to unblock warehouse deletion
+          if (newSourceStock <= 0) {
+            try {
+              await inventoryService.deleteItem(String(invItem.id));
+            } catch (delErr) {
+              console.warn('warehouseTransfersService.post: could not delete empty source item', delErr);
+            }
+          }
+        }
+
+        // 3) Create movement record (for audit)
         try {
           await inventoryService.createMovement(userId, {
             item_id: invItem.id ? String(invItem.id) : null,
@@ -6017,8 +6180,8 @@ export const warehouseTransfersService = {
             source_type: 'warehouse_transfer',
             source_id: transfer.id ? String(transfer.id) : null,
             source_number: transfer.document_number || (transfer.id ? String(transfer.id) : null),
-            from_warehouse_id: (transfer as any).from_warehouse_id || null,
-            to_warehouse_id: (transfer as any).to_warehouse_id || null,
+            from_warehouse_id: fromWarehouseId,
+            to_warehouse_id: toWarehouseId,
           });
         } catch (movError) {
           console.error('warehouseTransfersService.post createMovement error', movError);
@@ -15041,6 +15204,7 @@ export const settingsService = {
         .from('warehouses')
         .select('*')
         .eq('user_id', tenantId)
+        .or('active.eq.true,active.is.null')
         .order('name');
 
       if (error) throw error;
@@ -15156,7 +15320,12 @@ export const settingsService = {
       if (error) throw error;
       return true;
     } catch (error) {
+      const e: any = error as any;
       console.error('Error deleting warehouse:', error);
+      // PostgREST commonly returns 409 for FK constraint violations.
+      if (e?.status === 409 || e?.code === '23503') {
+        throw new Error('Cannot delete this location because it is still referenced by products or movements. Transfer/move the products out of the location first, then try again.');
+      }
       throw error;
     }
   },

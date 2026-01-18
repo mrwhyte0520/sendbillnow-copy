@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { resolveTenantId } from '../../../services/database';
 import { productsService } from '../../../services/contador/products.service';
 import type { Product as ProductType } from '../../../services/contador/products.service';
 
@@ -19,7 +20,6 @@ interface Product {
 export default function ContadorProductsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'bestsellers' | 'lowsellers' | 'margins'>('all');
-  const [showAddProduct, setShowAddProduct] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,18 +34,25 @@ export default function ContadorProductsPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await productsService.list(user.id);
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+      const data = await productsService.list(tenantId);
       const mapped: Product[] = data.map((p: ProductType) => {
-        const margin = p.price > 0 ? ((p.price - p.cost) / p.price) * 100 : 0;
+        const cost = Number(p.cost ?? 0) || 0;
+        const price = Number(p.price ?? 0) || 0;
+        const units = Number((p as any).current_stock ?? 0) || 0;
+
+        const margin = price > 0 ? ((price - cost) / price) * 100 : 0;
+        const revenue = price * units;
         return {
           id: p.id,
           name: p.name,
           sku: p.sku,
-          cost: p.cost,
-          price: p.price,
+          cost,
+          price,
           margin: Math.round(margin * 100) / 100,
-          unitsSold: 0, // Would come from sales data
-          revenue: 0, // Would come from sales data
+          unitsSold: units,
+          revenue: Math.round(revenue * 100) / 100,
           status: p.status === 'active' ? 'active' : 'inactive',
         };
       });
@@ -68,7 +75,13 @@ export default function ContadorProductsPage() {
   const stats = {
     totalProducts: products.filter(p => p.status === 'active').length,
     totalRevenue: products.reduce((acc, p) => acc + p.revenue, 0),
-    avgMargin: products.length > 0 ? Math.round(products.reduce((acc, p) => acc + p.margin, 0) / products.length) : 0,
+    avgMargin:
+      products.filter(p => p.price > 0).length > 0
+        ? Math.round(
+            products.filter(p => p.price > 0).reduce((acc, p) => acc + p.margin, 0) /
+              products.filter(p => p.price > 0).length
+          )
+        : 0,
     totalUnitsSold: products.reduce((acc, p) => acc + p.unitsSold, 0),
   };
 
@@ -86,13 +99,6 @@ export default function ContadorProductsPage() {
               <p className="text-gray-600">Product Accounting & Profitability</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowAddProduct(true)}
-            className="px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] flex items-center gap-2"
-          >
-            <i className="ri-add-line"></i>
-            Add Product
-          </button>
         </div>
 
         {/* Stats Cards */}
@@ -136,7 +142,7 @@ export default function ContadorProductsPage() {
                 <i className="ri-stack-line text-xl text-[#008000]"></i>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Units Sold</p>
+                <p className="text-sm text-gray-500">Total Units</p>
                 <p className="text-2xl font-bold text-[#008000]">{stats.totalUnitsSold}</p>
               </div>
             </div>
@@ -211,7 +217,6 @@ export default function ContadorProductsPage() {
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Margin</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Units Sold</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -231,16 +236,6 @@ export default function ContadorProductsPage() {
                           }`}>
                             {product.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button className="p-1 hover:bg-gray-100 rounded" title="Edit">
-                              <i className="ri-edit-line text-gray-500"></i>
-                            </button>
-                            <button className="p-1 hover:bg-gray-100 rounded" title="View Details">
-                              <i className="ri-eye-line text-gray-500"></i>
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))}
@@ -345,43 +340,6 @@ export default function ContadorProductsPage() {
           </div>
         </div>
 
-        {/* Add Product Modal */}
-        {showAddProduct && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Add New Product</h2>
-                <button onClick={() => setShowAddProduct(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cost ($)</label>
-                    <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price ($)</label>
-                    <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowAddProduct(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium">Add Product</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

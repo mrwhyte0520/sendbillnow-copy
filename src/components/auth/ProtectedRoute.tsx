@@ -4,10 +4,11 @@ import type { ReactElement } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
+import { resolveTenantId } from '../../services/database';
 
 const STORAGE_PREFIX = 'contabi_rbac_';
 
-async function fetchAllowedModules(userId: string | null, userEmail?: string | null): Promise<Set<string>> {
+async function fetchAllowedModules(userId: string | null, userEmail?: string | null, ownerUserId?: string | null): Promise<Set<string>> {
   try {
     if (!userId) {
       // local fallback
@@ -30,7 +31,12 @@ async function fetchAllowedModules(userId: string | null, userEmail?: string | n
       roleIds = (urByEmail || []).map((r: any) => r.role_id);
     }
     if (roleIds.length === 0) return new Set();
-    const { data: rp } = await supabase.from('role_permissions').select('permission_id').in('role_id', roleIds);
+    // IMPORTANT: role_permissions is tenant-scoped; filter by owner_user_id to satisfy RLS
+    const rpQuery = supabase
+      .from('role_permissions')
+      .select('permission_id')
+      .in('role_id', roleIds);
+    const { data: rp } = ownerUserId ? await rpQuery.eq('owner_user_id', ownerUserId) : await rpQuery;
     const permIds = (rp || []).map(r => r.permission_id);
     if (permIds.length === 0) return new Set();
     const { data: perms } = await supabase.from('permissions').select('*').in('id', permIds).eq('action', 'access');
@@ -41,9 +47,14 @@ async function fetchAllowedModules(userId: string | null, userEmail?: string | n
   }
 }
 
+// Map href segments to permission module names (handle mismatches like contador → accounting)
+const MODULE_MAP: Record<string, string> = {
+  'contador': 'accounting',
+};
+
 function mapPathToModule(pathname: string): string {
   const first = pathname.split('/').filter(Boolean)[0] || 'dashboard';
-  return first;
+  return MODULE_MAP[first] || first;
 }
 
 export default function ProtectedRoute({ children }: { children: ReactElement }) {
@@ -52,6 +63,8 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<Set<string> | null>(null);
   const [userStatus, setUserStatus] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(true); // Default true (fail-open for owner)
+  const [isLoading, setIsLoading] = useState(true);
   
   const { 
     canAccessRoute, 
@@ -63,9 +76,11 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
 
   useEffect(() => {
     async function checkAccess() {
+      setIsLoading(true);
       if (!user?.id) {
         setAllowed(new Set());
         setUserStatus(null);
+        setIsLoading(false);
         return;
       }
 
@@ -88,24 +103,61 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         }
       } catch (error) {
         console.error('Error verificando status del usuario:', error);
+        // Fail-open: do not block navigation for transient read errors
+        setUserStatus('active');
       }
 
-      // Si está activo, verificar permisos
-      const modules = await fetchAllowedModules(user.id);
+      // Si está activo, verificar si es owner
+      let owner = false;
+      let tenantIdResolved: string | null = null;
+      try {
+        const tenantId = await resolveTenantId(user.id);
+        tenantIdResolved = tenantId;
+        owner = tenantId === user.id;
+      } catch {
+        // If resolveTenantId fails, check if user has any user_roles entries
+        // If no entries, assume they are the owner (self-tenant)
+        try {
+          const { data: urCheck } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('user_id', user.id)
+            .limit(1);
+          // If user has no roles assigned, they are likely the owner
+          owner = !urCheck || urCheck.length === 0;
+        } catch {
+          // On complete failure, default to owner to avoid blocking
+          owner = true;
+        }
+      }
+
+      setIsOwner(owner);
+      if (owner) {
+        setAllowed(new Set(['*']));
+        setIsLoading(false);
+        return;
+      }
+
+      const modules = await fetchAllowedModules(user.id, user.email, tenantIdResolved);
       setAllowed(modules);
+      setIsLoading(false);
     }
 
     checkAccess();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  if (allowed === null || userStatus === null) return null; // could show a spinner
+  // Wait for access check to complete before making decisions
+  if (isLoading || allowed === null || userStatus === null) return null;
 
   // Si el usuario está inactivo, no renderizar nada (ya se hizo signOut arriba)
   if (userStatus === 'inactive') return null;
 
   const moduleName = mapPathToModule(window.location.pathname);
   const currentPath = location.pathname;
+
+  // Owner has full access (skip plan + RBAC checks)
+  if (isOwner) return children;
 
   // Rutas siempre permitidas (sin verificación de plan)
   const alwaysAllowed = ['/plans', '/profile', '/settings', '/dashboard'];
@@ -187,9 +239,16 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
     );
   }
 
-  // If no RBAC configured (no roles/permissions), allow by default
-  if (allowed.size === 0) return children;
+  // If no RBAC configured (no roles/permissions), allow minimal routes
+  if (allowed.size === 0) {
+    // Minimal access when permissions cannot be resolved
+    const minimalAllowed = ['/dashboard', '/profile', '/plans'];
+    const ok = minimalAllowed.some(r => currentPath === r || currentPath.startsWith(r + '/'));
+    if (ok) return children;
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  if (allowed.has(moduleName)) return children;
+  // Check if allowed contains the module OR the wildcard '*' (owner full access)
+  if (allowed.has('*') || allowed.has(moduleName)) return children;
   return <Navigate to="/dashboard" replace />;
 }

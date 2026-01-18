@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { vendorsService, purchaseOrdersService } from '../../../services/contador/vendors.service';
-import type { Vendor as VendorType, PurchaseOrder as POType } from '../../../services/contador/vendors.service';
+import { resolveTenantId } from '../../../services/database';
+import { vendorsService, purchaseOrdersService, vendorBillsService } from '../../../services/contador/vendors.service';
+import type { Vendor as VendorType, PurchaseOrder as POType, VendorBill } from '../../../services/contador/vendors.service';
 
 interface Vendor {
   id: string;
@@ -18,17 +19,16 @@ interface PurchaseOrder {
   vendorName: string;
   date: string;
   total: number;
-  status: 'pending' | 'received' | 'paid';
+  status: 'pending' | 'approved' | 'received' | 'cancelled';
   dueDate: string;
 }
 
 export default function ContadorCompraProveedoresPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'vendors' | 'orders' | 'aging'>('vendors');
-  const [showAddVendor, setShowAddVendor] = useState(false);
-  const [showAddOrder, setShowAddOrder] = useState(false);
+  const [activeTab, setActiveTab] = useState<'vendors' | 'orders'>('vendors');
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [vendorBills, setVendorBills] = useState<VendorBill[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,31 +41,52 @@ export default function ContadorCompraProveedoresPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [vends, pos] = await Promise.all([
-        vendorsService.list(user.id),
-        purchaseOrdersService.list(user.id),
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+      const [vends, pos, bills] = await Promise.all([
+        vendorsService.list(tenantId),
+        purchaseOrdersService.list(tenantId),
+        vendorBillsService.list(tenantId, { status: 'open' }).catch(() => []),
       ]);
 
-      const mappedVendors: Vendor[] = vends.map((v: VendorType) => ({
-        id: v.id,
-        name: v.name,
-        contact: v.phone || '',
-        email: v.email || '',
-        balance: 0, // Would come from bills
-        status: v.status === 'active' ? 'active' : 'inactive',
-      }));
+      const mappedVendors: Vendor[] = await Promise.all(
+        vends.map(async (v: VendorType) => {
+          let balance = 0;
+          try {
+            balance = await vendorsService.getBalance(v.id);
+          } catch {
+            balance = 0;
+          }
+          return {
+            id: v.id,
+            name: v.name,
+            contact: v.phone || '',
+            email: v.email || '',
+            balance,
+            status: v.status === 'active' ? 'active' : 'inactive',
+          };
+        })
+      );
 
       const mappedPOs: PurchaseOrder[] = pos.map((po: POType) => ({
         id: po.po_number,
         vendorName: po.vendor?.name || 'Unknown',
         date: po.order_date,
         total: po.total,
-        status: po.status === 'received' ? 'received' : po.status === 'sent' ? 'pending' : 'pending',
-        dueDate: po.order_date,
+        status:
+          po.status === 'received'
+            ? 'received'
+            : po.status === 'approved'
+              ? 'approved'
+              : po.status === 'cancelled'
+                ? 'cancelled'
+                : 'pending',
+        dueDate: (po.expected_date || po.order_date) as string,
       }));
 
       setVendors(mappedVendors);
       setPurchaseOrders(mappedPOs);
+      setVendorBills((bills || []) as VendorBill[]);
     } catch (error) {
       console.error('Error loading vendor data:', error);
     } finally {
@@ -76,11 +97,45 @@ export default function ContadorCompraProveedoresPage() {
   const totalPayable = vendors.reduce((acc, v) => acc + v.balance, 0);
   const pendingOrders = purchaseOrders.filter(o => o.status === 'pending').length;
 
+  const aging = (() => {
+    const today = new Date();
+    const toDaysPastDue = (dueDate: string | null): number => {
+      if (!dueDate) return 0;
+      const due = new Date(dueDate);
+      if (Number.isNaN(due.getTime())) return 0;
+      const diffMs = today.getTime() - due.getTime();
+      return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    };
+
+    const buckets = {
+      current: 0,
+      d1_30: 0,
+      d31_60: 0,
+      d60p: 0,
+    };
+
+    (vendorBills || []).forEach((b) => {
+      const amt = Number((b as any).balance_due ?? b.total ?? 0) || 0;
+      const daysPastDue = toDaysPastDue(b.due_date);
+      if (daysPastDue <= 0) buckets.current += amt;
+      else if (daysPastDue <= 30) buckets.d1_30 += amt;
+      else if (daysPastDue <= 60) buckets.d31_60 += amt;
+      else buckets.d60p += amt;
+    });
+
+    return {
+      current: Math.round(buckets.current * 100) / 100,
+      d1_30: Math.round(buckets.d1_30 * 100) / 100,
+      d31_60: Math.round(buckets.d31_60 * 100) / 100,
+      d60p: Math.round(buckets.d60p * 100) / 100,
+    };
+  })();
+
   const stats = {
     totalVendors: vendors.filter(v => v.status === 'active').length,
     totalPayable,
     pendingOrders,
-    overdueAmount: 0,
+    overdueAmount: Math.round((aging.d1_30 + aging.d31_60 + aging.d60p) * 100) / 100,
   };
 
   return (
@@ -96,22 +151,6 @@ export default function ContadorCompraProveedoresPage() {
               <h1 className="text-2xl font-bold text-gray-900">Purchases & Vendors</h1>
               <p className="text-gray-600">Accounts Payable Management</p>
             </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAddVendor(true)}
-              className="px-4 py-2 border border-[#008000] text-[#008000] rounded-lg font-medium hover:bg-[#008000]/5 flex items-center gap-2"
-            >
-              <i className="ri-user-add-line"></i>
-              Add Vendor
-            </button>
-            <button
-              onClick={() => setShowAddOrder(true)}
-              className="px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium hover:from-[#097509] hover:to-[#005300] flex items-center gap-2"
-            >
-              <i className="ri-add-line"></i>
-              New Purchase Order
-            </button>
           </div>
         </div>
 
@@ -170,7 +209,6 @@ export default function ContadorCompraProveedoresPage() {
               {[
                 { id: 'vendors', label: 'Vendors', icon: 'ri-store-2-line' },
                 { id: 'orders', label: 'Purchase Orders', icon: 'ri-file-list-3-line' },
-                { id: 'aging', label: 'AP Aging', icon: 'ri-time-line' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -189,8 +227,15 @@ export default function ContadorCompraProveedoresPage() {
           </div>
 
           <div className="p-4">
+            {loading && (
+              <div className="py-10 text-center text-gray-500">
+                <i className="ri-loader-4-line animate-spin text-3xl mb-2 block"></i>
+                Loading...
+              </div>
+            )}
+
             {/* Vendors Tab */}
-            {activeTab === 'vendors' && (
+            {!loading && activeTab === 'vendors' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -200,7 +245,6 @@ export default function ContadorCompraProveedoresPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Email</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Balance</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -219,19 +263,6 @@ export default function ContadorCompraProveedoresPage() {
                             {vendor.status === 'active' ? 'Active' : 'Inactive'}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button className="p-1 hover:bg-gray-100 rounded" title="View History">
-                              <i className="ri-history-line text-gray-500"></i>
-                            </button>
-                            <button className="p-1 hover:bg-gray-100 rounded" title="Make Payment">
-                              <i className="ri-money-dollar-circle-line text-[#008000]"></i>
-                            </button>
-                            <button className="p-1 hover:bg-gray-100 rounded" title="Edit">
-                              <i className="ri-edit-line text-gray-500"></i>
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -240,7 +271,7 @@ export default function ContadorCompraProveedoresPage() {
             )}
 
             {/* Purchase Orders Tab */}
-            {activeTab === 'orders' && (
+            {!loading && activeTab === 'orders' && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -251,7 +282,6 @@ export default function ContadorCompraProveedoresPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Due Date</th>
                       <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -264,24 +294,13 @@ export default function ContadorCompraProveedoresPage() {
                         <td className="px-4 py-3 text-right font-medium text-gray-900">${order.total.toFixed(2)}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            order.status === 'paid' ? 'bg-green-100 text-green-700' :
                             order.status === 'received' ? 'bg-blue-100 text-blue-700' :
+                            order.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            order.status === 'cancelled' ? 'bg-gray-100 text-gray-600' :
                             'bg-yellow-100 text-yellow-700'
                           }`}>
                             {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button className="p-1 hover:bg-gray-100 rounded" title="View">
-                              <i className="ri-eye-line text-gray-500"></i>
-                            </button>
-                            {order.status !== 'paid' && (
-                              <button className="p-1 hover:bg-gray-100 rounded" title="Pay">
-                                <i className="ri-money-dollar-circle-line text-[#008000]"></i>
-                              </button>
-                            )}
-                          </div>
                         </td>
                       </tr>
                     ))}
@@ -290,148 +309,9 @@ export default function ContadorCompraProveedoresPage() {
               </div>
             )}
 
-            {/* AP Aging Tab */}
-            {activeTab === 'aging' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                    <p className="text-sm text-green-700 mb-1">Current</p>
-                    <p className="text-2xl font-bold text-green-600">$1,200.00</p>
-                  </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                    <p className="text-sm text-yellow-700 mb-1">1-30 Days</p>
-                    <p className="text-2xl font-bold text-yellow-600">$2,500.00</p>
-                  </div>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-                    <p className="text-sm text-orange-700 mb-1">31-60 Days</p>
-                    <p className="text-2xl font-bold text-orange-600">$0.00</p>
-                  </div>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                    <p className="text-sm text-red-700 mb-1">60+ Days</p>
-                    <p className="text-2xl font-bold text-red-600">$4,500.00</p>
-                  </div>
-                </div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Vendor</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Current</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">1-30 Days</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">31-60 Days</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">60+ Days</th>
-                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">ABC Supplies Inc.</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$2,500.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right font-bold">$2,500.00</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">Tech Solutions LLC</td>
-                        <td className="px-4 py-3 text-right">$1,200.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right font-bold">$1,200.00</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-medium text-gray-900">Global Wholesale</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right">$0.00</td>
-                        <td className="px-4 py-3 text-right text-red-600">$4,500.00</td>
-                        <td className="px-4 py-3 text-right font-bold text-red-600">$4,500.00</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
+            {/* AP Aging Tab removed per user request */}
           </div>
         </div>
-
-        {/* Add Vendor Modal */}
-        {showAddVendor && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Add New Vendor</h2>
-                <button onClick={() => setShowAddVendor(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input type="email" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                  <input type="tel" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowAddVendor(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium">Add Vendor</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Add Purchase Order Modal */}
-        {showAddOrder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">New Purchase Order</h2>
-                <button onClick={() => setShowAddOrder(false)} className="p-1 hover:bg-gray-100 rounded">
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]">
-                    <option>Select vendor...</option>
-                    {vendors.filter(v => v.status === 'active').map(v => (
-                      <option key={v.id}>{v.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount ($)</label>
-                  <input type="number" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" />
-                </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowAddOrder(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium">Create Order</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );

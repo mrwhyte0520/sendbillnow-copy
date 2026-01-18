@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
+import { resolveTenantId } from '../../../services/database';
 import { reportsService } from '../../../services/contador/reports.service';
 import type {
   AccountingPeriod,
@@ -9,6 +10,8 @@ import type {
   ProfitAndLossReport,
   SalesTaxReport,
 } from '../../../services/contador/reports.service';
+import { exportToExcelWithHeaders, exportToPdf } from '../../../utils/exportImportUtils';
+import { settingsService } from '../../../services/database';
 
 export default function ContadorReportesPage() {
   const { user } = useAuth();
@@ -20,6 +23,21 @@ export default function ContadorReportesPage() {
   const [balance, setBalance] = useState<BalanceSheetReport | null>(null);
   const [cashFlow, setCashFlow] = useState<CashFlowReport | null>(null);
   const [salesTax, setSalesTax] = useState<SalesTaxReport | null>(null);
+  const [companyName, setCompanyName] = useState('');
+
+  useEffect(() => {
+    if (user?.id) {
+      loadCompanyInfo();
+    }
+  }, [user?.id]);
+
+  const loadCompanyInfo = async () => {
+    if (!user?.id) return;
+    try {
+      const info = await settingsService.getCompanyInfo();
+      setCompanyName(info?.name || 'Company');
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -42,7 +60,9 @@ export default function ContadorReportesPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await reportsService.periods.list(user.id);
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+      const data = await reportsService.periods.list(tenantId);
       setPeriods(data);
       if (data.length > 0) {
         setSelectedPeriodId((prev) => prev || data[0].id);
@@ -58,20 +78,22 @@ export default function ContadorReportesPage() {
     if (!user?.id || !selectedPeriod) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
       const [pnlReport, balanceReport, cashFlowReport, salesTaxReport] = await Promise.all([
         reportsService.generator.generateProfitAndLoss(
-          user.id,
+          tenantId,
           selectedPeriod.start_date,
           selectedPeriod.end_date
         ),
-        reportsService.generator.generateBalanceSheet(user.id, selectedPeriod.end_date),
+        reportsService.generator.generateBalanceSheet(tenantId, selectedPeriod.end_date),
         reportsService.generator.generateCashFlow(
-          user.id,
+          tenantId,
           selectedPeriod.start_date,
           selectedPeriod.end_date
         ),
         reportsService.generator.generateSalesTaxReport(
-          user.id,
+          tenantId,
           selectedPeriod.start_date,
           selectedPeriod.end_date
         ),
@@ -95,6 +117,141 @@ export default function ContadorReportesPage() {
   const totalAssets = balance?.totalAssets || 0;
   const totalLiabilities = balance?.totalLiabilities || 0;
   const totalEquity = balance?.totalEquity || 0;
+
+  const handleExportPdf = async () => {
+    let data: any[] = [];
+    let columns: { key: string; label: string }[] = [];
+    let title = '';
+
+    if (activeTab === 'pl') {
+      title = 'Profit & Loss Statement';
+      data = [
+        ...(pnl?.revenue || []).map(r => ({ category: r.category, type: 'Revenue', amount: r.amount })),
+        ...(pnl?.expenses || []).map(e => ({ category: e.category, type: 'Expense', amount: -e.amount })),
+        { category: 'Net Income', type: 'Total', amount: netIncome },
+      ];
+      columns = [
+        { key: 'category', label: 'Category' },
+        { key: 'type', label: 'Type' },
+        { key: 'amount', label: 'Amount' },
+      ];
+    } else if (activeTab === 'balance') {
+      title = 'Balance Sheet';
+      data = [
+        ...(balance?.assets || []).map(a => ({ name: a.name, type: 'Asset', amount: a.amount })),
+        ...(balance?.liabilities || []).map(l => ({ name: l.name, type: 'Liability', amount: l.amount })),
+        ...(balance?.equity || []).map(e => ({ name: e.name, type: 'Equity', amount: e.amount })),
+      ];
+      columns = [
+        { key: 'name', label: 'Account' },
+        { key: 'type', label: 'Type' },
+        { key: 'amount', label: 'Amount' },
+      ];
+    } else if (activeTab === 'cashflow') {
+      title = 'Cash Flow Statement';
+      data = [
+        ...(cashFlow?.operating || []).map(o => ({ description: o.description, type: 'Operating', amount: o.amount })),
+        ...(cashFlow?.investing || []).map(i => ({ description: i.description, type: 'Investing', amount: i.amount })),
+        ...(cashFlow?.financing || []).map(f => ({ description: f.description, type: 'Financing', amount: f.amount })),
+        { description: 'Net Change in Cash', type: 'Total', amount: cashFlow?.netChange || 0 },
+      ];
+      columns = [
+        { key: 'description', label: 'Description' },
+        { key: 'type', label: 'Activity Type' },
+        { key: 'amount', label: 'Amount' },
+      ];
+    } else if (activeTab === 'tax') {
+      title = 'Sales Tax Report';
+      data = (salesTax?.byJurisdiction || []).map(j => ({
+        jurisdiction: j.jurisdiction,
+        state: j.state,
+        taxableSales: j.taxableSales,
+        taxRate: j.taxRate,
+        taxCollected: j.taxCollected,
+      }));
+      columns = [
+        { key: 'state', label: 'State' },
+        { key: 'taxableSales', label: 'Taxable Sales' },
+        { key: 'taxRate', label: 'Tax Rate' },
+        { key: 'taxCollected', label: 'Tax Collected' },
+      ];
+    }
+
+    await exportToPdf(data, columns, `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`, `${companyName} - ${title}`, 'p');
+  };
+
+  const handleExportExcel = async () => {
+    let rows: any[] = [];
+    let headers: { key: string; title: string }[] = [];
+    let sheetName = '';
+    let title = '';
+
+    if (activeTab === 'pl') {
+      title = 'Profit & Loss Statement';
+      sheetName = 'P&L';
+      rows = [
+        ...(pnl?.revenue || []).map(r => ({ category: r.category, type: 'Revenue', amount: r.amount.toFixed(2) })),
+        ...(pnl?.expenses || []).map(e => ({ category: e.category, type: 'Expense', amount: (-e.amount).toFixed(2) })),
+        { category: 'Net Income', type: 'Total', amount: netIncome.toFixed(2) },
+      ];
+      headers = [
+        { key: 'category', title: 'Category' },
+        { key: 'type', title: 'Type' },
+        { key: 'amount', title: 'Amount ($)' },
+      ];
+    } else if (activeTab === 'balance') {
+      title = 'Balance Sheet';
+      sheetName = 'Balance Sheet';
+      rows = [
+        ...(balance?.assets || []).map(a => ({ name: a.name, type: 'Asset', amount: a.amount.toFixed(2) })),
+        ...(balance?.liabilities || []).map(l => ({ name: l.name, type: 'Liability', amount: l.amount.toFixed(2) })),
+        ...(balance?.equity || []).map(e => ({ name: e.name, type: 'Equity', amount: e.amount.toFixed(2) })),
+      ];
+      headers = [
+        { key: 'name', title: 'Account' },
+        { key: 'type', title: 'Type' },
+        { key: 'amount', title: 'Amount ($)' },
+      ];
+    } else if (activeTab === 'cashflow') {
+      title = 'Cash Flow Statement';
+      sheetName = 'Cash Flow';
+      rows = [
+        ...(cashFlow?.operating || []).map(o => ({ description: o.description, type: 'Operating', amount: o.amount.toFixed(2) })),
+        ...(cashFlow?.investing || []).map(i => ({ description: i.description, type: 'Investing', amount: i.amount.toFixed(2) })),
+        ...(cashFlow?.financing || []).map(f => ({ description: f.description, type: 'Financing', amount: f.amount.toFixed(2) })),
+        { description: 'Net Change in Cash', type: 'Total', amount: (cashFlow?.netChange || 0).toFixed(2) },
+      ];
+      headers = [
+        { key: 'description', title: 'Description' },
+        { key: 'type', title: 'Activity Type' },
+        { key: 'amount', title: 'Amount ($)' },
+      ];
+    } else if (activeTab === 'tax') {
+      title = 'Sales Tax Report';
+      sheetName = 'Sales Tax';
+      rows = (salesTax?.byJurisdiction || []).map(j => ({
+        state: j.state,
+        taxableSales: j.taxableSales.toFixed(2),
+        taxRate: j.taxRate.toFixed(2) + '%',
+        taxCollected: j.taxCollected.toFixed(2),
+      }));
+      headers = [
+        { key: 'state', title: 'State' },
+        { key: 'taxableSales', title: 'Taxable Sales ($)' },
+        { key: 'taxRate', title: 'Tax Rate' },
+        { key: 'taxCollected', title: 'Tax Collected ($)' },
+      ];
+    }
+
+    await exportToExcelWithHeaders(
+      rows,
+      headers,
+      `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`,
+      sheetName,
+      [30, 15, 15, 15],
+      { title, companyName }
+    );
+  };
 
   return (
     <DashboardLayout>
@@ -122,11 +279,17 @@ export default function ContadorReportesPage() {
                 </option>
               ))}
             </select>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+            <button 
+              onClick={handleExportPdf}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
               <i className="ri-file-pdf-line"></i>
               PDF
             </button>
-            <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2">
+            <button 
+              onClick={handleExportExcel}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+            >
               <i className="ri-file-excel-line"></i>
               Excel
             </button>

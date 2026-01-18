@@ -11,25 +11,23 @@ interface UserRole { id: string; user_id: string; role_id: string }
 interface UserWithRole { id: string; email: string; status: string; role_id: string; role_name: string; user_role_id: string }
 
 const APP_MODULES = [
-  'dashboard','accounting','banks-module','pos','sales','products','inventory','fixed-assets','accounts-receivable','accounts-payable','billing','taxes','plans','customers','users'
+  'dashboard','statistics','accounting','accounts-receivable','accounts-payable','billing','pos','inventory','plans','referrals','users','settings','admin'
 ];
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
+  statistics: 'Statistics',
   accounting: 'Accounting',
-  'banks-module': 'Banks',
-  pos: 'Point of Sale',
-  sales: 'Sales',
-  products: 'Products',
-  inventory: 'Inventory',
-  'fixed-assets': 'Fixed Assets',
   'accounts-receivable': 'Accounts Receivable',
   'accounts-payable': 'Accounts Payable',
   billing: 'Billing',
-  taxes: 'Taxes',
+  pos: 'Point of Sale',
+  inventory: 'Inventory',
   plans: 'Plans',
-  customers: 'Customers',
+  referrals: 'Referrals',
   users: 'Users',
+  settings: 'Settings',
+  admin: 'Admin',
 };
 
 export default function UsersPage() {
@@ -114,9 +112,16 @@ export default function UsersPage() {
       }
 
       // Usuario no existe, crear nuevo
+      const redirectTo = typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/auth/login`
+        : undefined;
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password: newUserPassword,
+        options: {
+          ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
+        },
       });
 
       if (error) {
@@ -169,6 +174,23 @@ export default function UsersPage() {
         .from('permissions')
         .select('*'); // permisos son globales, no por tenant
 
+      // If permissions table is empty (or not readable due to RLS), seed base access permissions
+      let permissionsData: any[] | null | undefined = p;
+      if (!permissionsData || permissionsData.length === 0) {
+        try {
+          const basePerms = APP_MODULES.map((m) => ({ module: m, action: 'access' }));
+          await supabase
+            .from('permissions')
+            .upsert(basePerms, { onConflict: 'module,action' });
+          const { data: p2 } = await supabase
+            .from('permissions')
+            .select('*');
+          permissionsData = p2;
+        } catch (e) {
+          console.error('Error seeding base permissions:', e);
+        }
+      }
+
       const { data: rp } = await supabase
         .from('role_permissions')
         .select('*')
@@ -204,13 +226,13 @@ export default function UsersPage() {
         }
       }
 
-      if (r && p && ur) {
+      if (r && permissionsData && ur) {
         // Combinar permisos: si Supabase devuelve role_permissions, usarlos; si no, usar los de localStorage
         const localRp: RolePermission[] = JSON.parse(localStorage.getItem(storageKey('role_permissions')) || '[]');
         const effectiveRp = rp && rp.length > 0 ? (rp as any as RolePermission[]) : localRp;
 
         // Filtrar permisos para excluir 'settings'
-        const filteredPermissions = (p as any[]).filter((perm: any) => perm.module !== 'settings');
+        const filteredPermissions = (permissionsData as any[]).filter((perm: any) => perm.module !== 'settings');
 
         setRoles(r as any);
         setPermissions(filteredPermissions as any);
@@ -237,31 +259,55 @@ export default function UsersPage() {
   }, [permissions.length]);
 
   const toggleRolePerm = async (roleId: string, permId: string, checked: boolean) => {
+    // Ensure we always persist real permission UUIDs (DB) when possible.
+    // Local placeholders look like "perm-<module>".
+    const resolvePermissionId = (id: string) => {
+      if (!id.startsWith('perm-')) return id;
+      const module = id.replace(/^perm-/, '');
+      const found = permissions.find((p) => p.module === module && p.action === 'access');
+      return found?.id || id;
+    };
+
+    const effectivePermId = resolvePermissionId(permId);
+
     // Actualización optimista en memoria y en localStorage (siempre)
     const next = checked
-      ? [...rolePerms, { role_id: roleId, permission_id: permId }]
-      : rolePerms.filter(rp => !(rp.role_id === roleId && rp.permission_id === permId));
+      ? [...rolePerms, { role_id: roleId, permission_id: effectivePermId }]
+      : rolePerms.filter(rp => !(rp.role_id === roleId && rp.permission_id === effectivePermId));
     setRolePerms(next);
     saveLocal('role_permissions', next);
 
     // Sincronizar con Supabase si hay usuario propietario
     if (user?.id) {
       try {
+        const ownerId = await resolveTenantId(user.id);
+        const ownerUserId = ownerId || user.id;
+
+        // If we still have a placeholder permission id, we can't persist to DB reliably.
+        if (effectivePermId.startsWith('perm-')) {
+          console.warn('Cannot persist role permission: unresolved permission id', { permId, effectivePermId });
+          alert('No se pudo guardar el permiso porque falta el Permission ID real. Recarga la página y vuelve a intentar.');
+          return;
+        }
+
         if (checked) {
-          await supabase
+          const { error } = await supabase
             .from('role_permissions')
             .upsert(
-              { role_id: roleId, permission_id: permId, owner_user_id: user.id },
+              { role_id: roleId, permission_id: effectivePermId, owner_user_id: ownerUserId },
               { onConflict: 'role_id,permission_id,owner_user_id' }
             );
+          if (error) throw error;
         } else {
-          await supabase
+          const { error } = await supabase
             .from('role_permissions')
             .delete()
-            .match({ role_id: roleId, permission_id: permId, owner_user_id: user.id });
+            .match({ role_id: roleId, permission_id: effectivePermId, owner_user_id: ownerUserId });
+          if (error) throw error;
         }
       } catch (error) {
         console.error('Error al actualizar permisos de rol:', error);
+        alert('Error al guardar permisos del rol. Verifica permisos/RLS en Supabase.');
       }
     }
   };

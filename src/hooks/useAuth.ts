@@ -2,11 +2,18 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
-function getAuthRedirectUrl() {
+function getPasswordResetRedirectUrl() {
   const origin = typeof window !== 'undefined' && window.location?.origin
     ? window.location.origin
     : '';
   return origin ? `${origin}/auth/reset-password` : undefined;
+}
+
+function getSignupRedirectUrl() {
+  const origin = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : '';
+  return origin ? `${origin}/auth/login` : undefined;
 }
 
 async function postWebnotiEvent(accessToken: string, event: 'login' | 'register') {
@@ -63,15 +70,6 @@ export const useAuth = () => {
         console.log('[Auth] Token refreshed successfully');
       }
       
-      // If signed out due to expired token, try to refresh
-      if (event === 'SIGNED_OUT' && !session) {
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        if (refreshData?.session) {
-          setUser(refreshData.session.user);
-          return;
-        }
-      }
-      
       setUser(session?.user ?? null);
       setLoading(false);
       
@@ -108,7 +106,7 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const redirectTo = getAuthRedirectUrl();
+      const redirectTo = getSignupRedirectUrl();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -157,15 +155,18 @@ export const useAuth = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setUser(null);
       return { error: null };
     } catch (error: any) {
+      // Even if Supabase returns an error, clear local user state to avoid stuck sessions
+      setUser(null);
       return { error: error.message };
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectTo = getAuthRedirectUrl();
+      const redirectTo = getPasswordResetRedirectUrl();
       const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
 
       if (error) throw error;
