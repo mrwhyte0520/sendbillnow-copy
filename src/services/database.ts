@@ -14946,10 +14946,10 @@ export const settingsService = {
         .update(payload)
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data ?? null;
     } catch (error) {
       console.error('Error updating user plan:', error);
       throw error;
@@ -14999,10 +14999,10 @@ export const settingsService = {
         })
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data ?? null;
     } catch (error) {
       console.error('Error extending user trial:', error);
       throw error;
@@ -15049,19 +15049,19 @@ export const settingsService = {
       }
       if (!role) throw new Error('Could not get/create admin role');
 
-      // 3) Check if role_permission exists
-      const { data: rp } = await supabase
-        .from('role_permissions')
-        .select('id')
-        .eq('owner_user_id', userId)
-        .eq('role_id', role.id)
-        .eq('permission_id', perm.id)
-        .maybeSingle();
-
-      if (!rp) {
+      // 3) Ensure role_permission exists (ignore if already exists - 409)
+      try {
         await supabase
           .from('role_permissions')
-          .insert({ owner_user_id: userId, role_id: role.id, permission_id: perm.id });
+          .upsert(
+            { owner_user_id: userId, role_id: role.id, permission_id: perm.id },
+            { onConflict: 'owner_user_id,role_id,permission_id', ignoreDuplicates: true }
+          );
+      } catch (rpErr: any) {
+        // Ignore duplicate/conflict errors (409)
+        if (rpErr?.code !== '23505' && rpErr?.status !== 409) {
+          console.warn('role_permissions upsert warning:', rpErr);
+        }
       }
 
       // 4) Check if user_roles entry exists
