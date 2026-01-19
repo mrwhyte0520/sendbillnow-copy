@@ -460,7 +460,7 @@ export const taxRatesService = {
 };
 
 // =============================================================================
-// REPORT GENERATION SERVICE - Uses real journal entries and chart of accounts
+// REPORT GENERATION SERVICE - Uses real transaction data per US GAAP
 // =============================================================================
 
 export const reportGeneratorService = {
@@ -470,42 +470,122 @@ export const reportGeneratorService = {
     endDate: string
   ): Promise<ProfitAndLossReport> {
     try {
-      // Use the existing chartAccountsService which queries real journal entries
-      const result = await chartAccountsService.generateIncomeStatement(companyId, startDate, endDate);
+      // =====================================================================
+      // REVENUE = Sales (subtotal, without tax) - Returns
+      // Source: invoices, credit_debit_notes (returns)
+      // =====================================================================
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('subtotal, tax_amount, total_amount, paid_amount, status')
+        .eq('user_id', companyId)
+        .gte('invoice_date', startDate)
+        .lte('invoice_date', endDate)
+        .not('status', 'in', '("cancelled","voided","draft")');
 
-      // Map income accounts to revenue categories
-      const revenue = (result.income || []).map((acc: any) => ({
-        category: acc.name || 'Revenue',
-        amount: acc.balance || 0,
-      })).filter((r: any) => r.amount > 0);
+      const grossSales = (invoices || []).reduce((sum, inv: any) => 
+        sum + (Number(inv.subtotal) || 0), 0);
 
-      // Combine costs and expenses
-      const expenses = [
-        ...(result.costs || []).map((acc: any) => ({
-          category: acc.name || 'Cost of Goods Sold',
-          amount: acc.balance || 0,
-        })),
-        ...(result.expenses || []).map((acc: any) => ({
-          category: acc.name || 'Expense',
-          amount: acc.balance || 0,
-        })),
-      ].filter((e: any) => e.amount > 0);
+      // Get sales returns/credits
+      const { data: creditNotes } = await supabase
+        .from('credit_debit_notes')
+        .select('total_amount, note_type, status')
+        .eq('user_id', companyId)
+        .eq('note_type', 'credit')
+        .gte('note_date', startDate)
+        .lte('note_date', endDate)
+        .not('status', 'in', '("cancelled","cancelada")');
+
+      const salesReturns = (creditNotes || []).reduce((sum, cn: any) =>
+        sum + (Number((cn as any).total_amount) || 0), 0);
+
+      const netSalesRevenue = grossSales - salesReturns;
+
+      // =====================================================================
+      // COGS = Cost of Goods Sold from inventory movements (sale_issue)
+      // Source: inventory_movements
+      // =====================================================================
+      const { data: inventoryMovements } = await supabase
+        .from('inventory_movements')
+        .select('quantity, unit_cost, movement_type, created_at')
+        .eq('user_id', companyId)
+        .eq('movement_type', 'exit')
+        .gte('created_at', startDate)
+        .lte('created_at', `${endDate}T23:59:59.999Z`);
+
+      const cogs = (inventoryMovements || []).reduce((sum, mov: any) => {
+        const qty = Math.abs(Number((mov as any).quantity) || 0);
+        const cost = Number((mov as any).unit_cost) || 0;
+        return sum + qty * cost;
+      }, 0);
+
+      // =====================================================================
+      // EXPENSES = AP Invoices + Petty Cash + Payroll
+      // Source: ap_invoices, petty_cash_expenses, payroll_entries
+      // =====================================================================
+      const { data: apInvoices } = await supabase
+        .from('ap_invoices')
+        .select('total_gross, total_itbis, total_to_pay, paid_amount, status')
+        .eq('user_id', companyId)
+        .gte('invoice_date', startDate)
+        .lte('invoice_date', endDate)
+        .not('status', 'in', '("cancelled","voided","draft")');
+
+      const apExpenses = (apInvoices || []).reduce((sum, inv: any) =>
+        sum + (Number((inv as any).total_gross) || 0), 0);
+
+      // Petty cash expenses
+      const { data: pettyCashExpenses } = await supabase
+        .from('petty_cash_expenses')
+        .select('amount')
+        .eq('user_id', companyId)
+        .gte('expense_date', startDate)
+        .lte('expense_date', endDate);
+
+      const pettyCash = (pettyCashExpenses || []).reduce((sum, exp: any) => 
+        sum + (Number(exp.amount) || 0), 0);
+
+      // Payroll expenses
+      const { data: payrollItems } = await supabase
+        .from('payroll_items')
+        .select('gross_pay, created_at')
+        .eq('user_id', companyId)
+        .gte('created_at', startDate)
+        .lte('created_at', `${endDate}T23:59:59.999Z`);
+
+      const payrollExpense = (payrollItems || []).reduce((sum, pi: any) =>
+        sum + (Number((pi as any).gross_pay) || 0), 0);
+
+      // Build revenue breakdown
+      const revenue: { category: string; amount: number }[] = [];
+      if (grossSales > 0) revenue.push({ category: 'Gross Sales', amount: grossSales });
+      if (salesReturns > 0) revenue.push({ category: 'Sales Returns & Allowances', amount: -salesReturns });
+
+      // Build expense breakdown (COGS separate from operating expenses)
+      const expenses: { category: string; amount: number }[] = [];
+      if (cogs > 0) expenses.push({ category: 'Cost of Goods Sold', amount: cogs });
+      if (apExpenses > 0) expenses.push({ category: 'Purchases & Vendor Bills', amount: apExpenses });
+      if (pettyCash > 0) expenses.push({ category: 'Petty Cash Expenses', amount: pettyCash });
+      if (payrollExpense > 0) expenses.push({ category: 'Payroll Expenses', amount: payrollExpense });
+
+      const totalRevenue = netSalesRevenue;
+      const totalExpenses = cogs + apExpenses + pettyCash + payrollExpense;
+      const netIncome = totalRevenue - totalExpenses;
 
       return {
         period: { start: startDate, end: endDate },
-        revenue: revenue.length > 0 ? revenue : [{ category: 'Sales', amount: 0 }],
-        totalRevenue: result.totalIncome || 0,
-        expenses: expenses.length > 0 ? expenses : [{ category: 'Expenses', amount: 0 }],
-        totalExpenses: (result.totalCosts || 0) + (result.totalExpenses || 0),
-        netIncome: result.netIncome || 0,
+        revenue,
+        totalRevenue,
+        expenses,
+        totalExpenses,
+        netIncome,
       };
     } catch (error) {
       console.error('generateProfitAndLoss error:', error);
       return {
         period: { start: startDate, end: endDate },
-        revenue: [{ category: 'Sales', amount: 0 }],
+        revenue: [],
         totalRevenue: 0,
-        expenses: [{ category: 'Expenses', amount: 0 }],
+        expenses: [],
         totalExpenses: 0,
         netIncome: 0,
       };
@@ -517,45 +597,149 @@ export const reportGeneratorService = {
     asOfDate: string
   ): Promise<BalanceSheetReport> {
     try {
-      // Use the existing chartAccountsService which queries real chart of accounts
-      const result = await chartAccountsService.generateBalanceSheet(companyId, asOfDate);
+      // =====================================================================
+      // ASSETS
+      // =====================================================================
+      
+      // 1. Cash = Bank Accounts + Cash Drawers + Petty Cash
+      const { data: bankAccounts } = await supabase
+        .from('bank_accounts')
+        .select('name, current_balance')
+        .eq('user_id', companyId);
 
-      // Map assets
-      const assets = (result.assets || []).map((acc: any) => ({
-        name: acc.name || 'Asset',
-        amount: acc.balance || 0,
-      })).filter((a: any) => a.amount > 0);
+      const bankCash = (bankAccounts || []).reduce((sum, acc: any) => 
+        sum + (Number(acc.current_balance) || 0), 0);
 
-      // Map liabilities
-      const liabilities = (result.liabilities || []).map((acc: any) => ({
-        name: acc.name || 'Liability',
-        amount: acc.balance || 0,
-      })).filter((l: any) => l.amount > 0);
+      const { data: cashDrawers } = await supabase
+        .from('contador_cash_drawers')
+        .select('current_balance')
+        .eq('user_id', companyId);
 
-      // Map equity
-      const equity = (result.equity || []).map((acc: any) => ({
-        name: acc.name || 'Equity',
-        amount: acc.balance || 0,
-      })).filter((e: any) => e.amount > 0);
+      const drawerCash = (cashDrawers || []).reduce((sum, d: any) => 
+        sum + (Number(d.current_balance) || 0), 0);
+
+      const { data: pettyCashFunds } = await supabase
+        .from('petty_cash_funds')
+        .select('current_balance')
+        .eq('user_id', companyId);
+
+      const pettyCash = (pettyCashFunds || []).reduce((sum, f: any) => 
+        sum + (Number(f.current_balance) || 0), 0);
+
+      const totalCash = bankCash + drawerCash + pettyCash;
+
+      // 2. Accounts Receivable = Unpaid invoices
+      const { data: arInvoices } = await supabase
+        .from('invoices')
+        .select('total, amount_paid')
+        .eq('user_id', companyId)
+        .lte('invoice_date', asOfDate)
+        .in('status', ['sent', 'partial', 'overdue']);
+
+      const accountsReceivable = (arInvoices || []).reduce((sum, inv: any) => {
+        const total = Number(inv.total) || 0;
+        const paid = Number(inv.amount_paid) || 0;
+        return sum + (total - paid);
+      }, 0);
+
+      // 3. Inventory = Current inventory value
+      const { data: inventoryItems } = await supabase
+        .from('inventory_items')
+        .select('quantity, unit_cost')
+        .eq('user_id', companyId)
+        .gt('quantity', 0);
+
+      const inventoryValue = (inventoryItems || []).reduce((sum, item: any) => {
+        const qty = Number(item.quantity) || 0;
+        const cost = Number(item.unit_cost) || 0;
+        return sum + (qty * cost);
+      }, 0);
+
+      // 4. Customer Advances (prepaid by customers - it's a liability, not asset)
+      // But customer advances received are actually liabilities
+
+      // =====================================================================
+      // LIABILITIES
+      // =====================================================================
+
+      // 1. Accounts Payable = Unpaid vendor bills
+      const { data: apInvoices } = await supabase
+        .from('ap_invoices')
+        .select('total, amount_paid')
+        .eq('user_id', companyId)
+        .lte('invoice_date', asOfDate)
+        .in('status', ['pending', 'approved', 'partial']);
+
+      const accountsPayable = (apInvoices || []).reduce((sum, inv: any) => {
+        const total = Number(inv.total) || 0;
+        const paid = Number(inv.amount_paid) || 0;
+        return sum + (total - paid);
+      }, 0);
+
+      // 2. Sales Tax Payable = Tax collected but not remitted
+      const { data: taxInvoices } = await supabase
+        .from('invoices')
+        .select('tax_amount')
+        .eq('user_id', companyId)
+        .lte('invoice_date', asOfDate)
+        .in('status', ['paid', 'partial', 'sent', 'overdue']);
+
+      const salesTaxPayable = (taxInvoices || []).reduce((sum, inv: any) => 
+        sum + (Number(inv.tax_amount) || 0), 0);
+
+      // 3. Customer Advances = Prepayments from customers (liability)
+      const { data: customerAdvances } = await supabase
+        .from('customer_advances')
+        .select('amount, applied_amount')
+        .eq('user_id', companyId);
+
+      const unappliedAdvances = (customerAdvances || []).reduce((sum, adv: any) => {
+        const amount = Number(adv.amount) || 0;
+        const applied = Number(adv.applied_amount) || 0;
+        return sum + (amount - applied);
+      }, 0);
+
+      // =====================================================================
+      // BUILD ARRAYS
+      // =====================================================================
+      const assets: { name: string; amount: number }[] = [];
+      if (totalCash > 0) assets.push({ name: 'Cash & Bank Accounts', amount: totalCash });
+      if (accountsReceivable > 0) assets.push({ name: 'Accounts Receivable', amount: accountsReceivable });
+      if (inventoryValue > 0) assets.push({ name: 'Inventory', amount: inventoryValue });
+
+      const liabilities: { name: string; amount: number }[] = [];
+      if (accountsPayable > 0) liabilities.push({ name: 'Accounts Payable', amount: accountsPayable });
+      if (salesTaxPayable > 0) liabilities.push({ name: 'Sales Tax Payable', amount: salesTaxPayable });
+      if (unappliedAdvances > 0) liabilities.push({ name: 'Customer Advances', amount: unappliedAdvances });
+
+      const totalAssets = assets.reduce((sum, a) => sum + a.amount, 0);
+      const totalLiabilities = liabilities.reduce((sum, l) => sum + l.amount, 0);
+      
+      // Equity = Assets - Liabilities (accounting equation)
+      const totalEquity = totalAssets - totalLiabilities;
+      const equity: { name: string; amount: number }[] = [];
+      if (totalEquity !== 0) {
+        equity.push({ name: 'Retained Earnings', amount: totalEquity });
+      }
 
       return {
         asOfDate,
-        assets: assets.length > 0 ? assets : [{ name: 'Total Assets', amount: 0 }],
-        totalAssets: result.totalAssets || 0,
-        liabilities: liabilities.length > 0 ? liabilities : [{ name: 'Total Liabilities', amount: 0 }],
-        totalLiabilities: result.totalLiabilities || 0,
-        equity: equity.length > 0 ? equity : [{ name: 'Retained Earnings', amount: result.totalEquity || 0 }],
-        totalEquity: result.totalEquity || 0,
+        assets,
+        totalAssets,
+        liabilities,
+        totalLiabilities,
+        equity,
+        totalEquity,
       };
     } catch (error) {
       console.error('generateBalanceSheet error:', error);
       return {
         asOfDate,
-        assets: [{ name: 'Total Assets', amount: 0 }],
+        assets: [],
         totalAssets: 0,
-        liabilities: [{ name: 'Total Liabilities', amount: 0 }],
+        liabilities: [],
         totalLiabilities: 0,
-        equity: [{ name: 'Retained Earnings', amount: 0 }],
+        equity: [],
         totalEquity: 0,
       };
     }
@@ -567,40 +751,78 @@ export const reportGeneratorService = {
     endDate: string
   ): Promise<CashFlowReport> {
     try {
-      // Use the existing chartAccountsService which queries real journal entries
-      const result = await chartAccountsService.generateCashFlowStatement(companyId, startDate, endDate);
+      // Get customer payments received (operating inflow)
+      const { data: customerPayments } = await supabase
+        .from('customer_payments')
+        .select('amount')
+        .eq('user_id', companyId)
+        .gte('payment_date', startDate)
+        .lte('payment_date', endDate);
 
-      const operating = [
-        { description: 'Net Operating Cash', amount: result.operatingCashFlow || 0 },
-      ];
+      const cashFromCustomers = (customerPayments || []).reduce((sum, p: any) => 
+        sum + (Number(p.amount) || 0), 0);
 
-      const investing = [
-        { description: 'Net Investing Cash', amount: result.investingCashFlow || 0 },
-      ];
+      // Get supplier payments made (operating outflow)
+      const { data: supplierPayments } = await supabase
+        .from('supplier_payments')
+        .select('amount')
+        .eq('user_id', companyId)
+        .gte('payment_date', startDate)
+        .lte('payment_date', endDate);
 
-      const financing = [
-        { description: 'Net Financing Cash', amount: result.financingCashFlow || 0 },
-      ];
+      const cashToSuppliers = (supplierPayments || []).reduce((sum, p: any) => 
+        sum + (Number(p.amount) || 0), 0);
+
+      // Try to get detailed breakdown from chart accounts
+      let operatingTotal = 0;
+      let investingTotal = 0;
+      let financingTotal = 0;
+
+      try {
+        const result = await chartAccountsService.generateCashFlowStatement(companyId, startDate, endDate);
+        if (result.operatingCashFlow !== 0 || result.investingCashFlow !== 0 || result.financingCashFlow !== 0) {
+          operatingTotal = result.operatingCashFlow || 0;
+          investingTotal = result.investingCashFlow || 0;
+          financingTotal = result.financingCashFlow || 0;
+        }
+      } catch {
+        // Ignore - will use transaction data
+      }
+
+      // Use transaction data if no journal entries
+      if (operatingTotal === 0 && (cashFromCustomers > 0 || cashToSuppliers > 0)) {
+        operatingTotal = cashFromCustomers - cashToSuppliers;
+      }
+
+      const operating: { description: string; amount: number }[] = [];
+      if (cashFromCustomers > 0) operating.push({ description: 'Collections from Customers', amount: cashFromCustomers });
+      if (cashToSuppliers > 0) operating.push({ description: 'Payments to Suppliers', amount: -cashToSuppliers });
+
+      const investing: { description: string; amount: number }[] = [];
+      if (investingTotal !== 0) investing.push({ description: 'Investing Activities', amount: investingTotal });
+
+      const financing: { description: string; amount: number }[] = [];
+      if (financingTotal !== 0) financing.push({ description: 'Financing Activities', amount: financingTotal });
 
       return {
         period: { start: startDate, end: endDate },
         operating,
-        totalOperating: result.operatingCashFlow || 0,
+        totalOperating: operatingTotal,
         investing,
-        totalInvesting: result.investingCashFlow || 0,
+        totalInvesting: investingTotal,
         financing,
-        totalFinancing: result.financingCashFlow || 0,
-        netChange: result.netCashFlow || 0,
+        totalFinancing: financingTotal,
+        netChange: operatingTotal + investingTotal + financingTotal,
       };
     } catch (error) {
       console.error('generateCashFlow error:', error);
       return {
         period: { start: startDate, end: endDate },
-        operating: [{ description: 'Net Operating Cash', amount: 0 }],
+        operating: [],
         totalOperating: 0,
-        investing: [{ description: 'Net Investing Cash', amount: 0 }],
+        investing: [],
         totalInvesting: 0,
-        financing: [{ description: 'Net Financing Cash', amount: 0 }],
+        financing: [],
         totalFinancing: 0,
         netChange: 0,
       };

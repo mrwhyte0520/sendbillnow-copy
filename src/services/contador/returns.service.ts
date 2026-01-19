@@ -252,20 +252,58 @@ export const salesReturnsService = {
       const tenantId = await resolveTenantId(companyId);
       if (!tenantId) return null;
 
+      // If invoice_id provided, get customer_id from invoice and apply accounting effect
+      let customerId = payload.customer_id || null;
+      if (payload.invoice_id) {
+        const { data: invoice } = await supabase
+          .from('invoices')
+          .select('customer_id, total_amount, paid_amount')
+          .eq('id', payload.invoice_id)
+          .single();
+        
+        if (invoice) {
+          customerId = invoice.customer_id;
+          
+          // Apply credit note: increase paid_amount to reflect the credit
+          const newPaidAmount = (Number(invoice.paid_amount) || 0) + payload.total_amount;
+          await supabase
+            .from('invoices')
+            .update({ paid_amount: newPaidAmount })
+            .eq('id', payload.invoice_id);
+          
+          // Update customer balance if exists
+          if (customerId) {
+            const { data: customer } = await supabase
+              .from('customers')
+              .select('current_balance')
+              .eq('id', customerId)
+              .single();
+            
+            if (customer) {
+              const newBalance = (Number(customer.current_balance) || 0) - payload.total_amount;
+              await supabase
+                .from('customers')
+                .update({ current_balance: newBalance })
+                .eq('id', customerId);
+            }
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('credit_debit_notes')
         .insert({
           user_id: tenantId,
           note_type: 'credit',
-          customer_id: payload.customer_id || null,
+          customer_id: customerId,
           invoice_id: payload.invoice_id || null,
           note_number: payload.note_number,
           note_date: payload.note_date,
           total_amount: payload.total_amount,
           reason: payload.reason || null,
-          applied_amount: 0,
-          balance_amount: payload.total_amount,
-          status: 'pending',
+          applied_amount: payload.total_amount, // Mark as applied since we updated invoice
+          balance_amount: 0,
+          status: 'applied',
         })
         .select('*')
         .single();
@@ -300,88 +338,22 @@ export const salesReturnsService = {
 
 export const vendorReturnsService = {
   async list(
-    companyId: string,
-    filters?: {
+    _companyId: string,
+    _filters?: {
       status?: string;
       vendorId?: string;
       startDate?: string;
       endDate?: string;
     }
   ): Promise<VendorReturn[]> {
-    try {
-      const tenantId = await resolveTenantId(companyId);
-      if (!tenantId) return [];
-
-      // Check if ap_debit_notes table exists and has vendor returns
-      // For now, try to read from a potential vendor_returns or ap_credit_notes table
-      // If not available, return empty
-      let query = supabase
-        .from('ap_credit_notes')
-        .select(`
-          *,
-          suppliers (id, name)
-        `)
-        .eq('user_id', tenantId)
-        .order('note_date', { ascending: false });
-
-      if (filters?.startDate) {
-        query = query.gte('note_date', filters.startDate);
-      }
-      if (filters?.endDate) {
-        query = query.lte('note_date', filters.endDate);
-      }
-      if (filters?.vendorId) {
-        query = query.eq('supplier_id', filters.vendorId);
-      }
-
-      const { data, error } = await query;
-      
-      // If table doesn't exist or error, return empty
-      if (error) {
-        console.log('Vendor returns table not available:', error.message);
-        return [];
-      }
-
-      return (data || []).map((note: any) => ({
-        id: note.id,
-        user_id: note.user_id,
-        vendor_id: note.supplier_id || '',
-        vendor_return_number: note.note_number || `VR-${note.id?.slice(0, 8)}`,
-        return_date: note.note_date,
-        status: note.status === 'applied' ? 'credited' : note.status === 'pending' ? 'draft' : 'received',
-        memo: note.reason || note.notes || '',
-        created_at: note.created_at,
-        vendor: { id: note.supplier_id || '', name: note.suppliers?.name || 'Unknown' },
-        total_amount: Number(note.total_amount) || 0,
-      }));
-    } catch (error) {
-      console.log('vendorReturnsService.list - table may not exist:', error);
-      return [];
-    }
+    // Vendor returns (ap_credit_notes) table does not exist in current schema
+    // Return empty array - this feature can be implemented when the table is created
+    return [];
   },
 
-  async getById(id: string): Promise<VendorReturn | null> {
-    try {
-      const { data, error } = await supabase
-        .from('ap_credit_notes')
-        .select('*, suppliers (id, name)')
-        .eq('id', id)
-        .single();
-      if (error) return null;
-      return {
-        id: data.id,
-        user_id: data.user_id,
-        vendor_id: data.supplier_id,
-        vendor_return_number: data.note_number,
-        return_date: data.note_date,
-        status: data.status === 'applied' ? 'credited' : 'received',
-        memo: data.reason,
-        created_at: data.created_at,
-        vendor: { id: data.supplier_id, name: data.suppliers?.name || '' },
-      };
-    } catch {
-      return null;
-    }
+  async getById(_id: string): Promise<VendorReturn | null> {
+    // Vendor returns table does not exist in current schema
+    return null;
   },
 };
 

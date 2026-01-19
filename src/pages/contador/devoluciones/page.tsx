@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { resolveTenantId } from '../../../services/database';
+import { resolveTenantId, invoicesService, apInvoicesService } from '../../../services/database';
 import { salesReturnsService, vendorReturnsService } from '../../../services/contador/returns.service';
+import { supabase } from '../../../lib/supabase';
 import type { SalesReturn, VendorReturn } from '../../../services/contador/returns.service';
 import { exportToExcelWithHeaders } from '../../../utils/exportImportUtils';
 import { exportToPdf } from '../../../utils/exportImportUtils';
@@ -36,17 +37,79 @@ export default function ContadorDevolucionesPage() {
   const [formAmount, setFormAmount] = useState('');
   const [formReason, setFormReason] = useState('Defective');
 
+  // Invoice selector state
+  const [customerInvoices, setCustomerInvoices] = useState<Array<{ id: string; invoice_number: string; customer_name: string; total_amount: number; status: string }>>([]);
+  const [vendorInvoices, setVendorInvoices] = useState<Array<{ id: string; invoice_number: string; supplier_name: string; total_gross: number; status: string }>>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+
   useEffect(() => {
     if (user?.id) {
       loadData();
       loadCompanyInfo();
+      loadInvoices();
     }
   }, [user?.id]);
+
+  const loadInvoices = async () => {
+    if (!user?.id) return;
+    setLoadingInvoices(true);
+    try {
+      const tenantId = await resolveTenantId(user.id);
+      
+      // Get invoice IDs that already have a return (credit note) - query directly
+      const { data: creditNotes } = await supabase
+        .from('credit_debit_notes')
+        .select('invoice_id')
+        .eq('user_id', tenantId || user.id)
+        .eq('note_type', 'credit')
+        .not('invoice_id', 'is', null);
+      
+      const invoiceIdsWithReturns = new Set(
+        (creditNotes || []).map((cn: any) => cn.invoice_id).filter(Boolean)
+      );
+      
+      console.log('Invoices with returns:', Array.from(invoiceIdsWithReturns));
+
+      // Load customer invoices, excluding those with returns
+      const custInvoices = await invoicesService.getAll(user.id);
+      setCustomerInvoices(
+        (custInvoices || [])
+          .filter((inv: any) => 
+            inv.status !== 'cancelled' && 
+            inv.status !== 'draft' &&
+            !invoiceIdsWithReturns.has(inv.id)
+          )
+          .map((inv: any) => ({
+            id: inv.id,
+            invoice_number: inv.invoice_number || `INV-${inv.id?.slice(0, 8)}`,
+            customer_name: inv.customers?.name || 'Walk-in',
+            total_amount: Number(inv.total_amount) || 0,
+            status: inv.status,
+          }))
+      );
+
+      // Load vendor invoices (AP)
+      const vendInvoices = await apInvoicesService.getAll(user.id);
+      setVendorInvoices(
+        (vendInvoices || []).filter((inv: any) => inv.status !== 'cancelled' && inv.status !== 'draft').map((inv: any) => ({
+          id: inv.id,
+          invoice_number: inv.invoice_number || `AP-${inv.id?.slice(0, 8)}`,
+          supplier_name: inv.suppliers?.name || 'Unknown',
+          total_gross: Number(inv.total_gross) || Number(inv.total_to_pay) || 0,
+          status: inv.status,
+        }))
+      );
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
 
   const loadCompanyInfo = async () => {
     if (!user?.id) return;
     try {
-      const info = await settingsService.getCompanyInfo(user.id);
+      const info = await settingsService.getCompanyInfo();
       setCompanyName(info?.name || 'Company');
     } catch { /* ignore */ }
   };
@@ -494,14 +557,40 @@ export default function ContadorDevolucionesPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Original Invoice/PO (optional)</label>
-                  <input 
-                    type="text" 
-                    placeholder="INV-XXXX or PO-XXXX" 
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {formType === 'customer' ? 'Select Invoice *' : 'Select Vendor Invoice *'}
+                  </label>
+                  <select
                     value={formReference}
-                    onChange={(e) => setFormReference(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]" 
-                  />
+                    onChange={(e) => {
+                      setFormReference(e.target.value);
+                      // Auto-fill amount from selected invoice
+                      if (formType === 'customer') {
+                        const inv = customerInvoices.find(i => i.id === e.target.value);
+                        if (inv) setFormAmount(inv.total_amount.toString());
+                      } else {
+                        const inv = vendorInvoices.find(i => i.id === e.target.value);
+                        if (inv) setFormAmount(inv.total_gross.toString());
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]"
+                  >
+                    <option value="">-- Select an invoice --</option>
+                    {formType === 'customer' ? (
+                      customerInvoices.map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.invoice_number} - {inv.customer_name} (${inv.total_amount.toFixed(2)})
+                        </option>
+                      ))
+                    ) : (
+                      vendorInvoices.map((inv) => (
+                        <option key={inv.id} value={inv.id}>
+                          {inv.invoice_number} - {inv.supplier_name} (${inv.total_gross.toFixed(2)})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {loadingInvoices && <p className="text-xs text-gray-500 mt-1">Loading invoices...</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($) *</label>
@@ -540,7 +629,7 @@ export default function ContadorDevolucionesPage() {
                 </button>
                 <button 
                   onClick={handleCreateReturn}
-                  disabled={creating || !formAmount || Number(formAmount) <= 0}
+                  disabled={creating || !formAmount || Number(formAmount) <= 0 || !formReference}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-[#0A8A0A] to-[#006B00] text-white rounded-lg font-medium disabled:opacity-50"
                 >
                   {creating ? 'Creating...' : 'Create Return'}

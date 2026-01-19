@@ -39,6 +39,22 @@ export default function ContadorReportesPage() {
     } catch { /* ignore */ }
   };
 
+  const selectedPeriod = useMemo(() => {
+    if (selectedPeriodId && periods.length > 0) {
+      return periods.find((p) => p.id === selectedPeriodId) || null;
+    }
+    // Default to current year if no periods exist
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    return {
+      id: 'default',
+      name: `${now.getFullYear()} YTD`,
+      start_date: yearStart.toISOString().split('T')[0],
+      end_date: now.toISOString().split('T')[0],
+      status: 'open' as const,
+    };
+  }, [periods, selectedPeriodId]);
+
   useEffect(() => {
     if (user?.id) {
       loadPeriods();
@@ -46,15 +62,11 @@ export default function ContadorReportesPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (user?.id && selectedPeriodId) {
+    if (user?.id && selectedPeriod) {
       loadReports();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, selectedPeriodId]);
-
-  const selectedPeriod = useMemo(() => {
-    return periods.find((p) => p.id === selectedPeriodId) || null;
-  }, [periods, selectedPeriodId]);
+  }, [user?.id, selectedPeriod?.start_date, selectedPeriod?.end_date]);
 
   const loadPeriods = async () => {
     if (!user?.id) return;
@@ -75,7 +87,9 @@ export default function ContadorReportesPage() {
   };
 
   const loadReports = async () => {
-    if (!user?.id || !selectedPeriod) return;
+    if (!user?.id) return;
+    const period = selectedPeriod;
+    if (!period) return;
     setLoading(true);
     try {
       const tenantId = await resolveTenantId(user.id);
@@ -83,19 +97,19 @@ export default function ContadorReportesPage() {
       const [pnlReport, balanceReport, cashFlowReport, salesTaxReport] = await Promise.all([
         reportsService.generator.generateProfitAndLoss(
           tenantId,
-          selectedPeriod.start_date,
-          selectedPeriod.end_date
+          period.start_date,
+          period.end_date
         ),
-        reportsService.generator.generateBalanceSheet(tenantId, selectedPeriod.end_date),
+        reportsService.generator.generateBalanceSheet(tenantId, period.end_date),
         reportsService.generator.generateCashFlow(
           tenantId,
-          selectedPeriod.start_date,
-          selectedPeriod.end_date
+          period.start_date,
+          period.end_date
         ),
         reportsService.generator.generateSalesTaxReport(
           tenantId,
-          selectedPeriod.start_date,
-          selectedPeriod.end_date
+          period.start_date,
+          period.end_date
         ),
       ]);
 
@@ -125,9 +139,13 @@ export default function ContadorReportesPage() {
 
     if (activeTab === 'pl') {
       title = 'Profit & Loss Statement';
+      const revenueRows = (pnl?.revenue || []).map(r => ({ category: r.category, type: 'Revenue', amount: r.amount }));
+      const expenseRows = (pnl?.expenses || []).map(e => ({ category: e.category, type: 'Expense', amount: -e.amount }));
       data = [
-        ...(pnl?.revenue || []).map(r => ({ category: r.category, type: 'Revenue', amount: r.amount })),
-        ...(pnl?.expenses || []).map(e => ({ category: e.category, type: 'Expense', amount: -e.amount })),
+        ...revenueRows,
+        { category: 'Total Revenue', type: 'Subtotal', amount: totalRevenue },
+        ...expenseRows,
+        { category: 'Total Expenses', type: 'Subtotal', amount: -totalExpenses },
         { category: 'Net Income', type: 'Total', amount: netIncome },
       ];
       columns = [
@@ -137,10 +155,17 @@ export default function ContadorReportesPage() {
       ];
     } else if (activeTab === 'balance') {
       title = 'Balance Sheet';
+      const assetRows = (balance?.assets || []).map(a => ({ name: a.name, type: 'Asset', amount: a.amount }));
+      const liabilityRows = (balance?.liabilities || []).map(l => ({ name: l.name, type: 'Liability', amount: l.amount }));
+      const equityRows = (balance?.equity || []).map(e => ({ name: e.name, type: 'Equity', amount: e.amount }));
       data = [
-        ...(balance?.assets || []).map(a => ({ name: a.name, type: 'Asset', amount: a.amount })),
-        ...(balance?.liabilities || []).map(l => ({ name: l.name, type: 'Liability', amount: l.amount })),
-        ...(balance?.equity || []).map(e => ({ name: e.name, type: 'Equity', amount: e.amount })),
+        ...assetRows,
+        { name: 'Total Assets', type: 'Subtotal', amount: totalAssets },
+        ...liabilityRows,
+        { name: 'Total Liabilities', type: 'Subtotal', amount: totalLiabilities },
+        ...equityRows,
+        { name: 'Total Equity', type: 'Subtotal', amount: totalEquity },
+        { name: 'Liabilities + Equity', type: 'Total', amount: totalLiabilities + totalEquity },
       ];
       columns = [
         { key: 'name', label: 'Account' },
@@ -149,11 +174,17 @@ export default function ContadorReportesPage() {
       ];
     } else if (activeTab === 'cashflow') {
       title = 'Cash Flow Statement';
+      const operatingTotal = cashFlow?.operating.reduce((a, i) => a + i.amount, 0) || 0;
+      const investingTotal = cashFlow?.investing.reduce((a, i) => a + i.amount, 0) || 0;
+      const financingTotal = cashFlow?.financing.reduce((a, i) => a + i.amount, 0) || 0;
       data = [
         ...(cashFlow?.operating || []).map(o => ({ description: o.description, type: 'Operating', amount: o.amount })),
+        { description: 'Net Operating Cash', type: 'Subtotal', amount: operatingTotal },
         ...(cashFlow?.investing || []).map(i => ({ description: i.description, type: 'Investing', amount: i.amount })),
+        { description: 'Net Investing Cash', type: 'Subtotal', amount: investingTotal },
         ...(cashFlow?.financing || []).map(f => ({ description: f.description, type: 'Financing', amount: f.amount })),
-        { description: 'Net Change in Cash', type: 'Total', amount: cashFlow?.netChange || 0 },
+        { description: 'Net Financing Cash', type: 'Subtotal', amount: financingTotal },
+        { description: 'Net Change in Cash', type: 'Total', amount: operatingTotal + investingTotal + financingTotal },
       ];
       columns = [
         { key: 'description', label: 'Description' },
@@ -162,13 +193,16 @@ export default function ContadorReportesPage() {
       ];
     } else if (activeTab === 'tax') {
       title = 'Sales Tax Report';
-      data = (salesTax?.byJurisdiction || []).map(j => ({
-        jurisdiction: j.jurisdiction,
+      const taxRows = (salesTax?.byJurisdiction || []).map(j => ({
         state: j.state,
         taxableSales: j.taxableSales,
         taxRate: j.taxRate,
         taxCollected: j.taxCollected,
       }));
+      data = [
+        ...taxRows,
+        { state: 'Total', taxableSales: salesTax?.totalTaxableSales || 0, taxRate: '-', taxCollected: salesTax?.totalTaxCollected || 0 },
+      ];
       columns = [
         { key: 'state', label: 'State' },
         { key: 'taxableSales', label: 'Taxable Sales' },
@@ -268,27 +302,29 @@ export default function ContadorReportesPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <select
-              value={selectedPeriodId}
-              onChange={(e) => setSelectedPeriodId(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]"
-            >
-              {periods.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            {periods.length > 0 && (
+              <select
+                value={selectedPeriodId}
+                onChange={(e) => setSelectedPeriodId(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000] bg-white"
+              >
+                {periods.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <button 
               onClick={handleExportPdf}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2 transition-colors"
             >
               <i className="ri-file-pdf-line"></i>
               PDF
             </button>
             <button 
               onClick={handleExportExcel}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+              className="px-4 py-2 bg-[#008000] text-white rounded-lg hover:bg-[#006600] flex items-center gap-2 transition-colors"
             >
               <i className="ri-file-excel-line"></i>
               Excel
@@ -355,9 +391,9 @@ export default function ContadorReportesPage() {
                         <span className="font-medium text-green-600">${item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between px-4 py-3 bg-green-50 font-semibold">
+                    <div className="flex justify-between px-4 py-3 bg-gray-100 font-semibold">
                       <span>Total Revenue</span>
-                      <span className="text-green-600">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      <span className="text-gray-800">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 </div>
@@ -383,10 +419,10 @@ export default function ContadorReportesPage() {
                 </div>
 
                 {/* Net Income */}
-                <div className={`rounded-lg p-4 ${netIncome >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                <div className={`rounded-lg p-4 ${netIncome >= 0 ? 'bg-gray-100 border border-gray-200' : 'bg-red-50 border border-red-200'}`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Net Income</span>
-                    <span className={`text-2xl font-bold ${netIncome >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    <span className="text-lg font-bold text-gray-900">Net Income</span>
+                    <span className={`text-2xl font-bold ${netIncome >= 0 ? 'text-gray-800' : 'text-red-700'}`}>
                       ${netIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -456,10 +492,10 @@ export default function ContadorReportesPage() {
                 </div>
 
                 {/* Balance Check */}
-                <div className="bg-[#008000]/10 rounded-lg p-4">
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">Total Liabilities + Equity</span>
-                    <span className="text-lg font-bold text-[#008000]">
+                    <span className="font-medium text-gray-900">Total Liabilities + Equity</span>
+                    <span className="text-lg font-bold text-gray-800">
                       ${(totalLiabilities + totalEquity).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -543,10 +579,10 @@ export default function ContadorReportesPage() {
                 </div>
 
                 {/* Net Change in Cash */}
-                <div className="bg-[#008000]/10 rounded-lg p-4">
+                <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Net Change in Cash</span>
-                    <span className="text-2xl font-bold text-[#008000]">
+                    <span className="text-lg font-bold text-gray-900">Net Change in Cash</span>
+                    <span className="text-2xl font-bold text-gray-800">
                       ${(
                         (cashFlow?.operating.reduce((a, i) => a + i.amount, 0) || 0) +
                         (cashFlow?.investing.reduce((a, i) => a + i.amount, 0) || 0) +
@@ -602,9 +638,9 @@ export default function ContadorReportesPage() {
                     <p className="text-sm text-blue-600 font-medium">Total Sales</p>
                     <p className="text-2xl font-bold text-blue-900">${(salesTax?.totalTaxableSales || 0).toLocaleString('en-US')}</p>
                   </div>
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <p className="text-sm text-green-600 font-medium">Tax Collected</p>
-                    <p className="text-2xl font-bold text-green-900">${(salesTax?.totalTaxCollected || 0).toLocaleString('en-US')}</p>
+                  <div className="bg-gray-100 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 font-medium">Tax Collected</p>
+                    <p className="text-2xl font-bold text-gray-900">${(salesTax?.totalTaxCollected || 0).toLocaleString('en-US')}</p>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4">
                     <p className="text-sm text-purple-600 font-medium">Avg Tax Rate</p>
