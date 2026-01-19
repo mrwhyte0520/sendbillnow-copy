@@ -1,9 +1,77 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { referralsService } from '../../services/database';
+
+function useInViewOnce<T extends HTMLElement>(options?: IntersectionObserverInit) {
+  const ref = useRef<T | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || inView) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15, ...options }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [inView, options]);
+
+  return [ref, inView] as const;
+}
 
 export default function HomePage() {
   const location = useLocation();
+  const heroImageRef = useRef<HTMLDivElement | null>(null);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [heroTilt, setHeroTilt] = useState({ rotateX: 0, rotateY: 0 });
+  const [isMounted, setIsMounted] = useState(false);
+
+  const [heroRef, heroInView] = useInViewOnce<HTMLElement>({ threshold: 0.2 });
+  const [featuresRef, featuresInView] = useInViewOnce<HTMLElement>({ threshold: 0.15 });
+  const [pos101Ref, pos101InView] = useInViewOnce<HTMLElement>({ threshold: 0.15 });
+  const [pricingRef, pricingInView] = useInViewOnce<HTMLElement>({ threshold: 0.15 });
+  const [ctaRef, ctaInView] = useInViewOnce<HTMLElement>({ threshold: 0.2 });
+
+  useEffect(() => {
+    const t = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 20;
+      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      setMousePosition({ x, y });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const handleHeroMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!heroImageRef.current) return;
+    const rect = heroImageRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -6;
+    const rotateY = ((x - centerX) / centerX) * 6;
+    setHeroTilt({ rotateX, rotateY });
+  };
+
+  const handleHeroMouseLeave = () => {
+    setHeroTilt({ rotateX: 0, rotateY: 0 });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const ref = params.get('ref');
@@ -81,6 +149,13 @@ export default function HomePage() {
     }
   };
 
+  const heroBgStyle = useMemo(() => {
+    return {
+      transform: `translate(${mousePosition.x}px, ${mousePosition.y}px)`,
+      transition: 'transform 0.35s ease-out',
+    } as const;
+  }, [mousePosition.x, mousePosition.y]);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -117,14 +192,22 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-[#FDFBF3] via-stone-100 to-stone-200 py-20 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
+      <section
+        ref={heroRef}
+        className="relative bg-gradient-to-br from-[#FDFBF3] via-stone-100 to-stone-200 py-20 overflow-hidden"
+      >
+        <div className="absolute inset-0 pointer-events-none" style={heroBgStyle}>
           <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#008000]/10 blur-3xl" />
           <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-[#556B2F]/10 blur-3xl" />
+          <div className="absolute top-1/2 left-1/4 h-56 w-56 -translate-y-1/2 rounded-full bg-[#008000]/5 blur-3xl" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <div
+              className={`transition-all duration-700 ease-out ${
+                heroInView && isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+            >
               <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight text-gray-900 mb-4 sm:mb-6">
                 A Smart <span className="text-[#008000]">POS</span> System
               </h1>
@@ -134,34 +217,58 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
                   to="/auth/login"
-                  className="bg-[#008000] text-white px-8 py-4 rounded-lg text-center font-semibold whitespace-nowrap cursor-pointer shadow-lg shadow-[#008000]/25 border border-[#006B00]/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-[#008000]/30 active:translate-y-0"
+                  className="group bg-[#008000] text-white px-8 py-4 rounded-lg text-center font-semibold whitespace-nowrap cursor-pointer shadow-lg shadow-[#008000]/25 border border-[#006B00]/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-[#008000]/30 active:scale-[0.98]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/demo"
-                  className="bg-[#FDFBF3] text-[#1F2616] px-8 py-4 rounded-lg text-center font-semibold whitespace-nowrap cursor-pointer border border-[#D8CBB5] shadow-md shadow-black/5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#F6F0DE] hover:shadow-lg active:translate-y-0"
+                  className="bg-[#FDFBF3] text-[#1F2616] px-8 py-4 rounded-lg text-center font-semibold whitespace-nowrap cursor-pointer border border-[#D8CBB5] shadow-md shadow-black/5 transition-all duration-300 hover:scale-[1.02] hover:bg-[#F6F0DE] hover:shadow-lg active:scale-[0.98]"
                 >
                   Request Free Demo
                 </Link>
               </div>
             </div>
-            <div className="relative cursor-pointer select-none touch-manipulation transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 active:scale-[0.99]">
-              <img 
-                src="/hero-analytics-green.svg"
-                alt="Dashboard de Send Bill Now"
-                className="rounded-2xl shadow-2xl border border-[#d8cbb5] object-cover"
-              />
-              <div className="absolute inset-0 rounded-xl border border-white/40 pointer-events-none bg-gradient-to-tr from-[#30442540] via-transparent to-transparent mix-blend-multiply"></div>
+            <div
+              className={`transition-all duration-700 ease-out delay-150 ${
+                heroInView && isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+              style={{ perspective: '1000px' }}
+            >
+              <div
+                ref={heroImageRef}
+                onMouseMove={handleHeroMouseMove}
+                onMouseLeave={handleHeroMouseLeave}
+                className="relative cursor-pointer select-none touch-manipulation transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-2xl active:translate-y-0.5"
+                style={{
+                  transform: `rotateX(${heroTilt.rotateX}deg) rotateY(${heroTilt.rotateY}deg)`,
+                  transformStyle: 'preserve-3d',
+                }}
+              >
+                <img 
+                  src="/hero-analytics-green.svg"
+                  alt="Dashboard de Send Bill Now"
+                  className="rounded-2xl shadow-2xl border border-[#d8cbb5] object-cover"
+                />
+                <div className="absolute inset-0 rounded-xl border border-white/40 pointer-events-none bg-gradient-to-tr from-[#30442540] via-transparent to-transparent mix-blend-multiply"></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-white">
+      <section
+        ref={featuresRef}
+        id="features"
+        className="py-20 bg-white"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div
+            className={`text-center mb-16 transition-all duration-700 ease-out ${
+              featuresInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
               Everything you need for your POS
             </h2>
@@ -172,7 +279,13 @@ export default function HomePage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 cursor-pointer select-none touch-manipulation border border-gray-200 shadow-sm shadow-black/5 transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-xl hover:shadow-black/10 active:translate-y-0.5 active:scale-[0.99]">
+              <div
+                key={index}
+                className={`bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 cursor-pointer select-none touch-manipulation border border-gray-200 shadow-sm shadow-black/5 transition-all duration-700 ease-out hover:shadow-xl hover:shadow-black/10 active:scale-[0.99] hover:[transform:perspective(1000px)_rotateX(3deg)_rotateY(-3deg)_translateY(-4px)] ${
+                  featuresInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                }`}
+                style={{ transitionDelay: `${index * 90}ms` }}
+              >
                 <div className="w-12 h-12 bg-gradient-to-br from-[#008000]/15 to-[#556B2F]/10 rounded-xl flex items-center justify-center mb-4 shadow-sm shadow-[#008000]/10 border border-[#008000]/10">
                   <i className={`${feature.icon} text-2xl text-[#008000]`}></i>
                 </div>
@@ -184,10 +297,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20 bg-[#FDFBF3]">
+      <section
+        ref={pos101Ref}
+        className="py-20 bg-[#FDFBF3]"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            <div>
+            <div
+              className={`transition-all duration-700 ease-out ${
+                pos101InView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+            >
               <div className="inline-flex items-center gap-2 rounded-full border border-[#D8CBB5] bg-white px-3 py-1 text-sm text-[#3B4A2A] shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-[#008000]" aria-hidden="true" />
                 POS 101
@@ -212,13 +332,13 @@ export default function HomePage() {
                     <div className="mt-4 flex flex-col sm:flex-row gap-3">
                       <Link
                         to="/demo"
-                        className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold bg-[#008000] text-white hover:bg-[#006B00] transition-colors"
+                        className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold bg-[#008000] text-white transition-all duration-300 hover:scale-[1.02] hover:bg-[#006B00] hover:shadow-lg hover:shadow-[#008000]/25 active:scale-[0.98]"
                       >
                         Request Free Demo
                       </Link>
                       <Link
                         to="/auth/login"
-                        className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold bg-[#F6F0DE] text-gray-900 border border-[#D8CBB5] hover:bg-[#EFE6CF] transition-colors"
+                        className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold bg-[#F6F0DE] text-gray-900 border border-[#D8CBB5] transition-all duration-300 hover:scale-[1.02] hover:bg-[#EFE6CF] hover:shadow-md active:scale-[0.98]"
                       >
                         Sign In
                       </Link>
@@ -228,7 +348,12 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#E7DFC8] bg-white shadow-lg overflow-hidden">
+            <div
+              className={`rounded-2xl border border-[#E7DFC8] bg-white shadow-lg overflow-hidden transition-all duration-700 ease-out delay-150 hover:[transform:perspective(1000px)_rotateX(2deg)_rotateY(2deg)_translateY(-4px)] ${
+                pos101InView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+              }`}
+              style={{ transformStyle: 'preserve-3d' }}
+            >
               <div className="p-6 bg-gradient-to-br from-[#008000]/10 via-white to-[#FDFBF3]">
                 <h3 className="text-xl font-bold text-gray-900">Key capabilities</h3>
                 <p className="text-sm text-gray-600 mt-1">Everything you need to run a modern point of sale.</p>
@@ -263,10 +388,18 @@ export default function HomePage() {
       </section>
 
       {/* Invoicing Plans Section */}
-      <section id="pricing" className="py-20 bg-gradient-to-b from-gray-50 to-white">
+      <section
+        ref={pricingRef}
+        id="pricing"
+        className="py-20 bg-gradient-to-b from-gray-50 to-white"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* POS Plans */}
-          <div className="text-center mb-12">
+          <div
+            className={`text-center mb-12 transition-all duration-700 ease-out ${
+              pricingInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+            }`}
+          >
             <div className="flex items-center justify-center mb-4">
               <i className="ri-store-2-line text-3xl text-[#008000] mr-3"></i>
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
@@ -280,7 +413,13 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {plans.filter(p => p.category === 'pos').map((plan, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-lg shadow-black/10 overflow-hidden border border-gray-200 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/15 hover:border-[#008000]/30">
+              <div
+                key={index}
+                className={`bg-white rounded-2xl shadow-lg shadow-black/10 overflow-hidden border border-gray-200 transition-all duration-700 ease-out hover:shadow-2xl hover:shadow-black/15 hover:border-[#008000]/30 hover:[transform:perspective(1000px)_rotateX(3deg)_rotateY(-3deg)_translateY(-4px)] ${
+                  pricingInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+                }`}
+                style={{ transitionDelay: `${index * 120}ms` }}
+              >
                 <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white text-center relative">
                   <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/10 via-transparent to-black/10" />
                   <i className="ri-store-2-line text-4xl mb-3"></i>
@@ -319,7 +458,7 @@ export default function HomePage() {
 
                   <Link
                     to="/auth/register"
-                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white shadow-md shadow-[#556B2F]/25 border border-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#4a5d29] hover:shadow-lg active:translate-y-0"
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white shadow-md shadow-[#556B2F]/25 border border-black/10 transition-all duration-300 hover:scale-[1.02] hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30 active:scale-[0.98]"
                   >
                     Select Plan
                   </Link>
@@ -331,12 +470,19 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-[#008000] to-[#006B00] relative overflow-hidden">
+      <section
+        ref={ctaRef}
+        className="py-20 bg-gradient-to-r from-[#008000] to-[#006B00] relative overflow-hidden"
+      >
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-24 left-10 h-72 w-72 rounded-full bg-black/10 blur-3xl" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center transition-all duration-700 ease-out ${
+            ctaInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
+        >
           <h2 className="text-4xl font-bold text-white mb-6">
             Ready to modernize your POS?
           </h2>
@@ -346,7 +492,7 @@ export default function HomePage() {
           </p>
           <Link 
             to="/auth/login" 
-            className="bg-white text-[#008000] px-8 py-4 rounded-lg font-bold text-lg inline-block cursor-pointer shadow-xl shadow-black/20 border border-white/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-gray-100 active:translate-y-0"
+            className="bg-white text-[#008000] px-8 py-4 rounded-lg font-bold text-lg inline-block cursor-pointer shadow-xl shadow-black/20 border border-white/40 transition-all duration-300 hover:scale-[1.02] hover:bg-gray-100 hover:shadow-2xl hover:shadow-black/25 active:scale-[0.98]"
           >
             Sign In
           </Link>

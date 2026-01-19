@@ -12,6 +12,14 @@ export default function DashboardPage() {
   const [currentDate] = useState(new Date());
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
 
+  const normalizeModuleKey = (value: unknown) => {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, '-')
+      .replace(/\s+/g, '-');
+  };
+
   // Obtener módulos permitidos para el usuario
   useEffect(() => {
     const fetchAllowed = async () => {
@@ -74,7 +82,11 @@ export default function DashboardPage() {
     if (allowedModules === null || allowedModules.size === 0) {
       return allQuickAccessButtons;
     }
-    return allQuickAccessButtons.filter(button => allowedModules.has(button.module));
+    const normalizedAllowed = new Set(Array.from(allowedModules).map(normalizeModuleKey));
+    const filtered = allQuickAccessButtons.filter((button) =>
+      normalizedAllowed.has(normalizeModuleKey(button.module))
+    );
+    return filtered.length > 0 ? filtered : allQuickAccessButtons;
   }, [allowedModules]);
 
   // Generar días del calendario

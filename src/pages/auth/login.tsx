@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -10,6 +10,46 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Animation states
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [cardTransform, setCardTransform] = useState({ rotateX: 0, rotateY: 0 });
+  const [isVisible, setIsVisible] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Trigger entrance animation on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Parallax effect on mouse move (very subtle)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 20;
+      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      setMousePosition({ x, y });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  // 3D Tilt effect on card
+  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    setCardTransform({ rotateX, rotateY });
+  };
+
+  const handleCardMouseLeave = () => {
+    setCardTransform({ rotateX: 0, rotateY: 0 });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,12 +95,43 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-white to-stone-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 via-white to-stone-50 flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Parallax background elements */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          transform: `translate(${mousePosition.x}px, ${mousePosition.y}px)`,
+          transition: 'transform 0.3s ease-out',
+        }}
+      >
+        <div className="absolute top-20 left-20 w-64 h-64 bg-[#008000]/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-20 w-80 h-80 bg-[#008000]/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-emerald-200/20 rounded-full blur-2xl" />
+      </div>
+
+      <div 
+        className={`w-full max-w-md transition-all duration-700 ease-out ${
+          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+        style={{ perspective: '1000px' }}
+      >
+        <div 
+          ref={cardRef}
+          onMouseMove={handleCardMouseMove}
+          onMouseLeave={handleCardMouseLeave}
+          className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl p-8 transition-all duration-200 ease-out"
+          style={{
+            transform: `rotateX(${cardTransform.rotateX}deg) rotateY(${cardTransform.rotateY}deg)`,
+            transformStyle: 'preserve-3d',
+          }}
+        >
           {/* Logo y título */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#008000] to-[#008000] rounded-2xl mb-4">
+          <div 
+            className={`text-center mb-8 transition-all duration-500 delay-100 ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'
+            }`}
+          >
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#008000] to-[#006400] rounded-2xl mb-4 shadow-lg shadow-[#008000]/25 transition-transform duration-300 hover:scale-110">
               <i className="ri-shield-user-line text-3xl text-white"></i>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome</h1>
@@ -77,7 +148,11 @@ export default function Login() {
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
+            <div 
+              className={`transition-all duration-500 delay-200 ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
@@ -97,7 +172,11 @@ export default function Login() {
               </div>
             </div>
 
-            <div>
+            <div 
+              className={`transition-all duration-500 delay-300 ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
@@ -125,12 +204,16 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div 
+              className={`flex items-center justify-between transition-all duration-500 delay-[350ms] ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
               <div className="flex items-center">
                 <input
                   id="remember"
                   type="checkbox"
-                  className="h-4 w-4 text-[#008000] focus:ring-[#008000] border-stone-300 rounded cursor-pointer"
+                  className="h-4 w-4 text-[#008000] focus:ring-[#008000] border-stone-300 rounded cursor-pointer transition-transform duration-200 hover:scale-110"
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-700 cursor-pointer">
                   Remember me
@@ -138,16 +221,21 @@ export default function Login() {
               </div>
               <Link
                 to="/auth/reset-password"
-                className="text-sm font-medium text-[#008000] hover:text-[#008000] transition-colors whitespace-nowrap"
+                className="text-sm font-medium text-[#008000] hover:text-[#006400] transition-all duration-300 whitespace-nowrap hover:underline underline-offset-2"
               >
                 Forgot your password?
               </Link>
             </div>
 
+            <div 
+              className={`transition-all duration-500 delay-[400ms] ${
+                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+              }`}
+            >
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-[#008000] to-[#008000] text-white py-3 px-4 rounded-lg font-medium hover:from-[#008000] hover:to-[#008000] focus:outline-none focus:ring-2 focus:ring-[#008000] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
+              className="group w-full bg-gradient-to-r from-[#008000] to-[#006400] text-white py-3 px-4 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-[#008000] focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap hover:scale-[1.02] hover:shadow-lg hover:shadow-[#008000]/30 active:scale-[0.98]"
             >
               {loading ? (
                 <>
@@ -156,33 +244,42 @@ export default function Login() {
                 </>
               ) : (
                 <>
-                  <i className="ri-login-box-line mr-2"></i>
+                  <i className="ri-login-box-line mr-2 transition-transform duration-300 group-hover:translate-x-1"></i>
                   Sign In
                 </>
               )}
             </button>
+            </div>
           </form>
 
           {/* Registro */}
-          <div className="mt-6 text-center">
+          <div 
+            className={`mt-6 text-center transition-all duration-500 delay-500 ${
+              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}
+          >
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
               <Link
                 to="/auth/register"
-                className="font-medium text-[#008000] hover:text-[#008000] transition-colors whitespace-nowrap"
+                className="font-medium text-[#008000] hover:text-[#006400] transition-all duration-300 whitespace-nowrap hover:underline underline-offset-2"
               >
                 Sign up here
               </Link>
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-500">
-            © 2024 Send Bill Now. All rights reserved.
-          </p>
-        </div>
+      {/* Footer */}
+      <div 
+        className={`absolute bottom-6 left-0 right-0 text-center transition-all duration-700 delay-700 ${
+          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}
+      >
+        <p className="text-sm text-gray-500">
+          © 2024 Send Bill Now. All rights reserved.
+        </p>
       </div>
     </div>
   );
