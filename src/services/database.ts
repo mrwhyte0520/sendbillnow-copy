@@ -14862,6 +14862,21 @@ export const settingsService = {
     }
   },
 
+  async getAllUsers() {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  },
+
   async createUser(userData: any) {
     try {
       const { data, error } = await supabase
@@ -14892,6 +14907,202 @@ export const settingsService = {
     } catch (error) {
       console.error('Error updating user status:', error);
       throw error;
+    }
+  },
+
+  async getUserPlanInfo(userId: string) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, plan_id, plan_status, trial_end')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data ?? null;
+    } catch (error) {
+      console.error('Error getting user plan info:', error);
+      return null;
+    }
+  },
+
+  async updateUserPlan(userId: string, planId: string, planStatus: 'active' | 'inactive' | 'cancelled' = 'active') {
+    try {
+      if (!userId) throw new Error('userId required');
+      const payload: any = {
+        plan_id: planId || null,
+        plan_status: planId ? planStatus : 'inactive',
+        updated_at: new Date().toISOString(),
+      };
+
+      // When user gets a plan, clear trial lockout
+      if (planId) {
+        payload.trial_end = null;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .update(payload)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error updating user plan:', error);
+      throw error;
+    }
+  },
+
+  async cancelUserPlan(userId: string) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          plan_id: null,
+          plan_status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      return data ?? null;
+    } catch (error) {
+      console.error('Error canceling user plan:', error);
+      throw error;
+    }
+  },
+
+  async extendUserTrial(userId: string, daysToAdd: number) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const days = Math.max(0, Math.floor(Number(daysToAdd) || 0));
+      if (days <= 0) throw new Error('daysToAdd must be > 0');
+
+      const current = await this.getUserPlanInfo(userId);
+      const now = new Date();
+      const base = current?.trial_end ? new Date(current.trial_end as any) : now;
+      const baseValid = !isNaN(base.getTime()) ? base : now;
+      const start = baseValid.getTime() > now.getTime() ? baseValid : now;
+      const next = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          trial_end: next.toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error extending user trial:', error);
+      throw error;
+    }
+  },
+
+  async toggleAdminRole(userId: string) {
+    try {
+      if (!userId) throw new Error('userId required');
+
+      // 1) Check if admin permission exists
+      let { data: perm } = await supabase
+        .from('permissions')
+        .select('id')
+        .eq('module', 'admin')
+        .eq('action', 'access')
+        .maybeSingle();
+
+      if (!perm) {
+        const { data: newPerm } = await supabase
+          .from('permissions')
+          .insert({ module: 'admin', action: 'access' })
+          .select()
+          .single();
+        perm = newPerm;
+      }
+      if (!perm) throw new Error('Could not get/create admin permission');
+
+      // 2) Check if admin role exists for this user as owner
+      let { data: role } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('owner_user_id', userId)
+        .eq('name', 'admin')
+        .maybeSingle();
+
+      if (!role) {
+        const { data: newRole } = await supabase
+          .from('roles')
+          .insert({ owner_user_id: userId, name: 'admin', description: 'Administrador del sistema' })
+          .select()
+          .single();
+        role = newRole;
+      }
+      if (!role) throw new Error('Could not get/create admin role');
+
+      // 3) Check if role_permission exists
+      const { data: rp } = await supabase
+        .from('role_permissions')
+        .select('id')
+        .eq('owner_user_id', userId)
+        .eq('role_id', role.id)
+        .eq('permission_id', perm.id)
+        .maybeSingle();
+
+      if (!rp) {
+        await supabase
+          .from('role_permissions')
+          .insert({ owner_user_id: userId, role_id: role.id, permission_id: perm.id });
+      }
+
+      // 4) Check if user_roles entry exists
+      const { data: ur } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('owner_user_id', userId)
+        .eq('user_id', userId)
+        .eq('role_id', role.id)
+        .maybeSingle();
+
+      if (ur) {
+        // Already has admin, remove it
+        await supabase.from('user_roles').delete().eq('id', ur.id);
+        return { hasAdmin: false };
+      } else {
+        // Add admin role
+        await supabase
+          .from('user_roles')
+          .insert({ owner_user_id: userId, user_id: userId, role_id: role.id });
+        return { hasAdmin: true };
+      }
+    } catch (error) {
+      console.error('Error toggling admin role:', error);
+      throw error;
+    }
+  },
+
+  async checkUserHasAdminRole(userId: string): Promise<boolean> {
+    try {
+      if (!userId) return false;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role_id, roles!inner(name)')
+        .eq('user_id', userId);
+
+      if (!roles || roles.length === 0) return false;
+      return roles.some((r: any) => r.roles?.name === 'admin');
+    } catch {
+      return false;
     }
   },
 

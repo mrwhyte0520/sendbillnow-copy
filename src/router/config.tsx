@@ -102,6 +102,7 @@ const CompanySettingsPage = lazy(() => import('../pages/settings/company/page'))
 
 // Admin Pages
 const AdminDemoRequestsPage = lazy(() => import('../pages/admin/demo-requests/page'));
+const AdminDashboardPage = lazy(() => import('../pages/admin/dashboard/page'));
 const OpeningBalancesPage = lazy(() => import('../pages/settings/opening-balances/page'));
 const UsersSettingsPage = lazy(() => import('../pages/settings/users/page'));
 const AccountingSettingsPage = lazy(() => import('../pages/settings/accounting/page'));
@@ -756,6 +757,10 @@ const routes: RouteObject[] = [
   {
     path: '/admin/demo-requests',
     element: <ProtectedRoute><AdminDemoRequestsPage /></ProtectedRoute>
+  },
+  {
+    path: '/admin/dashboard',
+    element: <ProtectedRoute><AdminDashboardPage /></ProtectedRoute>
   },
   // Auth Routes
   {

@@ -44,8 +44,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [isOwner, setIsOwner] = useState(true); // Por defecto true hasta verificar
-  const SUPER_ADMIN_EMAILS = ['rolianaurora30@gmail.com', 'htcreportes@gmail.com'];
-  const isSuperAdmin = !!user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase());
   const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; moduleName: string; requiredPlan: string }>({
     show: false,
     moduleName: '',
@@ -229,6 +227,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     fetchAllowed();
   }, [user?.id]);
 
+  const isAdminAllowed = (allowedModules && allowedModules.has('admin')) || false;
+
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -405,13 +405,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Backups', href: '/settings/backup' }
       ]
     }] : []),
-    // 15. Admin (super admin only)
-    ...(isSuperAdmin ? [{
+    // 15. Admin (RBAC: module 'admin')
+    ...(isAdminAllowed ? [{
       name: 'Admin',
-      href: '/admin/demo-requests',
+      href: '/admin/dashboard',
       icon: 'ri-admin-line',
       current: location.pathname.startsWith('/admin'),
       submenu: [
+        { name: 'Dashboard', href: '/admin/dashboard' },
         { name: 'Demo Requests', href: '/admin/demo-requests' }
       ]
     }] : [])
@@ -445,12 +446,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const minimalAllowed = new Set(['dashboard', 'profile', 'plans']);
     const currentModule = moduleOf(item.href);
 
-    // Owners should always see all modules; RBAC filtering is for sub-users only
+    // Owners should always see all modules EXCEPT Admin, which is always RBAC-gated.
+    // Admins (isAdminAllowed) have access to ALL modules.
     const allowByRbac = isOwner
-      ? true
-      : (allowedModules && allowedModules.size > 0
-          ? allowedModules.has(currentModule)
-          : minimalAllowed.has(currentModule));
+      ? (currentModule === 'admin' ? isAdminAllowed : true)
+      : isAdminAllowed
+        ? true // Admins can see everything
+        : (allowedModules && allowedModules.size > 0
+            ? allowedModules.has(currentModule)
+            : minimalAllowed.has(currentModule));
 
     const itemAllowed = allowByRbac;
     if (!itemAllowed) return null;
@@ -458,7 +462,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const submenu = hasSubmenu
       ? item.submenu.filter((s: any) => {
           const sm = moduleOf(s.href);
-          return isOwner
+          return isOwner || isAdminAllowed
             ? true
             : (allowedModules && allowedModules.size > 0
                 ? allowedModules.has(sm)
@@ -468,7 +472,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const hasFilteredSubmenu = submenu && submenu.length > 0;
 
     // Verificar si el módulo está restringido por plan
-    const isPlanRestricted = !isOwner && !canAccessRoute(item.href);
+    // Los admins tienen acceso a todo, no se les aplica restricción de plan
+    const isPlanRestricted = !isOwner && !isAdminAllowed && !canAccessRoute(item.href);
     const requiredPlan = isPlanRestricted ? getRequiredPlanForRoute(item.href) : '';
 
     // Handler para items restringidos
@@ -528,7 +533,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {hasFilteredSubmenu && isExpanded && !isPlanRestricted && !sidebarCollapsed && (
           <div className="ml-6 mt-2 space-y-1 border-l-2 border-[#c5d4a8] pl-4">
             {submenu!.map((subItem: any) => {
-              const isSubItemRestricted = !canAccessRoute(subItem.href);
+              // Admins y owners no tienen restricción de plan en submenús
+              const isSubItemRestricted = !isOwner && !isAdminAllowed && !canAccessRoute(subItem.href);
               const subRequiredPlan = isSubItemRestricted ? getRequiredPlanForRoute(subItem.href) : '';
 
               if (isSubItemRestricted) {

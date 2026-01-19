@@ -4,8 +4,6 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
 
-const SUPER_ADMIN_EMAILS = ['rolianaurora30@gmail.com', 'htcreportes@gmail.com'];
-
 interface DemoRequest {
   id: string;
   full_name: string;
@@ -38,20 +36,10 @@ export default function AdminDemoRequestsPage() {
   const [trialDays, setTrialDays] = useState(14);
   const [generatedPassword, setGeneratedPassword] = useState('');
 
-  // Verificar acceso super admin
-  const isSuperAdmin = !!user?.email && SUPER_ADMIN_EMAILS.includes(user.email.toLowerCase());
-
   useEffect(() => {
-    if (!isSuperAdmin && user) {
-      navigate('/dashboard');
-    }
-  }, [isSuperAdmin, user, navigate]);
-
-  useEffect(() => {
-    if (isSuperAdmin) {
-      loadRequests();
-    }
-  }, [isSuperAdmin]);
+    // Access is enforced by ProtectedRoute (RBAC admin module)
+    if (user) loadRequests();
+  }, [user]);
 
   const loadRequests = async () => {
     try {
@@ -168,20 +156,6 @@ export default function AdminDemoRequestsPage() {
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const approvedCount = requests.filter(r => r.status === 'approved').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
-
-  if (!isSuperAdmin) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <i className="ri-lock-2-fill text-6xl text-red-500 mb-4"></i>
-            <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
-            <p className="text-gray-600 mt-2">You don't have permission to access this page.</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>

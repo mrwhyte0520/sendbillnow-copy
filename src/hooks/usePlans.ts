@@ -44,6 +44,127 @@ interface TrialInfo {
   hasExpired: boolean;
 }
 
+function getPlanPrice(planId: string): number {
+  const prices: Record<string, number> = {
+    'pyme': 39.99,
+    'pro': 99.99,
+    'plus': 199.99,
+    'facturacion-simple': 19.99,
+    'facturacion-premium': 29.99,
+    'pos-basic': 99.99,
+    'pos-premium': 399.99,
+  };
+  return prices[planId] || 0;
+}
+
+function getPlanFeatures(planId: string): string[] {
+  const features: Record<string, string[]> = {
+    'pyme': [
+      'Una empresa',
+      'Facturación básica con NCF',
+      'Dashboard básico',
+      'Reportes DGII básicos',
+      'Inventario limitado (500 productos)',
+      '2 usuarios',
+    ],
+    'pro': [
+      '3 empresas',
+      'Contabilidad completa',
+      'Dashboard básico',
+      'Gestión bancaria básica',
+      'Inventario limitado (2,000 productos)',
+      'Nómina básica (10 empleados)',
+      '5 usuarios',
+    ],
+    'plus': [
+      'Empresas ilimitadas',
+      'Todas las funciones contables',
+      'Dashboard KPI avanzado',
+      'Inventario ilimitado',
+      'Nómina completa',
+      'Análisis financiero avanzado',
+      'Usuarios ilimitados',
+    ],
+    'pos-basic': [
+      'Full dashboard',
+      'POS system',
+      '1 user',
+      'Unlimited products',
+      '1 inventory warehouse',
+      'Customer management',
+      '2,000 electronic invoices',
+      'Backup every 48 hours',
+    ],
+    'pos-premium': [
+      'Full dashboard',
+      'POS system',
+      '30 users',
+      'Unlimited products',
+      'Unlimited inventory warehouses',
+      'Customer management',
+      '2,000 electronic invoices',
+      'Backup every 48 hours',
+    ],
+  };
+  return features[planId] || [];
+}
+
+function buildPlan(planId: string): Plan {
+  const plansInfo: { [key: string]: { name: string; color: string; icon: string } } = {
+    'pyme': {
+      name: 'PYME',
+      color: 'from-blue-500 to-blue-600',
+      icon: 'ri-building-2-line',
+    },
+    'pro': {
+      name: 'PRO',
+      color: 'from-indigo-500 to-indigo-600',
+      icon: 'ri-rocket-line',
+    },
+    'plus': {
+      name: 'PLUS',
+      color: 'from-purple-500 to-purple-600',
+      icon: 'ri-vip-crown-line',
+    },
+    'facturacion-simple': {
+      name: 'Facturación Simple',
+      color: 'from-emerald-500 to-emerald-600',
+      icon: 'ri-file-text-line',
+    },
+    'facturacion-premium': {
+      name: 'Facturación Premium',
+      color: 'from-green-500 to-green-600',
+      icon: 'ri-file-list-3-line',
+    },
+    'pos-basic': {
+      name: 'POS Basic',
+      color: 'from-slate-500 to-slate-600',
+      icon: 'ri-shopping-cart-line',
+    },
+    'pos-premium': {
+      name: 'POS Premium',
+      color: 'from-amber-500 to-amber-600',
+      icon: 'ri-shopping-cart-2-line',
+    },
+  };
+
+  const info = plansInfo[planId] || {
+    name: planId.toUpperCase(),
+    color: 'from-gray-500 to-gray-600',
+    icon: 'ri-question-line',
+  };
+
+  return {
+    id: planId,
+    name: info.name,
+    price: getPlanPrice(planId),
+    features: getPlanFeatures(planId),
+    active: true,
+    color: info.color,
+    icon: info.icon,
+  };
+}
+
 export function usePlans() {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [trialInfo, setTrialInfo] = useState<TrialInfo>({
@@ -86,11 +207,71 @@ export function usePlans() {
 
   // Inicializar o recuperar información del trial
   useEffect(() => {
-    const initializeTrial = () => {
+    const initializeFromDbOrLocal = async () => {
+      const now = new Date();
+
+      // 1) Try DB first
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user?.id) {
+          const { data: row, error } = await supabase
+            .from('users')
+            .select('plan_id, plan_status, trial_end')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (!error && row) {
+            const planId = (row as any).plan_id ? String((row as any).plan_id) : '';
+            const planStatus = (row as any).plan_status ? String((row as any).plan_status) : '';
+            const trialEndRaw = (row as any).trial_end ? new Date((row as any).trial_end) : null;
+            const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
+
+            if (planId && planStatus === 'active') {
+              const plan = buildPlan(planId);
+              setCurrentPlan(plan);
+              localStorage.setItem('contard_current_plan', JSON.stringify(plan));
+              // If plan active, trial considered inactive
+              setTrialInfo((prev) => ({
+                ...prev,
+                isActive: false,
+                hasExpired: false,
+              }));
+              return;
+            }
+
+            if (trialEnd) {
+              const timeLeft = calculateTimeLeft(trialEnd);
+              setCurrentPlan(null);
+              localStorage.removeItem('contard_current_plan');
+              setTrialInfo({
+                startDate: now,
+                endDate: trialEnd,
+                ...timeLeft,
+              });
+              localStorage.setItem('contard_trial_info', JSON.stringify({
+                startDate: now.toISOString(),
+                endDate: trialEnd.toISOString(),
+              }));
+              if (timeLeft.hasExpired) {
+                localStorage.setItem('contard_trial_expired', 'true');
+              } else {
+                localStorage.removeItem('contard_trial_expired');
+              }
+              return;
+            }
+          }
+        }
+      } catch {
+        // ignore and fallback
+      }
+
+      // 2) Fallback to localStorage
       const savedTrialInfo = localStorage.getItem('contard_trial_info');
       const savedPlan = localStorage.getItem('contard_current_plan');
-      
-      // Cargar plan actual si existe
+
       if (savedPlan) {
         try {
           const plan = JSON.parse(savedPlan);
@@ -106,56 +287,33 @@ export function usePlans() {
           const parsed = JSON.parse(savedTrialInfo);
           const endDate = new Date(parsed.endDate);
           const startDate = new Date(parsed.startDate);
-          
-          // Validar que las fechas sean válidas
           if (isNaN(endDate.getTime()) || isNaN(startDate.getTime())) {
             throw new Error('Invalid dates');
           }
-
           const timeLeft = calculateTimeLeft(endDate);
-          
           setTrialInfo({
             startDate,
             endDate,
-            ...timeLeft
+            ...timeLeft,
           });
+          return;
         } catch (error) {
           console.error('Error parsing trial info:', error);
-          // Si hay error, iniciar nuevo trial
-          startNewTrial();
         }
-      } else {
-        // Primera vez - iniciar trial
-        startNewTrial();
       }
-    };
 
-    const startNewTrial = () => {
-      const startDate = new Date();
+      // 3) Final fallback: set an in-memory 7-day trial
+      const startDate = now;
       const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      
-      const newTrialInfo = {
-        isActive: true,
-        daysLeft: 7,
-        hoursLeft: 0,
-        minutesLeft: 0,
+      const timeLeft = calculateTimeLeft(endDate);
+      setTrialInfo({
         startDate,
         endDate,
-        hasExpired: false
-      };
-      
-      localStorage.setItem('contard_trial_info', JSON.stringify({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
-      }));
-      
-      // Marcar que el trial fue usado
-      localStorage.setItem('contard_trial_used', 'true');
-      
-      setTrialInfo(newTrialInfo);
+        ...timeLeft,
+      });
     };
 
-    initializeTrial();
+    initializeFromDbOrLocal();
   }, []);
 
   // Actualizar contador cada minuto
@@ -191,40 +349,7 @@ export function usePlans() {
       // El usuario necesita poder pagar para reactivar su cuenta
       console.log('Subscribing to plan:', planId);
       
-      // Mapear el ID del plan a su información correspondiente
-      const plansInfo: {[key: string]: {name: string, color: string, icon: string}} = {
-        'pyme': { 
-          name: 'PYME',
-          color: 'from-blue-500 to-blue-600',
-          icon: 'ri-building-2-line'
-        },
-        'pro': { 
-          name: 'PRO',
-          color: 'from-indigo-500 to-indigo-600',
-          icon: 'ri-rocket-line'
-        },
-        'plus': { 
-          name: 'PLUS',
-          color: 'from-purple-500 to-purple-600',
-          icon: 'ri-vip-crown-line'
-        }
-      };
-      
-      const planInfo = plansInfo[planId] || { 
-        name: planId.toUpperCase(),
-        color: 'from-gray-500 to-gray-600',
-        icon: 'ri-question-line'
-      };
-      
-      const plan: Plan = {
-        id: planId,
-        name: planInfo.name,
-        price: getPlanPrice(planId),
-        features: getPlanFeatures(planId),
-        active: true,
-        color: planInfo.color,
-        icon: planInfo.icon
-      };
+      const plan: Plan = buildPlan(planId);
       
       setCurrentPlan(plan);
       
@@ -237,6 +362,26 @@ export function usePlans() {
       
       localStorage.setItem('contard_current_plan', JSON.stringify(plan));
       localStorage.removeItem('contard_trial_expired');
+
+      // Persist to DB when available
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          await supabase
+            .from('users')
+            .update({
+              plan_id: planId,
+              plan_status: 'active',
+              trial_end: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+        }
+      } catch {
+        // ignore
+      }
 
       await postWebnotiPlanPurchaseEvent();
       
@@ -251,6 +396,25 @@ export function usePlans() {
     try {
       setCurrentPlan(null);
       localStorage.removeItem('contard_current_plan');
+
+      // Persist to DB when available
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) {
+          await supabase
+            .from('users')
+            .update({
+              plan_id: null,
+              plan_status: 'cancelled',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+        }
+      } catch {
+        // ignore
+      }
       
       // NO iniciar nuevo trial automáticamente al cancelar
       // El usuario debe contactar soporte o pagar nuevamente
@@ -299,76 +463,11 @@ export function usePlans() {
     return 'active';
   };
 
-  const getPlanPrice = (planId: string): number => {
-    const prices: Record<string, number> = {
-      'pyme': 39.99,
-      'pro': 99.99,
-      'plus': 199.99,
-      'facturacion-simple': 19.99,
-      'facturacion-premium': 29.99,
-      'pos-basic': 99.99,
-      'pos-premium': 399.99
-    };
-    return prices[planId] || 0;
-  };
-
-  const getPlanFeatures = (planId: string): string[] => {
-    const features: Record<string, string[]> = {
-      'pyme': [
-        'Una empresa', 
-        'Facturación básica con NCF', 
-        'Dashboard básico',
-        'Reportes DGII básicos', 
-        'Inventario limitado (500 productos)',
-        '2 usuarios'
-      ],
-      'pro': [
-        '3 empresas', 
-        'Contabilidad completa', 
-        'Dashboard básico',
-        'Gestión bancaria básica', 
-        'Inventario limitado (2,000 productos)',
-        'Nómina básica (10 empleados)',
-        '5 usuarios'
-      ],
-      'plus': [
-        'Empresas ilimitadas', 
-        'Todas las funciones contables', 
-        'Dashboard KPI avanzado',
-        'Inventario ilimitado',
-        'Nómina completa',
-        'Análisis financiero avanzado',
-        'Usuarios ilimitados'
-      ],
-      'pos-basic': [
-        'Full dashboard',
-        'POS system',
-        '1 user',
-        'Unlimited products',
-        '1 inventory warehouse',
-        'Customer management',
-        '2,000 electronic invoices',
-        'Backup every 48 hours'
-      ],
-      'pos-premium': [
-        'Full dashboard',
-        'POS system',
-        '30 users',
-        'Unlimited products',
-        'Unlimited inventory warehouses',
-        'Customer management',
-        '2,000 electronic invoices',
-        'Backup every 48 hours'
-      ]
-    };
-    return features[planId] || [];
-  };
-
   const hasUsedTrial = () => {
     return localStorage.getItem('contard_trial_used') === 'true';
   };
 
-  const startTrialWithPlan = (planId: string) => {
+  const startTrialWithPlan = async (planId: string) => {
     // Iniciar trial solo si no se ha usado antes
     if (hasUsedTrial()) {
       return { success: false, error: 'Ya has utilizado tu período de prueba gratuito' };
@@ -398,6 +497,26 @@ export function usePlans() {
     localStorage.setItem('contard_trial_plan', planId);
     
     setTrialInfo(newTrialInfo);
+
+    // Persist trial_end to DB when available
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.id) {
+        await supabase
+          .from('users')
+          .update({
+            trial_end: endDate.toISOString(),
+            plan_id: null,
+            plan_status: 'inactive',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+      }
+    } catch {
+      // ignore
+    }
     
     return { success: true };
   };

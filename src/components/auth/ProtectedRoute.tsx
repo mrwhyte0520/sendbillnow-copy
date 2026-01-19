@@ -84,6 +84,8 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         return;
       }
 
+      const isAdminRoute = window.location.pathname.startsWith('/admin');
+
       // Verificar status del usuario
       try {
         const { data: userData } = await supabase
@@ -132,7 +134,9 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
       }
 
       setIsOwner(owner);
-      if (owner) {
+      // Owner is normally fail-open, but Admin module is ALWAYS role-gated.
+      // For /admin routes, even owner must have RBAC module 'admin'.
+      if (owner && !isAdminRoute) {
         setAllowed(new Set(['*']));
         setIsLoading(false);
         return;
@@ -155,12 +159,13 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
 
   const moduleName = mapPathToModule(window.location.pathname);
   const currentPath = location.pathname;
+  const isAdminRoute = currentPath.startsWith('/admin');
 
   // Owner has full access (skip plan + RBAC checks)
-  if (isOwner) return children;
+  if (isOwner && !isAdminRoute) return children;
 
   // Rutas siempre permitidas (sin verificación de plan)
-  const alwaysAllowed = ['/plans', '/profile', '/settings', '/dashboard'];
+  const alwaysAllowed = ['/plans', '/profile', '/settings', '/dashboard', '/admin'];
   const isAlwaysAllowed = alwaysAllowed.some(r => 
     currentPath === r || currentPath.startsWith(r + '/')
   );
