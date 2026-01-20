@@ -1,7 +1,7 @@
 import { formatAmount } from './numberFormat';
 import { formatDate } from './dateFormat';
 
-export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation';
+export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate';
 
 interface InvoiceData {
   invoiceNumber: string;
@@ -32,6 +32,7 @@ interface CompanyData {
 
 const BLUE = '#001B9E';
 const BLUE_LIGHT = '#e6e9f7';
+ 
 
 export function generateInvoiceHtml(
   invoice: InvoiceData,
@@ -45,6 +46,8 @@ export function generateInvoiceHtml(
     return generateSimpleTemplate(invoice, customer, company, docTitle);
   } else if (templateType === 'detailed') {
     return generateDetailedTemplate(invoice, customer, company, docTitle);
+  } else if (templateType === 'corporate') {
+    return generateCorporateTemplate(invoice, customer, company, docTitle);
   } else {
     return generateQuotationTemplate(invoice, customer, company);
   }
@@ -321,6 +324,98 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
   <div class="notes"><h4>NOTE:</h4><div class="notes-box"></div></div>
   <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box"></div></div>
   <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
+</div>
+<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+</body></html>`;
+}
+
+function generateCorporateTemplate(
+  invoice: InvoiceData,
+  customer: CustomerData,
+  company: CompanyData,
+  docTitle: string
+): string {
+  const coloredRows = (invoice.items || []).map((item, idx) => 
+    `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
+  ).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:24px;}
+.invoice{max-width:800px;margin:0 auto;background:#fff;border:2px solid #333;overflow:hidden;}
+.top-header{background:${BLUE};color:#fff;padding:20px 28px;text-align:center;}
+.top-header h1{font-size:20px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:12px;}
+.top-header p{font-size:11px;margin:2px 0;opacity:0.9;}
+.invoice-title{padding:20px 28px;text-align:right;}
+.invoice-title h2{font-size:36px;font-weight:800;color:#333;margin-bottom:12px;}
+.invoice-title p{font-size:11px;color:#666;margin:4px 0;}
+.invoice-title strong{color:#333;}
+.billing-section{padding:20px 28px;display:grid;grid-template-columns:1fr 1fr;gap:32px;border-bottom:2px solid ${BLUE};}
+.billing-section h3{font-size:11px;font-weight:700;color:#333;margin-bottom:10px;text-transform:uppercase;}
+.billing-section p{font-size:11px;color:#555;margin:4px 0;}
+table{width:100%;border-collapse:collapse;}
+th{background:${BLUE};color:#fff;padding:12px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;}
+th:nth-child(2){text-align:center;}
+th:nth-child(3),th:nth-child(4){text-align:right;}
+.bottom-section{padding:20px 28px;display:grid;grid-template-columns:1fr 280px;gap:24px;}
+.notes h4{font-size:11px;font-weight:700;color:#333;margin-bottom:8px;text-transform:uppercase;}
+.notes-box{border:2px solid #ddd;border-radius:4px;padding:12px;min-height:100px;font-size:10px;color:#666;}
+.summary{background:#fafafa;border:2px solid #ddd;border-radius:4px;padding:16px;}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px solid #eee;}
+.summary-row span:first-child{color:#666;}
+.summary-row span:last-child{font-weight:600;color:#333;}
+.balance-due{background:${BLUE};color:#fff;padding:14px 16px;margin:12px -16px -16px -16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;}
+.balance-due span:last-child{font-size:18px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{border:2px solid #333!important;}th{background:${BLUE}!important;color:#fff!important;}.top-header{background:${BLUE}!important;}.balance-due{background:${BLUE}!important;color:#fff!important;}}
+</style></head><body>
+<div class="invoice">
+  <div class="top-header">
+    <h1>
+      ${company.logo ? `<img src="${company.logo}" alt="" style="max-width:50px;max-height:50px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;"/>` : ''}
+      ${company.name}
+    </h1>
+    ${company.address ? `<p>${company.address}</p>` : ''}
+    <p>${[company.phone, company.email].filter(Boolean).join(' • ')}</p>
+  </div>
+  <div class="invoice-title">
+    <h2>${docTitle}</h2>
+    <p><strong>DATE:</strong> ${formatDate(invoice.date)}</p>
+    <p><strong>INVOICE NO:</strong> ${invoice.invoiceNumber}</p>
+    <p><strong>Payment terms:</strong> Due on receipt</p>
+  </div>
+  <div class="billing-section">
+    <div>
+      <h3>Bill To:</h3>
+      <p><strong>${customer.name}</strong></p>
+      <p>${customer.address || ''}</p>
+      <p>${customer.phone ? `Phone: ${customer.phone}` : ''}</p>
+    </div>
+    <div>
+      <h3>Ship To:</h3>
+      <p>${customer.name}</p>
+      <p>${customer.address || ''}</p>
+      <p>${customer.phone ? `Phone: ${customer.phone}` : ''}</p>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th>QTY</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <tbody>${coloredRows}</tbody>
+  </table>
+  <div class="bottom-section">
+    <div class="notes">
+      <h4>Additional Notes:</h4>
+      <div class="notes-box"></div>
+    </div>
+    <div class="summary">
+      <div class="summary-row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+      <div class="summary-row"><span>Discount:</span><span>$0.00</span></div>
+      <div class="summary-row"><span>Tax Rate:</span><span>${invoice.tax > 0 ? ((invoice.tax / invoice.subtotal) * 100).toFixed(0) + '%' : '0%'}</span></div>
+      <div class="summary-row"><span>Total & Tax:</span><span>${formatAmount(invoice.amount)}</span></div>
+      <div class="summary-row"><span>Shipping:</span><span>$0.00</span></div>
+      <div class="balance-due"><span>Balance Due:</span><span>${formatAmount(invoice.amount)}</span></div>
+    </div>
+  </div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation';
+export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate';
 
 interface InvoiceTypeModalProps {
   isOpen: boolean;
@@ -136,6 +136,46 @@ export default function InvoiceTypeModal({
         </div>
       ),
     },
+    {
+      id: 'corporate' as InvoiceTemplateType,
+      name: 'Corporate Invoice',
+      description: 'Professional format with header banner, Bill To/Ship To and Balance Due',
+      icon: 'ri-building-2-line',
+      preview: (
+        <div className="bg-white border border-gray-200 rounded overflow-hidden text-[6px] leading-tight">
+          <div className="bg-[#001B9E] text-white p-1.5 text-center">
+            <div className="font-bold text-[7px]">COMPANY NAME</div>
+            <div className="text-[5px] opacity-80">Address • Phone</div>
+          </div>
+          <div className="p-2">
+            <div className="text-right font-bold text-[8px] mb-1">INVOICE</div>
+            <div className="grid grid-cols-2 gap-2 mb-1 text-[5px]">
+              <div><span className="font-semibold">Bill To:</span><br/>Customer</div>
+              <div><span className="font-semibold">Ship To:</span><br/>Address</div>
+            </div>
+            <div className="border border-gray-200 rounded p-1 mb-1">
+              <div className="grid grid-cols-4 gap-1 text-[5px] font-semibold bg-[#001B9E] text-white -m-1 mb-1 p-1">
+                <span>Desc</span>
+                <span>Qty</span>
+                <span>Price</span>
+                <span>Total</span>
+              </div>
+              <div className="h-2"></div>
+            </div>
+            <div className="flex justify-between">
+              <div className="text-[5px] border border-gray-200 rounded p-1 flex-1 mr-1">Notes</div>
+              <div className="text-[5px] w-20">
+                <div className="flex justify-between"><span>Subtotal:</span><span>___</span></div>
+                <div className="flex justify-between"><span>Tax:</span><span>___</span></div>
+                <div className="bg-[#001B9E] text-white p-1 rounded mt-1 flex justify-between font-bold">
+                  <span>Balance:</span><span>$___</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const handleConfirm = () => {
@@ -151,7 +191,7 @@ export default function InvoiceTypeModal({
           onClick={onClose}
         />
         
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="relative bg-white rounded-2xl shadow-2xl max-w-5xl w-full overflow-hidden animate-in zoom-in-95 duration-200">
           {/* Header */}
           <div 
             className="p-6 text-center text-white"
@@ -168,7 +208,7 @@ export default function InvoiceTypeModal({
 
           {/* Content */}
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {templates.map((template) => (
                 <button
                   key={template.id}
