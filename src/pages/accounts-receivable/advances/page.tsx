@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import QRCode from 'qrcode';
 import { useAuth } from '../../../hooks/useAuth';
-import { customersService, invoicesService, customerAdvancesService, bankAccountsService, settingsService } from '../../../services/database';
+import { customersService, invoicesService, customerAdvancesService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 import { formatMoney } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
+
 import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 interface Advance {
@@ -36,12 +36,6 @@ interface CustomerOption {
   address?: string;
 }
 
-interface BankAccountOption {
-  id: string;
-  name: string;
-  chartAccountId: string | null;
-}
-
 export default function AdvancesPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,9 +52,6 @@ export default function AdvancesPage() {
     Array<{ id: string; invoiceNumber: string; totalAmount: number; paidAmount: number; customerId: string }>
   >([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
-  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
-  const [customerAdvanceAccounts, setCustomerAdvanceAccounts] = useState<Record<string, string>>({});
-  const [customerArAccounts, setCustomerArAccounts] = useState<Record<string, string>>({});
   const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
   const [advanceToPrint, setAdvanceToPrint] = useState<Advance | null>(null);
 
@@ -108,10 +99,9 @@ export default function AdvancesPage() {
     if (!user?.id) return;
     setLoadingSupport(true);
     try {
-      const [custList, invList, bankList] = await Promise.all([
+      const [custList, invList] = await Promise.all([
         customersService.getAll(user.id),
         invoicesService.getAll(user.id),
-        bankAccountsService.getAll(user.id),
       ]);
       setCustomers(
         (custList || []).map((c: any) => ({
@@ -133,32 +123,6 @@ export default function AdvancesPage() {
           customerId: String(inv.customer_id),
         }))
       );
-
-      // Mapa de cuentas de anticipos por cliente
-      const advMap: Record<string, string> = {};
-      (custList || []).forEach((c: any) => {
-        if (c.id && c.advanceAccountId) {
-          advMap[String(c.id)] = String(c.advanceAccountId);
-        }
-      });
-      setCustomerAdvanceAccounts(advMap);
-
-      // Mapa de cuentas de CxC por cliente (para cruces de anticipos vs facturas)
-      const arMap: Record<string, string> = {};
-      (custList || []).forEach((c: any) => {
-        if (c.id && c.arAccountId) {
-          arMap[String(c.id)] = String(c.arAccountId);
-        }
-      });
-      setCustomerArAccounts(arMap);
-
-      // Cuentas bancarias para poder generar asientos Banco vs Anticipos
-      const mappedBanks: BankAccountOption[] = (bankList || []).map((ba: any) => ({
-        id: String(ba.id),
-        name: `${ba.bank_name} - ${ba.account_number}`,
-        chartAccountId: ba.chart_account_id ? String(ba.chart_account_id) : null,
-      }));
-      setBankAccounts(mappedBanks);
     } finally {
       setLoadingSupport(false);
     }
@@ -389,136 +353,6 @@ export default function AdvancesPage() {
     setAdvanceToPrint(null);
   };
 
-  const handlePrintAdvanceLegacy = async (advance: Advance) => {
-    let companyName = '';
-    let companyRnc = '';
-    let companyPhone = '';
-    let companyEmail = '';
-    let companyAddress = '';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info) {
-        companyName = (info as any).name || (info as any).company_name || '';
-        companyRnc = (info as any).rnc || (info as any).ruc || (info as any).tax_id || '';
-        companyPhone = (info as any).phone || '';
-        companyEmail = (info as any).email || '';
-        companyAddress = (info as any).address || '';
-      }
-    } catch { /* usar defaults */ }
-
-    const customer = customers.find((c) => c.id === advance.customerId);
-    const customerName = customer?.name || advance.customerName;
-    const customerDoc = customer?.document || '';
-    const customerPhone = customer?.phone || '';
-    const customerEmail = customer?.email || '';
-    const customerAddress = customer?.address || '';
-
-    let qrDataUrl = '';
-    try {
-      const qrUrl = `${window.location.origin}/document/advance/${encodeURIComponent(advance.id)}`;
-      qrDataUrl = await QRCode.toDataURL(qrUrl, { errorCorrectionLevel: 'M', margin: 1, width: 160 });
-    } catch { qrDataUrl = ''; }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) { alert('No se pudo abrir la ventana de impresión'); return; }
-
-    const html = `
-      <html>
-        <head>
-          <title>Anticipo ${advance.advanceNumber}</title>
-          <style>
-            :root { --primary:#0b2a6f; --accent:#19a34a; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --bg:#ffffff; }
-            * { box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 28px; color: var(--text); background: var(--bg); }
-            .top { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; align-items: start; }
-            .company-name { font-weight: 800; font-size: 18px; color: var(--primary); }
-            .company-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
-            .doc { text-align: right; }
-            .doc-title { font-size: 44px; font-weight: 800; color: #9ca3af; letter-spacing: 1px; line-height: 1; }
-            .doc-number { margin-top: 6px; font-size: 22px; font-weight: 800; color: var(--accent); }
-            .doc-kv { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.45; }
-            .qr { margin-top: 10px; width: 110px; height: 110px; }
-            .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; margin-top: 16px; }
-            .card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
-            .card-head { background: var(--primary); padding: 10px 12px; color: #fff; font-weight: 800; font-size: 13px; }
-            .card-body { padding: 12px; font-size: 12px; }
-            .kv { display:grid; grid-template-columns: 140px 1fr; gap: 6px 10px; }
-            .kv .k { color: var(--muted); }
-            .kv .v { color: var(--text); font-weight: 600; }
-            .totals { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-            .totals-head { background: var(--primary); color: #fff; padding: 10px 12px; font-weight: 800; font-size: 13px; }
-            .totals-body { padding: 12px; }
-            .totals-row { display:grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-            .totals-row:last-child { border-bottom: none; }
-            .totals-row .label { color: var(--muted); font-weight: 700; }
-            .totals-row .value { font-weight: 800; color: var(--text); }
-            .totals-row.total .value { color: var(--primary); }
-            @media print { body { padding: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="top">
-            <div>
-              <div class="company-name">${companyName}</div>
-              ${companyRnc ? `<div class="company-meta">RNC: ${companyRnc}</div>` : ''}
-              ${companyPhone ? `<div class="company-meta">Tel: ${companyPhone}</div>` : ''}
-              ${companyEmail ? `<div class="company-meta">Email: ${companyEmail}</div>` : ''}
-              ${companyAddress ? `<div class="company-meta">Dirección: ${companyAddress}</div>` : ''}
-            </div>
-            <div class="doc">
-              <div class="doc-title">ANTICIPO</div>
-              <div class="doc-number">#${advance.advanceNumber}</div>
-              <div class="doc-kv">
-                <div><strong>Fecha:</strong> ${advance.date ? new Date(advance.date).toLocaleDateString('es-DO') : ''}</div>
-                <div><strong>Método:</strong> ${getPaymentMethodName(advance.paymentMethod)}</div>
-                <div><strong>Estado:</strong> ${getStatusName(advance.status)}</div>
-                ${advance.reference ? `<div><strong>Referencia:</strong> ${advance.reference}</div>` : ''}
-              </div>
-              ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
-            </div>
-          </div>
-
-          <div class="grid">
-            <div class="card">
-              <div class="card-head">Cliente</div>
-              <div class="card-body">
-                <div class="kv">
-                  <div class="k">Nombre</div>
-                  <div class="v">${customerName}</div>
-                  ${customerDoc ? `<div class="k">RNC/Cédula</div><div class="v">${customerDoc}</div>` : ''}
-                  ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
-                  ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
-                  ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
-                </div>
-              </div>
-            </div>
-            <div class="totals">
-              <div class="totals-head">Resumen</div>
-              <div class="totals-body">
-                <div class="totals-row"><div class="label">Monto</div><div class="value"> ${formatMoney(advance.amount, '')}</div></div>
-                <div class="totals-row"><div class="label">Aplicado</div><div class="value"> ${formatMoney(advance.appliedAmount, '')}</div></div>
-                <div class="totals-row total"><div class="label">Balance</div><div class="value"> ${formatMoney(advance.balance, '')}</div></div>
-              </div>
-            </div>
-          </div>
-
-          ${advance.concept ? `
-          <div style="margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 12px;">
-            <div style="font-weight: 700; color: var(--muted); margin-bottom: 6px;">Concepto</div>
-            <div style="font-size: 12px;">${advance.concept}</div>
-          </div>
-          ` : ''}
-
-          <script>
-            window.onload = function() { window.print(); setTimeout(() => window.close(), 1000); };
-          <\/script>
-        </body>
-      </html>
-    `;
-    printWindow.document.write(html);
-    printWindow.document.close();
-  };
-
   const handleApplyAdvance = (advance: Advance) => {
     setSelectedAdvance(advance);
     setShowApplyModal(true);
@@ -526,27 +360,27 @@ export default function AdvancesPage() {
 
   const handleCancelAdvance = async (advanceId: string) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para cancelar anticipos');
+      alert('You must be logged in to cancel advances');
       return;
     }
-    if (!confirm('¿Está seguro de que desea cancelar este anticipo?')) return;
+    if (!confirm('Are you sure you want to cancel this advance?')) return;
     try {
       await customerAdvancesService.updateStatus(advanceId, 'cancelled', {
         appliedAmount: 0,
         balanceAmount: 0,
       });
       await loadAdvances();
-      alert('Anticipo cancelado exitosamente');
+      alert('Advance cancelled successfully');
     } catch (error: any) {
-      console.error('[Advances] Error al cancelar anticipo', error);
-      alert(`Error al cancelar el anticipo: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[Advances] Error cancelling advance', error);
+      alert(`Error cancelling advance: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveAdvance = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para crear anticipos');
+      alert('You must be logged in to create advances');
       return;
     }
 
@@ -557,15 +391,9 @@ export default function AdvancesPage() {
     const paymentMethod = String(formData.get('payment_method') || '') as 'cash' | 'check' | 'transfer' | 'card';
     const reference = String(formData.get('reference') || '');
     const concept = String(formData.get('concept') || '');
-    const bankAccountId = String(formData.get('bank_account_id') || '');
 
     if (!customerId || !amount || !paymentMethod) {
-      alert('Cliente, monto y método de pago son obligatorios');
-      return;
-    }
-
-    if (paymentMethod !== 'cash' && !bankAccountId) {
-      alert('Debe seleccionar una cuenta de banco para este método de pago');
+      alert('Customer, amount, and payment method are required');
       return;
     }
 
@@ -589,18 +417,18 @@ export default function AdvancesPage() {
       await customerAdvancesService.create(user.id, payload);
 
       await loadAdvances();
-      alert('Anticipo creado exitosamente');
+      alert('Advance created successfully');
       setShowAdvanceModal(false);
     } catch (error: any) {
-      console.error('[Advances] Error al crear anticipo', error);
-      alert(`Error al crear el anticipo: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[Advances] Error creating advance', error);
+      alert(`Error creating advance: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveApplication = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id || !selectedAdvance) {
-      alert('Debes iniciar sesión y seleccionar un anticipo válido');
+      alert('You must be logged in and select a valid advance');
       return;
     }
 
@@ -609,17 +437,17 @@ export default function AdvancesPage() {
     const amountToApply = Number(formData.get('amount_to_apply') || 0);
 
     if (!invoiceId) {
-      alert('Debes seleccionar una factura para aplicar el anticipo');
+      alert('You must select an invoice to apply the advance');
       return;
     }
 
     if (!amountToApply || amountToApply <= 0) {
-      alert('El monto a aplicar debe ser mayor que 0');
+      alert('Amount to apply must be greater than 0');
       return;
     }
 
     if (amountToApply > selectedAdvance.balance) {
-      alert('El monto a aplicar no puede ser mayor que el saldo disponible del anticipo');
+      alert('Amount to apply cannot be greater than the available advance balance');
       return;
     }
 
@@ -629,18 +457,18 @@ export default function AdvancesPage() {
 
     const targetInvoice = invoices.find((inv) => inv.id === invoiceId);
     if (!targetInvoice) {
-      alert('La factura seleccionada no es válida');
+      alert('The selected invoice is not valid');
       return;
     }
 
     if (targetInvoice.customerId !== selectedAdvance.customerId) {
-      alert('La factura seleccionada no pertenece al mismo cliente del anticipo');
+      alert('The selected invoice does not belong to the same customer as the advance');
       return;
     }
 
     const invoiceBalanceBefore = targetInvoice.totalAmount - targetInvoice.paidAmount;
     if (amountToApply > invoiceBalanceBefore) {
-      alert('El monto a aplicar no puede ser mayor que el saldo pendiente de la factura');
+      alert('Amount to apply cannot be greater than the invoice pending balance');
       return;
     }
 
@@ -657,12 +485,12 @@ export default function AdvancesPage() {
       });
 
       await loadAdvances();
-      alert('Anticipo aplicado exitosamente');
+      alert('Advance applied successfully');
       setShowApplyModal(false);
       setSelectedAdvance(null);
     } catch (error: any) {
-      console.error('[Advances] Error al aplicar anticipo', error);
-      alert(`Error al aplicar el anticipo: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[Advances] Error applying advance', error);
+      alert(`Error applying advance: ${error?.message || 'check the console for more details'}`);
     }
   };
 
@@ -1009,28 +837,6 @@ export default function AdvancesPage() {
                       <option value="card">Card</option>
                     </select>
                   </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Bank account
-                  </label>
-                  <select
-                    name="bank_account_id"
-                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                  >
-                    <option value="">
-                      Select an account (required for Check, Transfer, or Card)
-                    </option>
-                    {bankAccounts.map((ba) => (
-                      <option key={ba.id} value={ba.id}>
-                        {ba.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-[#6b5c3b]">
-                    If the payment method is Cash, leave this blank and the default Cash account from Accounting Settings will be used.
-                  </p>
                 </div>
                 
                 <div>

@@ -3,7 +3,7 @@ import DashboardLayout from '../../../components/layout/DashboardLayout';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useAuth } from '../../../hooks/useAuth';
-import { customerPaymentsService, invoicesService, bankAccountsService, customersService, receiptsService, receiptApplicationsService, settingsService } from '../../../services/database';
+import { customerPaymentsService, invoicesService, customersService, receiptsService, receiptApplicationsService, settingsService } from '../../../services/database';
 import ExcelJS from 'exceljs';
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
@@ -35,14 +35,6 @@ interface InvoiceOption {
   status?: string;
 }
 
-interface BankAccountOption {
-  id: string;
-  name: string;
-  accountNumber?: string | null;
-  isActive?: boolean;
-  chartAccountId?: string | null;
-}
-
 export default function PaymentsPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,10 +46,6 @@ export default function PaymentsPage() {
   const [companyRnc, setCompanyRnc] = useState('');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
-  const [customerArAccounts, setCustomerArAccounts] = useState<Record<string, string>>({});
-  const [customerDocuments, setCustomerDocuments] = useState<Record<string, string>>({});
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [showDocumentPreviewModal, setShowDocumentPreviewModal] = useState(false);
   const [documentPreviewType, setDocumentPreviewType] = useState<'pdf' | 'table' | 'html'>('pdf');
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState('');
@@ -72,18 +60,8 @@ export default function PaymentsPage() {
   const [paymentInvoiceId, setPaymentInvoiceId] = useState<string>('');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentItbisWithheld, setPaymentItbisWithheld] = useState<number>(0);
-  const [paymentIsrWithheld, setPaymentIsrWithheld] = useState<number>(0);
-  const [invoiceHasServiceLines, setInvoiceHasServiceLines] = useState<Record<string, boolean>>({});
-  const [isrServiceRatePct] = useState<number>(0);
   const [customers, setCustomers] = useState<Array<{ id: string; name: string }>>([]);
   const [paymentCustomerId, setPaymentCustomerId] = useState<string>('');
-
-  const receivableAccounts = accounts.filter((acc) => {
-    if (!acc.allowPosting) return false;
-    if (acc.type !== 'asset') return false;
-    const name = String(acc.name || '').toLowerCase();
-    return name.includes('cuentas por cobrar');
-  });
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
@@ -111,10 +89,9 @@ export default function PaymentsPage() {
     const loadData = async () => {
       if (!user?.id) return;
       try {
-        const [paymentsData, invoicesData, bankAccountsData, customersData] = await Promise.all([
+        const [paymentsData, invoicesData, customersData] = await Promise.all([
           customerPaymentsService.getAll(user.id),
           invoicesService.getAll(user.id),
-          bankAccountsService.getAll(user.id),
           customersService.getAll(user.id),
         ]);
 
@@ -153,58 +130,15 @@ export default function PaymentsPage() {
           });
         setInvoices(mappedInvoices);
 
-        const mappedBankAccounts: BankAccountOption[] = (bankAccountsData || [])
-          .map((b: any) => {
-            const id = String(b.id);
-            const name = String(b.bank_name || b.name || b.account_name || '').trim();
-            const accountNumber = b.account_number ? String(b.account_number) : null;
-            const fallback = accountNumber
-              ? `Cuenta (${accountNumber})`
-              : `Cuenta ${id.slice(0, 8)}`;
-
-            return {
-              id,
-              name: name || fallback,
-              accountNumber,
-              isActive: b.is_active !== false,
-              chartAccountId: b.chart_account_id ? String(b.chart_account_id) : null,
-            };
-          })
-          .filter((b: BankAccountOption) => b.isActive !== false)
-          .sort((a: BankAccountOption, c: BankAccountOption) => String(a.name || '').localeCompare(String(c.name || '')));
-        setBankAccounts(mappedBankAccounts);
-
-        const mappedCustomerArAccounts = (customersData || []).reduce((acc: Record<string, string>, c: any) => {
-          const id = String(c.id);
-          const ar = c.ar_account_id || c.arAccountId || c.ar_accountId;
-          if (ar) {
-            acc[id] = String(ar);
-          }
-          return acc;
-        }, {} as Record<string, string>);
-        setCustomerArAccounts(mappedCustomerArAccounts);
-
         // Mapear lista de clientes para el dropdown
         const mappedCustomers = (customersData || [])
           .map((c: any) => ({
             id: String(c.id),
-            name: String(c.name || '').trim(),
+            name: String(c.name || c.customer_name || c.customerName || '').trim(),
           }))
           .filter((c: { id: string; name: string }) => c.name !== '')
           .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
         setCustomers(mappedCustomers);
-
-        const mappedCustomerDocuments = (customersData || []).reduce((acc: Record<string, string>, c: any) => {
-          const id = String(c.id);
-          const doc = c.document || c.rnc || c.tax_id || c.ruc || '';
-          if (doc) {
-            acc[id] = String(doc);
-          }
-          return acc;
-        }, {} as Record<string, string>);
-        setCustomerDocuments(mappedCustomerDocuments);
-
-        setAccounts([]);
       } catch (error) {
         console.error('Error cargando datos de pagos recibidos:', error);
       }
@@ -484,7 +418,6 @@ export default function PaymentsPage() {
     setPaymentInvoiceId('');
     setPaymentAmount(0);
     setPaymentItbisWithheld(0);
-    setPaymentIsrWithheld(0);
     setShowPaymentModal(true);
   };
 
@@ -504,13 +437,11 @@ export default function PaymentsPage() {
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) {
       setPaymentItbisWithheld(0);
-      setPaymentIsrWithheld(0);
       return;
     }
     const invoiceNumber = String(invoice.invoiceNumber || '');
     if (!isFiscalInvoiceNumber(invoiceNumber)) {
       setPaymentItbisWithheld(0);
-      setPaymentIsrWithheld(0);
       return;
     }
     const effectivePayment = Math.min(Number(amount || 0), Number(invoice.balance || 0));
@@ -519,48 +450,44 @@ export default function PaymentsPage() {
     const itbis = Number((invoice as any).taxAmount || 0);
     const suggestedItbisWithheld = Math.round(itbis * ratio * 100) / 100;
     setPaymentItbisWithheld(suggestedItbisWithheld);
-    setPaymentIsrWithheld(0);
   };
 
   const handleSavePayment = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar pagos');
+      alert('You must be logged in to record payments');
       return;
     }
 
     const formData = new FormData(e.currentTarget);
 
     const invoiceId = String(formData.get('invoiceId') || '');
-    const bankAccountId = String(formData.get('bankAccountId') || '');
-    const arAccountIdOverride = String(formData.get('arAccountId') || '');
     const amountToPay = Number(formData.get('amount') || 0);
     const paymentMethod = String(formData.get('paymentMethod') || 'cash');
     const reference = String(formData.get('reference') || '').trim();
     const itbisWithheld = Number(formData.get('itbisWithheld') || 0) || 0;
-    const isrWithheld = Number(formData.get('isrWithheld') || 0) || 0;
 
     if (!invoiceId) {
-      alert('Debes seleccionar una factura');
+      alert('You must select an invoice');
       return;
     }
 
     if (!amountToPay || amountToPay <= 0) {
-      alert('El monto a pagar debe ser mayor que 0');
+      alert('Amount to pay must be greater than 0');
       return;
     }
 
     const invoice = invoices.find((inv) => inv.id === invoiceId);
     if (!invoice) {
-      alert('La factura seleccionada no es válida');
+      alert('The selected invoice is not valid');
       return;
     }
 
     const invoiceNo = String(invoice.invoiceNumber || '');
     const isFiscal = isFiscalInvoiceNumber(invoiceNo);
-    if (!isFiscal && (itbisWithheld > 0 || isrWithheld > 0)) {
-      alert('No se puede registrar retención en una factura sin NCF (FAC-*)');
+    if (!isFiscal && itbisWithheld > 0) {
+      alert('You cannot record withholding on an invoice without NCF (FAC-*)');
       return;
     }
 
@@ -576,16 +503,16 @@ export default function PaymentsPage() {
       const paymentPayload: any = {
         customer_id: invoice.customerId,
         invoice_id: invoiceId,
-        bank_account_id: bankAccountId ? bankAccountId : null,
+        bank_account_id: null,
         amount: effectivePayment,
         payment_method: paymentMethod,
         payment_date: paymentDate,
         reference: reference || null,
         itbis_withheld: isFiscal ? itbisWithheld : 0,
-        isr_withheld: isFiscal ? isrWithheld : 0,
+        isr_withheld: 0,
       };
 
-      const createdPayment = await customerPaymentsService.create(user.id, paymentPayload);
+      await customerPaymentsService.create(user.id, paymentPayload);
 
       await invoicesService.updatePayment(invoiceId, newPaidAmount, newStatus);
 
@@ -630,7 +557,7 @@ export default function PaymentsPage() {
           });
         setInvoices(mappedInvoices);
       } catch (refreshError) {
-        console.error('Error recargando pagos/facturas luego del registro:', refreshError);
+        console.error('Error reloading payments/invoices after registration:', refreshError);
       }
 
       try {
@@ -642,7 +569,7 @@ export default function PaymentsPage() {
           amount: effectivePayment,
           payment_method: paymentMethod,
           reference: reference || null,
-          concept: `Pago factura ${invoice.invoiceNumber}`,
+          concept: `Invoice payment ${invoice.invoiceNumber}`,
           status: 'active' as const,
         };
 
@@ -679,148 +606,136 @@ export default function PaymentsPage() {
 
         const amountText = formatAmount(effectivePayment);
 
-        const customerRnc = customerDocuments[String(invoice.customerId)] || '';
-
         const receiptHtml = `
           <html>
             <head>
               <meta charset="utf-8" />
               <meta name="viewport" content="width=device-width, initial-scale=1" />
-              <title>Recibo ${receiptNo}</title>
+              <title>Receipt ${receiptNo}</title>
               <style>
                 :root {
-                  --bg: #f3f4f6;
-                  --card: #ffffff;
                   --text: #111827;
                   --muted: #6b7280;
                   --border: #e5e7eb;
-                  --primary: #2563eb;
-                  --primary-dark: #1d4ed8;
-                  --success: #16a34a;
+                  --primary: #2f3e1e;
+                  --success: #2f3e1e;
+                  --successBorder: rgba(47,62,30,.25);
+                  --successBg: rgba(47,62,30,.08);
                 }
                 * { box-sizing: border-box; }
-                body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; background: var(--bg); color: var(--text); }
-                .page { padding: 24px; }
-                .card { max-width: 860px; margin: 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 10px 22px rgba(0,0,0,.08); }
-                .header { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
-                .brand h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: .2px; }
+                body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background: #ffffff; color: var(--text); }
+                .page { padding: 22px; }
+                .wrap { max-width: 860px; margin: 0 auto; }
+                .meta { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; font-size: 12px; color: var(--muted); }
+                .meta .center { justify-self: center; font-weight: 700; color: var(--text); }
+                .header { margin-top: 14px; display: flex; justify-content: space-between; gap: 16px; }
+                .brand h1 { margin: 0; font-size: 18px; font-weight: 800; }
                 .brand p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-                .title { text-align: right; }
-                .title h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--primary); }
-                .title p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-                .content { padding: 18px 22px 22px; }
-                .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-                @media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
-                .field { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fafafa; }
-                .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-                .value { margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--text); word-break: break-word; }
-                .amount { margin-top: 14px; padding: 14px; border-radius: 12px; border: 1px solid rgba(22,163,74,.25); background: rgba(22,163,74,.08); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-                .amount .label { color: rgba(22,163,74,.9); }
+                .doc { text-align: right; }
+                .doc h2 { margin: 0; font-size: 14px; font-weight: 800; color: var(--primary); }
+                .doc p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+                .divider { margin-top: 14px; border-bottom: 1px solid var(--border); }
+
+                .content { margin-top: 16px; }
+                .field { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: #fff; margin-bottom: 12px; }
+                .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; }
+                .value { margin-top: 6px; font-size: 13px; font-weight: 700; word-break: break-word; }
+
+                .amount { border-radius: 10px; border: 1px solid var(--successBorder); background: var(--successBg); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+                .amount .label { color: rgba(47,62,30,.9); }
                 .amount .value { font-size: 18px; }
-                .actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px; }
-                .btn { appearance: none; border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 13px; cursor: pointer; }
-                .btn-primary { background: var(--primary); color: #fff; }
-                .btn-primary:hover { background: var(--primary-dark); }
-                .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
-                .btn-outline:hover { background: #f9fafb; }
-                .footer { padding: 14px 22px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
-                @media print {
-                  body { background: #fff; }
-                  .page { padding: 0; }
-                  .card { box-shadow: none; border: 0; border-radius: 0; }
-                  .actions { display: none !important; }
-                }
+                .amount .tag { color: rgba(47,62,30,.9); font-weight: 800; }
+
+                .footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+                @media print { .page { padding: 0; } }
               </style>
             </head>
             <body>
               <div class="page">
-                <div class="card">
+                <div class="wrap">
+                  <div class="meta">
+                    <div>${new Date().toLocaleString('en-US')}</div>
+                    <div class="center">Receipt ${receiptNo}</div>
+                    <div></div>
+                  </div>
+
                   <div class="header">
                     <div class="brand">
                       <h1>${companyName}</h1>
-                      ${companyRnc ? `<p>RNC: ${companyRnc}</p>` : `<p>&nbsp;</p>`}
+                      ${companyRnc ? `<p>Tax ID: ${companyRnc}</p>` : `<p>&nbsp;</p>`}
                     </div>
-                    <div class="title">
-                      <h2>Recibo de Cobro #${receiptNo}</h2>
-                      <p>Fecha: ${formatDate(receiptDate)}</p>
+                    <div class="doc">
+                      <h2>Collection Receipt #${receiptNo}</h2>
+                      <p>Date: ${formatDate(receiptDate)}</p>
                     </div>
                   </div>
 
+                  <div class="divider"></div>
+
                   <div class="content">
-                    <div class="grid">
-                      <div class="field">
-                        <div class="label">Cliente</div>
-                        <div class="value">${invoice.customerName}</div>
-                      </div>
-                      ${customerRnc ? `
-                        <div class="field">
-                          <div class="label">RNC del cliente</div>
-                          <div class="value">${customerRnc}</div>
-                        </div>
-                      ` : ''}
-                      <div class="field">
-                        <div class="label">Factura aplicada</div>
-                        <div class="value">${invoice.invoiceNumber}</div>
-                      </div>
-                      ${receiptPayload.concept ? `
-                        <div class="field" style="grid-column: 1 / -1;">
-                          <div class="label">Concepto</div>
-                          <div class="value">${receiptPayload.concept}</div>
-                        </div>
-                      ` : ''}
-                      <div class="field">
-                        <div class="label">Método de pago</div>
-                        <div class="value">${getPaymentMethodName(paymentMethod)}</div>
-                      </div>
-                      ${reference ? `
-                        <div class="field">
-                          <div class="label">Referencia</div>
-                          <div class="value">${reference}</div>
-                        </div>
-                      ` : ''}
+                    <div class="field">
+                      <div class="label">Customer</div>
+                      <div class="value">${invoice.customerName}</div>
                     </div>
+
+                    <div class="field">
+                      <div class="label">Applied invoice</div>
+                      <div class="value">${invoice.invoiceNumber}</div>
+                    </div>
+
+                    ${receiptPayload.concept ? `
+                      <div class="field">
+                        <div class="label">Concept</div>
+                        <div class="value">${receiptPayload.concept}</div>
+                      </div>
+                    ` : ''}
+
+                    <div class="field">
+                      <div class="label">Payment method</div>
+                      <div class="value">${getPaymentMethodName(paymentMethod)}</div>
+                    </div>
+
+                    ${reference ? `
+                      <div class="field">
+                        <div class="label">Reference</div>
+                        <div class="value">${reference}</div>
+                      </div>
+                    ` : ''}
 
                     <div class="amount">
                       <div>
-                        <div class="label">Monto recibido</div>
-                        <div class="value"> ${amountText}</div>
+                        <div class="label">Amount received</div>
+                        <div class="value">${amountText}</div>
                       </div>
-                      <div style="color: rgba(22,163,74,.9); font-weight: 800;">Cobro</div>
-                    </div>
-
-                    <div class="actions">
-                      <button class="btn btn-outline" onclick="window.close && window.close()" type="button">Cerrar</button>
-                      <button class="btn btn-primary" onclick="window.print()" type="button">Imprimir</button>
+                      <div class="tag">Collection</div>
                     </div>
                   </div>
 
-                  <div class="footer">
-                    Este documento fue generado automáticamente por el sistema.
-                  </div>
+                  <div class="footer">This document was automatically generated by the system.</div>
                 </div>
               </div>
             </body>
           </html>
         `;
 
-        openHtmlPreview(receiptHtml, `Recibo de Cobro #${receiptNo}`, `recibo-${receiptNo}.html`);
+        openHtmlPreview(receiptHtml, `Collection Receipt #${receiptNo}`, `receipt-${receiptNo}.html`);
       } catch (receiptError) {
-        console.error('Error generando recibo de cobro automático:', receiptError);
-        alert('Pago registrado, pero ocurrió un error al generar el recibo de cobro.');
+        console.error('Error generating automatic collection receipt:', receiptError);
+        alert('Payment recorded, but an error occurred generating the collection receipt.');
       }
 
       if (change > 0) {
         alert(
-          `Pago registrado correctamente. Devuelta: ${formatMoney(change)}`,
+          `Payment recorded successfully. Change: ${formatMoney(change)}`,
         );
       } else {
-        alert('Pago registrado exitosamente');
+        alert('Payment recorded successfully');
       }
 
       setShowPaymentModal(false);
     } catch (error: any) {
       console.error('[Payments] Error al registrar pago', error);
-      alert(`Error al registrar el pago: ${error?.message || 'revisa la consola para más detalles'}`);
+      alert(`Error recording payment: ${error?.message || 'check the console for more details'}`);
     }
   };
 
@@ -1211,7 +1126,6 @@ export default function PaymentsPage() {
                     setPaymentInvoiceId('');
                     setPaymentAmount(0);
                     setPaymentItbisWithheld(0);
-                    setPaymentIsrWithheld(0);
                     setShowPaymentModal(false);
                   }}
                   className="text-gray-400 hover:text-gray-600"
@@ -1237,7 +1151,6 @@ export default function PaymentsPage() {
                       setPaymentInvoiceId('');
                       setPaymentAmount(0);
                       setPaymentItbisWithheld(0);
-                      setPaymentIsrWithheld(0);
                     }}
                     className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
                   >
@@ -1263,42 +1176,7 @@ export default function PaymentsPage() {
                     onChange={async (e) => {
                       const next = String(e.target.value || '');
                       setPaymentInvoiceId(next);
-
-                      if (next && user?.id && invoiceHasServiceLines[next] === undefined) {
-                        try {
-                          const lines = await invoicesService.getLinesWithItemType(user.id, next);
-                          const hasServices = (lines || []).some((ln: any) => {
-                            const itemType = String((ln as any)?.inventory_items?.item_type || '').toLowerCase();
-                            return itemType === 'service';
-                          });
-                          setInvoiceHasServiceLines((prev: Record<string, boolean>) => ({ ...prev, [next]: hasServices }));
-                          // Recompute after caching
-                          const inv = invoices.find((i) => i.id === next);
-                          const invNumber = String(inv?.invoiceNumber || '');
-                          if (inv && isFiscalInvoiceNumber(invNumber)) {
-                            const total = Number(inv.totalAmount || 0);
-                            const itbis = Number((inv as any).taxAmount || 0);
-                            const effectivePayment = Math.min(Number(paymentAmount || 0), Number(inv.balance || 0));
-                            const ratio = total > 0 ? Math.max(0, Math.min(1, effectivePayment / total)) : 0;
-                            const suggestedItbisWithheld = Math.round(itbis * ratio * 100) / 100;
-                            setPaymentItbisWithheld(suggestedItbisWithheld);
-
-                            const baseSubtotal = Math.max(0, total - itbis);
-                            const isrRate = Math.max(0, Number(isrServiceRatePct) || 0) / 100;
-                            const suggestedIsrWithheld = hasServices && isrRate > 0
-                              ? Math.round(baseSubtotal * ratio * isrRate * 100) / 100
-                              : 0;
-                            setPaymentIsrWithheld(suggestedIsrWithheld);
-                          } else {
-                            recomputeWithheldDefaults(next, paymentAmount);
-                          }
-                        } catch {
-                          setInvoiceHasServiceLines((prev: Record<string, boolean>) => ({ ...prev, [next]: false }));
-                          recomputeWithheldDefaults(next, paymentAmount);
-                        }
-                      } else {
-                        recomputeWithheldDefaults(next, paymentAmount);
-                      }
+                      recomputeWithheldDefaults(next, paymentAmount);
                     }}
                     className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-800"
                   >
@@ -1308,50 +1186,6 @@ export default function PaymentsPage() {
                       .map((invoice) => (
                       <option key={invoice.id} value={invoice.id}>
                         {invoice.invoiceNumber} ({formatMoney(invoice.balance)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bank account (optional)
-                  </label>
-                  <select 
-                    name="bankAccountId"
-                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
-                  >
-                    <option value="">Select account</option>
-                    {bankAccounts
-                      .map((ba) => {
-                        const baseName = String(ba.name || '').trim();
-                        const label = baseName
-                          ? (ba.accountNumber ? `${baseName} (${ba.accountNumber})` : baseName)
-                          : `Cuenta ${String(ba.id || '').slice(0, 8)}`;
-                        return { ...ba, __label: label };
-                      })
-                      .filter((ba: any) => String(ba.__label || '').trim() !== '')
-                      .map((ba: any) => (
-                        <option key={ba.id} value={ba.id}>
-                          {ba.__label}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Accounts receivable account (optional)
-                  </label>
-                  <select
-                    name="arAccountId"
-                    className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8 text-gray-800"
-                    defaultValue=""
-                  >
-                    <option value="">Use default account</option>
-                    {receivableAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
                       </option>
                     ))}
                   </select>
@@ -1410,7 +1244,7 @@ export default function PaymentsPage() {
                   const isFiscal = inv ? isFiscalInvoiceNumber(String(inv.invoiceNumber || '')) : false;
                   const disabled = !inv || !isFiscal;
                   return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           VAT withheld
@@ -1427,22 +1261,6 @@ export default function PaymentsPage() {
                           placeholder="0.00"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ISR withheld
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          name="isrWithheld"
-                          disabled={disabled}
-                          value={Number.isFinite(paymentIsrWithheld) ? String(paymentIsrWithheld) : '0'}
-                          onChange={(e) => setPaymentIsrWithheld(Number(e.target.value) || 0)}
-                          className="w-full p-3 border border-[#d6cfbf] rounded-lg bg-white focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] disabled:bg-gray-100"
-                          placeholder="0.00"
-                        />
-                      </div>
                     </div>
                   );
                 })()}
@@ -1455,7 +1273,6 @@ export default function PaymentsPage() {
                       setPaymentCustomerId('');
                       setPaymentAmount(0);
                       setPaymentItbisWithheld(0);
-                      setPaymentIsrWithheld(0);
                       setShowPaymentModal(false);
                     }}
                     className="flex-1 border border-[#d6cfbf] text-[#2f3e1e] py-2 rounded-lg hover:bg-[#f7f0df] transition-colors whitespace-nowrap"

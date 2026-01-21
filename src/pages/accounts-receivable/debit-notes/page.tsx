@@ -61,18 +61,11 @@ export default function DebitNotesPage() {
     }
   };
 
-  const arAccounts = accounts.filter(
-    (acc) => acc.allowPosting && acc.type === 'asset'
-  );
-
-  const creditAccounts = accounts.filter(
-    (acc) => acc.allowPosting && acc.type === 'income'
-  );
-
   const filteredNotes = debitNotes.filter(note => {
     const matchesSearch = note.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          note.noteNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          note.reason.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || note.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -96,15 +89,6 @@ export default function DebitNotesPage() {
           customerId: String(inv.customer_id),
         }))
       );
-
-      // Mapa de cuentas de CxC por cliente (si tienen arAccountId configurado)
-      const arMap: Record<string, string> = {};
-      (custList || []).forEach((c: any) => {
-        if (c.id && c.arAccountId) {
-          arMap[String(c.id)] = String(c.arAccountId);
-        }
-      });
-      setCustomerArAccounts(arMap);
     } finally {
       setLoadingSupport(false);
     }
@@ -335,7 +319,6 @@ export default function DebitNotesPage() {
     const invoiceId = String(formData.get('invoice_id') || '');
     const reason = String(formData.get('reason') || '');
     const concept = String(formData.get('concept') || '');
-    const creditAccountId = String(formData.get('credit_account_id') || '');
 
     if (!customerId || !amount || !invoiceId) {
       alert('Customer, amount, and invoice are required.');
@@ -798,42 +781,6 @@ export default function DebitNotesPage() {
                   </select>
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Accounts Receivable 
-                  </label>
-                  <select
-                    name="ar_account_id"
-                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    defaultValue=""
-                  >
-                    <option value="">Select AR account</option>
-                    {arAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Credit account
-                  </label>
-                  <select
-                    name="credit_account_id"
-                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    defaultValue=""
-                  >
-                    <option value="">Select account</option>
-                    {creditAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-[#4a3c24] mb-2">
                     Concept

@@ -53,7 +53,6 @@ interface APInvoice {
 
 interface LineFormRow {
   description: string;
-  expenseAccountId: string;
   quantity: string;
   unitPrice: string;
   inventoryItemId?: string;
@@ -184,7 +183,7 @@ export default function APInvoicesPage() {
   };
 
   const [lines, setLines] = useState<LineFormRow[]>([
-    { description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' },
+    { description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' },
   ]);
 
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
@@ -414,7 +413,7 @@ export default function APInvoicesPage() {
   }, [user?.id]);
 
   const handleAddLine = () => {
-    setLines(prev => [...prev, { description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+    setLines(prev => [...prev, { description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
   };
 
   const handleLineChange = (index: number, field: keyof LineFormRow, value: string) => {
@@ -622,9 +621,22 @@ export default function APInvoicesPage() {
       discountValue: '',
       purchaseOrderId: '',
     });
-    setLines([{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+    setLines([{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
     setOtherTaxes([]);
     setEditingInvoice(null);
+  };
+
+  const handleSupplierChange = (supplierId: string) => {
+    const selected = suppliers.find((s: any) => String(s.id) === String(supplierId));
+    setHeaderForm((prev: any) => ({
+      ...prev,
+      supplierId,
+      taxId: selected?.tax_id || selected?.rnc || prev.taxId,
+      legalName: selected?.legal_name || selected?.name || prev.legalName,
+      paymentTermsId: selected?.payment_terms_id ? String(selected.payment_terms_id) : prev.paymentTermsId,
+      expenseType606: normalizeExpenseType606(selected?.expense_type_606) || prev.expenseType606,
+      purchaseOrderId: '',
+    }));
   };
 
   const handleNewInvoice = () => {
@@ -660,106 +672,87 @@ export default function APInvoicesPage() {
       const dbLines = await apInvoiceLinesService.getByInvoice(invoice.id);
       const mappedLines: LineFormRow[] = (dbLines || []).map((l: any) => ({
         description: l.description || '',
-        expenseAccountId: l.expense_account_id || '',
         quantity: String(l.quantity ?? '1'),
         unitPrice: String(l.unit_price ?? '0'),
         inventoryItemId: l.inventory_item_id ? String(l.inventory_item_id) : '',
         discountPercentage: l.discount_percentage != null ? String(l.discount_percentage) : '0',
         purchaseOrderItemId: l.purchase_order_item_id ? String(l.purchase_order_item_id) : undefined,
       }));
+
       setLines(
         mappedLines.length > 0
           ? mappedLines
-          : [{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]
+          : [{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]
       );
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error cargando líneas de factura de suplidor', error);
-      setLines([{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+      setLines([{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
     }
 
     setShowModal(true);
   };
 
-  const handleSupplierChange = (supplierId: string) => {
-    setHeaderForm((prev) => {
-      const selected = suppliers.find((s: any) => String(s.id) === String(supplierId));
-      return {
-        ...prev,
-        supplierId,
-        taxId: selected?.tax_id || selected?.rnc || prev.taxId,
-        legalName: selected?.legal_name || selected?.name || prev.legalName,
-        paymentTermsId: selected?.payment_terms_id ? String(selected.payment_terms_id) : prev.paymentTermsId,
-        expenseType606: normalizeExpenseType606(selected?.expense_type_606) || '',
-        purchaseOrderId: '',
-      };
-    });
-  };
-
   const handlePurchaseOrderChange = async (poId: string) => {
-    setHeaderForm((prev) => ({ ...prev, purchaseOrderId: poId }));
-
-    if (!poId || !user?.id) return;
+    setHeaderForm(prev => ({ ...prev, purchaseOrderId: poId }));
+    if (!poId || !user?.id) {
+      setLines([{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+      return;
+    }
 
     try {
       let orderItems: any[] = [];
       try {
         orderItems = await purchaseOrderItemsService.getWithInvoicedByOrderAccessible(user.id, poId);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('handlePurchaseOrderChange getWithInvoicedByOrderAccessible error', error);
         orderItems = [];
       }
 
-      // Fallback: si por cualquier razón la consulta con “invoiced” no devuelve filas,
-      // cargar al menos las líneas básicas de la OC.
       if (!orderItems || orderItems.length === 0) {
         try {
           orderItems = await purchaseOrderItemsService.getByOrderAccessible(user.id, poId);
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.error('handlePurchaseOrderChange getByOrderAccessible error', error);
           orderItems = [];
         }
       }
 
       if (!orderItems || orderItems.length === 0) {
-        setLines([{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+        setLines([{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
         return;
       }
 
-      const rawLines = (orderItems as any[]).map((it: any) => {
-        const orderedQty = Number(it.quantity) || 0;
-        const invoicedQty = Number(it.quantity_invoiced || 0);
-        const remainingQty = Number.isFinite(Number(it.quantity_invoiced))
-          ? Math.max(orderedQty - invoicedQty, 0)
-          : orderedQty;
+      const mappedLines: LineFormRow[] = (orderItems || [])
+        .map((it: any) => {
+          const orderedQty = Number(it.quantity ?? it.ordered_quantity ?? 0) || 0;
+          const invoicedQty = Number(it.invoiced_quantity ?? it.qty_invoiced ?? 0) || 0;
+          const remainingQty = Math.max(0, orderedQty - invoicedQty);
+          if (remainingQty <= 0) return null;
 
-        if (remainingQty <= 0) {
-          return null;
-        }
+          return {
+            description: it.description || (it.inventory_items as any)?.name || '',
+            quantity: String(remainingQty),
+            unitPrice: String(it.unit_cost ?? it.unit_price ?? '0'),
+            inventoryItemId: it.inventory_item_id ? String(it.inventory_item_id) : '',
+            discountPercentage: '0',
+            purchaseOrderItemId: it.id ? String(it.id) : undefined,
+            maxQuantityFromPo: orderedQty,
+            alreadyInvoicedQty: invoicedQty,
+          };
+        })
+        .filter(Boolean) as LineFormRow[];
 
-        return {
-          description: it.description || (it.inventory_items as any)?.name || '',
-          expenseAccountId: '',
-          quantity: String(remainingQty),
-          unitPrice: String(it.unit_cost ?? '0'),
-          inventoryItemId: it.inventory_item_id ? String(it.inventory_item_id) : '',
-          discountPercentage: '0',
-          purchaseOrderItemId: it.id ? String(it.id) : undefined,
-          maxQuantityFromPo: orderedQty,
-          alreadyInvoicedQty: invoicedQty,
-        } as LineFormRow;
-      });
-
-      const mappedLines: LineFormRow[] = rawLines.filter((l) => l !== null) as LineFormRow[];
-
-      setLines(mappedLines.length > 0
-        ? mappedLines
-        : [{ description: '', expenseAccountId: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
+      setLines(
+        mappedLines.length > 0
+          ? mappedLines
+          : [{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]
+      );
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error cargando líneas desde orden de compra', error);
+      alert('No se pudieron cargar las líneas de la orden de compra.');
+      setLines([{ description: '', quantity: '1', unitPrice: '0', inventoryItemId: '', discountPercentage: '0' }]);
     }
   };
 
@@ -1372,11 +1365,6 @@ ${items
       return;
     }
 
-    if (!headerForm.documentType || headerForm.documentType.trim() === '') {
-      alert('Debes ingresar el NCF / Tipo de Comprobante de la factura');
-      return;
-    }
-
     if (!headerForm.storeName || headerForm.storeName.trim() === '') {
       alert('Debes indicar la tienda o sucursal que registra la compra');
       return;
@@ -1406,6 +1394,11 @@ ${items
     const { gross, totalDiscount, itbis, totalOtherTaxes, otherTaxesDetail, itbisWithheld, isr, toPay } = calculateTotals();
     const { affectsItbis, supplierTypeKey, isrWithholdingRate } = getCurrentSupplierTaxProfile();
 
+    const resolvedDocumentType =
+      supplierTypeKey === 'proveedor_informal'
+        ? 'B17'
+        : (headerForm.documentType && String(headerForm.documentType).trim() !== '' ? String(headerForm.documentType).trim() : 'B01');
+
     if (supplierTypeKey === 'proveedor_informal') {
       if (itbis > 0) {
         alert('Proveedor informal no puede registrar ITBIS');
@@ -1413,10 +1406,6 @@ ${items
       }
       if (!(isrWithholdingRate > 0)) {
         alert('Proveedor informal requiere retención de ISR mayor a 0');
-        return;
-      }
-      if (headerForm.documentType && String(headerForm.documentType).trim() !== '' && String(headerForm.documentType).trim() !== 'B17') {
-        alert('Proveedor informal debe registrarse con comprobante B17 (o equivalente interno)');
         return;
       }
     }
@@ -1454,7 +1443,7 @@ ${items
       invoice_number: invoiceNumber,
       invoice_date: invoiceDate,
       due_date: dueDate,
-      document_type: headerForm.documentType || null,
+      document_type: resolvedDocumentType || null,
       tax_id: headerForm.taxId || null,
       legal_name: headerForm.legalName || null,
       payment_terms_id: headerForm.paymentTermsId || null,
@@ -1466,7 +1455,7 @@ ${items
       total_to_pay: toPay,
       store_name: headerForm.storeName || null,
       notes: headerForm.notes || null,
-      expense_type_606: headerForm.expenseType606 || null,
+      expense_type_606: null,
       discount_type: headerForm.discountType || null,
       discount_value: headerForm.discountValue ? Number(headerForm.discountValue) : 0,
       total_discount: totalDiscount,
@@ -1488,7 +1477,7 @@ ${items
       const lineItbis = affectsItbis ? lineTotalAfterDiscount * (itbisRate / 100) : 0;
       return {
         description: l.description,
-        expense_account_id: l.expenseAccountId || null,
+        expense_account_id: null,
         inventory_item_id: l.inventoryItemId || null,
         purchase_order_item_id: l.purchaseOrderItemId || null,
         quantity: qty,
@@ -1879,18 +1868,6 @@ ${items
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">NCF / Vouchers *</label>
-                    <input
-                      type="text"
-                      required
-                      value={headerForm.documentType}
-                      onChange={(e) => setHeaderForm(prev => ({ ...prev, documentType: e.target.value }))}
-                      className={inputBaseClass}
-                      placeholder="Ex: B01, B02..."
-                    />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Invoice Number</label>
                     <div className="flex gap-2">
                       <input
@@ -1992,22 +1969,6 @@ ${items
                         ))
                       )}
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#2f3e1e] mb-1">606 Expense Type</label>
-                    <select
-                      value={headerForm.expenseType606}
-                      onChange={(e) => setHeaderForm(prev => ({ ...prev, expenseType606: e.target.value }))}
-                      className={inputBaseClass}
-                    >
-                      <option value="">Not specified</option>
-                      {expenseTypes606.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-[#6b5c3b]">
-                      Recommended for the DGII 606 filing
-                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#2f3e1e] mb-1">Store / Branch *</label>
@@ -2171,7 +2132,6 @@ ${items
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Item / Description</th>
-                          <th className="px-2 py-2 text-left font-medium text-gray-600 text-xs">Account</th>
                           <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Qty.</th>
                           <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Price</th>
                           <th className="px-2 py-2 text-right font-medium text-gray-600 text-xs">Disc.%</th>
@@ -2222,20 +2182,6 @@ ${items
                                   className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                   placeholder="Description"
                                 />
-                              </td>
-                              <td className="px-2 py-2">
-                                <select
-                                  value={line.expenseAccountId || ''}
-                                  onChange={(e) => handleLineChange(index, 'expenseAccountId', e.target.value)}
-                                  className="w-full border border-gray-300 rounded-md px-1 py-1 text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                  <option value="">Select account...</option>
-                                  {expenseAccounts.map((acc: any) => (
-                                    <option key={acc.id} value={acc.id}>
-                                      {acc.code} - {acc.name}
-                                    </option>
-                                  ))}
-                                </select>
                               </td>
                               <td className="px-2 py-2">
                                 <input

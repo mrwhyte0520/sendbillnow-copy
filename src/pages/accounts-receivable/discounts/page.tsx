@@ -32,7 +32,6 @@ export default function DiscountsPage() {
       pendingAmount: number;
     }>
   >([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,19 +39,13 @@ export default function DiscountsPage() {
   const [noteInvoiceId, setNoteInvoiceId] = useState<string>('');
   const [noteAmount, setNoteAmount] = useState<number>(0);
   const [notePercent, setNotePercent] = useState<number>(0);
-  const [noteOriginAccountId, setNoteOriginAccountId] = useState<string>('');
-  const [noteDiscountsAccountId, setNoteDiscountsAccountId] = useState<string>('');
   const [noteConcept, setNoteConcept] = useState<string>('');
-
-  const incomeAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'income');
 
   const resetDiscountForm = () => {
     setNoteCustomerId('');
     setNoteInvoiceId('');
     setNoteAmount(0);
     setNotePercent(0);
-    setNoteOriginAccountId('');
-    setNoteDiscountsAccountId('');
     setNoteConcept('');
   };
 
@@ -114,25 +107,6 @@ export default function DiscountsPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!showModal) return;
-    if (!accounts.length) return;
-    if (noteDiscountsAccountId) return;
-
-    const norm = (v: any) => String(v || '').toLowerCase().trim();
-    const normalizeCode = (code: any) => String(code || '').replace(/\./g, '');
-
-    const candidates = accounts.filter((acc: any) => acc?.allowPosting);
-    const byName = candidates.find((acc: any) => norm(acc.name) === 'descuentos en ventas');
-    const byContains = candidates.find((acc: any) => norm(acc.name).includes('descuento') && norm(acc.name).includes('venta'));
-    const byCode = candidates.find((acc: any) => ['4104', '410401', '4204', '420401'].includes(normalizeCode(acc.code)));
-
-    const selected = byName || byContains || byCode;
-    if (selected?.id) {
-      setNoteDiscountsAccountId(String(selected.id));
-    }
-  }, [showModal, accounts, noteDiscountsAccountId]);
 
   const filteredDiscounts = discounts.filter((d) => {
     const term = searchTerm.toLowerCase();
@@ -211,7 +185,7 @@ export default function DiscountsPage() {
   const handleSaveDiscount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para registrar descuentos');
+      alert('You must be logged in to record discounts');
       return;
     }
 
@@ -223,12 +197,12 @@ export default function DiscountsPage() {
     const concept = String(formData.get('concept') || '');
 
     if (!invoiceId) {
-      alert('Debes seleccionar una factura relacionada para aplicar el descuento');
+      alert('You must select a related invoice to apply the discount');
       return;
     }
 
     if (!amount || amount <= 0) {
-      alert('El monto debe ser mayor que 0');
+      alert('Amount must be greater than 0');
       return;
     }
 
@@ -238,12 +212,12 @@ export default function DiscountsPage() {
       if (targetInvoice) {
         const pending = Number(targetInvoice.pendingAmount) || 0;
         if (pending <= 0) {
-          alert('La factura seleccionada no tiene saldo pendiente para aplicar descuentos.');
+          alert('The selected invoice has no pending balance to apply discounts.');
           return;
         }
         if (amount > pending) {
           alert(
-            `El monto del descuento no puede ser mayor que el saldo pendiente de la factura (pendiente: ${pending.toLocaleString()}).`,
+            `The discount amount cannot be greater than the invoice pending balance (pending: ${pending.toLocaleString()}).`,
           );
           return;
         }
@@ -317,7 +291,7 @@ export default function DiscountsPage() {
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('[Discounts] Error al registrar descuento', error);
-      alert(error?.message || 'Error al registrar el descuento.');
+      alert(error?.message || 'Error recording the discount.');
     }
   };
 
@@ -561,46 +535,6 @@ export default function DiscountsPage() {
                         .filter((inv) => (!noteCustomerId || inv.customerId === noteCustomerId) && (Number(inv.pendingAmount) || 0) > 0)
                         .map((inv) => (
                           <option key={inv.id} value={inv.id}>{inv.invoiceNumber}</option>
-                        ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                      Original income account
-                    </label>
-                    <select
-                      name="origin_account_id"
-                      value={noteOriginAccountId}
-                      onChange={(e) => setNoteOriginAccountId(e.target.value)}
-                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    >
-                      <option value="">Select an original income account</option>
-                      {incomeAccounts.map((acc) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.code ? `${acc.code} · ${acc.name}` : acc.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                      “Sales discounts” account
-                    </label>
-                    <select
-                      name="discounts_account_id"
-                      value={noteDiscountsAccountId}
-                      onChange={(e) => setNoteDiscountsAccountId(e.target.value)}
-                      className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    >
-                      <option value="">Select the discounts account</option>
-                      {accounts
-                        .filter((acc) => acc.allowPosting)
-                        .map((acc) => (
-                          <option key={acc.id} value={acc.id}>
-                            {acc.code ? `${acc.code} · ${acc.name}` : acc.name}
-                          </option>
                         ))}
                     </select>
                   </div>

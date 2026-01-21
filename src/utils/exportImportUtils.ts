@@ -134,16 +134,6 @@ export const addExcelBrandedHeader = async (
   companyCell.alignment = { horizontal: 'center', vertical: 'middle' };
   currentRow++;
 
-  // RNC if available
-  if (company.rnc) {
-    ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-    const rncCell = ws.getCell(currentRow, 1);
-    rncCell.value = `RNC: ${company.rnc}`;
-    rncCell.font = { size: 10, color: { argb: `FF${REPORT_COLORS.textMuted}` } };
-    rncCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    currentRow++;
-  }
-
   // Report title (centered)
   ws.mergeCells(currentRow, 1, currentRow, totalColumns);
   const titleCell = ws.getCell(currentRow, 1);

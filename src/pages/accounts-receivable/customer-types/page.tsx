@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { customerTypesService, chartAccountsService } from '../../../services/database';
+import { customerTypesService } from '../../../services/database';
 
 interface CustomerType {
   id: string;
@@ -12,13 +12,11 @@ interface CustomerType {
   creditLimit: number;
   allowedDelayDays: number;
   noTax: boolean;
-  arAccountId?: string | null;
 }
 
 export default function CustomerTypesPage() {
   const { user } = useAuth();
   const [types, setTypes] = useState<CustomerType[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedType, setSelectedType] = useState<CustomerType | null>(null);
@@ -27,12 +25,8 @@ export default function CustomerTypesPage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const [list, accs] = await Promise.all([
-        customerTypesService.getAll(user.id),
-        chartAccountsService.getAll(user.id),
-      ]);
+      const list = await customerTypesService.getAll(user.id);
       setTypes(list || []);
-      setAccounts(accs || []);
     } finally {
       setLoading(false);
     }
@@ -42,13 +36,6 @@ export default function CustomerTypesPage() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  const arAccounts = accounts.filter((acc) => {
-    if (!acc.allowPosting) return false;
-    if (acc.type !== 'asset') return false;
-    const name = String(acc.name || '').toLowerCase();
-    return name.includes('cuentas por cobrar');
-  });
 
   const handleNew = () => {
     setSelectedType(null);
@@ -64,14 +51,13 @@ export default function CustomerTypesPage() {
     e.preventDefault();
     if (!user?.id) return;
     const form = new FormData(e.currentTarget);
-    const payload: any = {
+    const payload = {
       name: String(form.get('name') || ''),
       description: String(form.get('description') || ''),
       fixedDiscount: Number(form.get('fixedDiscount') || 0) || 0,
       creditLimit: Number(form.get('creditLimit') || 0) || 0,
       allowedDelayDays: Number(form.get('allowedDelayDays') || 0) || 0,
       noTax: String(form.get('noTax') || 'false') === 'true',
-      arAccountId: String(form.get('arAccountId') || ''),
     };
 
     try {
@@ -262,24 +248,6 @@ export default function CustomerTypesPage() {
                       <option value="false">No</option>
                       <option value="true">Yes</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Accounts receivable account</label>
-                    <select
-                      name="arAccountId"
-                      defaultValue={selectedType?.arAccountId || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                    >
-                      <option value="">Use default account</option>
-                      {arAccounts.map((acc: any) => (
-                        <option key={acc.id} value={acc.id}>
-                          {acc.code} - {acc.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1 text-xs text-gray-500">
-                      If empty, the general accounts receivable account will be used.
-                    </p>
                   </div>
                 </div>
 

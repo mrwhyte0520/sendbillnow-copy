@@ -104,9 +104,6 @@ export default function InvoicesPage() {
   const [newInvoiceNoTax, setNewInvoiceNoTax] = useState(false);
   const [taxConfig, setTaxConfig] = useState<{ itbis_rate: number } | null>(null);
 
-  const [newInvoiceDocumentType, setNewInvoiceDocumentType] = useState<string>('');
-  const [ncfSeries, setNcfSeries] = useState<any[]>([]);
-
   const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
   const [invoiceToPrint, setInvoiceToPrint] = useState<Invoice | null>(null);
 
@@ -250,24 +247,6 @@ export default function InvoicesPage() {
       }
     };
     loadTaxConfig();
-  }, [user?.id]);
-
-  useEffect(() => {
-    const loadNcfSeries = async () => {
-      if (!user?.id) {
-        setNcfSeries([]);
-        return;
-      }
-      try {
-        const series = await taxService.getNcfSeries(user.id);
-        setNcfSeries((series || []).filter((s: any) => s.status === 'active'));
-      } catch (error) {
-        console.error('Error cargando series NCF:', error);
-        setNcfSeries([]);
-      }
-    };
-
-    loadNcfSeries();
   }, [user?.id]);
 
   useEffect(() => {
@@ -420,7 +399,7 @@ export default function InvoicesPage() {
       '';
 
     const statusText =
-      statusFilter === 'all' ? 'All' : getStatusName(statusFilter as Invoice['status']);
+      statusFilter === 'all' ? 'All' : getStatusName(statusFilter);
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Accounts Receivable');
@@ -608,14 +587,13 @@ export default function InvoicesPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    const safeNumber = invoice.invoiceNumber || invoice.id;
-    saveAs(blob, `factura_cxc_${safeNumber}.xlsx`);
+    saveAs(blob, `factura_${invoice.invoiceNumber || invoice.id}.xlsx`);
   };
 
   const handleSaveInvoice = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para crear facturas');
+      alert('You must be logged in to create invoices');
       return;
     }
 
@@ -627,41 +605,12 @@ export default function InvoicesPage() {
     const amount = newInvoiceTotal;
 
     if (!customerId || !amount) {
-      alert('Cliente y al menos un producto/servicio con monto son obligatorios');
+      alert('Customer and at least one product/service with an amount are required');
       return;
     }
 
-    // Debug trace
-    // eslint-disable-next-line no-console
-    console.log('[Invoices] handleSaveInvoice payload', { customerId, dueDate, description, amount });
-
     const todayStr = new Date().toISOString().slice(0, 10);
-    let invoiceNumber = `FAC-${Date.now()}`;
-
-    const selectedDocType = String(newInvoiceDocumentType || '');
-    if (selectedDocType) {
-      const availableDocTypes = Array.from(
-        new Set(
-          (ncfSeries || [])
-            .filter((s: any) => s.status === 'active')
-            .map((s: any) => String(s.document_type)),
-        ),
-      );
-
-      if (!availableDocTypes.includes(selectedDocType)) {
-        alert('No hay serie NCF activa disponible para el tipo seleccionado.');
-        return;
-      }
-
-      try {
-        const nextNcf = await taxService.getNextNcf(user.id, selectedDocType);
-        if (nextNcf?.ncf) {
-          invoiceNumber = nextNcf.ncf;
-        }
-      } catch {
-        // NCF no disponible - se usará número interno
-      }
-    }
+    const invoiceNumber = `FAC-${Date.now()}`;
 
     const invoicePayload = {
       customer_id: customerId,
@@ -689,205 +638,28 @@ export default function InvoicesPage() {
       }));
 
     if (linesPayload.length === 0) {
-      alert('Debes agregar al menos un producto o servicio a la factura');
+      alert('You must add at least one product or service to the invoice');
       return;
     }
 
     try {
       await invoicesService.create(user.id, invoicePayload, linesPayload);
       await loadInvoices();
-      alert('Factura creada exitosamente');
+      alert('Invoice created successfully');
       setShowInvoiceModal(false);
     } catch (error: any) {
-      // eslint-disable-next-line no-console
       console.error('[Invoices] Error al crear factura', error);
-      alert(`Error al crear la factura: ${error?.message || 'revisa la consola para más detalles'}`);
+      alert(`Error creating invoice: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleRegisterPayment = (invoice?: Invoice | null) => {
-    // Abre el modal de pago (sin guardar). El guardado lo hace handleSavePayment.
     if (invoice) {
       setSelectedInvoice(invoice);
     } else {
       setSelectedInvoice(null);
     }
     setShowPaymentModal(true);
-  };
-
-  const handleSavePayment = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (!user?.id) {
-      alert('Debes iniciar sesión para registrar pagos');
-      return;
-    }
-
-    const formData = new FormData(e.currentTarget);
-
-    const invoiceId = selectedInvoice ? selectedInvoice.id : String(formData.get('invoice_id') || '');
-    const amountToPay = Number(formData.get('amount_to_pay') || 0);
-    const paymentMethod = String(formData.get('payment_method') || 'cash');
-    const reference = String(formData.get('reference') || '').trim();
-    const cashAccountIdFromForm = String(formData.get('cash_account_id') || '');
-
-    if (!invoiceId) {
-      alert('Debes seleccionar una factura');
-      return;
-    }
-
-    if (!amountToPay || amountToPay <= 0) {
-      alert('El monto a pagar debe ser mayor que 0');
-      return;
-    }
-
-    const currentInvoice = invoices.find((inv) => inv.id === invoiceId);
-    if (!currentInvoice) {
-      alert('La factura seleccionada no es válida');
-      return;
-    }
-
-    const effectivePayment = Math.min(amountToPay, currentInvoice.balance);
-    const change = amountToPay - effectivePayment;
-    const paymentDate = new Date().toISOString().slice(0, 10);
-
-    const newPaid = currentInvoice.paidAmount + effectivePayment;
-    const newBalance = currentInvoice.amount - newPaid;
-    const newStatus: Invoice['status'] = newBalance > 0 ? 'partial' : 'paid';
-
-    try {
-      const paymentPayload: any = {
-        customer_id: currentInvoice.customerId,
-        invoice_id: invoiceId,
-        bank_account_id: null,
-        amount: effectivePayment,
-        payment_method: paymentMethod,
-        payment_date: paymentDate,
-        reference: reference || null,
-      };
-
-      const createdPayment = await customerPaymentsService.create(user.id, paymentPayload);
-
-      await invoicesService.updatePayment(invoiceId, newPaid, newStatus);
-      await loadInvoices();
-
-      try {
-        const receiptNumber = `RC-${Date.now()}`;
-        const receiptPayload = {
-          customer_id: currentInvoice.customerId,
-          receipt_number: receiptNumber,
-          receipt_date: paymentDate,
-          amount: effectivePayment,
-          payment_method: paymentMethod,
-          reference: reference || null,
-          concept: `Pago factura ${currentInvoice.invoiceNumber}`,
-          status: 'active' as const,
-        };
-
-        const createdReceipt = await receiptsService.create(user.id, receiptPayload);
-
-        await receiptApplicationsService.create(user.id, {
-          receipt_id: createdReceipt.id,
-          invoice_id: invoiceId,
-          amount_applied: effectivePayment,
-          application_date: paymentDate,
-          notes: null,
-        });
-
-        const receiptNo = (createdReceipt as any)?.receipt_number || receiptNumber;
-
-        const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
-        const companyRnc =
-          (companyInfo as any)?.rnc ||
-          (companyInfo as any)?.tax_id ||
-          (companyInfo as any)?.ruc ||
-          '';
-
-        const amountText = formatAmount(effectivePayment);
-
-        const receiptHtml = `
-          <html>
-            <head>
-              <meta charset="utf-8" />
-              <meta name="viewport" content="width=device-width, initial-scale=1" />
-              <title>Recibo ${receiptNo}</title>
-              <style>
-                :root { --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --primary:#2563eb; --primaryDark:#1d4ed8; }
-                *{ box-sizing:border-box; }
-                body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
-                .page{ padding:24px; }
-                .card{ max-width:860px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 10px 22px rgba(0,0,0,.08); }
-                .header{ padding:20px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
-                .brand h1{ margin:0; font-size:18px; font-weight:800; }
-                .brand p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
-                .title{ text-align:right; }
-                .title h2{ margin:0; font-size:16px; font-weight:800; color:var(--primary); }
-                .title p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
-                .content{ padding:18px 22px 22px; }
-                .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
-                @media (min-width: 720px){ .grid{ grid-template-columns:1fr 1fr; } }
-                .field{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:#fafafa; }
-                .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-                .value{ margin-top:6px; font-size:14px; font-weight:700; word-break:break-word; }
-                .amount{ margin-top:14px; padding:14px; border-radius:12px; border:1px solid rgba(22,163,74,.25); background: rgba(22,163,74,.08); display:flex; justify-content:space-between; gap:12px; align-items:center; }
-                .amount .label{ color: rgba(22,163,74,.9); }
-                .amount .value{ font-size:18px; }
-                .actions{ margin-top:16px; display:flex; justify-content:flex-end; gap:10px; }
-                .btn{ appearance:none; border:0; border-radius:10px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer; }
-                .btnPrimary{ background:var(--primary); color:#fff; }
-                .btnPrimary:hover{ background:var(--primaryDark); }
-                .footer{ padding:14px 22px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
-                @media print{ body{ background:#fff; } .page{ padding:0; } .card{ box-shadow:none; border:0; border-radius:0; } .actions{ display:none !important; } }
-              </style>
-            </head>
-            <body>
-              <div class="page">
-                <div class="card">
-                  <div class="header">
-                    <div class="brand">
-                      <h1>${companyName}</h1>
-                      ${companyRnc ? `<p>RNC: ${companyRnc}</p>` : `<p>&nbsp;</p>`}
-                    </div>
-                    <div class="title">
-                      <div>
-                        <div class="label">Monto recibido</div>
-                        <div class="value"> ${amountText}</div>
-                      </div>
-                      <div style="color: rgba(22,163,74,.9); font-weight:800;">Cobro</div>
-                    </div>
-
-                    <div class="actions">
-                      <button class="btn btnPrimary" onclick="window.print()" type="button">Imprimir</button>
-                    </div>
-                  </div>
-
-                  <div class="footer">Este documento fue generado automáticamente por el sistema.</div>
-                </div>
-              </div>
-            </body>
-          </html>
-        `;
-
-        openReceiptPreview(receiptHtml, `Recibo de Cobro #${receiptNo}`, `recibo-${receiptNo}.html`);
-      } catch (receiptError) {
-        console.error('Error generando recibo de cobro automático:', receiptError);
-        alert('Pago registrado, pero ocurrió un error al generar el recibo de cobro.');
-      }
-
-      if (change > 0) {
-        alert(
-          `Pago registrado correctamente. Devuelta:  ${formatAmount(change)}`,
-        );
-      } else {
-        alert('Pago registrado exitosamente');
-      }
-
-      setShowPaymentModal(false);
-      setSelectedInvoice(null);
-    } catch (error: any) {
-      console.error('[Invoices] Error al registrar pago', error);
-      alert(`Error al registrar el pago: ${error?.message || 'revisa la consola para más detalles'}`);
-    }
   };
 
   const [showReceiptPreviewModal, setShowReceiptPreviewModal] = useState(false);
@@ -935,6 +707,177 @@ export default function InvoicesPage() {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
+  const handleSavePayment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!user?.id) {
+      alert('You must be logged in to record payments');
+      return;
+    }
+
+    const formData = new FormData(e.currentTarget);
+
+    const invoiceId = selectedInvoice ? selectedInvoice.id : String(formData.get('invoice_id') || '');
+    const amountToPay = Number(formData.get('amount_to_pay') || 0);
+    const paymentMethod = String(formData.get('payment_method') || 'cash');
+    const reference = String(formData.get('reference') || '').trim();
+
+    if (!invoiceId) {
+      alert('You must select an invoice');
+      return;
+    }
+
+    if (!amountToPay || amountToPay <= 0) {
+      alert('Amount to pay must be greater than 0');
+      return;
+    }
+
+    const currentInvoice = invoices.find((inv) => inv.id === invoiceId);
+    if (!currentInvoice) {
+      alert('The selected invoice is not valid');
+      return;
+    }
+
+    const effectivePayment = Math.min(amountToPay, currentInvoice.balance);
+    const change = amountToPay - effectivePayment;
+    const paymentDate = new Date().toISOString().slice(0, 10);
+
+    const newPaid = currentInvoice.paidAmount + effectivePayment;
+    const newBalance = currentInvoice.amount - newPaid;
+    const newStatus: Invoice['status'] = newBalance > 0 ? 'partial' : 'paid';
+
+    try {
+      const paymentPayload: any = {
+        customer_id: currentInvoice.customerId,
+        invoice_id: invoiceId,
+        bank_account_id: null,
+        amount: effectivePayment,
+        payment_method: paymentMethod,
+        payment_date: paymentDate,
+        reference: reference || null,
+      };
+
+      await customerPaymentsService.create(user.id, paymentPayload);
+      await invoicesService.updatePayment(invoiceId, newPaid, newStatus);
+      await loadInvoices();
+
+      try {
+        const receiptNumber = `RC-${Date.now()}`;
+        const receiptPayload = {
+          customer_id: currentInvoice.customerId,
+          receipt_number: receiptNumber,
+          receipt_date: paymentDate,
+          amount: effectivePayment,
+          payment_method: paymentMethod,
+          reference: reference || null,
+          concept: `Invoice payment ${currentInvoice.invoiceNumber}`,
+          status: 'active' as const,
+        };
+
+        const createdReceipt = await receiptsService.create(user.id, receiptPayload);
+
+        await receiptApplicationsService.create(user.id, {
+          receipt_id: createdReceipt.id,
+          invoice_id: invoiceId,
+          amount_applied: effectivePayment,
+          application_date: paymentDate,
+          notes: null,
+        });
+
+        const receiptNo = (createdReceipt as any)?.receipt_number || receiptNumber;
+
+        const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
+        const companyRnc =
+          (companyInfo as any)?.rnc ||
+          (companyInfo as any)?.tax_id ||
+          (companyInfo as any)?.ruc ||
+          '';
+
+        const amountText = formatAmount(effectivePayment);
+
+        const receiptHtml = `
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <title>Receipt ${receiptNo}</title>
+              <style>
+                :root { --bg:#f3f4f6; --card:#fff; --text:#111827; --muted:#6b7280; --border:#e5e7eb; --primary:#2563eb; --primaryDark:#1d4ed8; }
+                *{ box-sizing:border-box; }
+                body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+                .page{ padding:24px; }
+                .card{ max-width:860px; margin:0 auto; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:0 10px 22px rgba(0,0,0,.08); }
+                .header{ padding:20px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:16px; align-items:flex-start; }
+                .brand h1{ margin:0; font-size:18px; font-weight:800; }
+                .brand p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
+                .title{ text-align:right; }
+                .title h2{ margin:0; font-size:16px; font-weight:800; color:var(--primary); }
+                .title p{ margin:4px 0 0; font-size:12px; color:var(--muted); }
+                .content{ padding:18px 22px 22px; }
+                .grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+                @media (min-width: 720px){ .grid{ grid-template-columns:1fr 1fr; } }
+                .field{ border:1px solid var(--border); border-radius:12px; padding:12px 14px; background:#fafafa; }
+                .label{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+                .value{ margin-top:6px; font-size:14px; font-weight:700; word-break:break-word; }
+                .amount{ margin-top:14px; padding:14px; border-radius:12px; border:1px solid rgba(22,163,74,.25); background: rgba(22,163,74,.08); display:flex; justify-content:space-between; gap:12px; align-items:center; }
+                .amount .label{ color: rgba(22,163,74,.9); }
+                .amount .value{ font-size:18px; }
+                .actions{ margin-top:16px; display:flex; justify-content:flex-end; gap:10px; }
+                .btn{ appearance:none; border:0; border-radius:10px; padding:10px 14px; font-weight:700; font-size:13px; cursor:pointer; }
+                .btnPrimary{ background:var(--primary); color:#fff; }
+                .btnPrimary:hover{ background:var(--primaryDark); }
+                .footer{ padding:14px 22px; border-top:1px solid var(--border); font-size:12px; color:var(--muted); }
+                @media print{ body{ background:#fff; } .page{ padding:0; } .card{ box-shadow:none; border:0; border-radius:0; } .actions{ display:none !important; } }
+              </style>
+            </head>
+            <body>
+              <div class="page">
+                <div class="card">
+                  <div class="header">
+                    <div class="brand">
+                      <h1>${companyName}</h1>
+                      ${companyRnc ? `<p>RNC: ${companyRnc}</p>` : `<p>&nbsp;</p>`}
+                    </div>
+                    <div class="title">
+                      <div>
+                        <div class="label">Amount received</div>
+                        <div class="value"> ${amountText}</div>
+                      </div>
+                      <div style="color: rgba(22,163,74,.9); font-weight:800;">Collection</div>
+                    </div>
+
+                    <div class="actions">
+                      <button class="btn btnPrimary" onclick="window.print()" type="button">Print</button>
+                    </div>
+                  </div>
+
+                  <div class="footer">This document was automatically generated by the system.</div>
+                </div>
+              </div>
+            </body>
+          </html>
+        `;
+
+        openReceiptPreview(receiptHtml, `Collection Receipt #${receiptNo}`, `receipt-${receiptNo}.html`);
+      } catch (receiptError) {
+        console.error('Error generating automatic collection receipt:', receiptError);
+        alert('Payment recorded, but an error occurred generating the collection receipt.');
+      }
+
+      if (change > 0) {
+        alert(`Payment recorded successfully. Change: ${formatAmount(change)}`);
+      } else {
+        alert('Payment recorded successfully');
+      }
+
+      setShowPaymentModal(false);
+      setSelectedInvoice(null);
+    } catch (error: any) {
+      console.error('[Invoices] Error recording payment', error);
+      alert(`Error recording payment: ${error?.message || 'check the console for more details'}`);
+    }
+  };
+
   const handleNewInvoice = () => {
     setSelectedInvoice(null);
     setSelectedCustomerId('');
@@ -942,7 +885,6 @@ export default function InvoicesPage() {
     setNewInvoiceDiscountType('percentage');
     setNewInvoiceDiscountPercent(0);
     setNewInvoiceNoTax(false);
-    setNewInvoiceDocumentType('');
     recalcNewInvoiceTotals([{ itemId: undefined, description: '', quantity: 1, price: 0, total: 0 }]);
     setShowInvoiceModal(true);
   };
@@ -1316,27 +1258,6 @@ export default function InvoicesPage() {
 
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Document type (NCF)</label>
-                    <select
-                      value={newInvoiceDocumentType}
-                      onChange={(e) => setNewInvoiceDocumentType(e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    >
-                      <option value="">Not selected...</option>
-                      {Array.from(
-                        new Set(
-                          (ncfSeries || [])
-                            .filter((s: any) => s.status === 'active')
-                            .map((s: any) => String(s.document_type)),
-                        ),
-                      ).map((dt) => (
-                        <option key={dt} value={dt}>
-                          {dt}
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
                 

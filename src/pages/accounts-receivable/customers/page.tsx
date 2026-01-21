@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
-import { customersService, chartAccountsService, salesRepsService, customerTypesService, paymentTermsService, settingsService } from '../../../services/database';
+import { customersService, salesRepsService, customerTypesService, paymentTermsService, settingsService } from '../../../services/database';
 import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 interface Customer {
@@ -14,8 +14,6 @@ interface Customer {
   creditLimit: number;
   currentBalance: number;
   status: 'active' | 'inactive' | 'blocked';
-  arAccountId?: string | null;
-  advanceAccountId?: string | null;
   documentType?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
@@ -38,7 +36,6 @@ export default function CustomersPage() {
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [salesReps, setSalesReps] = useState<Array<{ id: string; name: string; is_active: boolean }>>([]);
   const [customerTypes, setCustomerTypes] = useState<any[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<Array<{ id: string; name: string; days?: number }>>([]);
@@ -97,13 +94,11 @@ export default function CustomersPage() {
     const run = async () => {
       await loadCustomers();
       if (!user?.id) return;
-      const [accs, reps, types, terms] = await Promise.all([
-        chartAccountsService.getAll(user.id),
+      const [reps, types, terms] = await Promise.all([
         salesRepsService.getAll(user.id),
         customerTypesService.getAll(user.id),
         paymentTermsService.getAll(user.id),
       ]);
-      setAccounts(accs || []);
       setSalesReps((reps || []).filter((r: any) => r.is_active));
       setCustomerTypes(types || []);
       const mappedTerms = (terms || []).map((t: any) => ({
@@ -116,22 +111,6 @@ export default function CustomersPage() {
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  // Cuentas por cobrar permitidas para clientes: cuentas de activo posteables que contengan "Cuentas por Cobrar" en el nombre
-  const receivableAccounts = accounts.filter((acc) => {
-    if (!acc.allowPosting) return false;
-    if (acc.type !== 'asset') return false;
-    const name = String(acc.name || '').toLowerCase();
-    return name.includes('cuentas por cobrar');
-  });
-
-  // Cuentas de anticipos de clientes: cuentas de pasivo posteables y ACTIVAS
-  const advanceAccounts = accounts.filter((acc) => {
-    if (!acc.allowPosting) return false;
-    if (acc.type !== 'liability') return false;
-    if (acc.isActive === false) return false; // Solo cuentas activas
-    return true;
-  });
 
   const getCustomerStatusColor = (status: string) => {
     switch (status) {
@@ -319,11 +298,6 @@ export default function CustomersPage() {
         creditLimitInput.value = String(suggested);
       }
     }
-
-    const arAccountSelect = form.elements.namedItem('arAccountId') as HTMLSelectElement | null;
-    if (arAccountSelect && selectedType.arAccountId) {
-      arAccountSelect.value = String(selectedType.arAccountId);
-    }
   };
 
   const handleSaveCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -344,8 +318,6 @@ export default function CustomersPage() {
       address: String(formData.get('address') || ''),
       creditLimit: Number(formData.get('creditLimit') || 0),
       status: String(formData.get('status') || 'active') as Customer['status'],
-      arAccountId: String(formData.get('arAccountId') || ''),
-      advanceAccountId: String(formData.get('advanceAccountId') || ''),
       documentType: String(formData.get('documentType') || ''),
       contactName: String(formData.get('contactName') || ''),
       contactPhone: String(formData.get('contactPhone') || ''),
@@ -836,48 +808,6 @@ export default function CustomersPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Accounts receivable account (optional)
-                  </label>
-                  <select
-                    name="arAccountId"
-                    defaultValue={(selectedCustomer as any)?.arAccountId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                  >
-                    <option value="">Use default account</option>
-                    {receivableAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    If you do not select an account, the default A/R account will be used.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Customer advance account (optional)
-                  </label>
-                  <select
-                    name="advanceAccountId"
-                    defaultValue={selectedCustomer?.advanceAccountId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                  >
-                    <option value="">No specific advance account</option>
-                    {advanceAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    If you do not select one, advances will follow the global configuration.
-                  </p>
-                </div>
-                
                 <div className="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0 pt-4">
                   <button
                     type="button"

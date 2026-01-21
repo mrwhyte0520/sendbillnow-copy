@@ -3,6 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
+import { invoicesService, apInvoicesService, purchaseOrdersService } from '../../services/database';
+
+interface InvoiceDueItem {
+  id: string;
+  number: string;
+  customer?: string;
+  supplier?: string;
+  total: number;
+  dueDate: string;
+  type: 'receivable' | 'payable';
+}
+
+interface DayInvoices {
+  receivables: InvoiceDueItem[];
+  payables: InvoiceDueItem[];
+}
 
 const STORAGE_PREFIX = 'contabi_rbac_';
 
@@ -11,6 +27,8 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [currentDate] = useState(new Date());
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
+  const [invoicesByDay, setInvoicesByDay] = useState<Record<string, DayInvoices>>({});
+  const [selectedDayInvoices, setSelectedDayInvoices] = useState<{ day: number; data: DayInvoices } | null>(null);
 
   const normalizeModuleKey = (value: unknown) => {
     return String(value || '')
@@ -50,6 +68,114 @@ export default function DashboardPage() {
     };
     fetchAllowed();
   }, [user?.id]);
+
+  // Load pending invoices (AR and AP) for calendar
+  useEffect(() => {
+    const loadInvoices = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const normalizeStatus = (value: any) => String(value || '').trim().toLowerCase();
+        
+        // Load AR invoices (accounts receivable - what customers owe us)
+        const arInvoices = await invoicesService.getAll(user.id);
+        const pendingAR: InvoiceDueItem[] = (arInvoices || [])
+          .filter((inv: any) => {
+            const status = normalizeStatus(inv.status);
+            if (['paid', 'cancelled', 'voided', 'draft'].includes(status)) return false;
+            const totalAmount = Number(inv.total_amount) || 0;
+            const paidAmount = Number(inv.paid_amount) || 0;
+            const balanceAmount =
+              typeof inv.balance_amount === 'number'
+                ? Number(inv.balance_amount)
+                : Math.max(0, totalAmount - paidAmount);
+            return balanceAmount > 0;
+          })
+          .map((inv: any) => ({
+            id: inv.id,
+            number: inv.invoice_number || inv.id,
+            customer: inv.customers?.name || inv.customer_name || inv.customer || 'Unknown',
+            total:
+              typeof inv.balance_amount === 'number'
+                ? Number(inv.balance_amount)
+                : Math.max(0, (Number(inv.total_amount) || 0) - (Number(inv.paid_amount) || 0)),
+            dueDate: inv.due_date || inv.dueDate || '',
+            type: 'receivable' as const,
+          }));
+
+        // Load AP invoices (accounts payable - what we owe suppliers)
+        const apInvoices = await apInvoicesService.getAll(user.id);
+        const pendingAP: InvoiceDueItem[] = (apInvoices || [])
+          .filter((inv: any) => {
+            const status = normalizeStatus(inv.status);
+            if (['paid', 'cancelled', 'voided'].includes(status)) return false;
+            const balanceAmount =
+              typeof inv.balance_amount === 'number'
+                ? Number(inv.balance_amount)
+                : Number(inv.total_to_pay) || Number(inv.total_amount) || 0;
+            return balanceAmount > 0;
+          })
+          .map((inv: any) => ({
+            id: inv.id,
+            number: inv.invoice_number || inv.id,
+            supplier: inv.suppliers?.name || inv.supplier_name || inv.supplier || 'Unknown',
+            total:
+              typeof inv.balance_amount === 'number'
+                ? Number(inv.balance_amount)
+                : Number(inv.total_to_pay) || Number(inv.total_amount) || 0,
+            dueDate: inv.due_date || inv.dueDate || inv.delivery_date || '',
+            type: 'payable' as const,
+          }));
+
+        // Load Purchase Orders as upcoming payables (when not yet invoiced)
+        const purchaseOrders = await purchaseOrdersService.getAll(user.id);
+        const pendingPO: InvoiceDueItem[] = (purchaseOrders || [])
+          .filter((po: any) => {
+            const status = normalizeStatus(po.status);
+            if (['cancelled', 'received'].includes(status)) return false;
+            const total = Number(po.total_amount) || 0;
+            return total > 0;
+          })
+          .map((po: any) => ({
+            id: String(po.id),
+            number: po.po_number || po.id,
+            supplier: po.suppliers?.name || po.supplier_name || 'Unknown',
+            total: Number(po.total_amount) || 0,
+            dueDate: po.expected_date || po.order_date || '',
+            type: 'payable' as const,
+          }));
+
+        // Group by day (only for current month)
+        const byDay: Record<string, DayInvoices> = {};
+        
+        [...pendingAR, ...pendingAP, ...pendingPO].forEach((inv) => {
+          if (!inv.dueDate) return;
+          const dueDate = new Date(inv.dueDate);
+          if (Number.isNaN(dueDate.getTime())) return;
+          if (dueDate.getFullYear() !== year || dueDate.getMonth() !== month) return;
+          
+          const dayKey = String(dueDate.getDate());
+          if (!byDay[dayKey]) {
+            byDay[dayKey] = { receivables: [], payables: [] };
+          }
+          
+          if (inv.type === 'receivable') {
+            byDay[dayKey].receivables.push(inv);
+          } else {
+            byDay[dayKey].payables.push(inv);
+          }
+        });
+        
+        setInvoicesByDay(byDay);
+      } catch (error) {
+        console.error('Error loading invoices for calendar:', error);
+      }
+    };
+    
+    loadInvoices();
+  }, [user?.id, currentDate]);
 
   const handleSignOut = async () => {
     try {
@@ -167,6 +293,18 @@ export default function DashboardPage() {
               <i className="ri-calendar-line text-2xl text-white"></i>
             </div>
           </div>
+
+          {/* Legend */}
+          <div className="mb-4 flex items-center gap-6 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span>Receivables (to collect)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <span>Payables (to pay)</span>
+            </div>
+          </div>
           
           <div className="grid grid-cols-7 gap-2">
             {/* Encabezados de días */}
@@ -177,22 +315,142 @@ export default function DashboardPage() {
             ))}
             
             {/* Días del mes */}
-            {getDaysInMonth(currentDate).map((day, index) => (
-              <div
-                key={index}
-                className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 ${
-                  day === null
-                    ? 'bg-transparent'
-                    : day === currentDate.getDate()
-                    ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white font-bold shadow-lg shadow-[#008000]/30 scale-110'
-                    : 'bg-gradient-to-br from-[#f8f6f0] to-[#f0ece0] hover:from-[#e8e4d8] hover:to-[#e0dcd0] text-[#2f3e1e] hover:text-[#008000] cursor-pointer hover:shadow-md hover:-translate-y-0.5'
-                }`}
-              >
-                {day}
-              </div>
-            ))}
+            {getDaysInMonth(currentDate).map((day, index) => {
+              const dayData = day ? invoicesByDay[String(day)] : null;
+              const hasReceivables = dayData && dayData.receivables.length > 0;
+              const hasPayables = dayData && dayData.payables.length > 0;
+              const hasInvoices = hasReceivables || hasPayables;
+              
+              return (
+                <div
+                  key={index}
+                  onClick={() => {
+                    if (day && dayData) {
+                      setSelectedDayInvoices({ day, data: dayData });
+                    }
+                  }}
+                  className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 relative ${
+                    day === null
+                      ? 'bg-transparent'
+                      : day === currentDate.getDate()
+                      ? 'bg-gradient-to-br from-[#008000] to-[#006600] text-white font-bold shadow-lg shadow-[#008000]/30 scale-110'
+                      : hasInvoices
+                      ? 'bg-gradient-to-br from-[#fff8e6] to-[#ffefcc] hover:from-[#ffe8b3] hover:to-[#ffd480] text-[#2f3e1e] cursor-pointer hover:shadow-md hover:-translate-y-0.5 border-2 border-[#f0c040]'
+                      : 'bg-gradient-to-br from-[#f8f6f0] to-[#f0ece0] hover:from-[#e8e4d8] hover:to-[#e0dcd0] text-[#2f3e1e] hover:text-[#008000] cursor-pointer hover:shadow-md hover:-translate-y-0.5'
+                  }`}
+                >
+                  <span>{day}</span>
+                  {hasInvoices && (
+                    <div className="flex gap-1 mt-0.5">
+                      {hasReceivables && (
+                        <div className="w-2 h-2 rounded-full bg-green-500" title="Receivables due"></div>
+                      )}
+                      {hasPayables && (
+                        <div className="w-2 h-2 rounded-full bg-red-500" title="Payables due"></div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
+
+        {/* Invoice Details Modal */}
+        {selectedDayInvoices && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+              <div className="bg-gradient-to-r from-[#008000] to-[#006600] px-6 py-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white">
+                  Invoices Due - {monthNames[currentDate.getMonth()]} {selectedDayInvoices.day}, {currentDate.getFullYear()}
+                </h3>
+                <button
+                  onClick={() => setSelectedDayInvoices(null)}
+                  className="text-white/80 hover:text-white text-2xl"
+                >
+                  <i className="ri-close-line"></i>
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4 bg-[#faf9f5]">
+                {/* Receivables */}
+                {selectedDayInvoices.data.receivables.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
+                      <i className="ri-arrow-down-circle-line"></i>
+                      To Collect (Receivables)
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedDayInvoices.data.receivables.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="bg-[#eafff0] border border-[#86efac] rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-[#d7ffe4]"
+                          onClick={() => {
+                            setSelectedDayInvoices(null);
+                            navigate('/accounts-receivable/invoices');
+                          }}
+                        >
+                          <div>
+                            <div className="font-medium text-[#14532d]">{inv.number}</div>
+                            <div className="text-sm text-[#166534]">{inv.customer}</div>
+                          </div>
+                          <div className="font-bold text-[#166534]">
+                            ${inv.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Payables */}
+                {selectedDayInvoices.data.payables.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
+                      <i className="ri-arrow-up-circle-line"></i>
+                      To Pay (Payables)
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedDayInvoices.data.payables.map((inv) => (
+                        <div
+                          key={inv.id}
+                          className="bg-[#fff1f2] border border-[#fda4af] rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-[#ffe4e6]"
+                          onClick={() => {
+                            setSelectedDayInvoices(null);
+                            navigate('/accounts-payable/invoices');
+                          }}
+                        >
+                          <div>
+                            <div className="font-medium text-[#7f1d1d]">{inv.number}</div>
+                            <div className="text-sm text-[#991b1b]">{inv.supplier}</div>
+                          </div>
+                          <div className="font-bold text-[#991b1b]">
+                            ${inv.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedDayInvoices.data.receivables.length === 0 && selectedDayInvoices.data.payables.length === 0 && (
+                  <div className="text-center text-gray-500 py-4">
+                    No invoices due on this day
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
+                <button
+                  onClick={() => setSelectedDayInvoices(null)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

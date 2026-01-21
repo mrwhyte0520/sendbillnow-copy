@@ -136,11 +136,10 @@ export default function InvoicingPage() {
   const [newInvoiceNotes, setNewInvoiceNotes] = useState('');
   const [newInvoiceStoreName, setNewInvoiceStoreName] = useState('Main Store');
   const [newInvoiceSaleType, setNewInvoiceSaleType] = useState<'credit' | 'cash'>('credit');
-  const [newInvoiceDocumentType, setNewInvoiceDocumentType] = useState<string>('');
-  const [ncfSeries, setNcfSeries] = useState<any[]>([]);
   const [newInvoicePaymentMethod, setNewInvoicePaymentMethod] = useState<string>('');
   const [newInvoiceBankAccountId, setNewInvoiceBankAccountId] = useState<string>('');
   const [newInvoicePaymentReference, setNewInvoicePaymentReference] = useState<string>('');
+
   const [bankAccounts, setBankAccounts] = useState<Array<{ id: string; name: string; chartAccountId: string | null }>>([]);
 
   type NewItem = { itemId?: string; description: string; quantity: number; price: number; total: number };
@@ -376,23 +375,6 @@ export default function InvoicingPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    const loadNcfSeries = async () => {
-      if (!user?.id) {
-        setNcfSeries([]);
-        return;
-      }
-      try {
-        const series = await taxService.getNcfSeries(user.id);
-        setNcfSeries((series || []).filter((s: any) => s.status === 'active'));
-      } catch (error) {
-        console.error('Error cargando series NCF:', error);
-        setNcfSeries([]);
-      }
-    };
-    loadNcfSeries();
-  }, [user?.id]);
-
-  useEffect(() => {
     const loadBankAccounts = async () => {
       if (!user?.id) return;
       try {
@@ -513,9 +495,6 @@ export default function InvoicingPage() {
     setNewInvoicePaymentMethod('');
     setNewInvoiceBankAccountId('');
     setNewInvoicePaymentReference('');
-
-    const activeSeries = (ncfSeries || []).find((s: any) => s.status === 'active');
-    setNewInvoiceDocumentType(activeSeries?.document_type || 'B02');
 
     const defaultStore = stores.find((s) => s.is_active !== false) || stores[0];
     setNewInvoiceStoreName(defaultStore?.name || 'Main Store');
@@ -870,45 +849,22 @@ export default function InvoicingPage() {
 
     worksheet.mergeCells('A1:D1');
     worksheet.getCell('A1').value = companyName;
-    worksheet.getCell('A1').font = { bold: true, size: 16 };
-    worksheet.getCell('A1').alignment = { horizontal: 'center' } as any;
+    worksheet.getCell('A1').font = { bold: true, size: 16, color: { argb: 'FFFFFFFF' } };
+    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' } as any;
+    worksheet.getCell('A1').fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF008000' },
+    };
+    worksheet.getRow(1).height = 24;
 
-    if (companyRnc) {
-      worksheet.mergeCells('A2:D2');
-      worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
-      worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-      worksheet.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FF0b2a6f' } };
-      worksheet.getCell('A2').fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFe0e7ff' }
-      };
-    }
-
-    const headerStartRow = companyRnc ? 3 : 2;
+    const headerStartRow = 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
     worksheet.getCell(`A${headerStartRow}`).value = `Invoice #${invoice.id}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
 
-    const ncfRow = headerStartRow + 1;
-    worksheet.mergeCells(`A${ncfRow}:D${ncfRow}`);
-    worksheet.getCell(`A${ncfRow}`).value = `NCF: ${invoice.id}`;
-    worksheet.getCell(`A${ncfRow}`).font = { bold: true, size: 14, color: { argb: 'FF166534' } };
-    worksheet.getCell(`A${ncfRow}`).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFdcfce7' }
-    };
-    worksheet.getCell(`A${ncfRow}`).alignment = { horizontal: 'center' } as any;
-    worksheet.getCell(`A${ncfRow}`).border = {
-      top: { style: 'medium', color: { argb: 'FF16a34a' } },
-      bottom: { style: 'medium', color: { argb: 'FF16a34a' } },
-      left: { style: 'medium', color: { argb: 'FF16a34a' } },
-      right: { style: 'medium', color: { argb: 'FF16a34a' } }
-    };
-
     if (String(invoice.id || '').toUpperCase().startsWith('B')) {
-      const fiscalRow = ncfRow + 1;
+      const fiscalRow = headerStartRow + 1;
       worksheet.mergeCells(`A${fiscalRow}:D${fiscalRow}`);
       worksheet.getCell(`A${fiscalRow}`).value = '✓ VALID INVOICE FOR TAX CREDIT';
       worksheet.getCell(`A${fiscalRow}`).font = { bold: true, size: 11, color: { argb: 'FF92400e' } };
@@ -1214,32 +1170,6 @@ export default function InvoicingPage() {
     const total = newInvoiceTotal;
 
     let invoiceNumber = `FAC-${Date.now()}`;
-    // Si el usuario NO selecciona tipo de documento, entonces la factura se crea SIN NCF.
-    // Solo se genera NCF cuando el usuario selecciona explícitamente un tipo.
-    const selectedDocType = String(newInvoiceDocumentType || '');
-    if (selectedDocType) {
-      const availableDocTypes = Array.from(
-        new Set(
-          (ncfSeries || [])
-            .filter((s: any) => s.status === 'active')
-            .map((s: any) => String(s.document_type)),
-        ),
-      );
-
-      if (!availableDocTypes.includes(selectedDocType)) {
-        alert('No active NCF series available for the selected type.');
-        return;
-      }
-
-      try {
-        const nextNcf = await taxService.getNextNcf(user.id, selectedDocType);
-        if (nextNcf?.ncf) {
-          invoiceNumber = nextNcf.ncf;
-        }
-      } catch {
-        // NCF no disponible - se usará número interno
-      }
-    }
 
     const invoicePayload = {
       customer_id: newInvoiceCustomerId,
@@ -2006,27 +1936,6 @@ export default function InvoicingPage() {
                     >
                       <option value="credit">Credit</option>
                       <option value="cash">Cash</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Type (NCF)</label>
-                    <select
-                      value={newInvoiceDocumentType}
-                      onChange={(e) => setNewInvoiceDocumentType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    >
-                      <option value="">Not selected...</option>
-                      {Array.from(
-                        new Set(
-                          (ncfSeries || [])
-                            .filter((s: any) => s.status === 'active')
-                            .map((s: any) => String(s.document_type)),
-                        ),
-                      ).map((dt) => (
-                        <option key={dt} value={dt}>
-                          {dt}
-                        </option>
-                      ))}
                     </select>
                   </div>
                   <div>

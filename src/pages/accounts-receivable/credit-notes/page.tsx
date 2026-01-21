@@ -38,8 +38,6 @@ export default function CreditNotesPage() {
   const [invoices, setInvoices] = useState<Array<{ id: string; invoiceNumber: string; totalAmount: number; paidAmount: number; status: string; customerId: string }>>([]);
   const [invoiceDetails, setInvoiceDetails] = useState<any[]>([]);
   const [loadingSupport, setLoadingSupport] = useState(false);
-  const [customerArAccounts, setCustomerArAccounts] = useState<Record<string, string>>({});
-  const [accounts, setAccounts] = useState<any[]>([]);
   const [noteCustomerId, setNoteCustomerId] = useState<string>('');
 
   const getStatusColor = (status: string) => {
@@ -51,10 +49,6 @@ export default function CreditNotesPage() {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const arAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'asset');
-
-  const debitAccounts = accounts.filter((acc) => acc.allowPosting && acc.type === 'income');
 
   const loadSupportData = async () => {
     if (!user?.id) return;
@@ -295,25 +289,25 @@ export default function CreditNotesPage() {
 
   const handleCancelNote = async (noteId: string) => {
     if (!user?.id) {
-      alert('Debes iniciar sesión para cancelar notas');
+      alert('You must be logged in to cancel notes');
       return;
     }
-    if (!confirm('¿Está seguro de que desea cancelar esta nota de crédito?')) return;
+    if (!confirm('Are you sure you want to cancel this credit note?')) return;
     try {
       await creditDebitNotesService.updateStatus(noteId, 'cancelled');
       await loadNotes();
-      alert('Nota de crédito cancelada exitosamente');
+      alert('Credit note cancelled successfully');
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error('[CreditNotes] Error cancelando nota de crédito', error);
-      alert(`Error al cancelar la nota de crédito: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[CreditNotes] Error cancelling credit note', error);
+      alert(`Error cancelling credit note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveNote = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
-      alert('Debes iniciar sesión para crear notas de crédito');
+      alert('You must be logged in to create credit notes');
       return;
     }
     const formData = new FormData(e.currentTarget);
@@ -323,17 +317,16 @@ export default function CreditNotesPage() {
     const invoiceId = String(formData.get('invoice_id') || '');
     const reason = String(formData.get('reason') || '');
     const concept = String(formData.get('concept') || '');
-    const debitAccountId = String(formData.get('debit_account_id') || '');
 
     if (!customerId || !amount || !invoiceId) {
-      alert('Cliente, monto y factura son obligatorios');
+      alert('Customer, amount, and invoice are required');
       return;
     }
 
     // Validación contra saldo pendiente de la factura
     const targetInvoice = invoices.find((inv) => String(inv.id) === invoiceId);
     if (!targetInvoice) {
-      alert('No se pudo encontrar la factura seleccionada. Vuelve a cargar la página e inténtalo de nuevo.');
+      alert('The selected invoice could not be found. Reload the page and try again.');
       return;
     }
 
@@ -342,13 +335,13 @@ export default function CreditNotesPage() {
     const pendingAmount = Math.max(originalTotal - paidAmount, 0);
 
     if (pendingAmount <= 0) {
-      alert('La factura seleccionada no tiene saldo pendiente para aplicar una nota de crédito.');
+      alert('The selected invoice has no pending balance to apply a credit note.');
       return;
     }
 
     if (amount > pendingAmount) {
       alert(
-        `El monto de la nota de crédito no puede ser mayor que el saldo pendiente de la factura (pendiente: ${pendingAmount.toLocaleString()}).`,
+        `The credit note amount cannot be greater than the invoice pending balance (pending: ${pendingAmount.toLocaleString()}).`,
       );
       return;
     }
@@ -390,19 +383,19 @@ export default function CreditNotesPage() {
       }
 
       await loadNotes();
-      alert('Nota de crédito creada exitosamente');
+      alert('Credit note created successfully');
       setShowNoteModal(false);
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error('[CreditNotes] Error al crear nota', error);
-      alert(`Error al crear la nota de crédito: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[CreditNotes] Error creating credit note', error);
+      alert(`Error creating credit note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
   const handleSaveApplication = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id || !selectedNote) {
-      alert('Debes iniciar sesión y seleccionar una nota válida');
+      alert('You must be logged in and select a valid note');
       return;
     }
 
@@ -411,17 +404,17 @@ export default function CreditNotesPage() {
     const amountToApply = Number(formData.get('amount_to_apply') || 0);
 
     if (!invoiceId) {
-      alert('Debes seleccionar una factura para aplicar la nota');
+      alert('You must select an invoice to apply the note');
       return;
     }
 
     if (!amountToApply || amountToApply <= 0) {
-      alert('El monto a aplicar debe ser mayor que 0');
+      alert('Amount to apply must be greater than 0');
       return;
     }
 
     if (amountToApply > selectedNote.balance) {
-      alert('El monto a aplicar no puede ser mayor que el saldo disponible de la nota');
+      alert('Amount to apply cannot be greater than the available note balance');
       return;
     }
 
@@ -431,13 +424,13 @@ export default function CreditNotesPage() {
 
     const invoice = invoiceDetails.find((inv: any) => String(inv.id) === invoiceId);
     if (!invoice) {
-      alert('No se pudo encontrar la factura seleccionada. Vuelve a cargar la página e inténtalo de nuevo.');
+      alert('The selected invoice could not be found. Reload the page and try again.');
       return;
     }
 
     const originalTotal = Number(invoice.total_amount) || 0;
     if (amountToApply > originalTotal) {
-      alert('El monto a aplicar no puede ser mayor que el total de la factura');
+      alert('Amount to apply cannot be greater than the invoice total');
       return;
     }
 
@@ -464,13 +457,13 @@ export default function CreditNotesPage() {
         balanceAmount: newBalance,
       });
       await loadNotes();
-      alert('Nota de crédito aplicada exitosamente');
+      alert('Credit note applied successfully');
       setShowApplyModal(false);
       setSelectedNote(null);
     } catch (error: any) {
       // eslint-disable-next-line no-console
-      console.error('[CreditNotes] Error al aplicar nota', error);
-      alert(`Error al aplicar la nota de crédito: ${error?.message || 'revisa la consola para más detalles'}`);
+      console.error('[CreditNotes] Error applying credit note', error);
+      alert(`Error applying credit note: ${error?.message || 'check the console for more details'}`);
     }
   };
 
@@ -604,38 +597,38 @@ export default function CreditNotesPage() {
         {/* Credit Notes Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {(loadingNotes || loadingSupport) && (
-            <div className="px-6 pt-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 pt-3 text-sm text-gray-500">Loading data...</div>
           )}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nota
+                    Note
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
+                    Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monto
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aplicado
+                    Applied
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saldo
+                    Balance
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Motivo
+                    Reason
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -673,7 +666,7 @@ export default function CreditNotesPage() {
                         <button
                           onClick={() => handleViewNote(note)}
                           className="text-blue-600 hover:text-blue-900"
-                          title="Ver detalles"
+                          title="View details"
                         >
                           <i className="ri-eye-line"></i>
                         </button>
@@ -681,7 +674,7 @@ export default function CreditNotesPage() {
                           <button
                             onClick={() => handleApplyNote(note)}
                             className="text-green-600 hover:text-green-900"
-                            title="Aplicar nota"
+                            title="Apply note"
                           >
                             <i className="ri-check-line"></i>
                           </button>
@@ -690,7 +683,7 @@ export default function CreditNotesPage() {
                           <button
                             onClick={() => handleCancelNote(note.id)}
                             className="text-red-600 hover:text-red-900"
-                            title="Cancelar nota"
+                            title="Cancel note"
                           >
                             <i className="ri-close-circle-line"></i>
                           </button>
@@ -802,42 +795,6 @@ export default function CreditNotesPage() {
                     <option value="Commercial rebate">Commercial rebate</option>
                     <option value="Service cancellation">Service cancellation</option>
                     <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Accounts Receivable
-                  </label>
-                  <select
-                    name="ar_account_id"
-                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    defaultValue=""
-                  >
-                    <option value="">Select AR account</option>
-                    {arAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c24] mb-2">
-                    Debit account
-                  </label>
-                  <select
-                    name="debit_account_id"
-                    className="w-full p-3 border border-[#d8cbb5] bg-[#fffdf6] rounded-lg focus:ring-2 focus:ring-[#6b5c3b] focus:border-[#6b5c3b] pr-8"
-                    defaultValue=""
-                  >
-                    <option value="">Select account</option>
-                    {debitAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
                   </select>
                 </div>
 

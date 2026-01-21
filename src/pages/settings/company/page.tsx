@@ -199,18 +199,6 @@ export default function CompanySettingsPage() {
                   className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RNC/RUC *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={companyInfo.ruc}
-                  onChange={(e) => handleInputChange('ruc', e.target.value)}
-                  className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
-                />
-              </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Address *
