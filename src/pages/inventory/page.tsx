@@ -1935,26 +1935,6 @@ export default function InventoryPage() {
           </button>
         </div>
 
-        {/* Cost Revaluation */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-[#dff3df] rounded-lg flex items-center justify-center">
-              <i className="ri-slideshow-line text-[#008000]"></i>
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900 ml-3">Cost Revaluation</h4>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">
-            Module to adjust weighted average inventory costs.
-          </p>
-          <button
-            onClick={() => navigate('/inventory/cost-revaluation')}
-            className="w-full bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
-          >
-            <i className="ri-bar-chart-box-line mr-2"></i>
-            Open Module
-          </button>
-        </div>
-
       </div>
 
       {/* General Statistics */}
