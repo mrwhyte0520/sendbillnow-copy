@@ -109,7 +109,7 @@ export default function InventoryPhysicalCountPage() {
 
     Object.entries(balances).forEach(([wid, itemBalances]) => {
       const warehouse = warehouses.find((w) => String(w.id) === wid);
-      const warehouseName = warehouse?.name || 'Almacén';
+      const warehouseName = warehouse?.name || 'Warehouse';
 
       Object.entries(itemBalances).forEach(([iid, qty]) => {
         const theoreticalQty = Number(qty) || 0;
@@ -148,19 +148,19 @@ export default function InventoryPhysicalCountPage() {
 
   const handleExportExcel = () => {
     if (filteredRows.length === 0) {
-      alert('No hay datos para exportar');
+      alert('No data to export');
       return;
     }
 
     const headers = [
-      { key: 'warehouseName', title: 'Almacén' },
+      { key: 'warehouseName', title: 'Warehouse' },
       { key: 'sku', title: 'SKU' },
-      { key: 'name', title: 'Producto' },
-      { key: 'category', title: 'Categoría' },
-      { key: 'theoreticalQty', title: 'Existencia Teórica' },
-      { key: 'countedQty', title: 'Cantidad Contada' },
-      { key: 'difference', title: 'Diferencia' },
-      { key: 'notes', title: 'Observaciones' },
+      { key: 'name', title: 'Product' },
+      { key: 'category', title: 'Category' },
+      { key: 'theoreticalQty', title: 'Theoretical Stock' },
+      { key: 'countedQty', title: 'Counted Qty' },
+      { key: 'difference', title: 'Difference' },
+      { key: 'notes', title: 'Observations' },
     ];
 
     const rowsData = filteredRows.map((r) => ({
@@ -180,10 +180,10 @@ export default function InventoryPhysicalCountPage() {
       (companyInfo?.legal_name as string) ||
       undefined;
 
-    const title = 'Toma de Inventario Físico';
-    const periodText = `Periodo: ${new Date().toISOString().slice(0, 7)}`;
+    const title = 'Physical Inventory Count';
+    const periodText = `Period: ${new Date().toISOString().slice(0, 7)}`;
 
-    exportToExcelWithHeaders(rowsData, headers, 'toma_inventario_fisico', 'Toma Física', undefined, {
+    exportToExcelWithHeaders(rowsData, headers, 'physical_inventory_count', 'Physical Count', undefined, {
       title,
       companyName,
       headerStyle: 'dgii_606',
@@ -193,19 +193,19 @@ export default function InventoryPhysicalCountPage() {
 
   const handleExportPdf = async () => {
     if (filteredRows.length === 0) {
-      alert('No hay datos para exportar');
+      alert('No data to export');
       return;
     }
 
     const columns = [
-      { key: 'warehouseName', label: 'Almacén' },
+      { key: 'warehouseName', label: 'Warehouse' },
       { key: 'sku', label: 'SKU' },
-      { key: 'name', label: 'Producto' },
-      { key: 'category', label: 'Categoría' },
-      { key: 'theoreticalQty', label: 'Existencia Teórica' },
-      { key: 'countedQty', label: 'Cantidad Contada' },
-      { key: 'difference', label: 'Diferencia' },
-      { key: 'notes', label: 'Observaciones' },
+      { key: 'name', label: 'Product' },
+      { key: 'category', label: 'Category' },
+      { key: 'theoreticalQty', label: 'Theoretical Stock' },
+      { key: 'countedQty', label: 'Counted Qty' },
+      { key: 'difference', label: 'Difference' },
+      { key: 'notes', label: 'Observations' },
     ];
 
     const data = filteredRows.map((r) => ({
@@ -224,11 +224,11 @@ export default function InventoryPhysicalCountPage() {
         (companyInfo?.name as string) ||
         (companyInfo?.company_name as string) ||
         '';
-      const title = `${companyName} - Toma de Inventario Físico`;
-      await exportToPdf(data, columns, 'toma_inventario_fisico', title);
+      const title = `${companyName} - Physical Inventory Count`;
+      await exportToPdf(data, columns, 'physical_inventory_count', title);
     } catch (error) {
       console.error('[InventoryPhysicalCount] Error exporting PDF', error);
-      alert('Error al exportar a PDF. Revisa la consola para más detalles.');
+      alert('Error exporting to PDF. Check the console for details.');
     }
   };
 
@@ -240,7 +240,7 @@ export default function InventoryPhysicalCountPage() {
             {companyInfo && (
               <div className="text-sm text-gray-700 mb-1">
                 <p className="font-semibold text-gray-900">
-                  {companyInfo.name || companyInfo.company_name || 'Empresa'}
+                  {companyInfo.name || companyInfo.company_name || 'Company'}
                 </p>
                 <p className="text-xs text-gray-600">
                   {companyInfo.tax_id && <span>RNC: {companyInfo.tax_id}</span>}
@@ -249,9 +249,9 @@ export default function InventoryPhysicalCountPage() {
                 </p>
               </div>
             )}
-            <h1 className="text-2xl font-bold text-gray-900">Toma de Inventario Físico</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Physical Inventory Count</h1>
             <p className="text-sm text-gray-600 mt-1">
-              Listado para conteo físico de inventario por producto y almacén.
+              List for physical inventory count by product and warehouse.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -260,14 +260,14 @@ export default function InventoryPhysicalCountPage() {
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-excel-line mr-2" />
-              Exportar a Excel
+              Export to Excel
             </button>
             <button
               onClick={handleExportPdf}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
             >
               <i className="ri-file-pdf-line mr-2" />
-              Exportar a PDF
+              Export to PDF
             </button>
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function InventoryPhysicalCountPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha de conteo</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Count Date</label>
               <input
                 type="date"
                 value={dateCutoff}
@@ -284,13 +284,13 @@ export default function InventoryPhysicalCountPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Almacén</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
               <select
                 value={selectedWarehouseId}
                 onChange={(e) => setSelectedWarehouseId(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
               >
-                <option value="all">Todos los almacenes</option>
+                <option value="all">All warehouses</option>
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
                     {w.name}
@@ -299,12 +299,12 @@ export default function InventoryPhysicalCountPage() {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por SKU, nombre o categoría"
+                placeholder="Search by SKU, name or category"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -318,18 +318,18 @@ export default function InventoryPhysicalCountPage() {
               className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="includeZeroStock" className="text-sm text-gray-700">
-              Incluir productos con existencia teórica igual a 0
+              Include products with zero theoretical stock
             </label>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           {loading && (
-            <div className="px-6 py-3 text-sm text-gray-500">Cargando datos...</div>
+            <div className="px-6 py-3 text-sm text-gray-500">Loading data...</div>
           )}
 
           {!loading && filteredRows.length === 0 && (
-            <div className="px-6 py-4 text-sm text-gray-500">No hay datos para los filtros seleccionados.</div>
+            <div className="px-6 py-4 text-sm text-gray-500">No data for the selected filters.</div>
           )}
 
           {!loading && filteredRows.length > 0 && (
@@ -337,14 +337,14 @@ export default function InventoryPhysicalCountPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Almacén</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Warehouse</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Existencia Teórica</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad Contada</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Diferencia</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observaciones</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Theoretical Stock</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Counted Qty</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Difference</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observations</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
