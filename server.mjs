@@ -1,15 +1,42 @@
 import express from 'express';
+import fs from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 import demoRequestHandler from './api/demo-request.js';
 import approveDemoHandler from './api/approve-demo.js';
 import webnotiEventHandler from './api/webnoti/event.js';
+import createCheckoutSessionHandler from './api/create-checkout-session.js';
+import getCheckoutSessionHandler from './api/get-checkout-session.js';
+import stripeWebhookHandler from './api/stripe-webhook.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  try {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx <= 0) continue;
+      const key = trimmed.slice(0, idx).trim();
+      let val = trimmed.slice(idx + 1);
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!(key in process.env)) {
+        process.env[key] = val;
+      }
+    }
+  } catch {}
+}
+
 const app = express();
+
+app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => stripeWebhookHandler(req, res));
 
 // JSON body parsing for our API handlers
 app.use(express.json({ limit: '2mb' }));
@@ -18,6 +45,8 @@ app.use(express.json({ limit: '2mb' }));
 app.all('/api/demo-request', (req, res) => demoRequestHandler(req, res));
 app.all('/api/approve-demo', (req, res) => approveDemoHandler(req, res));
 app.all('/api/webnoti/event', (req, res) => webnotiEventHandler(req, res));
+app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandler(req, res));
+app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
 
 // Serve static frontend
 const distPath = path.join(__dirname, 'dist');

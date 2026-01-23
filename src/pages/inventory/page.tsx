@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId } from '../../services/database';
+import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId, productCategoriesService } from '../../services/database';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
@@ -19,6 +19,13 @@ export default function InventoryPage() {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [productCategories, setProductCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [categoryForm, setCategoryForm] = useState<{ name: string; description: string; color: string }>({
+    name: '',
+    description: '',
+    color: '#6b7a40',
+  });
   const [warehouseEntries, setWarehouseEntries] = useState<any[]>([]);
   const [warehouseTransfers, setWarehouseTransfers] = useState<any[]>([]);
   const [entryInvoices, setEntryInvoices] = useState<any[]>([]);
@@ -61,7 +68,7 @@ export default function InventoryPage() {
     const params = new URLSearchParams(location.search || '');
     const tab = String(params.get('tab') || '').toLowerCase();
     const normalized = tab === 'items' ? 'products' : tab;
-    const allowed = new Set(['dashboard', 'products', 'movements', 'entries', 'transfers', 'warehouses', 'reports']);
+    const allowed = new Set(['dashboard', 'products', 'movements', 'entries', 'transfers', 'warehouses', 'categories', 'reports']);
     if (allowed.has(normalized)) {
       setActiveTab(normalized);
     }
@@ -142,7 +149,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     const loadEntrySources = async () => {
-      if (!user?.id || modalType !== 'warehouse_entry') return;
+      if (!user?.id) return;
       try {
         const [invoices, notes] = await Promise.all([
           invoicesService.getAll(user.id),
@@ -157,7 +164,7 @@ export default function InventoryPage() {
       }
     };
     loadEntrySources();
-  }, [user?.id, modalType]);
+  }, [user?.id]);
 
   useEffect(() => {
     const loadEntriesIfNeeded = async () => {
@@ -261,6 +268,23 @@ export default function InventoryPage() {
       setSuppliers([]);
     }
   };
+
+  const loadProductCategories = async () => {
+    try {
+      if (!user?.id) return;
+      const data = await productCategoriesService.getAll(user.id);
+      setProductCategories(data || []);
+    } catch (error) {
+      console.error('Error loading product categories:', error);
+      setProductCategories([]);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      loadProductCategories();
+    }
+  }, [user?.id]);
 
   const handleDeleteWarehouse = async (warehouse: any) => {
     if (!warehouse?.id) return;
@@ -745,9 +769,14 @@ export default function InventoryPage() {
 
   const categories = Array.from(
     new Set(
-      items
-        .map((item) => item.category)
-        .filter((category): category is string => Boolean(category && category.trim().length)),
+      [
+        ...productCategories
+          .map((category: any) => (category?.name ? String(category.name) : ''))
+          .filter((name) => Boolean(name && name.trim().length)),
+        ...items
+          .map((item) => item.category)
+          .filter((category): category is string => Boolean(category && category.trim().length)),
+      ],
     ),
   );
 
@@ -1036,7 +1065,7 @@ export default function InventoryPage() {
                 {['SKU', 'Name', 'Category', 'Stock', 'Cost Price', 'Sale Price', 'Status', 'Actions'].map((header) => (
                   <th
                     key={header}
-                    className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] tracking-wider uppercase"
+                    className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider"
                   >
                     {header}
                   </th>
@@ -1586,6 +1615,216 @@ export default function InventoryPage() {
     </div>
   );
 
+  const handleCreateCategory = async () => {
+    if (!user?.id) return;
+    const name = String(categoryForm.name || '').trim();
+    if (!name) {
+      alert('Category name is required');
+      return;
+    }
+
+    try {
+      await productCategoriesService.create(user.id, {
+        name,
+        description: categoryForm.description || '',
+        color: categoryForm.color || '#6b7a40',
+      });
+      await loadProductCategories();
+      setCategoryForm({ name: '', description: '', color: '#6b7a40' });
+      setSelectedCategory(null);
+    } catch (error: any) {
+      console.error('Error creating category:', error);
+      alert(error?.message || 'Error creating category');
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!user?.id) return;
+    if (!selectedCategory?.id) return;
+    const name = String(categoryForm.name || '').trim();
+    if (!name) {
+      alert('Category name is required');
+      return;
+    }
+
+    try {
+      await productCategoriesService.update(String(selectedCategory.id), {
+        name,
+        description: categoryForm.description || '',
+        color: categoryForm.color || '#6b7a40',
+      });
+      await loadProductCategories();
+      setCategoryForm({ name: '', description: '', color: '#6b7a40' });
+      setSelectedCategory(null);
+    } catch (error: any) {
+      console.error('Error updating category:', error);
+      alert(error?.message || 'Error updating category');
+    }
+  };
+
+  const handleDeleteCategory = async (category: any) => {
+    if (!user?.id) return;
+    if (!category?.id) return;
+
+    const productsUsingCategory = items.filter((item: any) => String(item?.category || '') === String(category?.name || ''));
+    if (productsUsingCategory.length > 0) {
+      alert(`Cannot delete this category. It is used by ${productsUsingCategory.length} product(s).`);
+      return;
+    }
+
+    if (!confirm(`Delete category "${String(category.name || '')}"? This action cannot be undone.`)) return;
+
+    try {
+      await productCategoriesService.delete(String(category.id));
+      await loadProductCategories();
+      if (selectedCategory?.id && String(selectedCategory.id) === String(category.id)) {
+        setSelectedCategory(null);
+        setCategoryForm({ name: '', description: '', color: '#6b7a40' });
+      }
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      alert(error?.message || 'Error deleting category');
+    }
+  };
+
+  const renderCategories = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-[#2e3c21]">Product Categories</h3>
+      </div>
+
+      <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow p-6">
+        <h4 className="text-md font-semibold text-[#3b4d2d] mb-4">
+          {selectedCategory ? 'Edit Category' : 'Add New Category'}
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Name *</label>
+            <input
+              type="text"
+              value={categoryForm.name}
+              onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))}
+              className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40]"
+              placeholder="Category name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Description</label>
+            <input
+              type="text"
+              value={categoryForm.description}
+              onChange={(e) => setCategoryForm((prev) => ({ ...prev, description: e.target.value }))}
+              className="w-full border border-[#d4c9b1] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#6b7a40]"
+              placeholder="Optional description"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3b4d2d] mb-1">Color</label>
+            <input
+              type="color"
+              value={categoryForm.color || '#6b7a40'}
+              onChange={(e) => setCategoryForm((prev) => ({ ...prev, color: e.target.value }))}
+              className="w-full h-[42px] border border-[#d4c9b1] rounded-lg px-1 py-1 focus:outline-none focus:ring-2 focus:ring-[#6b7a40]"
+            />
+          </div>
+          <div className="flex items-end gap-2">
+            <button
+              type="button"
+              onClick={selectedCategory ? handleUpdateCategory : handleCreateCategory}
+              className="flex-1 bg-[#6b7a40] text-white px-4 py-2 rounded-lg hover:bg-[#4f5f33] transition-colors"
+            >
+              {selectedCategory ? 'Update' : 'Add Category'}
+            </button>
+            {selectedCategory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setCategoryForm({ name: '', description: '', color: '#6b7a40' });
+                }}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white/90 border border-[#eadfc6] rounded-xl shadow overflow-hidden">
+        {productCategories.length === 0 ? (
+          <div className="text-center py-12 text-[#7b6e4f]">
+            <i className="ri-price-tag-3-line text-4xl mb-2"></i>
+            <p>No categories yet. Add your first category above.</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-[#eadfc6]">
+            <thead className="bg-[#f1ead6]">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider">Color</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider">Products</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-[#eadfc6]">
+              {productCategories.map((category: any) => {
+                const productsCount = items.filter((item: any) => String(item?.category || '') === String(category?.name || '')).length;
+                return (
+                  <tr key={category.id} className="hover:bg-[#faf8f3]">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div
+                        className="w-6 h-6 rounded-full border border-gray-300"
+                        style={{ backgroundColor: category.color || '#6b7a40' }}
+                      ></div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2e3c21]">
+                      {category.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7b6e4f]">
+                      {category.description || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6b7a40] font-medium">
+                      {productsCount}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(category);
+                            setCategoryForm({
+                              name: String(category?.name || ''),
+                              description: String(category?.description || ''),
+                              color: String(category?.color || '#6b7a40'),
+                            });
+                          }}
+                          className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                          title="Edit"
+                        >
+                          <i className="ri-edit-line text-gray-700"></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(category)}
+                          className="p-2 rounded-lg border border-gray-200 hover:bg-red-50"
+                          title="Delete"
+                        >
+                          <i className="ri-delete-bin-line text-red-600"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+
   const renderReports = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -1593,7 +1832,6 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
         {/* Stock Report */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center mb-4">
@@ -1826,21 +2064,24 @@ export default function InventoryPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Category
                     </label>
-                    <input
-                      type="text"
-                      list="inventory-categories"
-                      value={formData.category || ''}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Type or select a category"
-                    />
-                    <datalist id="inventory-categories">
-                      {categories
-                        .filter((c: any) => c != null && String(c).trim() !== '')
-                        .map((category: any) => (
-                          <option key={String(category)} value={String(category)} />
+                    {productCategories.length === 0 ? (
+                      <div className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50">
+                        No categories yet. Add one in the <strong>Categories</strong> tab.
+                      </div>
+                    ) : (
+                      <select
+                        value={formData.category || ''}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                      >
+                        <option value="">Select a category</option>
+                        {productCategories.map((category: any) => (
+                          <option key={category.id} value={category.name}>
+                            {category.name}
+                          </option>
                         ))}
-                    </datalist>
+                      </select>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -3268,6 +3509,7 @@ export default function InventoryPage() {
 
             { id: 'transfers', label: 'Transfers', icon: 'ri-swap-line' },
             { id: 'warehouses', label: 'Locations', icon: 'ri-building-line' },
+            { id: 'categories', label: 'Categories', icon: 'ri-price-tag-3-line' },
             { id: 'reports', label: 'Reports', icon: 'ri-file-chart-line' },
           ].map((tab) => (
             <button
@@ -3295,6 +3537,7 @@ export default function InventoryPage() {
         {activeTab === 'entries' && renderWarehouseEntriesTab()}
         {activeTab === 'transfers' && renderWarehouseTransfersTab()}
         {activeTab === 'warehouses' && renderWarehouses()}
+        {activeTab === 'categories' && renderCategories()}
         {activeTab === 'reports' && renderReports()}
       </div>
 

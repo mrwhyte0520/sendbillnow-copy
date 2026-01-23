@@ -16,13 +16,13 @@ interface StripePaymentFormProps {
 // It's converted to cents for Stripe
 
 export default function StripePaymentFormDirect({
-  planId,
+  planId: _planId,
   planName,
   amount,
-  onSuccess,
+  onSuccess: _onSuccess,
   onCancel,
-  userId,
-  userEmail,
+  userId: _userId,
+  userEmail: _userEmail,
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -56,71 +56,7 @@ export default function StripePaymentFormDirect({
     setError(null);
 
     try {
-      console.log('Starting payment process (DIRECT MODE)...', { planId, userId, userEmail });
-      
-      // Get the CardElement
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
-        throw new Error('Could not get card element');
-      }
-
-      // DIRECT MODE: Create Payment Intent directly with Stripe API
-      // NOTE: This is ONLY for testing. In production you MUST use Edge Function
-      const stripeSecretKey = 'sk_test_51ShnlT40CPO0GsETq1rsp2QUIhmeJc6NzFFEjAERHvmbMWV3YabUdfJapGkm7NDvJx7M35p3bTyKvCf0vfFSfgaN00R7SKTzhH';
-      
-      console.log('Creating Payment Intent directly...');
-      
-      const paymentIntentResponse = await fetch('https://api.stripe.com/v1/payment_intents', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${stripeSecretKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          amount: Math.round(amount * 100).toString(),
-          currency: 'usd',
-          'automatic_payment_methods[enabled]': 'true',
-          'metadata[planId]': planId,
-          'metadata[userId]': userId,
-          'metadata[userEmail]': userEmail,
-          description: `Subscription ${planName} - ${userEmail}`,
-        }),
-      });
-
-      if (!paymentIntentResponse.ok) {
-        const errorData = await paymentIntentResponse.json();
-        console.error('Stripe API error:', errorData);
-        throw new Error(errorData.error?.message || 'Error creating Payment Intent');
-      }
-
-      const paymentIntentData = await paymentIntentResponse.json();
-      console.log('Payment Intent created:', paymentIntentData);
-      const clientSecret = paymentIntentData.client_secret;
-
-      // Confirm payment
-      console.log('Confirming payment...');
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            email: userEmail,
-          },
-        },
-      });
-
-      if (stripeError) {
-        console.error('Stripe confirmation error:', stripeError);
-        throw new Error(stripeError.message);
-      }
-
-      console.log('Payment Intent status:', paymentIntent?.status);
-
-      if (paymentIntent?.status === 'succeeded') {
-        console.log('Payment succeeded!');
-        onSuccess();
-      } else {
-        throw new Error(`Payment was not completed correctly. Status: ${paymentIntent?.status || 'unknown'}`);
-      }
+      throw new Error('Direct card payments are disabled. Please use Stripe Checkout.');
     } catch (err: any) {
       console.error('Payment error:', err);
       console.error('Error details:', {

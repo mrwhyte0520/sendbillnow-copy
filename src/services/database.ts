@@ -17335,3 +17335,100 @@ export const revaluationService = {
     }
   },
 };
+
+/* ==========================================================
+   Product Categories Service
+   Tabla: product_categories
+========================================================== */
+export const productCategoriesService = {
+  async getAll(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('product_categories')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('name');
+
+      if (error) {
+        // If table doesn't exist, return empty array
+        if (
+          error.code === '42P01' ||
+          error.status === 404 ||
+          error.message?.includes('does not exist') ||
+          error.message?.includes("Could not find the table 'public.product_categories'")
+        ) {
+          console.warn('product_categories table does not exist yet');
+          return [];
+        }
+        return handleDatabaseError(error, []);
+      }
+      return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async create(userId: string, category: { name: string; description?: string; color?: string }) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
+
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('product_categories')
+        .insert({
+          user_id: tenantId,
+          name: category.name,
+          description: category.description || null,
+          color: category.color || null,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('productCategoriesService.create error', error);
+      throw error;
+    }
+  },
+
+  async update(id: string, category: { name?: string; description?: string; color?: string }) {
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('product_categories')
+        .update({
+          ...category,
+          updated_at: now,
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('productCategoriesService.update error', error);
+      throw error;
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { error } = await supabase
+        .from('product_categories')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('productCategoriesService.delete error', error);
+      throw error;
+    }
+  },
+};

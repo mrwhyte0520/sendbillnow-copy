@@ -1,11 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { usePlans } from '../../hooks/usePlans';
 import { useAuth } from '../../hooks/useAuth';
 import { referralsService } from '../../services/database';
-import { Elements } from '@stripe/react-stripe-js';
-import { getStripe } from '../../services/stripe';
-import StripePaymentFormDirect from '../../components/StripePaymentFormDirect';
 
 interface Plan {
   id: string;
@@ -26,7 +23,8 @@ export default function PlansPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successPlanName, setSuccessPlanName] = useState('');
-  const [stripePromise] = useState(() => getStripe());
+  const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const { user } = useAuth();
   
   const { 
@@ -89,6 +87,118 @@ export default function PlansPage() {
     setSelectedPlan(planId);
     setShowPaymentModal(true);
   };
+
+  const startStripeCheckout = async () => {
+    if (!selectedPlanData) return;
+    if (!user?.id || !user?.email) {
+      setCheckoutError('You must be logged in to continue.');
+      return;
+    }
+
+    setCheckoutError(null);
+    setIsRedirectingToStripe(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          planId: selectedPlanData.id,
+          billingPeriod,
+          userId: user.id,
+          userEmail: user.email,
+        }),
+      });
+
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not start Stripe Checkout.');
+      }
+
+      window.location.href = data.url;
+    } catch (error: any) {
+      setCheckoutError(error?.message || 'Could not start Stripe Checkout.');
+      setIsRedirectingToStripe(false);
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    const sessionId = params.get('session_id');
+
+    if (!checkout) return;
+
+    const cleanupQuery = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('checkout');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
+    };
+
+    if (checkout === 'cancel') {
+      cleanupQuery();
+      setIsRedirectingToStripe(false);
+      setCheckoutError(null);
+      return;
+    }
+
+    if (checkout !== 'success' || !sessionId) {
+      cleanupQuery();
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+        const resp = await fetch(`${apiBase}/api/get-checkout-session`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok || !data?.session) {
+          throw new Error(data?.error || 'Could not verify Stripe Checkout session.');
+        }
+
+        const session = data.session;
+        const planId = session?.metadata?.planId ? String(session.metadata.planId) : '';
+        const clientRef = session?.client_reference_id ? String(session.client_reference_id) : '';
+        const status = session?.status ? String(session.status) : '';
+
+        if (clientRef && user?.id && clientRef !== user.id) {
+          throw new Error('Checkout session does not match the current user.');
+        }
+
+        if (status !== 'complete') {
+          throw new Error('Payment not completed.');
+        }
+
+        if (!planId) {
+          throw new Error('Missing planId in Stripe metadata.');
+        }
+
+        if (cancelled) return;
+        setSelectedPlan(planId);
+        await handlePaymentSuccess();
+      } catch (error: any) {
+        if (cancelled) return;
+        setCheckoutError(error?.message || 'Could not finalize payment.');
+      } finally {
+        if (!cancelled) {
+          setIsRedirectingToStripe(false);
+          cleanupQuery();
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const getPrice = (plan: Plan) => {
     return billingPeriod === 'monthly' ? plan.priceMonthly : plan.priceAnnual;
@@ -419,17 +529,43 @@ export default function PlansPage() {
                 </div>
               )}
 
-              <Elements stripe={stripePromise}>
-                <StripePaymentFormDirect
-                  planId={selectedPlan}
-                  planName={selectedPlanData.name}
-                  amount={getPrice(selectedPlanData)}
-                  onSuccess={handlePaymentSuccess}
-                  onCancel={() => setShowPaymentModal(false)}
-                  userId={user?.id || ''}
-                  userEmail={user?.email || ''}
-                />
-              </Elements>
+              {checkoutError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                  <div className="flex items-center">
+                    <i className="ri-error-warning-line text-xl mr-2"></i>
+                    <span className="text-sm">{checkoutError}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentModal(false)}
+                  disabled={isRedirectingToStripe}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={startStripeCheckout}
+                  disabled={isRedirectingToStripe}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center"
+                >
+                  {isRedirectingToStripe ? (
+                    <>
+                      <i className="ri-loader-4-line animate-spin mr-2"></i>
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-secure-payment-line mr-2"></i>
+                      Pay with Stripe
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

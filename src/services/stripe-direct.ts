@@ -1,12 +1,14 @@
-import { loadStripe } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 import type { Stripe } from '@stripe/stripe-js';
 
-// ⚠️ SOLO PARA TESTING - En producción usa Edge Functions
-const STRIPE_PUBLIC_KEY = 'pk_test_51ShnlT40CPO0GsETAkN5N69t74Ek1upquT65m69K6BMih11V4KjyrPqJ2NQ9we3uKspEM3UHMJ0s0edGjG5e2Zb100Y0I7kk6f';
+const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 
 let stripePromise: Promise<Stripe | null>;
 
 export const getStripe = () => {
+  if (!STRIPE_PUBLIC_KEY) {
+    throw new Error('Missing VITE_STRIPE_PUBLISHABLE_KEY');
+  }
   if (!stripePromise) {
     stripePromise = loadStripe(STRIPE_PUBLIC_KEY);
   }
@@ -21,7 +23,7 @@ export const PLAN_PRICES = {
 
 // Versión simplificada para testing sin backend
 // En producción, esto debe hacerse desde un servidor seguro
-export const createTestPaymentIntent = async (planId: string, amount: number) => {
+export const createTestPaymentIntent = async (_planId: string, _amount: number) => {
   // Para modo testing, usamos Stripe Checkout en lugar de Payment Intents
   // Esto es más simple y no requiere backend
   return {
