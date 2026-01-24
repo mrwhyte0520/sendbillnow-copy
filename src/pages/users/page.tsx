@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { supabase } from '../../lib/supabase';
 import { resolveTenantId } from '../../services/database';
 
@@ -32,6 +33,7 @@ const MODULE_LABELS: Record<string, string> = {
 
 export default function UsersPage() {
   const { user } = useAuth();
+  const { limits } = usePlanPermissions();
 
   const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee'>('roles');
 
@@ -71,6 +73,12 @@ export default function UsersPage() {
     }
     if (newUserPassword.length < 6) {
       alert('Password must be at least 6 characters long');
+      return;
+    }
+
+    // Check user limit based on plan
+    if (limits.users !== -1 && usersWithRoles.length >= limits.users) {
+      alert(`You have reached the maximum number of users (${limits.users}) for your plan. Please upgrade to add more users.`);
       return;
     }
     try {

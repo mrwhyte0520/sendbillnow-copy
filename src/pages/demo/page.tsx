@@ -479,9 +479,6 @@ export default function DemoPage() {
             <Link to="/" className="text-sm font-semibold text-[#008000] hover:underline">
               Back to main landing
             </Link>
-            <Link to="/auth/register" className="text-sm font-semibold text-[#1F2616] hover:underline">
-              Start free trial
-            </Link>
           </div>
         </div>
       </footer>

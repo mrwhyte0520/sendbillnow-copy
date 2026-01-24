@@ -11,6 +11,7 @@ import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePr
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 import { useAuth } from '../../../hooks/useAuth';
+import { usePlanPermissions } from '../../../hooks/usePlanPermissions';
 import {
   bankAccountsService,
   bankCurrenciesService,
@@ -76,6 +77,7 @@ interface UiInvoice {
 
 export default function InvoicingPage() {
   const { user } = useAuth();
+  const { limits } = usePlanPermissions();
   const [showDocumentPreviewModal, setShowDocumentPreviewModal] = useState(false);
   const [documentPreviewTitle, setDocumentPreviewTitle] = useState('');
   const [documentPreviewFilename, setDocumentPreviewFilename] = useState('');
@@ -1151,6 +1153,16 @@ export default function InvoicingPage() {
     if (!newInvoiceCustomerId) {
       alert('Select a customer');
       return;
+    }
+
+    // Check invoice limit based on plan (monthly limit)
+    if (limits.invoicesPerMonth !== -1) {
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const invoicesThisMonth = invoices.filter(inv => inv.date.startsWith(currentMonth)).length;
+      if (invoicesThisMonth >= limits.invoicesPerMonth) {
+        alert(`You have reached the maximum number of invoices (${limits.invoicesPerMonth}) for this month. Please upgrade your plan to create more invoices.`);
+        return;
+      }
     }
 
     const isCashSale = mode === 'final' && newInvoiceSaleType === 'cash';
