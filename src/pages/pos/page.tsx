@@ -132,6 +132,62 @@ export default function POSPage() {
   const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
 
+  const currentItbisRate = taxConfig?.itbis_rate ?? 18;
+
+  // Customer Display sync
+  const [lastCartAction, setLastCartAction] = useState<{ action: 'add' | 'remove' | 'update' | 'clear'; itemName?: string } | null>(null);
+  const customerDisplayChannel = useRef<BroadcastChannel | null>(null);
+
+  // Initialize BroadcastChannel for customer display
+  useEffect(() => {
+    customerDisplayChannel.current = new BroadcastChannel('pos_customer_display');
+    return () => {
+      customerDisplayChannel.current?.close();
+    };
+  }, []);
+
+  // Sync cart to customer display whenever cart or totals change
+  useEffect(() => {
+    if (!customerDisplayChannel.current) return;
+    
+    const rawSubtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const customerType = selectedCustomer?.customerTypeId 
+      ? customerTypes.find((t: any) => t.id === selectedCustomer.customerTypeId) 
+      : null;
+    
+    const discountRate = customerType?.fixedDiscount ? Number(customerType.fixedDiscount) || 0 : 0;
+    const discount = discountRate > 0 ? rawSubtotal * (discountRate / 100) : 0;
+    const subtotal = rawSubtotal - discount;
+    const tax = customerType?.noTax ? 0 : subtotal * (currentItbisRate / 100);
+    const total = subtotal + tax;
+
+    const payload = {
+      cart: cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        total: item.total,
+        extras: item.extras,
+      })),
+      subtotal,
+      discount,
+      tax,
+      total,
+      taxRate: currentItbisRate,
+      customerName: selectedCustomer?.name,
+      lastAction: lastCartAction?.action,
+      lastItemName: lastCartAction?.itemName,
+    };
+
+    // Persist last known state so a newly-opened customer screen can render immediately
+    try {
+      localStorage.setItem('pos_customer_display_state', JSON.stringify(payload));
+    } catch {}
+
+    customerDisplayChannel.current.postMessage(payload);
+  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction]);
+
   // Load available extras from localStorage on mount
   useEffect(() => {
     try {
@@ -149,8 +205,6 @@ export default function POSPage() {
       localStorage.setItem('pos_available_extras', JSON.stringify(extras));
     } catch {}
   };
-
-  const currentItbisRate = taxConfig?.itbis_rate ?? 18;
   
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -621,6 +675,7 @@ export default function POSPage() {
 
       return [...prev, { ...product, quantity: allowedToAdd, total: allowedToAdd * product.price }];
     });
+    setLastCartAction({ action: 'add', itemName: product.name });
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -638,15 +693,19 @@ export default function POSPage() {
       return;
     }
 
-    setCart(cart.map(item =>
-      item.id === id
-        ? { ...item, quantity, total: quantity * item.price }
-        : item
+    const item = cart.find(i => i.id === id);
+    setCart(cart.map(i =>
+      i.id === id
+        ? { ...i, quantity, total: quantity * i.price }
+        : i
     ));
+    setLastCartAction({ action: 'update', itemName: item?.name });
   };
 
   const removeFromCart = (id: string) => {
-    setCart(cart.filter(item => item.id !== id));
+    const item = cart.find(i => i.id === id);
+    setCart(cart.filter(i => i.id !== id));
+    setLastCartAction({ action: 'remove', itemName: item?.name });
   };
 
   const deleteProduct = (productId: string) => {
@@ -920,6 +979,7 @@ export default function POSPage() {
       setShowPrintTypeModal(true);
       
       setCart([]);
+      setLastCartAction({ action: 'clear' });
       setSelectedCustomer(null);
       setAmountReceived('');
       setPaymentMethod('');
@@ -1329,6 +1389,18 @@ export default function POSPage() {
               >
                 <i className="ri-settings-3-line mr-2 text-[#7a8c45]"></i>
                 Model
+              </button>
+              {/* Customer Display Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  window.open('/pos/customer-display', 'CustomerDisplay', 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no');
+                }}
+                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-[#4a5a2a] to-[#3a4a1a] border-2 border-[#3a4a1a] rounded-xl hover:from-[#3a4a1a] hover:to-[#2a3a0a] hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-white shadow-sm"
+                title="Open customer display on second screen"
+              >
+                <i className="ri-dual-sim-2-line mr-2"></i>
+                Customer Display
               </button>
               <button
                 type="button"

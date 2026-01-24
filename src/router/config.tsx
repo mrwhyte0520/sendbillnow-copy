@@ -73,6 +73,7 @@ const AccountingPeriodsPage = lazy(() => import('../pages/accounting/periods/pag
 const TrialBalancePage = lazy(() => import('../pages/accounting/trial-balance/page'));
 
 const POSPage = lazy(() => import('../pages/pos/page'));
+const CustomerDisplayPage = lazy(() => import('../pages/pos/customer-display'));
 const ProductsPage = lazy(() => import('../pages/products/page'));
 const CustomersPage = lazy(() => import('../pages/customers/page'));
 const UsersPage = lazy(() => import('../pages/users/page'));
@@ -439,6 +440,10 @@ const routes: RouteObject[] = [
   {
     path: '/pos',
     element: <ProtectedRoute><POSPage /></ProtectedRoute>
+  },
+  {
+    path: '/pos/customer-display',
+    element: <CustomerDisplayPage />
   },
   {
     path: '/products',
