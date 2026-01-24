@@ -19,6 +19,9 @@ interface CustomerDisplayData {
   customerName?: string;
   lastAction?: 'add' | 'remove' | 'update' | 'clear';
   lastItemName?: string;
+  cashierName?: string;
+  registerLabel?: string;
+  updatedAt?: string;
 }
 
 export default function CustomerDisplayPage() {
@@ -31,6 +34,7 @@ export default function CustomerDisplayPage() {
     taxRate: 18,
   });
   const [lastAddedItem, setLastAddedItem] = useState<string | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   useEffect(() => {
     // Load initial state (important when the customer display opens after items already exist in the cart)
@@ -71,12 +75,31 @@ export default function CustomerDisplayPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
   const formatMoney = (value: number) => {
     const n = Number(value) || 0;
     return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getTotalItems = () => data.cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const formatUpdatedAt = (iso?: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  };
+
+  const formatNow = () => {
+    const d = now;
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1a2810] via-[#2f3e1e] to-[#1a2810] text-white flex flex-col">
@@ -95,6 +118,16 @@ export default function CustomerDisplayPage() {
             </div>
           </div>
           <div className="text-right">
+            <div className="flex items-center justify-end gap-3 text-xs text-white/60 whitespace-nowrap">
+              <span>{data.registerLabel || 'Register #1'}</span>
+              {data.cashierName && (
+                <span>{`Cashier: ${data.cashierName}`}</span>
+              )}
+              {data.updatedAt && (
+                <span>{`Updated: ${formatUpdatedAt(data.updatedAt)}`}</span>
+              )}
+              <span>{`Time: ${formatNow()}`}</span>
+            </div>
             <div className="text-sm text-white/60">Items</div>
             <div className="text-3xl font-bold text-[#a4c26a]">{getTotalItems()}</div>
           </div>

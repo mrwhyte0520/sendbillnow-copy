@@ -6052,7 +6052,7 @@ export const warehouseTransfersService = {
 
       for (const rawLine of lines as any[]) {
         const rawQty = Number(rawLine.quantity) || 0;
-        const qty = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
+        let qty = Number.isFinite(rawQty) ? Math.round(rawQty) : 0;
         if (qty <= 0) continue;
 
         // Fetch inventory item directly by ID (more reliable than FK join)
@@ -6087,6 +6087,20 @@ export const warehouseTransfersService = {
         }
 
         const currentSourceStock = Number(invItem.current_stock) || 0;
+        // Guard: do not allow moving more than available stock
+        if (currentSourceStock <= 0) {
+          console.warn('warehouseTransfersService.post: source item has no available stock', {
+            transferId: transfer.id,
+            itemId: invItem.id,
+            qty,
+            currentSourceStock,
+          });
+          continue;
+        }
+        if (qty > currentSourceStock) {
+          // Clamp to available to avoid negative stock / partial failures
+          qty = currentSourceStock;
+        }
 
         // 1) Resolve destination item (if it already exists)
         let destItem: any | null = null;
@@ -6118,52 +6132,58 @@ export const warehouseTransfersService = {
         }
 
         // 2) Apply transfer safely
-        // If this line is moving ALL stock of this item and the destination item doesn't exist,
-        // move the record by changing warehouse_id (avoids UNIQUE conflicts on SKU).
-        if (!destItem?.id && qty >= currentSourceStock && currentSourceStock > 0) {
+        // Unique constraint is now on (user_id, warehouse_id, sku), allowing same SKU in different warehouses.
+        
+        const isFullTransfer = qty >= currentSourceStock;
+        
+        if (isFullTransfer && !destItem?.id) {
+          // Transferring ALL stock and no dest item exists - just move the record by changing warehouse_id
           await inventoryService.updateItem(userId, String(invItem.id), {
             warehouse_id: toWarehouseId,
           });
-        } else {
-          // Ensure destination update/insert succeeds BEFORE subtracting from source
-          if (destItem?.id) {
-            const currentDestStock = Number(destItem.current_stock) || 0;
-            await inventoryService.updateItem(userId, String(destItem.id), {
-              current_stock: currentDestStock + qty,
-            });
-          } else {
-            // Create a new record in destination warehouse, cloning fields
-            const {
-              id: _id,
-              user_id: _user_id,
-              created_at: _created_at,
-              updated_at: _updated_at,
-              warehouse_id: _warehouse_id,
-              current_stock: _current_stock,
-              ...clone
-            } = invItem;
-
-            await inventoryService.createItem(userId, {
-              ...clone,
-              warehouse_id: toWarehouseId,
-              current_stock: qty,
-            });
-          }
-
-          // Now subtract from source
-          const newSourceStock = Math.max(0, currentSourceStock - qty);
+        } else if (isFullTransfer && destItem?.id) {
+          // Transferring ALL stock and dest item exists - add to dest and zero out source.
+          // We must NOT delete the source row because it may be referenced by transfer lines (FK).
+          const currentDestStock = Number(destItem.current_stock) || 0;
+          await inventoryService.updateItem(userId, String(destItem.id), {
+            current_stock: currentDestStock + qty,
+          });
+          await inventoryService.updateItem(userId, String(invItem.id), {
+            current_stock: 0,
+          });
+        } else if (destItem?.id) {
+          // Partial transfer - dest item exists - add to it
+          const currentDestStock = Number(destItem.current_stock) || 0;
+          await inventoryService.updateItem(userId, String(destItem.id), {
+            current_stock: currentDestStock + qty,
+          });
+          // Subtract from source
+          const newSourceStock = currentSourceStock - qty;
           await inventoryService.updateItem(userId, String(invItem.id), {
             current_stock: newSourceStock,
           });
+        } else {
+          // Partial transfer - no dest item - create new record in destination
+          const {
+            id: _id,
+            user_id: _user_id,
+            created_at: _created_at,
+            updated_at: _updated_at,
+            warehouse_id: _warehouse_id,
+            current_stock: _current_stock,
+            ...clone
+          } = invItem;
 
-          // If source is now empty, delete the row to unblock warehouse deletion
-          if (newSourceStock <= 0) {
-            try {
-              await inventoryService.deleteItem(String(invItem.id));
-            } catch (delErr) {
-              console.warn('warehouseTransfersService.post: could not delete empty source item', delErr);
-            }
-          }
+          await inventoryService.createItem(userId, {
+            ...clone,
+            warehouse_id: toWarehouseId,
+            current_stock: qty,
+          });
+          // Subtract from source
+          const newSourceStock = currentSourceStock - qty;
+          await inventoryService.updateItem(userId, String(invItem.id), {
+            current_stock: newSourceStock,
+          });
         }
 
         // 3) Create movement record (for audit)

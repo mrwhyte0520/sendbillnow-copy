@@ -546,7 +546,7 @@ export default function RecurringBillingPage() {
                       <div className="font-medium"> {Number(subscription.amount || 0).toLocaleString()}</div>
                       {subscription.apply_itbis !== false && (
                         <div className="text-xs text-green-600">
-                          +ITBIS ({Number(subscription.itbis_rate) || 18}%)
+                          +Tax ({Number(subscription.itbis_rate) || 18}%)
                         </div>
                       )}
                     </td>
@@ -753,12 +753,12 @@ export default function RecurringBillingPage() {
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <label htmlFor="applyItbis" className="ml-2 text-sm text-gray-700">
-                        Apply ITBIS automatically
+                        Apply tax automatically
                       </label>
                     </div>
                     {applyItbis && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ITBIS Rate (%)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%)</label>
                         <input
                           type="number"
                           min="0"
@@ -773,7 +773,7 @@ export default function RecurringBillingPage() {
                   </div>
                   {applyItbis && amount !== '' && Number(amount) > 0 && (
                     <div className="mt-3 text-sm text-gray-600">
-                      <span className="font-medium">Preview:</span> Amount:  {Number(amount).toLocaleString()} + ITBIS ({itbisRate}%):  {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900"> {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
+                      <span className="font-medium">Preview:</span> Amount:  {Number(amount).toLocaleString()} + Tax ({itbisRate}%):  {(Number(amount) * itbisRate / 100).toLocaleString()} = <span className="font-bold text-gray-900"> {(Number(amount) * (1 + itbisRate / 100)).toLocaleString()}</span>
                     </div>
                   )}
                 </div>

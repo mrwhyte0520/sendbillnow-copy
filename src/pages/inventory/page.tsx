@@ -77,7 +77,7 @@ export default function InventoryPage() {
   const getWarehouseStats = (warehouseId: string) => {
     const wid = String(warehouseId || '');
     const inWarehouse = (Array.isArray(items) ? items : []).filter((it: any) => String(it?.warehouse_id ?? '') === wid);
-    const products = inWarehouse.length;
+    const products = inWarehouse.filter((it: any) => (Number(it?.current_stock) || 0) > 0).length;
     const stockTotal = inWarehouse.reduce((sum: number, it: any) => sum + (Number(it?.current_stock) || 0), 0);
     const valueTotal = inWarehouse.reduce((sum: number, it: any) => {
       const stock = Number(it?.current_stock) || 0;
@@ -3109,7 +3109,7 @@ export default function InventoryPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Date *</label>
                       <input
@@ -3119,15 +3119,101 @@ export default function InventoryPage() {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Document Number</label>
-                      <input
-                        type="text"
-                        value={formData.document_number || ''}
-                        onChange={(e) => setFormData({ ...formData, document_number: e.target.value })}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="E.g.: Internal reference"
-                      />
+
+                    <div className="md:col-span-3">
+                      <div className="space-y-3">
+                        {transferLines.map((line, idx) => {
+                          const originId = formData.from_warehouse_id;
+                          const availableItems = originId
+                            ? items.filter((it) => {
+                                if (!it || !it.id) return false;
+                                const inWarehouse = String(it.warehouse_id) === String(originId);
+                                const qty = Number(it.current_stock) || 0;
+                                return inWarehouse && qty > 0;
+                              })
+                            : items;
+
+                          const selectedItem = availableItems.find(
+                            (it) => String(it.id) === String(line.inventory_item_id),
+                          );
+                          const availableQty = selectedItem
+                            ? Number(selectedItem.current_stock) || 0
+                            : 0;
+
+                          return (
+                            <div key={idx} className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                              <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Product Lines</label>
+                                <select
+                                  value={line.inventory_item_id || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const selected = availableItems.find((it) => String(it.id) === String(value));
+                                    const stockQty = selected ? String(Number(selected.current_stock) || 0) : '';
+                                    setTransferLines((prev) =>
+                                      prev.map((ln, i) => (i === idx ? { ...ln, inventory_item_id: value, quantity: stockQty } : ln)),
+                                    );
+                                  }}
+                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
+                                >
+                                  <option value="">Select product</option>
+                                  {availableItems.map((item) => (
+                                    <option key={item.id} value={item.id}>
+                                      {item.name} ({item.sku}) - Stock: {item.current_stock}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Units to Transfer</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max={availableQty || undefined}
+                                  value={line.quantity}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setTransferLines((prev) =>
+                                      prev.map((ln, i) => (i === idx ? { ...ln, quantity: value } : ln)),
+                                    );
+                                  }}
+                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                                {selectedItem && (
+                                  <p className="mt-1 text-xs text-blue-600 font-medium">
+                                    Available: {availableQty} units
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTransferLines((prev) => [
+                                      ...prev,
+                                      { inventory_item_id: '', quantity: '', notes: '' },
+                                    ]);
+                                  }}
+                                  className="px-3 py-2 bg-green-100 text-green-700 rounded-lg border border-green-200 hover:bg-green-200 text-xs"
+                                >
+                                  <i className="ri-add-line"></i>
+                                </button>
+                                {transferLines.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTransferLines((prev) => prev.filter((_, i) => i !== idx));
+                                    }}
+                                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg border border-red-200 hover:bg-red-200 text-xs"
+                                  >
+                                    <i className="ri-delete-bin-line"></i>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
@@ -3140,115 +3226,6 @@ export default function InventoryPage() {
                       rows={2}
                       placeholder="E.g.: Transfer between warehouses"
                     />
-                  </div>
-
-                  <div className="mt-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-2">Product Lines</h4>
-                    <div className="space-y-3">
-                      {transferLines.map((line, idx) => {
-                        const originId = formData.from_warehouse_id;
-                        const originBalances = originId
-                          ? warehouseBalances[String(originId)] || {}
-                          : {};
-
-                        const availableItems = originId
-                          ? items.filter((it) => {
-                              if (!it || !it.id) return false;
-                              const inWarehouse = String(it.warehouse_id) === String(originId);
-                              const qty = Number(it.current_stock) || 0;
-                              return inWarehouse && qty > 0;
-                            })
-                          : items;
-
-                        const selectedItem = availableItems.find(
-                          (it) => String(it.id) === String(line.inventory_item_id),
-                        );
-                        const availableQty = selectedItem
-                          ? Number(selectedItem.current_stock) || 0
-                          : 0;
-
-                        return (
-                          <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
-                            <div className="md:col-span-2">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Item</label>
-                              <select
-                                value={line.inventory_item_id || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  // Auto-fill quantity with total stock when selecting product
-                                  const selected = availableItems.find((it) => String(it.id) === String(value));
-                                  const stockQty = selected ? String(Number(selected.current_stock) || 0) : '';
-                                  setTransferLines((prev) =>
-                                    prev.map((ln, i) => (i === idx ? { ...ln, inventory_item_id: value, quantity: stockQty } : ln)),
-                                  );
-                                }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-8"
-                              >
-                                <option value="">Select product</option>
-                                {availableItems.map((item) => (
-                                  <option key={item.id} value={item.id}>
-                                    {item.name} ({item.sku}) - Stock: {item.current_stock}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Units to Transfer</label>
-                              <input
-                                type="number"
-                                value={line.quantity}
-                                readOnly
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-700 cursor-not-allowed"
-                              />
-                              {selectedItem && (
-                                <p className="mt-1 text-xs text-green-600 font-medium">
-                                  All {availableQty} units will be transferred
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
-                              <input
-                                type="text"
-                                value={line.notes || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setTransferLines((prev) =>
-                                    prev.map((ln, i) => (i === idx ? { ...ln, notes: value } : ln)),
-                                  );
-                                }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTransferLines((prev) => [
-                                    ...prev,
-                                    { inventory_item_id: '', quantity: '', notes: '' },
-                                  ]);
-                                }}
-                                className="px-3 py-2 bg-green-100 text-green-700 rounded-lg border border-green-200 hover:bg-green-200 text-xs"
-                              >
-                                <i className="ri-add-line"></i>
-                              </button>
-                              {transferLines.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTransferLines((prev) => prev.filter((_, i) => i !== idx));
-                                  }}
-                                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg border border-red-200 hover:bg-red-200 text-xs"
-                                >
-                                  <i className="ri-delete-bin-line"></i>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
                   </div>
                 </div>
               </>
@@ -3337,6 +3314,14 @@ export default function InventoryPage() {
           >
             <i className="ri-arrow-left-line text-lg"></i>
             <span>Back to Home</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/pos?tab=pos')}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#008000] text-white text-sm font-medium shadow-sm hover:bg-[#006600] transition-colors"
+          >
+            <i className="ri-shopping-cart-2-line text-lg"></i>
+            <span>Go to POS</span>
           </button>
 
           <div className="h-6 w-px bg-gray-300"></div>

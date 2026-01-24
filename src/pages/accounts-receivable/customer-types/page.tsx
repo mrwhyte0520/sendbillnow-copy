@@ -239,7 +239,7 @@ export default function CustomerTypesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice without VAT/ITBIS</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Invoice without Tax</label>
                     <select
                       name="noTax"
                       defaultValue={selectedType?.noTax ? 'true' : 'false'}

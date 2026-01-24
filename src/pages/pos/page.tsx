@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
@@ -72,6 +72,7 @@ interface Sale {
 export default function POSPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
@@ -109,6 +110,15 @@ export default function POSPage() {
   const [cashClosingNotes, setCashClosingNotes] = useState('');
   const [savingCashClosing, setSavingCashClosing] = useState(false);
   const [taxConfig, setTaxConfig] = useState<{ itbis_rate: number } | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '');
+    const tab = String(params.get('tab') || '').toLowerCase();
+    const allowed = new Set(['dashboard', 'pos', 'inventory', 'cash-diff', 'cash-closing', 'sales', 'reports', 'customers']);
+    if (allowed.has(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   // View mode: 'simple' | 'normal' | 'custom'
   const [viewMode, setViewMode] = useState<'simple' | 'normal' | 'custom'>('normal');
@@ -150,16 +160,27 @@ export default function POSPage() {
   useEffect(() => {
     if (!customerDisplayChannel.current) return;
     
+    const customerType = customerTypes.find((ct) => String(ct.id) === String(selectedCustomer?.customerTypeId));
     const rawSubtotal = cart.reduce((sum, item) => sum + item.total, 0);
-    const customerType = selectedCustomer?.customerTypeId 
-      ? customerTypes.find((t: any) => t.id === selectedCustomer.customerTypeId) 
-      : null;
-    
-    const discountRate = customerType?.fixedDiscount ? Number(customerType.fixedDiscount) || 0 : 0;
-    const discount = discountRate > 0 ? rawSubtotal * (discountRate / 100) : 0;
-    const subtotal = rawSubtotal - discount;
+    const discount = 0;
+    const subtotal = Math.max(0, rawSubtotal - discount);
     const tax = customerType?.noTax ? 0 : subtotal * (currentItbisRate / 100);
     const total = subtotal + tax;
+
+    const cashierName =
+      (user as any)?.user_metadata?.full_name ||
+      (user as any)?.user_metadata?.name ||
+      user?.email ||
+      'Cashier';
+
+    let registerLabel = 'Register #1';
+    try {
+      const rawRegister = localStorage.getItem('pos_register_number');
+      const n = rawRegister ? String(rawRegister).trim() : '';
+      if (n) {
+        registerLabel = `Register #${n}`;
+      }
+    } catch {}
 
     const payload = {
       cart: cart.map(item => ({
@@ -178,6 +199,9 @@ export default function POSPage() {
       customerName: selectedCustomer?.name,
       lastAction: lastCartAction?.action,
       lastItemName: lastCartAction?.itemName,
+      cashierName,
+      registerLabel,
+      updatedAt: new Date().toISOString(),
     };
 
     // Persist last known state so a newly-opened customer screen can render immediately
