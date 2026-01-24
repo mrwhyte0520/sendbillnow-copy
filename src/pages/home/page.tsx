@@ -98,9 +98,12 @@ export default function HomePage() {
   ];
 
   const [billingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
   const plans = [
     {
+      id: 'pos-basic',
       name: 'Basic Plan',
       priceMonthly: 99.99,
       priceAnnual: 839.92,
@@ -119,6 +122,7 @@ export default function HomePage() {
       category: 'pos'
     },
     {
+      id: 'pos-premium',
       name: 'Premium Plan',
       priceMonthly: 399.99,
       priceAnnual: 3359.92,
@@ -140,6 +144,38 @@ export default function HomePage() {
 
   const formatMoney = (amount: number) => {
     return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const startStripeCheckout = async (planId: string) => {
+    setSelectedPlanId(planId);
+    setIsRedirectingToStripe(true);
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const refCode = localStorage.getItem('ref_code') || undefined;
+      
+      const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          billingPeriod,
+          refCode,
+        }),
+      });
+
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not start checkout.');
+      }
+
+      window.location.href = data.url;
+    } catch (error: any) {
+      console.error('Stripe checkout error:', error);
+      alert(error?.message || 'Could not start checkout. Please try again.');
+      setIsRedirectingToStripe(false);
+      setSelectedPlanId(null);
+    }
   };
 
   const handleSmoothScroll = (elementId: string) => {
@@ -456,12 +492,20 @@ export default function HomePage() {
                     </ul>
                   </div>
 
-                  <Link
-                    to="/auth/register"
-                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white shadow-md shadow-[#556B2F]/25 border border-black/10 transition-all duration-300 hover:scale-[1.02] hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30 active:scale-[0.98]"
+                  <button
+                    onClick={() => startStripeCheckout(plan.id)}
+                    disabled={isRedirectingToStripe}
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white shadow-md shadow-[#556B2F]/25 border border-black/10 transition-all duration-300 hover:scale-[1.02] hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Select Plan
-                  </Link>
+                    {isRedirectingToStripe && selectedPlanId === plan.id ? (
+                      <>
+                        <i className="ri-loader-4-line animate-spin mr-2"></i>
+                        Redirecting to payment...
+                      </>
+                    ) : (
+                      'Select Plan'
+                    )}
+                  </button>
                 </div>
               </div>
             ))}

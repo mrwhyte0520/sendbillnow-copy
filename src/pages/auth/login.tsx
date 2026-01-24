@@ -85,8 +85,17 @@ export default function Login() {
       }
 
       if (data?.user) {
-        // Redirigir al dashboard
-        navigate('/dashboard');
+        // Check if there's a selected plan from landing page
+        const selectedPlan = localStorage.getItem('selected_plan');
+        if (selectedPlan) {
+          // Clear the stored plan and redirect to plans page
+          localStorage.removeItem('selected_plan');
+          localStorage.removeItem('selected_billing');
+          navigate('/plans');
+        } else {
+          // Redirigir al dashboard
+          navigate('/dashboard');
+        }
       }
     } catch (err: any) {
       setError('Login error. Please try again.');

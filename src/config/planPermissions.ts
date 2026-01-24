@@ -1,7 +1,7 @@
 // Configuración de permisos por plan
 // Define qué módulos y rutas están disponibles para cada plan
 
-export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-premium' | 'pos-super-plus' | 'pyme' | 'pro' | 'plus' | 'trial' | 'none';
+export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-basic' | 'pos-premium' | 'pos-super-plus' | 'pyme' | 'pro' | 'plus' | 'trial' | 'none';
 
 export interface PlanLimits {
   users: number;
@@ -126,6 +126,46 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       products: 1000,
     }
   },
+  'pos-basic': {
+    id: 'pos-basic',
+    name: 'POS Basic',
+    modules: [
+      MODULES.DASHBOARD,
+      MODULES.POS,
+      MODULES.BILLING,
+      MODULES.INVOICING,
+      MODULES.QUOTES,
+      MODULES.CREDIT_NOTES,
+      MODULES.REPORTS,
+      MODULES.INVENTORY,
+      MODULES.PRODUCTS,
+      MODULES.CUSTOMERS,
+      MODULES.SETTINGS,
+    ],
+    routes: [
+      '/dashboard',
+      '/pos',
+      '/billing',
+      '/billing/invoicing',
+      '/billing/quotes',
+      '/billing/credit-notes',
+      '/billing/debit-notes',
+      '/reports',
+      '/inventory',
+      '/inventory/products',
+      '/inventory/warehouses',
+      '/customers',
+      '/settings',
+      '/profile',
+      '/plans',
+    ],
+    limits: {
+      users: 1,
+      invoicesPerMonth: 2000,
+      warehouses: 1,
+      products: -1, // unlimited
+    }
+  },
   'pos-premium': {
     id: 'pos-premium',
     name: 'POS Premium',
@@ -200,10 +240,10 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/plans',
     ],
     limits: {
-      users: 80,
+      users: 30,
       invoicesPerMonth: 2000,
-      warehouses: 2,
-      products: -1, // ilimitado
+      warehouses: -1, // unlimited
+      products: -1, // unlimited
     }
   },
   'pos-super-plus': {

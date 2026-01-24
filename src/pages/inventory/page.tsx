@@ -507,6 +507,12 @@ export default function InventoryPage() {
         if (selectedItem?.id) {
           await settingsService.updateWarehouse(selectedItem.id, formData);
         } else {
+          // Check warehouse limit before creating
+          const limitCheck = await settingsService.checkWarehouseLimit(user.id);
+          if (!limitCheck.allowed) {
+            alert(limitCheck.message || 'You have reached the maximum number of warehouses for your plan.');
+            return;
+          }
           await settingsService.createWarehouse(formData);
         }
         await loadWarehouses();

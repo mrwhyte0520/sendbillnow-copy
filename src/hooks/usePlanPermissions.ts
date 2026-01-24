@@ -47,6 +47,7 @@ export function usePlanPermissions(): PlanPermissions {
       if (planId.includes('plus') || planId === 'plus') return 'plus';
       if (planId.includes('facturacion-simple') || planId === 'facturacion-simple') return 'facturacion-simple';
       if (planId.includes('facturacion-premium') || planId === 'facturacion-premium') return 'facturacion-premium';
+      if (planId.includes('pos-basic') || planId === 'pos-basic') return 'pos-basic';
       if (planId.includes('pos-premium') || planId === 'pos-premium') return 'pos-premium';
       if (planId.includes('pos-super-plus') || planId === 'pos-super-plus') return 'pos-super-plus';
       // Si tiene un plan activo pero no coincide, dar acceso completo

@@ -103,9 +103,10 @@ export default async function handler(req, res) {
   const billingPeriod = body.billingPeriod === 'annual' ? 'annual' : 'monthly';
   const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
   const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : '';
+  const refCode = typeof body.refCode === 'string' ? body.refCode.trim() : '';
 
-  if (!planId || !userId || !userEmail) {
-    return res.status(400).json({ ok: false, error: 'Missing planId/userId/userEmail' });
+  if (!planId) {
+    return res.status(400).json({ ok: false, error: 'Missing planId' });
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -136,14 +137,15 @@ export default async function handler(req, res) {
     const subscriptionMetadata = {
       planId,
       billingPeriod,
-      userId,
-      userEmail,
+      ...(userId && { userId }),
+      ...(userEmail && { userEmail }),
+      ...(refCode && { refCode }),
     };
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer_email: userEmail,
-      client_reference_id: userId,
+      ...(userEmail && { customer_email: userEmail }),
+      ...(userId && { client_reference_id: userId }),
       line_items: [
         priceId
           ? { quantity: 1, price: priceId }
@@ -157,8 +159,12 @@ export default async function handler(req, res) {
               },
             },
       ],
-      success_url: `${baseUrl}/plans?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/plans?checkout=cancel`,
+      success_url: userId 
+        ? `${baseUrl}/plans?checkout=success&session_id={CHECKOUT_SESSION_ID}`
+        : `${baseUrl}/auth/register?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: userId 
+        ? `${baseUrl}/plans?checkout=cancel`
+        : `${baseUrl}/?checkout=cancel`,
       metadata: subscriptionMetadata,
       subscription_data: {
         metadata: subscriptionMetadata,

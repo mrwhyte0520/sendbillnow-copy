@@ -14915,7 +14915,7 @@ export const settingsService = {
       if (!userId) throw new Error('userId required');
       const { data, error } = await supabase
         .from('users')
-        .select('id, plan_id, plan_status, trial_end')
+        .select('id, plan_id, plan_status, trial_end, max_users, max_warehouses, max_invoices, billing_period')
         .eq('id', userId)
         .maybeSingle();
 
@@ -14924,6 +14924,46 @@ export const settingsService = {
     } catch (error) {
       console.error('Error getting user plan info:', error);
       return null;
+    }
+  },
+
+  async checkWarehouseLimit(userId: string): Promise<{ allowed: boolean; current: number; max: number; message?: string }> {
+    try {
+      if (!userId) throw new Error('userId required');
+      
+      // Resolve to owner/tenant - subusers use their owner's plan
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Could not resolve tenant');
+      
+      // Get plan info from the owner (tenant), not the subuser
+      const planInfo = await this.getUserPlanInfo(tenantId);
+      const maxWarehouses = planInfo?.max_warehouses ?? 1;
+      
+      // -1 means unlimited
+      if (maxWarehouses === -1) {
+        return { allowed: true, current: 0, max: -1 };
+      }
+      
+      // Count warehouses for this tenant
+      const { count, error } = await supabase
+        .from('warehouses')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      
+      if (error) throw error;
+      
+      const currentCount = count || 0;
+      const allowed = currentCount < maxWarehouses;
+      
+      return {
+        allowed,
+        current: currentCount,
+        max: maxWarehouses,
+        message: allowed ? undefined : `Your plan allows a maximum of ${maxWarehouses} warehouse${maxWarehouses === 1 ? '' : 's'}. Please upgrade your plan to add more.`
+      };
+    } catch (error) {
+      console.error('Error checking warehouse limit:', error);
+      return { allowed: true, current: 0, max: 1 };
     }
   },
 
