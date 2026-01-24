@@ -27,7 +27,12 @@ if (fs.existsSync(envPath)) {
       if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
         val = val.slice(1, -1);
       }
-      if (!(key in process.env)) {
+      const existing = process.env[key];
+      const shouldOverrideStripe =
+        key.startsWith('STRIPE_') &&
+        (!existing || !String(existing).trim() || String(existing).trim().startsWith('sksk_'));
+
+      if (!(key in process.env) || shouldOverrideStripe) {
         process.env[key] = val;
       }
     }
