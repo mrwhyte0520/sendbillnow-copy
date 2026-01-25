@@ -400,7 +400,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       current: location.pathname.startsWith('/settings'),
       submenu: [
         { name: 'Company', href: '/settings/company' },
-        { name: 'Opening Balances', href: '/settings/opening-balances' },
         { name: 'Inventory', href: '/settings/inventory' },
         { name: 'Backups', href: '/settings/backup' }
       ]

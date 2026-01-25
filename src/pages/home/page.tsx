@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { referralsService } from '../../services/database';
 
@@ -30,6 +30,7 @@ function useInViewOnce<T extends HTMLElement>(options?: IntersectionObserverInit
 
 export default function HomePage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const heroImageRef = useRef<HTMLDivElement | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [heroTilt, setHeroTilt] = useState({ rotateX: 0, rotateY: 0 });
@@ -84,6 +85,16 @@ export default function HomePage() {
       } catch {}
     }
   }, [location.search]);
+
+  useEffect(() => {
+    const hash = String(location.hash || '').replace('#', '').trim();
+    if (!hash) return;
+
+    try {
+      const el = document.getElementById(hash);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    } catch {}
+  }, [location.hash]);
   const features = [
     {
       icon: 'ri-shield-check-line',
@@ -149,33 +160,12 @@ export default function HomePage() {
   const startStripeCheckout = async (planId: string) => {
     setSelectedPlanId(planId);
     setIsRedirectingToStripe(true);
-
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-      const refCode = localStorage.getItem('ref_code') || undefined;
-      
-      const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          planId,
-          billingPeriod,
-          refCode,
-        }),
-      });
-
-      const data = await resp.json().catch(() => null);
-      if (!resp.ok || !data?.url) {
-        throw new Error(data?.error || 'Could not start checkout.');
-      }
-
-      window.location.href = data.url;
-    } catch (error: any) {
-      console.error('Stripe checkout error:', error);
-      alert(error?.message || 'Could not start checkout. Please try again.');
-      setIsRedirectingToStripe(false);
-      setSelectedPlanId(null);
-    }
+      localStorage.setItem('selected_plan', planId);
+      localStorage.setItem('selected_billing', billingPeriod);
+    } catch {}
+    navigate(`/auth/register?plan=${encodeURIComponent(planId)}`);
+    setIsRedirectingToStripe(false);
   };
 
   const handleSmoothScroll = (elementId: string) => {

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import { settingsService, chartAccountsService, accountingSettingsService } from '../../../services/database';
+import { settingsService, accountingSettingsService, taxService } from '../../../services/database';
 import { useAuth } from '../../../hooks/useAuth';
-import { usePlanPermissions } from '../../../hooks/usePlanPermissions';
 
 interface InventorySettings {
   id?: string;
@@ -24,7 +23,6 @@ interface Warehouse {
 
 export default function InventorySettingsPage() {
   const { user } = useAuth();
-  const { limits } = usePlanPermissions();
   const [settings, setSettings] = useState<InventorySettings>({
     valuation_method: 'fifo',
     auto_reorder: true,
@@ -35,16 +33,6 @@ export default function InventorySettingsPage() {
     negative_stock_allowed: false
   });
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [accounts, setAccounts] = useState<{ id: string; code: string; name: string }[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [newWarehouse, setNewWarehouse] = useState({
-    name: '',
-    location: '',
-    description: '',
-    address: '',
-    phone: '',
-    inventoryAccountId: '',
-  });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [skuSettings, setSkuSettings] = useState({
@@ -53,11 +41,15 @@ export default function InventorySettingsPage() {
     padding: 4,
   });
 
+  const [showTaxModal, setShowTaxModal] = useState(false);
+  const [taxRate, setTaxRate] = useState(18);
+  const [savingTax, setSavingTax] = useState(false);
+
   useEffect(() => {
     loadSettings();
     loadWarehouses();
-    loadAccounts();
     loadSkuSettings();
+    loadTaxConfig();
   }, [user?.id]);
 
   const loadSettings = async () => {
@@ -89,23 +81,6 @@ export default function InventorySettingsPage() {
     }
   };
 
-  const loadAccounts = async () => {
-    try {
-      if (!user?.id) {
-        setAccounts([]);
-        return;
-      }
-      const data = await chartAccountsService.getAll(user.id);
-      const options = (data || [])
-        .filter((acc: any) => acc.allow_posting !== false && acc.type === 'asset')
-        .map((acc: any) => ({ id: acc.id, code: acc.code, name: acc.name }));
-      setAccounts(options);
-    } catch (error) {
-      console.error('Error loading accounts for warehouses:', error);
-      setAccounts([]);
-    }
-  };
-
   const loadSkuSettings = async () => {
     if (!user?.id) return;
     try {
@@ -116,17 +91,14 @@ export default function InventorySettingsPage() {
     }
   };
 
-  const handleSaveSkuSettings = async () => {
-    if (!user?.id) return;
-    setLoading(true);
-    setMessage(null);
+  const loadTaxConfig = async () => {
     try {
-      await accountingSettingsService.updateSkuSettings(user.id, skuSettings);
-      setMessage({ type: 'success', text: 'SKU settings saved successfully' });
+      const data = await taxService.getTaxConfiguration();
+      if (data && typeof data.itbis_rate === 'number') {
+        setTaxRate(data.itbis_rate);
+      }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error saving SKU settings' });
-    } finally {
-      setLoading(false);
+      console.error('Error loading tax configuration:', error);
     }
   };
 
@@ -145,46 +117,36 @@ export default function InventorySettingsPage() {
     }
   };
 
-  const handleCreateWarehouse = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInputChange = (field: keyof InventorySettings, value: any) => {
+    setSettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveSkuSettings = async () => {
+    if (!user?.id) return;
     setLoading(true);
-
+    setMessage(null);
     try {
-      if (limits.warehouses !== -1 && warehouses.length >= limits.warehouses) {
-        alert(`You've reached the limit of ${limits.warehouses} location(s) for your plan.`);
-        setLoading(false);
-        return;
-      }
-      await settingsService.createWarehouse({
-        name: newWarehouse.name,
-        location: newWarehouse.location,
-        description: newWarehouse.description || null,
-        address: newWarehouse.address || null,
-        phone: newWarehouse.phone || null,
-        inventory_account_id: newWarehouse.inventoryAccountId || null,
-        active: true,
-      });
-      setMessage({ type: 'success', text: 'Location created successfully' });
-
-      setShowModal(false);
-      setNewWarehouse({
-        name: '',
-        location: '',
-        description: '',
-        address: '',
-        phone: '',
-        inventoryAccountId: '',
-      });
-      loadWarehouses();
+      await accountingSettingsService.updateSkuSettings(user.id, skuSettings);
+      setMessage({ type: 'success', text: 'SKU settings saved successfully' });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Error creating the location' });
+      setMessage({ type: 'error', text: 'Error saving SKU settings' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: keyof InventorySettings, value: any) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+  const handleSaveTaxRate = async () => {
+    setSavingTax(true);
+    setMessage(null);
+    try {
+      await taxService.saveTaxConfiguration({ itbis_rate: taxRate });
+      setMessage({ type: 'success', text: 'Tax rate saved successfully' });
+      setShowTaxModal(false);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Error saving tax rate' });
+    } finally {
+      setSavingTax(false);
+    }
   };
 
   return (
@@ -276,7 +238,6 @@ export default function InventorySettingsPage() {
                   Enable automatic reorder
                 </label>
               </div>
-              
               {settings.auto_reorder && (
                 <div className="grid grid-cols-1 md-grid-cols-2 gap-6">
                   <div>
@@ -293,51 +254,6 @@ export default function InventorySettingsPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Tracking Settings */}
-          <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
-            <h2 className="text-lg font-semibold text-[#2f3e1e] mb-4">Tracking Preferences</h2>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="track_serial_numbers"
-                  checked={settings.track_serial_numbers}
-                  onChange={(e) => handleInputChange('track_serial_numbers', e.target.checked)}
-                  className="h-4 w-4 text-[#2f3e1e] focus:ring-[#6b8a45] border-[#d9ceb5] rounded"
-                />
-                <label htmlFor="track_serial_numbers" className="ml-2 block text-sm text-[#2f3e1e]">
-                  Track serial numbers
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="track_expiration"
-                  checked={settings.track_expiration}
-                  onChange={(e) => handleInputChange('track_expiration', e.target.checked)}
-                  className="h-4 w-4 text-[#2f3e1e] focus:ring-[#6b8a45] border-[#d9ceb5] rounded"
-                />
-                <label htmlFor="track_expiration" className="ml-2 block text-sm text-[#2f3e1e]">
-                  Track expiration dates
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="negative_stock_allowed"
-                  checked={settings.negative_stock_allowed}
-                  onChange={(e) => handleInputChange('negative_stock_allowed', e.target.checked)}
-                  className="h-4 w-4 text-[#2f3e1e] focus:ring-[#6b8a45] border-[#d9ceb5] rounded"
-                />
-                <label htmlFor="negative_stock_allowed" className="ml-2 block text-sm text-[#2f3e1e]">
-                  Allow negative stock
-                </label>
-              </div>
             </div>
           </div>
 
@@ -423,174 +339,89 @@ export default function InventorySettingsPage() {
           </div>
         </div>
 
-        {/* Locations Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-[#e4d8c4]">
-          <div className="p-6 border-b border-[#e4d8c4] flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-[#2f3e1e]">Locations</h2>
+        {/* Tax Settings */}
+        <div className="bg-white rounded-xl shadow-sm border border-[#e4d8c4] p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-[#2f3e1e] mb-1">Tax Settings</h2>
+              <p className="text-sm text-[#6b5c3b]">
+                Configure the default tax rate applied to sales across the system.
+              </p>
+            </div>
             <button
-              onClick={() => setShowModal(true)}
-              className="bg-[#2f3e1e] text-white px-4 py-2 rounded-lg hover:bg-[#1f2a15] flex items-center space-x-2"
+              type="button"
+              onClick={() => setShowTaxModal(true)}
+              className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2a15] flex items-center space-x-2"
             >
-              <i className="ri-add-line"></i>
-              <span>New Location</span>
+              <i className="ri-percent-line"></i>
+              <span>Change Tax Rate</span>
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#f7f3e8]">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#6b5c3b] uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-[#f1e4cd]">
-                {warehouses.map((warehouse) => (
-                  <tr key={warehouse.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2f3e1e]">
-                      {warehouse.name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#6b5c3b]">
-                      {warehouse.location}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        warehouse.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {warehouse.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button className="text-[#2f3e1e] hover:text-[#1f2a15]">
-                          <i className="ri-edit-line"></i>
-                        </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          <i className="ri-delete-bin-line"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-4 p-4 bg-[#f7f3e8] rounded-lg flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-[#2f3e1e] rounded-full flex items-center justify-center">
+                <i className="ri-percent-line text-white text-lg"></i>
+              </div>
+              <div>
+                <p className="text-sm text-[#6b5c3b]">Current Tax Rate</p>
+                <p className="text-2xl font-bold text-[#2f3e1e]">{taxRate}%</p>
+              </div>
+            </div>
+            <p className="text-xs text-[#8c7c5b] max-w-xs text-right">
+              This rate is applied to POS sales, invoices, and customer displays.
+            </p>
           </div>
         </div>
 
-        {/* New Location Modal */}
-        {showModal && (
+        {/* Tax Rate Modal */}
+        {showTaxModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md border border-[#e4d8c4]">
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm border border-[#e4d8c4]">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[#2f3e1e]">New Location</h3>
+                <h3 className="text-lg font-semibold text-[#2f3e1e]">Change Tax Rate</h3>
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={() => setShowTaxModal(false)}
                   className="text-[#6b5c3b] hover:text-[#2f3e1e]"
                 >
                   <i className="ri-close-line text-xl"></i>
                 </button>
               </div>
-              <form onSubmit={handleCreateWarehouse} className="space-y-4">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Name *
+                  <label className="block text-sm font-medium text-[#4a3c23] mb-2">
+                    Tax Rate %
                   </label>
                   <input
-                    type="text"
-                    required
-                    value={newWarehouse.name}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45] text-2xl font-bold text-center"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Location *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newWarehouse.location}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, location: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={newWarehouse.description}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                    rows={2}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.address}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={newWarehouse.phone}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#4a3c23] mb-1">
-                    Inventory account
-                  </label>
-                  <select
-                    value={newWarehouse.inventoryAccountId}
-                    onChange={(e) => setNewWarehouse(prev => ({ ...prev, inventoryAccountId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#d9ceb5] rounded-lg focus:ring-2 focus:ring-[#6b8a45] focus:border-[#6b8a45]"
-                  >
-                    <option value="">Select an account</option>
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-xs text-[#8c7c5b] mt-2">
+                    This percentage will be applied to all POS sales and invoices.
+                  </p>
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => setShowTaxModal(false)}
                     className="px-4 py-2 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg hover:bg-[#f3e7cf]"
                   >
                     Cancel
                   </button>
                   <button
-                    type="submit"
-                    disabled={loading}
+                    type="button"
+                    onClick={handleSaveTaxRate}
+                    disabled={savingTax}
                     className="px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#1f2a15] disabled:opacity-50"
                   >
-                    {loading ? 'Creating...' : 'Create Location'}
+                    {savingTax ? 'Saving...' : 'Save'}
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         )}

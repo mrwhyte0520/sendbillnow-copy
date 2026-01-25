@@ -140,11 +140,44 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Invalid JSON body' });
   }
 
-  const { to, customerName, companyName, sale, templateType, attachment } = body;
+  const {
+    to,
+    customerName,
+    companyName,
+    sale: saleRaw,
+    templateType,
+    attachment: attachmentRaw,
+    subject: subjectRaw,
+    invoiceNumber,
+    total,
+    subtotal,
+    tax,
+    items,
+    pdfBase64,
+  } = body;
 
   if (!to || typeof to !== 'string' || !to.includes('@')) {
     return res.status(400).json({ success: false, error: 'Valid recipient email is required' });
   }
+
+  const derivedItems = Array.isArray(items)
+    ? items
+    : [];
+
+  const sale = (saleRaw && typeof saleRaw === 'object')
+    ? saleRaw
+    : {
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString(),
+        subtotal: subtotal ?? total ?? 0,
+        tax: tax ?? 0,
+        total: total ?? 0,
+        items: derivedItems.map((i) => ({
+          name: i.name ?? i.description ?? 'Item',
+          quantity: i.quantity ?? 1,
+          total: i.total ?? i.amount ?? i.price ?? 0,
+        })),
+      };
 
   if (!sale || typeof sale !== 'object') {
     return res.status(400).json({ success: false, error: 'Missing sale data' });
@@ -157,8 +190,10 @@ export default async function handler(req, res) {
     ? String(process.env.RESEND_REPLY_TO).trim()
     : null;
 
-  const total = formatMoney(sale.total);
-  const subject = `Your Receipt - $${total}`;
+  const totalFormatted = formatMoney(sale.total);
+  const subject = (typeof subjectRaw === 'string' && subjectRaw.trim())
+    ? subjectRaw.trim()
+    : `Your Receipt - $${totalFormatted}`;
 
   const html = buildReceiptHtml({
     companyName,
@@ -168,6 +203,16 @@ export default async function handler(req, res) {
   });
 
   const attachments = [];
+  const attachment = (attachmentRaw && typeof attachmentRaw === 'object')
+    ? attachmentRaw
+    : (typeof pdfBase64 === 'string' && pdfBase64.trim())
+      ? {
+          filename: `${invoiceNumber || 'document'}.pdf`,
+          content: pdfBase64,
+          content_type: 'application/pdf',
+        }
+      : null;
+
   if (attachment && typeof attachment === 'object') {
     const filename = attachment.filename;
     const content = attachment.content;

@@ -1,5 +1,6 @@
 
 import { type RouteObject } from 'react-router';
+import { Navigate } from 'react-router-dom';
 import { lazy } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -104,7 +105,6 @@ const CompanySettingsPage = lazy(() => import('../pages/settings/company/page'))
 // Admin Pages
 const AdminDemoRequestsPage = lazy(() => import('../pages/admin/demo-requests/page'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/dashboard/page'));
-const OpeningBalancesPage = lazy(() => import('../pages/settings/opening-balances/page'));
 const UsersSettingsPage = lazy(() => import('../pages/settings/users/page'));
 const AccountingSettingsPage = lazy(() => import('../pages/settings/accounting/page'));
 const TaxSettingsPage = lazy(() => import('../pages/settings/taxes/page'));
@@ -724,7 +724,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/settings/opening-balances',
-    element: <ProtectedRoute><OpeningBalancesPage /></ProtectedRoute>
+    element: <Navigate to="/settings" replace />
   },
   {
     path: '/settings/users',

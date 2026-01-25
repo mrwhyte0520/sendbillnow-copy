@@ -1507,6 +1507,17 @@ export default function POSPage() {
               </button>
               <button
                 type="button"
+                onClick={() => {
+                  window.location.href = '/accounts-receivable/customers';
+                }}
+                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
+                title="Go to Customer Management"
+              >
+                <i className="ri-user-3-line mr-2 text-[#7a8c45]"></i>
+                Customers
+              </button>
+              <button
+                type="button"
                 onClick={() => setCartOpen(prev => !prev)}
                 className="relative inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-[#008000] to-[#006600] border-2 border-[#006600] rounded-xl hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/25 hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-white shadow-md"
               >

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useAuth } from '../../../hooks/useAuth';
 import {
   apInvoicesService,
@@ -21,7 +23,61 @@ import {
 } from '../../../services/database';
 import { formatAmount, getCurrencyPrefix } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+
+const isGeneralSupplierName = (name?: string | null) => {
+  if (!name) return false;
+  return String(name).trim().toLowerCase() === 'general supplier';
+};
+
+const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/script>/gi, '');
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+};
+
+const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:1024px;height:1400px;border:0;opacity:0';
+  document.body.appendChild(iframe);
+  const safeHtml = stripPrintScripts(html);
+  await new Promise<void>((resolve) => {
+    iframe.onload = () => resolve();
+    iframe.srcdoc = safeHtml;
+  });
+  const body = iframe.contentDocument?.body;
+  if (!body) {
+    document.body.removeChild(iframe);
+    throw new Error('Failed to render document for PDF');
+  }
+  const canvas = await html2canvas(body, { scale: 1.25, useCORS: true, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/jpeg', 0.72);
+  const pdf = new jsPDF('p', 'pt', 'a4');
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const scale = pdfWidth / canvas.width;
+  const scaledHeight = canvas.height * scale;
+  let y = 0;
+  let remaining = scaledHeight;
+  while (remaining > 0) {
+    pdf.addImage(imgData, 'JPEG', 0, y, pdfWidth, scaledHeight);
+    remaining -= pdfHeight;
+    if (remaining > 0) {
+      pdf.addPage();
+      y -= pdfHeight;
+    }
+  }
+  document.body.removeChild(iframe);
+  const arrayBuffer = pdf.output('arraybuffer');
+  return arrayBufferToBase64(arrayBuffer);
+};
 
 interface APInvoice {
   id: string;
@@ -2309,6 +2365,70 @@ ${items
           onSelect={handlePrintTypeSelect}
           documentType="supplier_invoice"
           title="Select Invoice Format"
+          customerEmail={
+            invoiceToPrint && !isGeneralSupplierName(invoiceToPrint.supplierName)
+              ? suppliers.find((s) => s.id === invoiceToPrint.supplierId)?.email
+              : undefined
+          }
+          onSendEmail={async (templateType) => {
+            if (!invoiceToPrint) return;
+            const fullSupplier = suppliers.find((s) => s.id === invoiceToPrint.supplierId);
+            const email = fullSupplier?.email;
+            if (!email || !email.includes('@')) {
+              alert('Supplier email not available');
+              return;
+            }
+            let companyInfo: any = null;
+            try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
+            const invoiceData = {
+              invoiceNumber: invoiceToPrint.invoiceNumber,
+              date: invoiceToPrint.invoiceDate,
+              dueDate: invoiceToPrint.dueDate || invoiceToPrint.invoiceDate,
+              amount: invoiceToPrint.totalToPay,
+              subtotal: invoiceToPrint.totalGross,
+              tax: invoiceToPrint.totalItbis,
+              items: [{ description: 'Supplier Invoice', quantity: 1, price: invoiceToPrint.totalToPay, total: invoiceToPrint.totalToPay }],
+            };
+            const customerData = {
+              name: invoiceToPrint.supplierName || fullSupplier?.name || 'Supplier',
+              document: fullSupplier?.document,
+              phone: fullSupplier?.phone,
+              email: fullSupplier?.email,
+              address: fullSupplier?.address,
+            };
+            const companyData = {
+              name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
+              phone: companyInfo?.phone || '',
+              email: companyInfo?.email || '',
+              address: companyInfo?.address || '',
+              logo: companyInfo?.logo,
+            };
+            try {
+              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType);
+              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
+              const res = await fetch('/api/send-receipt-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: email,
+                  subject: `Invoice ${invoiceToPrint.invoiceNumber}`,
+                  invoiceNumber: invoiceToPrint.invoiceNumber,
+                  customerName: customerData.name,
+                  total: invoiceToPrint.totalToPay,
+                  pdfBase64,
+                }),
+              });
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to send email');
+              }
+              alert('Email sent successfully!');
+            } catch (err: any) {
+              console.error('Error sending invoice email:', err);
+              alert(err.message || 'Failed to send email');
+            }
+          }}
         />
       </div>
     </DashboardLayout>

@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function Register() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { signUp } = useAuth();
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
+  const [isPaid, setIsPaid] = useState(false);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -16,6 +20,91 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '');
+    const plan = String(params.get('plan') || localStorage.getItem('selected_plan') || '').trim();
+    if (plan) {
+      setSelectedPlanId(plan);
+      try {
+        localStorage.setItem('selected_plan', plan);
+      } catch {}
+    }
+  }, [location.search]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search || '');
+    const sessionId = String(params.get('session_id') || '').trim();
+    if (!sessionId) return;
+
+    (async () => {
+      setIsCheckingPayment(true);
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+        const resp = await fetch(`${apiBase}/api/get-checkout-session`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok || !data?.ok) {
+          throw new Error(data?.error || 'Could not verify payment session.');
+        }
+        const status = String(data?.session?.status || '');
+        if (status === 'complete') {
+          setIsPaid(true);
+          try {
+            localStorage.setItem('pending_checkout_session_id', sessionId);
+          } catch {}
+        }
+      } catch (err: any) {
+        setError(err?.message || 'Could not verify payment session.');
+      } finally {
+        setIsCheckingPayment(false);
+      }
+    })();
+  }, [location.search]);
+
+  const startCheckout = async () => {
+    const planId = String(selectedPlanId || '').trim();
+    if (!planId) {
+      setError('Please select a plan first.');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Please enter a valid email');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const refCode = localStorage.getItem('ref_code') || undefined;
+      const billingPeriod = localStorage.getItem('selected_billing') === 'annual' ? 'annual' : 'monthly';
+
+      const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          billingPeriod,
+          refCode,
+          userEmail: formData.email,
+        }),
+      });
+
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not start checkout.');
+      }
+
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err?.message || 'Could not start checkout. Please try again.');
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -51,6 +140,12 @@ export default function Register() {
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       setLoading(false);
+      return;
+    }
+
+    if (!isPaid) {
+      setLoading(false);
+      await startCheckout();
       return;
     }
 
@@ -265,18 +360,23 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isCheckingPayment}
               className="w-full bg-gradient-to-r from-[#008000] to-[#008000] text-white py-3 px-4 rounded-lg font-medium hover:from-[#008000] hover:to-[#008000] focus:outline-none focus:ring-2 focus:ring-[#008000] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap"
             >
-              {loading ? (
+              {isCheckingPayment ? (
                 <>
                   <i className="ri-loader-4-line animate-spin mr-2"></i>
-                  Creating account...
+                  Verifying payment...
+                </>
+              ) : loading ? (
+                <>
+                  <i className="ri-loader-4-line animate-spin mr-2"></i>
+                  {isPaid ? 'Creating account...' : 'Redirecting to payment...'}
                 </>
               ) : (
                 <>
                   <i className="ri-user-add-line mr-2"></i>
-                  Create Account
+                  {isPaid ? 'Create Account' : 'Continue to Payment'}
                 </>
               )}
             </button>

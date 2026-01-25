@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { exportToPdf } from '../../../utils/exportImportUtils';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 import { toast } from 'sonner';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatAmount, getCurrencyPrefix } from '../../../utils/numberFormat';
@@ -19,6 +21,60 @@ import {
   inventoryService,
   settingsService,
 } from '../../../services/database';
+
+const isGeneralCustomerName = (name?: string | null) => {
+  if (!name) return false;
+  return String(name).trim().toLowerCase() === 'general customer';
+};
+
+const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/script>/gi, '');
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+};
+
+const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:1024px;height:1400px;border:0;opacity:0';
+  document.body.appendChild(iframe);
+  const safeHtml = stripPrintScripts(html);
+  await new Promise<void>((resolve) => {
+    iframe.onload = () => resolve();
+    iframe.srcdoc = safeHtml;
+  });
+  const body = iframe.contentDocument?.body;
+  if (!body) {
+    document.body.removeChild(iframe);
+    throw new Error('Failed to render document for PDF');
+  }
+  const canvas = await html2canvas(body, { scale: 1.25, useCORS: true, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/jpeg', 0.72);
+  const pdf = new jsPDF('p', 'pt', 'a4');
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const scale = pdfWidth / canvas.width;
+  const scaledHeight = canvas.height * scale;
+  let y = 0;
+  let remaining = scaledHeight;
+  while (remaining > 0) {
+    pdf.addImage(imgData, 'JPEG', 0, y, pdfWidth, scaledHeight);
+    remaining -= pdfHeight;
+    if (remaining > 0) {
+      pdf.addPage();
+      y -= pdfHeight;
+    }
+  }
+  document.body.removeChild(iframe);
+  const arrayBuffer = pdf.output('arraybuffer');
+  return arrayBufferToBase64(arrayBuffer);
+};
 
 // Tipos de datos
 type StatusType = 'pending' | 'approved' | 'under_review' | 'rejected' | 'expired' | 'invoiced';
@@ -1917,6 +1973,77 @@ export default function QuotesPage() {
           onSelect={handlePrintTypeSelect}
           documentType="quote"
           title="Select Quote Format"
+          customerEmail={
+            quoteToPrint && !isGeneralCustomerName(quoteToPrint.customer)
+              ? quoteToPrint.customerEmail
+              : undefined
+          }
+          onSendEmail={async (templateType) => {
+            if (!quoteToPrint) return;
+            const fullCustomer = quoteToPrint.customerId
+              ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId))
+              : undefined;
+            const email = fullCustomer?.email || quoteToPrint.customerEmail;
+            if (!email || !email.includes('@')) {
+              alert('Customer email not available');
+              return;
+            }
+            let companyInfo: any = null;
+            try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
+            const quoteData = {
+              invoiceNumber: quoteToPrint.id,
+              date: quoteToPrint.date,
+              dueDate: quoteToPrint.validUntil,
+              amount: quoteToPrint.total,
+              subtotal: quoteToPrint.amount,
+              tax: quoteToPrint.tax,
+              items: quoteToPrint.items.map((item) => ({
+                description: item.description,
+                quantity: item.quantity,
+                price: item.price,
+                total: item.total,
+              })),
+            };
+            const customerData = {
+              name: quoteToPrint.customer || fullCustomer?.name || 'Customer',
+              document: fullCustomer?.document || undefined,
+              phone: fullCustomer?.phone,
+              email: fullCustomer?.email || quoteToPrint.customerEmail,
+              address: fullCustomer?.address,
+            };
+            const companyData = {
+              name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
+              phone: companyInfo?.phone || '',
+              email: companyInfo?.email || '',
+              address: companyInfo?.address || '',
+              logo: companyInfo?.logo,
+            };
+            try {
+              const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType);
+              const pdfBase64 = await generatePdfBase64FromHtml(quoteHtml);
+              const res = await fetch('/api/send-receipt-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: email,
+                  subject: `Quote ${quoteToPrint.id}`,
+                  invoiceNumber: quoteToPrint.id,
+                  customerName: customerData.name,
+                  total: quoteToPrint.total,
+                  pdfBase64,
+                }),
+              });
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to send email');
+              }
+              alert('Email sent successfully!');
+            } catch (err: any) {
+              console.error('Error sending quote email:', err);
+              alert(err.message || 'Failed to send email');
+            }
+          }}
         />
       </div>
     </DashboardLayout>

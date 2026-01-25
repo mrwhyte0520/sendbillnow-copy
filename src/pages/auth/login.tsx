@@ -85,6 +85,30 @@ export default function Login() {
       }
 
       if (data?.user) {
+        const pendingSessionId = localStorage.getItem('pending_checkout_session_id');
+        if (pendingSessionId) {
+          try {
+            const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+            const resp = await fetch(`${apiBase}/api/claim-checkout-session`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: pendingSessionId,
+                userId: data.user.id,
+                userEmail: data.user.email,
+              }),
+            });
+            const claimData = await resp.json().catch(() => null);
+            if (!resp.ok || !claimData?.ok) {
+              throw new Error(claimData?.error || 'Could not apply plan after checkout.');
+            }
+            localStorage.removeItem('pending_checkout_session_id');
+          } catch (claimErr: any) {
+            console.error('Error claiming checkout session:', claimErr);
+            alert(claimErr?.message || 'Could not apply the purchased plan. Please contact support.');
+          }
+        }
+
         // Check if there's a selected plan from landing page
         const selectedPlan = localStorage.getItem('selected_plan');
         if (selectedPlan) {
@@ -269,12 +293,12 @@ export default function Login() {
           >
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link
-                to="/auth/register"
+              <a
+                href="/#pricing"
                 className="font-medium text-[#008000] hover:text-[#006400] transition-all duration-300 whitespace-nowrap hover:underline underline-offset-2"
               >
                 Sign up here
-              </Link>
+              </a>
             </p>
           </div>
         </div>
