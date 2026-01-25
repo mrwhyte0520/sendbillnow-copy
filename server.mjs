@@ -8,7 +8,9 @@ import approveDemoHandler from './api/approve-demo.js';
 import webnotiEventHandler from './api/webnoti/event.js';
 import createCheckoutSessionHandler from './api/create-checkout-session.js';
 import getCheckoutSessionHandler from './api/get-checkout-session.js';
+import claimCheckoutSessionHandler from './api/claim-checkout-session.js';
 import stripeWebhookHandler from './api/stripe-webhook.js';
+import sendReceiptEmailHandler from './api/send-receipt-email.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,7 +46,7 @@ const app = express();
 app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req, res) => stripeWebhookHandler(req, res));
 
 // JSON body parsing for our API handlers
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '25mb' }));
 
 // API routes (same signatures as Vercel handlers)
 app.all('/api/demo-request', (req, res) => demoRequestHandler(req, res));
@@ -52,6 +54,8 @@ app.all('/api/approve-demo', (req, res) => approveDemoHandler(req, res));
 app.all('/api/webnoti/event', (req, res) => webnotiEventHandler(req, res));
 app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandler(req, res));
 app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
+app.all('/api/claim-checkout-session', (req, res) => claimCheckoutSessionHandler(req, res));
+app.all('/api/send-receipt-email', (req, res) => sendReceiptEmailHandler(req, res));
 
 // Serve static frontend
 const distPath = path.join(__dirname, 'dist');

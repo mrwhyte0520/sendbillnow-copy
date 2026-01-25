@@ -8,6 +8,8 @@ interface InvoiceTypeModalProps {
   onSelect: (type: InvoiceTemplateType) => void;
   documentType?: 'invoice' | 'supplier_invoice' | 'quote';
   title?: string;
+  customerEmail?: string;
+  onSendEmail?: (type: InvoiceTemplateType) => void;
 }
 
 const BRAND_BLUE = '#0d3b66';
@@ -18,6 +20,8 @@ export default function InvoiceTypeModal({
   onSelect,
   documentType = 'invoice',
   title = 'Select Document Format',
+  customerEmail,
+  onSendEmail,
 }: InvoiceTypeModalProps) {
   const [selectedType, setSelectedType] = useState<InvoiceTemplateType>('simple');
 
@@ -183,6 +187,15 @@ export default function InvoiceTypeModal({
     onClose();
   };
 
+  const handleSendEmail = () => {
+    if (onSendEmail) {
+      onSendEmail(selectedType);
+    }
+    onClose();
+  };
+
+  const canSendEmail = Boolean(customerEmail && customerEmail.includes('@'));
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
@@ -261,6 +274,21 @@ export default function InvoiceTypeModal({
               >
                 Cancel
               </button>
+              {onSendEmail && (
+                <button
+                  onClick={handleSendEmail}
+                  disabled={!canSendEmail}
+                  className={`px-5 py-2.5 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                    canSendEmail
+                      ? 'bg-blue-600 text-white shadow-lg hover:shadow-xl hover:bg-blue-700'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                  title={canSendEmail ? `Send to ${customerEmail}` : 'Customer email required'}
+                >
+                  <i className="ri-mail-send-line"></i>
+                  Send via Email
+                </button>
+              )}
               <button
                 onClick={handleConfirm}
                 className="px-5 py-2.5 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2"

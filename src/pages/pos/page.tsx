@@ -10,7 +10,9 @@ import { customersService, invoicesService, receiptsService, inventoryService, c
 import { exportToExcelStyled } from '../../utils/exportImportUtils';
 import { formatAmount, formatMoney } from '../../utils/numberFormat';
 import InvoiceTypeModal from '../../components/common/InvoiceTypeModal';
-import { printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
 
 interface Product {
   id: string;
@@ -52,6 +54,83 @@ interface Customer {
   customerTypeId?: string | null;
   paymentTermId?: string | null;
 }
+
+const stripPrintScripts = (html: string) => {
+  // Remove the auto-print/auto-close script to avoid side-effects when rendering offscreen
+  return html.replace(/<script>[\s\S]*?<\/script>/gi, '');
+};
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+};
+
+const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-10000px';
+  iframe.style.top = '0';
+  iframe.style.width = '1024px';
+  iframe.style.height = '1400px';
+  iframe.style.border = '0';
+  iframe.style.opacity = '0';
+
+  document.body.appendChild(iframe);
+
+  const safeHtml = stripPrintScripts(html);
+  const loaded = new Promise<void>((resolve) => {
+    iframe.onload = () => resolve();
+  });
+  iframe.srcdoc = safeHtml;
+  await loaded;
+
+  const doc = iframe.contentDocument;
+  const body = doc?.body;
+  if (!body) {
+    document.body.removeChild(iframe);
+    throw new Error('Failed to render invoice for PDF');
+  }
+
+  const canvas = await html2canvas(body, {
+    scale: 1.25,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+  });
+
+  const imgData = canvas.toDataURL('image/jpeg', 0.72);
+  const pdf = new jsPDF('p', 'pt', 'a4');
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+
+  const imgWidth = canvas.width;
+  const imgHeight = canvas.height;
+  const scale = pdfWidth / imgWidth;
+  const scaledHeight = imgHeight * scale;
+
+  let y = 0;
+  let remaining = scaledHeight;
+  while (remaining > 0) {
+    pdf.addImage(imgData, 'JPEG', 0, y, pdfWidth, scaledHeight);
+    remaining -= pdfHeight;
+    if (remaining > 0) {
+      pdf.addPage();
+      y -= pdfHeight;
+    }
+  }
+
+  const buffer = pdf.output('arraybuffer') as ArrayBuffer;
+  const base64 = arrayBufferToBase64(buffer);
+
+  document.body.removeChild(iframe);
+  return base64;
+};
 
 interface Sale {
   id: string;
@@ -3414,6 +3493,105 @@ export default function POSPage() {
           onSelect={handlePrintTypeSelect}
           documentType="invoice"
           title="Print Receipt"
+          customerEmail={
+            completedSale?.customer?.name?.toLowerCase() !== 'general customer'
+              ? completedSale?.customer?.email
+              : undefined
+          }
+          onSendEmail={async (templateType) => {
+            if (!completedSale) return;
+            const email = completedSale.customer?.email;
+            if (!email || !email.includes('@')) {
+              alert('Customer email not available');
+              return;
+            }
+            let companyInfo: any = null;
+            try {
+              companyInfo = await settingsService.getCompanyInfo();
+            } catch {
+              companyInfo = null;
+            }
+
+            const saleData = {
+              invoiceNumber: completedSale.id,
+              date: completedSale.date,
+              dueDate: completedSale.date,
+              amount: completedSale.total,
+              subtotal: completedSale.subtotal,
+              tax: completedSale.tax,
+              items: completedSale.items.map((item) => ({
+                description:
+                  item.name +
+                  (item.extras?.length ? ` + ${item.extras.map((e) => e.name).join(', ')}` : ''),
+                quantity: item.quantity,
+                price: item.price,
+                total: item.total,
+              })),
+            };
+            const customerData = {
+              name: completedSale.customer?.name || 'Customer',
+              document: completedSale.customer?.document,
+              phone: completedSale.customer?.phone,
+              email: completedSale.customer?.email,
+              address: completedSale.customer?.address,
+            };
+            const companyData = {
+              name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
+              phone: companyInfo?.phone || '',
+              email: companyInfo?.email || '',
+              address: companyInfo?.address || '',
+              logo: companyInfo?.logo,
+            };
+
+            try {
+              const invoiceHtml = generateInvoiceHtml(saleData, customerData, companyData, templateType);
+              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
+
+              if (!pdfBase64 || pdfBase64.length < 1000) {
+                alert('Failed to generate PDF');
+                return;
+              }
+
+              const response = await fetch('/api/send-receipt-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: email,
+                  customerName: completedSale.customer?.name || 'Customer',
+                  companyName: companyInfo?.company_name || companyInfo?.name || 'Send Bill Now',
+                  templateType,
+                  sale: {
+                    id: completedSale.id,
+                    date: completedSale.date,
+                    time: completedSale.time,
+                    items: completedSale.items,
+                    subtotal: completedSale.subtotal,
+                    tax: completedSale.tax,
+                    total: completedSale.total,
+                  },
+                  attachment: {
+                    filename: `Receipt-${completedSale.id}.pdf`,
+                    content: pdfBase64,
+                    contentType: 'application/pdf',
+                  },
+                }),
+              });
+
+              const result = await response.json().catch(() => null);
+              if (!response.ok || !result?.success) {
+                alert(result?.error || 'Failed to send email');
+                return;
+              }
+
+              alert('Email sent successfully');
+              setShowPrintTypeModal(false);
+              setCompletedSale(null);
+            } catch (error) {
+              console.error('Send receipt email failed:', error);
+              alert('Failed to send email');
+            }
+          }}
         />
       </div>
     </DashboardLayout>
