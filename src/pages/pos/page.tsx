@@ -173,11 +173,14 @@ export default function POSPage() {
     phone: '',
     email: '',
     address: '',
-    type: 'regular' as 'regular' | 'vip'
+    type: 'regular' as 'regular' | 'vip',
+    secondEmail: ''
   });
   const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
+  const newCustomerNameInputRef = useRef<HTMLInputElement | null>(null);
+  const newCustomerModalRef = useRef<HTMLDivElement | null>(null);
   const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
   const [customerTypes, setCustomerTypes] = useState<any[]>([]);
   const [cashDenominations, setCashDenominations] = useState(
@@ -385,6 +388,30 @@ export default function POSPage() {
     }
   }, [showPaymentModal, amountReceived]);
 
+  useEffect(() => {
+    if (showNewCustomerModal) {
+      setTimeout(() => {
+        newCustomerNameInputRef.current?.focus();
+      }, 0);
+    }
+  }, [showNewCustomerModal]);
+
+  useEffect(() => {
+    if (!showNewCustomerModal) return;
+
+    const onFocusIn = (e: FocusEvent) => {
+      const modalEl = newCustomerModalRef.current;
+      if (!modalEl) return;
+      const target = e.target as Node | null;
+      if (target && !modalEl.contains(target)) {
+        newCustomerNameInputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, [showNewCustomerModal]);
+
   const anyModalOpen =
     showCustomerModal ||
     showPaymentModal ||
@@ -402,7 +429,6 @@ export default function POSPage() {
   useEffect(() => {
     if (activeTab !== 'customers') {
       setShowEditCustomerModal(false);
-      setShowNewCustomerModal(false);
     }
   }, [activeTab]);
 
@@ -1133,18 +1159,13 @@ export default function POSPage() {
   };
 
   const addNewCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.document) {
-      alert('Name and document are required');
+    if (!newCustomer.name || !newCustomer.phone) {
+      alert('Full name and phone are required');
       return;
     }
 
-    // Basic validation (allow phone empty)
-    const docOk = /^\d{3}-\d{7}-\d$/.test(newCustomer.document);
-    const phoneOk = !newCustomer.phone || /^\d{3}-\d{3}-\d{4}$/.test(newCustomer.phone);
-    if (!docOk) {
-      alert('Invalid document. Expected format: 000-0000000-0');
-      return;
-    }
+    // Basic phone validation
+    const phoneOk = /^\d{3}-\d{3}-\d{4}$/.test(newCustomer.phone);
     if (!phoneOk) {
       alert('Invalid phone. Expected format: 000-000-0000');
       return;
@@ -1154,12 +1175,13 @@ export default function POSPage() {
       try {
         await customersService.create(user.id, {
           name: newCustomer.name,
-          document: newCustomer.document,
+          document: newCustomer.document || '',
           phone: newCustomer.phone,
           email: newCustomer.email,
-          address: newCustomer.address,
+          address: newCustomer.address || '',
           creditLimit: 0,
           status: 'active',
+          contactEmail: newCustomer.secondEmail || undefined,
         });
         await loadCustomers();
       } catch (error) {
@@ -1182,7 +1204,8 @@ export default function POSPage() {
       phone: '',
       email: '',
       address: '',
-      type: 'regular'
+      type: 'regular',
+      secondEmail: ''
     });
     setShowNewCustomerModal(false);
     alert('Customer added successfully');
@@ -1507,11 +1530,9 @@ export default function POSPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  window.location.href = '/accounts-receivable/customers';
-                }}
+                onClick={() => setShowNewCustomerModal(true)}
                 className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
-                title="Go to Customer Management"
+                title="Quick add new customer"
               >
                 <i className="ri-user-3-line mr-2 text-[#7a8c45]"></i>
                 Customers
@@ -2827,6 +2848,17 @@ export default function POSPage() {
               <div className="space-y-2">
                 <button
                   onClick={() => {
+                    setShowCustomerModal(false);
+                    setShowNewCustomerModal(true);
+                  }}
+                  className="w-full text-left p-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  <div className="font-medium text-blue-900">New Customer</div>
+                  <div className="text-sm text-blue-700">Quick add</div>
+                </button>
+
+                <button
+                  onClick={() => {
                     const general = customers.find((c) => String(c.name || '').trim().toLowerCase() === 'general customer');
                     setSelectedCustomer(general || null);
                     setShowCustomerModal(false);
@@ -3379,119 +3411,106 @@ export default function POSPage() {
           </Modal>
         )}
 
-        {/* New Customer Modal */}
-        {showNewCustomerModal && (
-          <Modal>
-            <div className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">New Customer</h3>
-                <button
-                  onClick={() => setShowNewCustomerModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <i className="ri-close-line"></i>
-                </button>
-              </div>
-              
-              <form onSubmit={(e) => { e.preventDefault(); addNewCustomer(); }} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={newCustomer.name}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document *
-                  </label>
-                  <input
-                    type="text"
-                    value={newCustomer.document}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, document: formatDocument(e.target.value) }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="001-1234567-8"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="809-123-4567"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={newCustomer.email}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="cliente@email.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address
-                  </label>
-                  <textarea
-                    value={newCustomer.address}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, address: e.target.value }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows={2}
-                    placeholder="Full address"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Type
-                  </label>
-                  <select
-                    value={newCustomer.type}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, type: e.target.value as 'regular' | 'vip' }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                  >
-                    <option value="regular">Regular</option>
-                    <option value="vip">VIP</option>
-                  </select>
-                </div>
-
-                <div className="flex space-x-3 pt-4">
+        {/* New Customer Modal - Using createPortal directly to avoid re-mount on state change */}
+        {showNewCustomerModal && createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setShowNewCustomerModal(false)} />
+            <div className="relative w-full max-w-lg">
+              <div
+                ref={newCustomerModalRef}
+                className="bg-white rounded-lg p-6 w-96 max-h-[80vh] overflow-y-auto"
+                onKeyDownCapture={(e) => e.stopPropagation()}
+                tabIndex={-1}
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">New Customer</h3>
                   <button
-                    type="button"
                     onClick={() => setShowNewCustomerModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-                  >
-                    Save Customer
+                    <i className="ri-close-line"></i>
                   </button>
                 </div>
-              </form>
+                
+                <p className="text-sm text-gray-500 mb-4">Add a new customer to the system.</p>
+                
+                <form onSubmit={(e) => { e.preventDefault(); addNewCustomer(); }} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full name *
+                    </label>
+                    <input
+                      ref={newCustomerNameInputRef}
+                      type="text"
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={newCustomer.email}
+                        onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="email@example.com"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone *
+                      </label>
+                      <input
+                        type="tel"
+                        value={newCustomer.phone}
+                        onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="809-123-4567"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Second email (optional)
+                    </label>
+                    <input
+                      type="email"
+                      value={newCustomer.secondEmail}
+                      onChange={(e) => setNewCustomer(prev => ({ ...prev, secondEmail: e.target.value }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Optional"
+                    />
+                  </div>
+
+                  <div className="flex space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowNewCustomerModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-          </Modal>
+          </div>,
+          document.body
         )}
 
         {/* Print Type Modal - Auto opens after payment */}

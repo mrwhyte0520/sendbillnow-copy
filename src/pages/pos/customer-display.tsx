@@ -102,12 +102,7 @@ export default function CustomerDisplayPage() {
 
   const getTotalItems = () => data.cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  const formatUpdatedAt = (iso?: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-  };
+  const formatUpdatedAt = (_iso?: string) => now.toLocaleDateString('en-US');
 
   const formatNow = () => {
     const d = now;
@@ -210,7 +205,7 @@ export default function CustomerDisplayPage() {
                 <span>{`Cashier: ${data.cashierName}`}</span>
               )}
               {data.updatedAt && (
-                <span>{`Updated: ${formatUpdatedAt(data.updatedAt)}`}</span>
+                <span>{`Date: ${formatUpdatedAt(data.updatedAt)}`}</span>
               )}
               <span>{`Time: ${formatNow()}`}</span>
             </div>
