@@ -95,7 +95,6 @@ export default function CompanySettingsPage() {
   const [showPrinterModal, setShowPrinterModal] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<PrinterConfig | null>(null);
   const [newPrinterName, setNewPrinterName] = useState('');
-  const [newPrinterArea, setNewPrinterArea] = useState<PrinterConfig['area']>('front');
   const [newPrinterType, setNewPrinterType] = useState<PrinterConfig['type']>('network_raw');
   const [newPrinterHost, setNewPrinterHost] = useState('');
   const [newPrinterPort, setNewPrinterPort] = useState(9100);
@@ -302,7 +301,7 @@ export default function CompanySettingsPage() {
       await settingsService.savePrinter({
         id: editingPrinter?.id,
         name: newPrinterName,
-        area: newPrinterArea,
+        area: editingPrinter?.area ?? 'front',
         type: newPrinterType,
         host: newPrinterHost || null,
         port: newPrinterPort,
@@ -316,7 +315,6 @@ export default function CompanySettingsPage() {
       setShowPrinterModal(false);
       setEditingPrinter(null);
       setNewPrinterName('');
-      setNewPrinterArea('front');
       setNewPrinterType('network_raw');
       setNewPrinterHost('');
       setNewPrinterPort(9100);
@@ -750,7 +748,6 @@ export default function CompanySettingsPage() {
                     onClick={() => {
                       setEditingPrinter(null);
                       setNewPrinterName('');
-                      setNewPrinterArea('front');
                       setNewPrinterType('network_raw');
                       setNewPrinterHost('');
                       setNewPrinterPort(9100);
@@ -829,7 +826,6 @@ export default function CompanySettingsPage() {
                                   onClick={() => {
                                     setEditingPrinter(printer);
                                     setNewPrinterName(printer.name);
-                                    setNewPrinterArea(printer.area);
                                     setNewPrinterType(printer.type);
                                     setNewPrinterHost(printer.host || '');
                                     setNewPrinterPort(printer.port || 9100);
@@ -1101,36 +1097,19 @@ export default function CompanySettingsPage() {
                     className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Area
-                    </label>
-                    <select
-                      value={newPrinterArea}
-                      onChange={(e) => setNewPrinterArea(e.target.value as PrinterConfig['area'])}
-                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
-                    >
-                      <option value="front">front</option>
-                      <option value="kitchen">kitchen</option>
-                      <option value="bar">bar</option>
-                      <option value="other">other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Type
-                    </label>
-                    <select
-                      value={newPrinterType}
-                      onChange={(e) => setNewPrinterType(e.target.value as PrinterConfig['type'])}
-                      className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
-                    >
-                      <option value="network_raw">network_raw</option>
-                      <option value="usb">usb</option>
-                      <option value="windows">windows</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type
+                  </label>
+                  <select
+                    value={newPrinterType}
+                    onChange={(e) => setNewPrinterType(e.target.value as PrinterConfig['type'])}
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
+                  >
+                    <option value="network_raw">network_raw</option>
+                    <option value="usb">usb</option>
+                    <option value="windows">windows</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
