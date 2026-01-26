@@ -665,11 +665,9 @@ export default function InvoicesPage() {
     }
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const invoiceNumber = `FAC-${Date.now()}`;
 
     const invoicePayload = {
       customer_id: customerId,
-      invoice_number: invoiceNumber,
       invoice_date: todayStr,
       due_date: dueDate || null,
       currency: 'DOP',

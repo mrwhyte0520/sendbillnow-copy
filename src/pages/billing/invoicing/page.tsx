@@ -1236,11 +1236,8 @@ export default function InvoicingPage() {
     const tax = newInvoiceTax;
     const total = newInvoiceTotal;
 
-    let invoiceNumber = `FAC-${Date.now()}`;
-
     const invoicePayload = {
       customer_id: newInvoiceCustomerId,
-      invoice_number: invoiceNumber,
       invoice_date: newInvoiceDate,
       due_date: newInvoiceDueDate,
       currency: newInvoiceCurrency || baseCurrencyCode,
@@ -1273,7 +1270,7 @@ export default function InvoicingPage() {
       if (isCashSale && created?.invoice?.id) {
         const createdInvoice = created.invoice as any;
         const invoiceId = String(createdInvoice.id);
-        const createdInvoiceNumber = String(createdInvoice.invoice_number || `FAC-${Date.now()}`);
+        const createdInvoiceNumber = String(createdInvoice.invoice_number || createdInvoice.id || '').trim();
         const paymentDate = String(createdInvoice.invoice_date || newInvoiceDate);
         const amountToPay = Number(createdInvoice.total_amount) || total;
 

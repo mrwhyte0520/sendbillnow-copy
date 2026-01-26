@@ -96,8 +96,10 @@ th:nth-child(4){text-align:center;}
 .summary-row.total{border-top:3px solid ${BLUE};border-bottom:none;font-weight:700;font-size:18px;margin-top:10px;padding-top:14px;background:${BLUE_LIGHT};margin:-16px;margin-top:10px;padding:14px 16px;border-radius:0 0 6px 6px;}
 .summary-row.total span:first-child{color:${BLUE};}
 .summary-row.total span:last-child{color:${BLUE};}
-.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}}
+.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;}
+.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
+.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
@@ -137,7 +139,10 @@ th:nth-child(4){text-align:center;}
       <div class="summary-row total"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
     </div>
   </div>
-  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
+  <div class="footer">
+    <p>Thank you for your purchase.</p>
+    <div class="powered">Powered by: sendbillnow.com</div>
+  </div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;
@@ -159,9 +164,12 @@ function generateDetailedTemplate(
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:24px;}
 .invoice{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);}
-.header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
-.logo-section h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
-.logo-section p{font-size:10px;color:#666;margin:3px 0;}
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+.company-wrap{display:flex;align-items:center;gap:14px;margin-top:22px;}
+.company-wrap img{max-width:70px;max-height:70px;object-fit:contain;border-radius:8px;}
+.company-info{margin-top:0;}
+.company-info h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
+.company-info p{font-size:10px;color:#666;margin:3px 0;}
 .invoice-info{text-align:right;}
 .invoice-info h2{font-size:30px;color:${BLUE};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
 .invoice-info p{font-size:10px;color:#666;margin:4px 0;}
@@ -192,17 +200,21 @@ th:nth-child(4){text-align:center;}
 .signature h4{font-size:12px;color:${BLUE};margin-bottom:14px;font-weight:700;}
 .signature-line{border-bottom:2px solid ${BLUE};width:220px;margin-bottom:6px;}
 .signature p{font-size:11px;color:${BLUE};font-weight:600;}
-.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}}
+.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;}
+.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
+.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="header">
-    <div class="logo-section">
-      ${company.logo ? `<img src="${company.logo}" alt="${company.name}" style="max-width:70px;max-height:70px;object-fit:contain;margin-bottom:6px;border-radius:8px;"/>` : ''}
-      <h1>${company.name}</h1>
-      ${company.address ? `<p>${company.address}</p>` : ''}
-      ${company.phone ? `<p>${company.phone}</p>` : ''}
-      ${company.email ? `<p>${company.email}</p>` : ''}
+    <div class="company-wrap">
+      ${company.logo ? `<img src="${company.logo}" alt="${company.name}"/>` : ''}
+      <div class="company-info">
+        <h1>${company.name}</h1>
+        ${company.address ? `<p>${company.address}</p>` : ''}
+        ${company.phone ? `<p>${company.phone}</p>` : ''}
+        ${company.email ? `<p>${company.email}</p>` : ''}
+      </div>
     </div>
     <div class="invoice-info">
       <h2>${docTitle}</h2>
@@ -240,7 +252,10 @@ th:nth-child(4){text-align:center;}
   </div>
   <div class="terms"><h4>Terms & Conditions:</h4><div class="terms-box"></div></div>
   <div class="signature"><h4>Signature</h4><div class="signature-line"></div><p>X_________________</p></div>
-  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
+  <div class="footer">
+    <p>Thank you for your purchase.</p>
+    <div class="powered">Powered by: sendbillnow.com</div>
+  </div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;
@@ -287,8 +302,10 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 .terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
 .terms h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
 .terms-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:70px;font-size:10px;color:#666;background:#fff;}
-.footer{padding:20px 28px;background:${BLUE};text-align:center;font-size:13px;color:#fff;font-weight:600;letter-spacing:0.5px;}
-@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.meta-section{background:${BLUE_LIGHT}!important;}.footer{background:${BLUE}!important;color:#fff!important;}.summary-bar .total{background:${BLUE_LIGHT}!important;}}
+.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;}
+.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
+.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
+@media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.meta-section{background:${BLUE_LIGHT}!important;}.summary-bar .total{background:${BLUE_LIGHT}!important;}}
 </style></head><body>
 <div class="quote">
   <div class="header">
@@ -323,7 +340,10 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
   </div>
   <div class="notes"><h4>NOTE:</h4><div class="notes-box"></div></div>
   <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box"></div></div>
-  <div class="footer">THANK YOU FOR YOUR BUSINESS!</div>
+  <div class="footer">
+    <p>Thank you for your purchase.</p>
+    <div class="powered">Powered by: sendbillnow.com</div>
+  </div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
 </body></html>`;
@@ -344,16 +364,20 @@ function generateCorporateTemplate(
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:24px;}
 .invoice{max-width:800px;margin:0 auto;background:#fff;border:2px solid #333;overflow:hidden;}
-.top-header{background:${BLUE};color:#fff;padding:20px 28px;text-align:center;}
-.top-header h1{font-size:20px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:12px;}
-.top-header p{font-size:11px;margin:2px 0;opacity:0.9;}
-.invoice-title{padding:20px 28px;text-align:right;}
-.invoice-title h2{font-size:36px;font-weight:800;color:#333;margin-bottom:12px;}
-.invoice-title p{font-size:11px;color:#666;margin:4px 0;}
-.invoice-title strong{color:#333;}
-.billing-section{padding:20px 28px;display:grid;grid-template-columns:1fr 1fr;gap:32px;border-bottom:2px solid ${BLUE};}
-.billing-section h3{font-size:11px;font-weight:700;color:#333;margin-bottom:10px;text-transform:uppercase;}
-.billing-section p{font-size:11px;color:#555;margin:4px 0;}
+.top-header{background:${BLUE};color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:center;gap:16px;}
+.company-wrap{display:flex;align-items:center;gap:14px;}
+.top-header img{max-width:64px;max-height:64px;object-fit:contain;border-radius:6px;}
+.company-info{flex:0;}
+.company-info h1{font-size:18px;font-weight:700;margin-bottom:4px;color:#fff;}
+.company-info p{font-size:10px;margin:2px 0;color:rgba(255,255,255,0.92);}
+.invoice-info{text-align:right;min-width:220px;}
+.invoice-info h2{font-size:32px;font-weight:800;color:${BLUE};margin-bottom:10px;letter-spacing:0.5px;}
+.invoice-info p{font-size:10px;color:#666;margin:3px 0;}
+.invoice-info strong{color:#333;}
+.header-line{height:3px;background:${BLUE};}
+.billing-section{padding:16px 28px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;border-bottom:2px solid ${BLUE};}
+.billing-section h3{font-size:11px;font-weight:700;color:#333;margin-bottom:8px;text-transform:uppercase;}
+.billing-section p{font-size:11px;color:#555;margin:3px 0;}
 table{width:100%;border-collapse:collapse;}
 th{background:${BLUE};color:#fff;padding:12px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;}
 th:nth-child(2){text-align:center;}
@@ -367,39 +391,47 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 .summary-row span:last-child{font-weight:600;color:#333;}
 .balance-due{background:${BLUE};color:#fff;padding:14px 16px;margin:12px -16px -16px -16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;}
 .balance-due span:last-child{font-size:18px;}
+.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;}
+.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
+.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{border:2px solid #333!important;}th{background:${BLUE}!important;color:#fff!important;}.top-header{background:${BLUE}!important;}.balance-due{background:${BLUE}!important;color:#fff!important;}}
 </style></head><body>
 <div class="invoice">
   <div class="top-header">
-    <h1>
-      ${company.logo ? `<img src="${company.logo}" alt="" style="max-width:50px;max-height:50px;object-fit:contain;border-radius:4px;background:#fff;padding:4px;"/>` : ''}
-      ${company.name}
-    </h1>
-    ${company.address ? `<p>${company.address}</p>` : ''}
-    <p>${[company.phone, company.email].filter(Boolean).join(' • ')}</p>
+    <div class="company-wrap">
+      ${company.logo ? `<img src="${company.logo}" alt="${company.name}"/>` : ''}
+      <div class="company-info">
+        <h1>${company.name}</h1>
+        ${company.address ? `<p>${company.address}</p>` : ''}
+        ${company.phone ? `<p>${company.phone}</p>` : ''}
+        ${company.email ? `<p>${company.email}</p>` : ''}
+      </div>
+    </div>
   </div>
-  <div class="invoice-title">
-    <h2>${docTitle}</h2>
-    <p><strong>DATE:</strong> ${formatDate(invoice.date)}</p>
-    <p><strong>INVOICE NO:</strong> ${invoice.invoiceNumber}</p>
-    <p><strong>Payment terms:</strong> Due on receipt</p>
-  </div>
+  <div class="header-line"></div>
   <div class="billing-section">
     <div>
       <h3>Bill To:</h3>
       <p><strong>${customer.name}</strong></p>
-      <p>${customer.address || ''}</p>
-      <p>${customer.phone ? `Phone: ${customer.phone}` : ''}</p>
+      ${customer.email ? `<p>Email: ${customer.email}</p>` : ''}
+      ${customer.phone ? `<p>Phone: ${customer.phone}</p>` : ''}
     </div>
     <div>
       <h3>Ship To:</h3>
       <p>${customer.name}</p>
       <p>${customer.address || ''}</p>
-      <p>${customer.phone ? `Phone: ${customer.phone}` : ''}</p>
+      ${customer.phone ? `<p>Phone: ${customer.phone}</p>` : ''}
+    </div>
+    <div class="invoice-info">
+      <h2>${docTitle}</h2>
+      <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
+      <p><strong>Invoice Date & Time:</strong> ${formatDate(invoice.date)}</p>
+      <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
   <table>
-    <thead><tr><th>Description</th><th>QTY</th><th>Unit Price</th><th>Total</th></tr></thead>
+    <thead><tr><th>Description of Services</th><th>QTY</th><th>Price</th><th>Amount</th></tr></thead>
     <tbody>${coloredRows}</tbody>
   </table>
   <div class="bottom-section">
@@ -415,6 +447,10 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
       <div class="summary-row"><span>Shipping:</span><span>$0.00</span></div>
       <div class="balance-due"><span>Balance Due:</span><span>${formatAmount(invoice.amount)}</span></div>
     </div>
+  </div>
+  <div class="footer">
+    <p>Thank you for your business.</p>
+    <div class="powered">Powered by: sendbillnow.com</div>
   </div>
 </div>
 <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>

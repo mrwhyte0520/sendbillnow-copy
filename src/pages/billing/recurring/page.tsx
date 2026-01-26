@@ -220,13 +220,8 @@ export default function RecurringBillingPage() {
       const taxAmount = subApplyItbis ? Number((amt * subItbisRate / 100).toFixed(2)) : 0;
       const totalAmount = Number((amt + taxAmount).toFixed(2));
 
-      // Generate a unique invoice number
-
-      const invoiceNumber = `REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
-
       const invoicePayload = {
         customer_id: sub.customer_id,
-        invoice_number: invoiceNumber,
         invoice_date: today,
         due_date: today,
         currency: 'DOP',
@@ -272,7 +267,8 @@ export default function RecurringBillingPage() {
 
       await loadData();
       toast.dismiss(loadingId);
-      toast.success(`✅ Invoice generated: ${invoiceNumber}${taxAmount > 0 ? ` (includes ITBIS:  ${taxAmount.toLocaleString()})` : ''}`);
+      const issued = String((invoice as any)?.invoice_number || (invoice as any)?.id || '').trim();
+      toast.success(`✅ Invoice generated: ${issued}${taxAmount > 0 ? ` (includes ITBIS:  ${taxAmount.toLocaleString()})` : ''}`);
     } catch (error: any) {
       // eslint-disable-next-line no-console
       console.error('Error generating invoice for subscription:', error);

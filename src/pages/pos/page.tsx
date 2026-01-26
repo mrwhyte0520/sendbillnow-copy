@@ -962,7 +962,6 @@ export default function POSPage() {
           }
 
           const todayStr = newSale.date;
-          const invoiceNumber = `POS-${Date.now()}`;
 
           const isImmediatePayment = ['cash', 'card', 'transfer'].includes(newSale.paymentMethod);
 
@@ -977,7 +976,6 @@ export default function POSPage() {
 
           const invoicePayload = {
             customer_id: customerForAr.id,
-            invoice_number: invoiceNumber,
             invoice_date: todayStr,
             due_date: dueDateStr,
             currency: 'DOP',

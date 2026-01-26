@@ -428,15 +428,6 @@ export default function CustomersPage() {
                     Contact
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sales Rep
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Credit Limit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Current Balance
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -445,69 +436,67 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-[#e8e0d0]">
-                {filteredCustomers.map((customer) => {
-                  const rep = salesReps.find((r) => r.id === customer.salesRepId);
-                  return (
-                    <tr key={customer.id} className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                          <div className="text-sm text-gray-500">{customer.address}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.document}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {customer.contactName || customer.phone}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {customer.contactPhone || ''}{customer.contactPhone && customer.contactEmail ? ' / ' : ''}{customer.contactEmail || customer.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {rep ? rep.name : '—'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {customer.creditLimit.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {customer.currentBalance.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(customer.status)}`}>
-                          {getCustomerStatusName(customer.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => handleEditCustomer(customer)}
-                            className="text-[#2f3e1e] hover:text-[#1b250f]"
-                            title="Edit customer"
-                          >
-                            <i className="ri-edit-line"></i>
-                          </button>
-                          <button 
-                            onClick={() => handleViewCustomer(customer)}
-                            className="text-[#4c5535] hover:text-[#2f3e1e]"
-                            title="View details"
-                          >
-                            <i className="ri-eye-line"></i>
-                          </button>
-                          <button 
-                            onClick={() => handleCustomerStatement(customer)}
-                            className="text-[#6b4a2b] hover:text-[#4c2f17]"
-                            title="Account statement"
-                          >
-                            <i className="ri-file-list-line"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredCustomers.map((customer) => (
+                  <tr
+                    key={customer.id}
+                    className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                        <div className="text-sm text-gray-500">{customer.address}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {customer.document}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{customer.contactName || customer.phone}</div>
+                      <div className="text-sm text-gray-500">
+                        {customer.contactPhone || ''}
+                        {customer.contactPhone && customer.contactEmail ? ' / ' : ''}
+                        {customer.contactEmail || customer.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCustomerStatusColor(
+                          customer.status,
+                        )}`}
+                      >
+                        {getCustomerStatusName(customer.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleEditCustomer(customer)}
+                          className="text-[#2f3e1e] hover:text-[#1b250f]"
+                          title="Edit customer"
+                          type="button"
+                        >
+                          <i className="ri-edit-line"></i>
+                        </button>
+                        <button
+                          onClick={() => handleViewCustomer(customer)}
+                          className="text-[#4c5535] hover:text-[#2f3e1e]"
+                          title="View details"
+                          type="button"
+                        >
+                          <i className="ri-eye-line"></i>
+                        </button>
+                        <button
+                          onClick={() => handleCustomerStatement(customer)}
+                          className="text-[#6b4a2b] hover:text-[#4c2f17]"
+                          title="Account statement"
+                          type="button"
+                        >
+                          <i className="ri-file-list-line"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -536,7 +525,7 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Name / Business Name
+                      Business Name
                     </label>
                     <input
                       type="text"
@@ -544,47 +533,8 @@ export default function CustomersPage() {
                       name="name"
                       defaultValue={selectedCustomer?.name || ''}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                      placeholder="Customer name"
+                      placeholder="Name"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Document
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <select
-                        name="documentType"
-                        value={selectedDocType}
-                        onChange={(e) => {
-                          setSelectedDocType(e.target.value);
-                          setDocumentValue(formatDocument(documentValue.replace(/\D/g, ''), e.target.value));
-                        }}
-                        className="col-span-1 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                      >
-                        <option value="">Type</option>
-                        <option value="rnc">RNC</option>
-                        <option value="cedula">ID</option>
-                        <option value="passport">Passport</option>
-                        <option value="other">Other</option>
-                      </select>
-                      <div className="col-span-2">
-                        <input
-                          type="text"
-                          required
-                          name="document"
-                          value={documentValue}
-                          onChange={(e) => setDocumentValue(formatDocument(e.target.value, selectedDocType))}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                          placeholder={
-                            selectedDocType === 'rnc'
-                              ? '1-01-12345-6'
-                              : selectedDocType === 'cedula'
-                                ? '000-0000000-0'
-                                : 'Document number'
-                          }
-                        />
-                      </div>
-                    </div>
                   </div>
                 </div>
 
@@ -600,7 +550,7 @@ export default function CustomersPage() {
                       value={phoneValue}
                       onChange={(e) => setPhoneValue(formatPhone(e.target.value))}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                      placeholder="809-000-0000"
+                      placeholder="555-555-5555"
                     />
                   </div>
 
@@ -655,7 +605,7 @@ export default function CustomersPage() {
                       value={contactPhoneValue}
                       onChange={(e) => setContactPhoneValue(formatPhone(e.target.value))}
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                      placeholder="809-000-0000"
+                      placeholder="555-555-5555"
                     />
                   </div>
                   <div>
@@ -675,21 +625,6 @@ export default function CustomersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Credit limit
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      name="creditLimit"
-                      defaultValue={selectedCustomer?.creditLimit || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Status
                     </label>
                     <select
@@ -702,110 +637,6 @@ export default function CustomersPage() {
                       <option value="blocked">Blocked</option>
                     </select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Customer type
-                    </label>
-                    <select
-                      name="customerType"
-                      defaultValue={(selectedCustomer as any)?.customerType || ''}
-                      onChange={handleCustomerTypeSelectChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                    >
-                      <option value="">Not specified</option>
-                      {customerTypes.map((t: any) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment terms
-                    </label>
-                    <select
-                      name="paymentTermId"
-                      defaultValue={(selectedCustomer as any)?.paymentTermId || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                    >
-                      <option value="">Not specified</option>
-                      {paymentTerms.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.name}
-                          {typeof term.days === 'number' ? ` (${term.days} days)` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Invoice type
-                    </label>
-                    <select
-                      name="invoiceType"
-                      defaultValue={(selectedCustomer as any)?.invoiceType || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                    >
-                      <option value="">Not specified</option>
-                      <option value="credit">Credit</option>
-                      <option value="cash">Cash</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Default NCF type
-                    </label>
-                    <select
-                      name="ncfType"
-                      defaultValue={(selectedCustomer as any)?.ncfType || ''}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                    >
-                      <option value="">Not specified</option>
-                      <option value="consumo">Final consumer</option>
-                      <option value="credito_fiscal">Tax credit</option>
-                      <option value="gubernamental">Government</option>
-                      <option value="especial">Special regime</option>
-                      <option value="exportacion">Export</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned sales rep (optional)
-                  </label>
-                  <select
-                    name="salesRepId"
-                    defaultValue={(selectedCustomer as any)?.salesRepId || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e] pr-8"
-                  >
-                    <option value="">No sales rep assigned</option>
-                    {salesReps.map((rep) => (
-                      <option key={rep.id} value={rep.id}>
-                        {rep.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Salesperson note (optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="salesperson"
-                    defaultValue={(selectedCustomer as any)?.salesperson || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                    placeholder="Internal note for the sales team"
-                  />
                 </div>
 
                 <div className="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0 pt-4">

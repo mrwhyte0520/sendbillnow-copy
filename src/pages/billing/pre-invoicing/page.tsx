@@ -471,11 +471,9 @@ export default function PreInvoicingPage() {
     (async () => {
       try {
         const todayStr = new Date().toISOString().slice(0, 10);
-        const invoiceNumber = `FAC-${Date.now()}`;
 
         const invoicePayload = {
           customer_id: quote.customerId,
-          invoice_number: invoiceNumber,
           invoice_date: todayStr,
           due_date: quote.validUntil || todayStr,
           currency: 'DOP',
@@ -495,12 +493,13 @@ export default function PreInvoicingPage() {
           line_number: index + 1,
         }));
 
-        await invoicesService.create(user.id, invoicePayload, linesPayload);
+        const created = await invoicesService.create(user.id, invoicePayload, linesPayload);
 
         await quotesService.update(quote.dbId, { status: 'invoiced' });
         setQuotes((prev) => prev.map((q) => (q.id === quote.id ? { ...q, status: 'invoiced' } : q)));
 
-        toast.success(`Cotización ${quote.id} convertida en factura ${invoiceNumber}`);
+        const createdNumber = String((created as any)?.invoice?.invoice_number || '').trim();
+        toast.success(`Cotización ${quote.id} convertida en factura ${createdNumber || 'OK'}`);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error converting quote to invoice:', error);

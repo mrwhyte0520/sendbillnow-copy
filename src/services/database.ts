@@ -8263,7 +8263,6 @@ export const deliveryNotesService = {
       );
 
       const todayStr = new Date().toISOString().split('T')[0];
-      const invoiceNumber = `FAC-DN-${Date.now()}`;
       const currency = (postedNotes[0] as any).currency || 'DOP';
 
       const noteNumbers = postedNotes
@@ -8272,7 +8271,6 @@ export const deliveryNotesService = {
 
       const invoicePayload = {
         customer_id: customerId,
-        invoice_number: invoiceNumber,
         invoice_date: todayStr,
         // La tabla invoices exige due_date NOT NULL, por lo que usamos por defecto
         // la misma fecha de la factura cuando generamos desde Conduces.
@@ -8286,17 +8284,7 @@ export const deliveryNotesService = {
         notes: `Factura generada desde conduces: ${noteNumbers}`,
       };
 
-      // 4) Crear factura e insertar líneas, sin duplicar asientos contables
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({ ...invoicePayload, user_id: tenantId })
-        .select('*')
-        .single();
-
-      if (invoiceError) throw invoiceError;
-
       const linesPayload = (lines as any[]).map((ln, index) => ({
-        invoice_id: invoiceData.id,
         description: ln.description,
         quantity: ln.quantity,
         unit_price: ln.unit_price,
@@ -8307,12 +8295,13 @@ export const deliveryNotesService = {
         delivery_note_line_id: ln.id,
       }));
 
-      const { data: invoiceLinesData, error: invoiceLinesError } = await supabase
-        .from('invoice_lines')
-        .insert(linesPayload)
-        .select('*');
-
-      if (invoiceLinesError) throw invoiceLinesError;
+      // 4) Crear factura e insertar líneas (invoicesService.create asigna invoice_number por RPC)
+      const { invoice: invoiceData, lines: invoiceLinesData } = await invoicesService.create(
+        userId,
+        invoicePayload,
+        linesPayload,
+        { skipPeriodValidation: true },
+      );
 
       try {
         const shouldPostToLedger = String((invoiceData as any).status || '') !== 'draft';
@@ -8803,9 +8792,21 @@ export const invoicesService = {
         }
       }
 
+      const invoiceToInsert = { ...(invoice || {}) } as any;
+      if (!invoiceToInsert.invoice_number) {
+        const { data: nextNumber, error: nextErr } = await supabase.rpc('next_invoice_number', {
+          p_tenant_id: tenantId,
+        });
+        if (nextErr) throw nextErr;
+        invoiceToInsert.invoice_number = String(nextNumber || '').trim();
+        if (!invoiceToInsert.invoice_number) {
+          throw new Error('Could not generate invoice number');
+        }
+      }
+
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({ ...invoice, user_id: tenantId })
+        .insert({ ...invoiceToInsert, user_id: tenantId })
         .select()
         .single();
 
@@ -12270,12 +12271,8 @@ export const recurringSubscriptionsService = {
           const taxAmount = applyItbis ? Number((amount * itbisRate / 100).toFixed(2)) : 0;
           const totalAmount = Number((amount + taxAmount).toFixed(2));
 
-          // 5. GENERAR NÚMERO DE FACTURA ÚNICO
-          const invoiceNumber = `REC-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
-
           const invoicePayload = {
             customer_id: sub.customer_id as string,
-            invoice_number: invoiceNumber,
             invoice_date: todayStr,
             due_date: todayStr,
             currency: 'DOP',

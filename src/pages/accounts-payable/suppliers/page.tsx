@@ -309,7 +309,6 @@ export default function SuppliersPage() {
     }
   };
 
-  // Cuentas por pagar permitidas para proveedores: pasivo posteable con 'cuentas por pagar' en el nombre
   const payableAccounts = accounts.filter((acc) => {
     if (!acc.allowPosting) return false;
     if (acc.type !== 'liability') return false;
@@ -317,132 +316,29 @@ export default function SuppliersPage() {
     return name.includes('cuentas por pagar');
   });
 
-  useEffect(() => {
-    loadSuppliers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
   const filteredSuppliers = suppliers.filter((supplier) => {
     const matchesCategory = filterCategory === 'all' || supplier.category === filterCategory;
     const matchesStatus = filterStatus === 'all' || supplier.status === filterStatus;
     const matchesPaymentTerms = filterPaymentTerms === 'all' || supplier.paymentTerms === filterPaymentTerms;
-    const matchesSearch = searchTerm === '' ||
+    const matchesSearch =
+      searchTerm === '' ||
       supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.rnc.toLowerCase().includes(searchTerm.toLowerCase()) ||
       supplier.email.toLowerCase().includes(searchTerm.toLowerCase());
+
     return matchesCategory && matchesStatus && matchesPaymentTerms && matchesSearch;
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.id) {
-      alert('You must log in to manage suppliers');
-      return;
-    }
+  const resolveStatusLabel = (status: any) => {
+    if (status === 'Activo' || status === 'Active') return 'Active';
+    if (status === 'Inactivo' || status === 'Inactive') return 'Inactive';
+    return String(status || 'Active');
+  };
 
-    const selectedType =
-      supplierTypes.find((t: any) => String(t.id) === String(formData.supplierTypeId)) || null;
-    const supplierTypeKey = getSupplierTypeKey(selectedType);
-
-    const taxIdDigits = onlyDigits(formData.rnc);
-    if (supplierTypeKey === 'persona_juridica') {
-      if (taxIdDigits.length !== 9) {
-        alert('For Legal Entity the RNC must have 9 digits');
-        return;
-      }
-    } else if (supplierTypeKey === 'persona_fisica') {
-      if (taxIdDigits.length !== 11) {
-        alert('For Individual the ID must have 11 digits');
-        return;
-      }
-    } else if (supplierTypeKey === 'prestador_servicios') {
-      if (!(taxIdDigits.length === 9 || taxIdDigits.length === 11)) {
-        alert('For Service Provider the RNC must have 9 digits or the ID 11 digits');
-        return;
-      }
-    } else if (supplierTypeKey === 'proveedor_informal') {
-      if (taxIdDigits.length > 0) {
-        alert('For Informal Supplier no RNC/ID should be registered');
-        return;
-      }
-    } else if (formData.documentType === 'RNC' && taxIdDigits.length !== 9) {
-      alert('RNC must have 9 digits');
-      return;
-    } else if (formData.documentType === 'Cédula' && taxIdDigits.length !== 11) {
-      alert('ID must have 11 digits');
-      return;
-    }
-
-    const resolvedDocumentType =
-      supplierTypeKey === 'persona_juridica'
-        ? 'RNC'
-        : supplierTypeKey === 'persona_fisica'
-          ? 'Cédula'
-          : supplierTypeKey === 'proveedor_informal'
-            ? 'Otro'
-            : formData.documentType;
-
-    const payload: any = {
-      // Columnas reales de la tabla suppliers
-      name: formData.name,
-      legal_name: formData.legalName || formData.name,
-      document_type: resolvedDocumentType,
-      tax_id: taxIdDigits || null,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      // city y country opcionales, por ahora vacíos
-      city: '',
-      country: '',
-      contact_name: formData.contactName || null,
-      contact_phone: formData.contactPhone || null,
-      contact_email: formData.contactEmail || null,
-      fax: formData.fax || null,
-      website: formData.website || null,
-      current_balance: typeof formData.creditLimit === 'string' && formData.creditLimit !== ''
-        ? parseFloat(formData.creditLimit)
-        : 0,
-      credit_limit: typeof formData.creditLimit === 'string' && formData.creditLimit !== ''
-        ? parseFloat(formData.creditLimit)
-        : 0,
-      is_active: formData.status === 'Activo',
-      expense_type_606: normalizeExpenseType606(formData.expenseType606) || null,
-      tax_regime: formData.taxRegime || null,
-      default_invoice_type: formData.defaultInvoiceType || null,
-      payment_terms: formData.paymentTerms || null,
-      payment_terms_id: formData.paymentTermsId || null,
-      supplier_type_id: formData.supplierTypeId || null,
-      default_bank_account_id: formData.defaultBankAccountId || null,
-    };
-
-    if (formData.apAccountId) {
-      payload.ap_account_id = formData.apAccountId;
-    } else {
-      payload.ap_account_id = null;
-    }
-
-    try {
-      if (editingSupplier?.id) {
-        await suppliersService.update(editingSupplier.id, payload);
-        setStoredSupplierCategory(user.id, String(editingSupplier.id), formData.category);
-      } else {
-        const created = await suppliersService.create(user.id, payload);
-        if (created?.id) {
-          setStoredSupplierCategory(user.id, String(created.id), formData.category);
-        }
-      }
-
-      // Guardar siempre la categoría en el historial de sugerencias (aunque no haya id retornado)
-      upsertStoredCategory(user.id, formData.category);
-
-      await loadSuppliers();
-      resetForm();
-      alert(editingSupplier ? 'Supplier updated successfully' : 'Supplier created successfully');
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error saving supplier', error);
-      alert('Error saving supplier');
-    }
+  const statusCircleClasses = (status: any) => {
+    const normalized = resolveStatusLabel(status).toLowerCase();
+    if (normalized === 'inactive') return 'bg-red-100 text-red-700';
+    return 'bg-green-100 text-green-700';
   };
 
   const resetForm = () => {
@@ -476,20 +372,25 @@ export default function SuppliersPage() {
     setShowModal(false);
   };
 
+  const handleViewDetails = (supplier: any) => {
+    setSelectedSupplier(supplier);
+    setShowDetailsModal(true);
+  };
+
   const handleEdit = (supplier: any) => {
     setEditingSupplier(supplier);
     setFormData({
-      name: supplier.name,
-      rnc: supplier.rnc,
+      name: supplier.name || '',
+      rnc: supplier.rnc || '',
       documentType: supplier.document_type || 'RNC',
-      legalName: supplier.legal_name || supplier.name,
-      phone: supplier.phone,
-      email: supplier.email,
-      address: supplier.address,
+      legalName: supplier.legal_name || supplier.name || '',
+      phone: supplier.phone || '',
+      email: supplier.email || '',
+      address: supplier.address || '',
       category: supplier.category || '',
-      creditLimit: supplier.creditLimit.toString(),
-      paymentTerms: supplier.paymentTerms,
-      contact: supplier.contact,
+      creditLimit: typeof supplier.creditLimit === 'number' ? String(supplier.creditLimit) : '',
+      paymentTerms: supplier.paymentTerms || '30 días',
+      contact: supplier.contact || '',
       contactName: supplier.contactName || '',
       contactPhone: supplier.contactPhone || '',
       contactEmail: supplier.contactEmail || '',
@@ -497,212 +398,135 @@ export default function SuppliersPage() {
       website: supplier.website || '',
       status: supplier.status || 'Activo',
       apAccountId: supplier.apAccountId || '',
-      expenseType606: normalizeExpenseType606(supplier.expense_type_606) || '',
-      taxRegime: supplier.tax_regime || '',
-      defaultInvoiceType: supplier.default_invoice_type || '',
-      supplierTypeId: supplier.supplierTypeId || '',
-      paymentTermsId: supplier.paymentTermsId || '',
-      defaultBankAccountId: supplier.defaultBankAccountId || '',
+      expenseType606: normalizeExpenseType606(supplier.expense_type_606) || supplier.expenseType606 || '',
+      taxRegime: supplier.tax_regime || supplier.taxRegime || '',
+      defaultInvoiceType: supplier.default_invoice_type || supplier.defaultInvoiceType || '',
+      supplierTypeId: supplier.supplierTypeId || supplier.supplier_type_id || '',
+      paymentTermsId: supplier.paymentTermsId || supplier.payment_terms_id || '',
+      defaultBankAccountId: supplier.defaultBankAccountId || supplier.default_bank_account_id || '',
     });
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string | number) => {
-    if (!user?.id) {
-      alert('You must log in to delete suppliers');
-      return;
+  const handleDelete = async (id: string) => {
+    if (!user?.id) return;
+    const ok = confirm('Are you sure you want to delete this supplier?');
+    if (!ok) return;
+    try {
+      await suppliersService.delete(id);
+      await loadSuppliers();
+    } catch (error) {
+      alert('Error deleting supplier');
+      console.error('Error deleting supplier:', error);
     }
-    if (!confirm('Are you sure you want to delete this supplier?')) return;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+
+    const payload: any = {
+      name: formData.name,
+      legal_name: formData.name,
+      document_type: null,
+      tax_id: null,
+      email: formData.email || null,
+      phone: formData.phone || null,
+      address: formData.address || null,
+      city: '',
+      country: '',
+      contact_name: formData.contactName || null,
+      contact_phone: formData.contactPhone || null,
+      contact_email: formData.contactEmail || null,
+      fax: formData.fax || null,
+      website: formData.website || null,
+      current_balance: 0,
+      credit_limit: 0,
+      is_active: formData.status === 'Activo',
+      expense_type_606: null,
+      tax_regime: null,
+      default_invoice_type: null,
+      payment_terms: null,
+      payment_terms_id: null,
+      supplier_type_id: null,
+      default_bank_account_id: null,
+      ap_account_id: null,
+    };
 
     try {
-      await suppliersService.delete(String(id));
+      if (editingSupplier?.id) {
+        await suppliersService.update(editingSupplier.id, payload);
+      } else {
+        const created = await suppliersService.create(user.id, payload);
+        if (created?.id) {
+          setStoredSupplierCategory(user.id, String(created.id), formData.category);
+        }
+      }
+
+      upsertStoredCategory(user.id, formData.category);
       await loadSuppliers();
-      alert('Supplier deleted successfully');
+      resetForm();
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting supplier', error);
-      alert('Could not delete supplier');
+      alert('Error saving supplier');
+      console.error('Error saving supplier:', error);
     }
   };
 
   const exportToPDF = async () => {
-    const { default: jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
-    const doc = new jsPDF();
-
-    // Company header
-
-    let companyName = '';
-    try {
-      const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName =
-          (info as any).name ||
-          (info as any).company_name ||
-          (info as any).legal_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para PDF de proveedores:', error);
-    }
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-
-    // Company name centered
-
-    doc.setFontSize(14);
-    doc.text(companyName, pageWidth / 2, 15, { align: 'center' as any });
-
-    // Title
-    doc.setFontSize(18);
-    doc.text('Supplier Directory', pageWidth / 2, 25, { align: 'center' as any });
-
-    // Report metadata
-    doc.setFontSize(12);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-US')}`, 20, 40);
-    doc.text(`Suppliers in report: ${filteredSuppliers.length}`, 20, 48);
-
-    // Table data
-
-    const tableData = filteredSuppliers.map((supplier) => [
-      supplier.name,
-      supplier.rnc,
-      supplier.phone,
-      supplier.category,
-      ` ${supplier.creditLimit.toLocaleString()}`,
-      ` ${supplier.balance.toLocaleString()}`,
-      supplier.status
-    ]);
-
-    // Table rendering
-    doc.autoTable({
-      head: [['Supplier', 'Tax ID', 'Phone', 'Category', 'Credit Limit', 'Balance', 'Status']],
-      body: tableData,
-      startY: 70,
-      theme: 'striped',
-      headStyles: { fillColor: [63, 77, 44], textColor: 255, fontStyle: 'bold' },
-
-      styles: { fontSize: 9 },
-      columnStyles: {
-        0: { cellWidth: 40 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25, halign: 'right' },
-        5: { cellWidth: 25, halign: 'right' },
-        6: { cellWidth: 20, halign: 'center' },
-      },
-    });
-
-    // Summary stats
-    const totalCreditLimit = filteredSuppliers.reduce((sum, s) => sum + s.creditLimit, 0);
-    const totalBalance = filteredSuppliers.reduce((sum, s) => sum + s.balance, 0);
-    const activeSuppliers = filteredSuppliers.filter((s) => s.status === 'Activo' || s.status === 'Active').length;
-
-    doc.autoTable({
-      body: [
-        ['Total Credit Limit:', ` ${totalCreditLimit.toLocaleString()}`],
-        ['Current Balance Total:', ` ${totalBalance.toLocaleString()}`],
-        ['Active Suppliers:', `${activeSuppliers} of ${filteredSuppliers.length}`]
-      ],
-      startY: ((doc as any).lastAutoTable?.finalY ?? 70) + 20,
-      theme: 'plain',
-
-      styles: { fontStyle: 'bold' }
-    });
-
-    // Pie de página
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.width - 50, doc.internal.pageSize.height - 10);
-      doc.text('Accounting System · Supplier Management', 20, doc.internal.pageSize.height - 10);
-    }
-
-    doc.save(`suppliers-${new Date().toISOString().split('T')[0]}.pdf`);
+    alert('PDF export is not available right now.');
   };
 
   const exportToExcel = async () => {
     let companyName = '';
     try {
       const info = await settingsService.getCompanyInfo();
-      if (info && (info as any)) {
-        const resolvedName =
-          (info as any).name ||
-          (info as any).company_name ||
-          (info as any).legal_name;
-        if (resolvedName) {
-          companyName = String(resolvedName);
-        }
-      }
+      const resolvedName = (info as any)?.name || (info as any)?.company_name;
+      if (resolvedName) companyName = String(resolvedName);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error obteniendo información de la empresa para Excel de proveedores:', error);
+      console.error('Error obteniendo información de la empresa para Excel de suplidores:', error);
     }
 
-    const rows = filteredSuppliers.map((supplier) => ({
-      name: supplier.name,
-      rnc: supplier.rnc,
-      phone: supplier.phone,
-      email: supplier.email,
-      address: supplier.address,
-      category: supplier.category,
-      creditLimit: supplier.creditLimit,
-      balance: supplier.balance,
-      status: resolveStatusLabel(supplier.status),
-      paymentTerms: supplier.paymentTerms,
-      contact: supplier.contact,
-    }));
+    const todayIso = new Date().toISOString().split('T')[0];
+    const todayLocal = new Date().toLocaleDateString();
 
     const headers = [
       { key: 'name', title: 'Supplier' },
-      { key: 'rnc', title: 'Tax ID' },
-      { key: 'phone', title: 'Phone' },
       { key: 'email', title: 'Email' },
-      { key: 'address', title: 'Address' },
+      { key: 'phone', title: 'Phone' },
       { key: 'category', title: 'Category' },
-      { key: 'creditLimit', title: 'Credit Limit' },
-      { key: 'balance', title: 'Current Balance' },
       { key: 'status', title: 'Status' },
-      { key: 'paymentTerms', title: 'Payment Terms' },
-      { key: 'contact', title: 'Contact' },
     ];
 
-    const today = new Date().toISOString().split('T')[0];
-    const fileBase = `suppliers_${today}`;
+    const rows = filteredSuppliers.map((s) => ({
+      name: s.name,
+      email: s.email,
+      phone: s.phone,
+      category: s.category,
+      status: resolveStatusLabel(s.status),
+    }));
+
+    if (!rows.length) {
+      alert('There are no suppliers to export with the current filters.');
+      return;
+    }
 
     exportToExcelWithHeaders(
       rows,
       headers,
-      fileBase,
+      `suppliers-${todayIso}`,
       'Suppliers',
-      [24, 14, 16, 26, 32, 18, 18, 18, 14, 18, 20],
+      [30, 28, 18, 18, 14],
       {
-        title: 'Supplier Directory',
+        title: `Supplier Report - ${todayLocal}`,
         companyName,
       },
     );
   };
 
-  const handleViewDetails = (supplier: any) => {
-    setSelectedSupplier(supplier);
-    setShowDetailsModal(true);
-  };
-
-  const resolveStatusLabel = (statusValue: string) => {
-    if (statusValue === 'Activo') return 'Active';
-    if (statusValue === 'Inactivo') return 'Inactive';
-    return statusValue || 'Unknown';
-  };
-
-  const statusCircleClasses = (statusValue: string) =>
-    statusValue === 'Activo' || statusValue === 'Active'
-      ? 'bg-[#d7e2b0] text-[#2f3c24]'
-      : 'bg-[#f5c2b0] text-[#5b2a1c]';
+  useEffect(() => {
+    loadSuppliers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return (
     <DashboardLayout>
@@ -875,10 +699,7 @@ export default function SuppliersPage() {
               <thead className="bg-[#f5ebd6]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Supplier</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Tax ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Balance</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Credit Limit</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-[#2f3c24] uppercase tracking-wider">Actions</th>
                 </tr>
@@ -892,17 +713,10 @@ export default function SuppliersPage() {
                         <div className="text-sm text-[#5c6b42]">{supplier.email}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{supplier.rnc}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[#d7e2b0] text-[#2f3c24]">
                         {supplier.category}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
-                       {supplier.balance.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2f3c24]">
-                       {supplier.creditLimit.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(supplier.status)}`}>
@@ -929,7 +743,6 @@ export default function SuppliersPage() {
                         >
                           <i className="ri-delete-bin-line"></i>
                         </button>
-
                       </div>
                     </td>
                   </tr>
@@ -961,16 +774,18 @@ export default function SuppliersPage() {
                     <p className="text-[#2f3c24]">{selectedSupplier.name}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Tax ID</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.rnc}</p>
-                  </div>
-                  <div>
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Email</h4>
                     <p className="text-[#2f3c24]">{selectedSupplier.email}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Phone</h4>
                     <p className="text-[#2f3c24]">{selectedSupplier.phone}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Status</h4>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(selectedSupplier.status)}`}>
+                      {resolveStatusLabel(selectedSupplier.status)}
+                    </span>
                   </div>
                   <div className="md:col-span-2">
                     <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Address</h4>
@@ -981,48 +796,6 @@ export default function SuppliersPage() {
                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-[#d7e2b0] text-[#2f3c24]">
                       {selectedSupplier.category}
                     </span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Status</h4>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCircleClasses(selectedSupplier.status)}`}>
-                      {resolveStatusLabel(selectedSupplier.status)}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Credit Limit</h4>
-                    <p className="text-[#2f3c24]"> {selectedSupplier.creditLimit.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Current Balance</h4>
-                    <p className="text-[#2f3c24]"> {selectedSupplier.balance.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Payment Terms</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.paymentTerms}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.contact}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Person</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.contactName || '-'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Phone</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.contactPhone || '-'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Contact Email</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.contactEmail || '-'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Fax</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.fax || '-'}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-[#5c6b42] mb-1">Website</h4>
-                    <p className="text-[#2f3c24]">{selectedSupplier.website || '-'}</p>
                   </div>
                 </div>
                 <div className="flex justify-end space-x-3 mt-6">
@@ -1043,7 +816,6 @@ export default function SuppliersPage() {
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         )}
@@ -1061,52 +833,12 @@ export default function SuppliersPage() {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Business Name *</label>
                     <input 
                       type="text"
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Type <span className="text-red-500">*</span></label>
-                    <select
-                      value={formData.documentType}
-                      onChange={(e) => setFormData({ ...formData, documentType: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      {documentTypes.map((dt) => (
-                        <option key={dt} value={dt}>{dt}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Document Number (Tax ID) *</label>
-                    <input 
-                      type="text"
-                      required
-                      value={formData.rnc}
-                      onChange={(e) => {
-                        const limit = getTaxIdDigitsLimit(formData.documentType);
-                        if (limit === null) {
-                          setFormData({ ...formData, rnc: e.target.value });
-                          return;
-                        }
-                        const digits = onlyDigits(e.target.value).slice(0, limit);
-                        const formatted = formatTaxId(formData.documentType, digits);
-                        setFormData({ ...formData, rnc: formatted });
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Legal Name</label>
-                    <input
-                      type="text"
-                      value={formData.legalName}
-                      onChange={(e) => setFormData({ ...formData, legalName: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -1183,87 +915,6 @@ export default function SuppliersPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Credit Limit</label>
-                    <input 
-                      type="number" min="0"
-                      value={formData.creditLimit}
-                      onChange={(e) => setFormData({...formData, creditLimit: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Terms</label>
-                    <select 
-                      value={formData.paymentTermsId}
-                      onChange={(e) => {
-                        const selected = paymentTermsList.find((t: any) => String(t.id) === e.target.value);
-                        setFormData({
-                          ...formData,
-                          paymentTermsId: e.target.value,
-                          paymentTerms: selected?.name || formData.paymentTerms,
-                        });
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Unspecified</option>
-                      {paymentTermsList.map((term: any) => (
-                        <option key={term.id} value={term.id}>{term.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Expense Type 606</label>
-                    <select
-                      value={formData.expenseType606}
-                      onChange={(e) => setFormData({ ...formData, expenseType606: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Unspecified</option>
-                      {expenseTypes606.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tax Regime</label>
-                    <select
-                      value={formData.taxRegime}
-                      onChange={(e) => setFormData({ ...formData, taxRegime: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Unspecified</option>
-                      {taxRegimes.map((reg) => (
-                        <option key={reg} value={reg}>{reg}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Default Invoice Type</label>
-                    <select
-                      value={formData.defaultInvoiceType}
-                      onChange={(e) => setFormData({ ...formData, defaultInvoiceType: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Unspecified</option>
-                      {invoiceTypes.map((it) => (
-                        <option key={it} value={it}>{it}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Supplier Type</label>
-                    <select
-                      value={formData.supplierTypeId}
-                      onChange={(e) => setFormData({ ...formData, supplierTypeId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Unspecified</option>
-                      {supplierTypes.map((st: any) => (
-                        <option key={st.id} value={st.id}>{st.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <input
                       type="text"
@@ -1291,43 +942,6 @@ export default function SuppliersPage() {
                   </div>
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Accounts Payable (optional)
-                  </label>
-                  <select
-                    value={formData.apAccountId}
-                    onChange={(e) => setFormData({ ...formData, apAccountId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                  >
-                    <option value="">Use default account</option>
-                    {payableAccounts.map((acc: any) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-gray-500">
-                    If you don't select an account, the default accounts payable account will be used.
-                  </p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Default Bank Account (optional)
-                  </label>
-                  <select
-                    value={formData.defaultBankAccountId}
-                    onChange={(e) => setFormData({ ...formData, defaultBankAccountId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                  >
-                    <option value="">No default account</option>
-                    {bankAccounts.map((ba: any) => (
-                      <option key={ba.id} value={ba.id}>
-                        {ba.bank_name} - {ba.account_number}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div className="flex justify-end space-x-3 pt-4">
                   <button 
                     type="button"

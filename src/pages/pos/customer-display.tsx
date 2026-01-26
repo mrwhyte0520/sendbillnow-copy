@@ -28,6 +28,7 @@ interface CustomerDisplayData {
 
 export default function CustomerDisplayPage() {
   const { user } = useAuth();
+  const brandBlue = '#001B9E';
   const [data, setData] = useState<CustomerDisplayData>({
     cart: [],
     subtotal: 0,
@@ -180,121 +181,154 @@ export default function CustomerDisplayPage() {
 
   return (
     <div
-      className="min-h-screen bg-white text-gray-900 flex flex-col"
+      className="min-h-screen text-gray-900 flex flex-col"
+      style={{ background: '#f3f6fb' }}
       onDoubleClick={toggleFullscreen}
       role="presentation"
     >
       {/* Header */}
-      <header className="bg-[#001B9E] border-b border-white/15 p-4 text-white">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/15 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Your Order</h1>
-              <p className="text-sm text-white/80">Items update in real-time</p>
+      <header className="px-6 pt-6 pb-4">
+        <div className="max-w-6xl mx-auto flex items-start justify-between gap-6">
+          <div>
+            <div className="text-2xl font-semibold text-gray-900">Current order</div>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              <span
+                className="px-3 py-1 rounded-full border border-white/15 text-white"
+                style={{ background: brandBlue }}
+              >
+                {data.registerLabel || 'Register #1'}
+              </span>
+              <span
+                className="px-3 py-1 rounded-full border border-white/15 text-white"
+                style={{ background: brandBlue }}
+              >
+                {data.cashierName ? `Cashier: ${data.cashierName}` : 'Cashier'}
+              </span>
+              {data.customerName ? (
+                <span
+                  className="px-3 py-1 rounded-full border border-white/15 text-white"
+                  style={{ background: brandBlue }}
+                >
+                  {data.customerName}
+                </span>
+              ) : null}
+              <span
+                className="px-3 py-1 rounded-full border border-white/15 text-white"
+                style={{ background: brandBlue }}
+              >
+                {data.updatedAt ? `Date: ${formatUpdatedAt(data.updatedAt)}` : `Date: ${formatUpdatedAt()}`}
+              </span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-3 text-xs text-white/80 whitespace-nowrap">
-              <span>{data.registerLabel || 'Register #1'}</span>
-              {data.cashierName && (
-                <span>{`Cashier: ${data.cashierName}`}</span>
-              )}
-              {data.updatedAt && (
-                <span>{`Date: ${formatUpdatedAt(data.updatedAt)}`}</span>
-              )}
-              <span>{`Time: ${formatNow()}`}</span>
+
+          <div className="flex items-start gap-3">
+            <div className="bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm text-center min-w-[120px]">
+              <div className="text-xs text-gray-500">Items</div>
+              <div className="text-3xl font-semibold" style={{ color: brandBlue }}>{getTotalItems()}</div>
             </div>
-            <div className="text-sm text-white/80">Items</div>
-            <div className="text-3xl font-bold text-white">{getTotalItems()}</div>
+            <div className="bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm text-center min-w-[140px]">
+              <div className="text-xs text-gray-500">Total</div>
+              <div className="text-3xl font-semibold" style={{ color: brandBlue }}>{formatMoney(data.total)}</div>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden flex flex-col max-w-4xl mx-auto w-full p-4 bg-white">
-        {data.cart.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
+      <main className="flex-1 px-6 pb-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items list */}
+          <section className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="font-semibold text-gray-900">Order items</div>
+              <div className="text-sm text-gray-500">Updated {formatNow()}</div>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Waiting for items...</h2>
-            <p className="text-gray-600">Products will appear here as they are added</p>
-          </div>
-        ) : (
-          <>
-            {/* Cart Items */}
-            <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-              {data.cart.map((item, index) => (
-                <div
-                  key={`${item.id}-${index}`}
-                  className={`bg-white rounded-xl p-4 border transition-all duration-300 ${
-                    lastAddedItem === item.name
-                      ? 'border-[#001B9E] bg-[#001B9E]/5 scale-[1.02]'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.name}</h3>
-                      {item.extras && item.extras.length > 0 && (
-                        <div className="text-sm text-[#001B9E] mt-1">
-                          + {item.extras.map(e => `${e.name} (${e.quantity})`).join(', ')}
-                        </div>
-                      )}
-                      <div className="text-sm text-gray-600 mt-1">
-                        {formatMoney(item.price)} each
+
+            {data.cart.length === 0 ? (
+              <div className="py-16 flex flex-col items-center justify-center text-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <div className="text-xl font-semibold text-gray-900">Waiting for items…</div>
+                <div className="text-gray-600 mt-1">Products will appear here as they are added</div>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {data.cart.map((item, index) => (
+                  <div
+                    key={`${item.id}-${index}`}
+                    className={`px-6 py-5 flex items-center justify-between transition-colors ${
+                      lastAddedItem === item.name ? 'bg-blue-50' : 'bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0H4m16 0l1 7H3l1-7" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-gray-900 truncate">{item.name}</div>
+                        <div className="text-sm text-gray-500">{formatMoney(item.price)} each</div>
+                        {item.extras && item.extras.length > 0 ? (
+                          <div className="text-sm mt-1" style={{ color: brandBlue }}>
+                            + {item.extras.map((e) => `${e.name} (${e.quantity})`).join(', ')}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
+
                     <div className="flex items-center gap-4">
-                      <div className="bg-gray-100 px-4 py-2 rounded-lg">
-                        <span className="text-xl font-bold">{item.quantity}</span>
+                      <div className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-center min-w-[70px]">
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500">Qty</div>
+                        <div className="text-lg font-semibold text-gray-900">{item.quantity}</div>
                       </div>
-                      <div className="text-right min-w-[100px]">
-                        <div className="text-xl font-bold text-[#001B9E]">{formatMoney(item.total)}</div>
+                      <div className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-right min-w-[110px]">
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500">Amount</div>
+                        <div className="text-lg font-semibold" style={{ color: brandBlue }}>
+                          {formatMoney(item.total)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </main>
-
-      {/* Footer - Totals */}
-      <footer className="bg-[#001B9E] border-t border-white/15 p-6 text-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="space-y-3 mb-4">
-            <div className="flex justify-between text-lg text-white/85">
-              <span>Subtotal</span>
-              <span>{formatMoney(data.subtotal)}</span>
-            </div>
-            {data.discount > 0 && (
-              <div className="flex justify-between text-lg text-[#e57373]">
-                <span>Discount</span>
-                <span>-{formatMoney(data.discount)}</span>
+                ))}
               </div>
             )}
-            <div className="flex justify-between text-lg text-white/85">
-              <span>Tax ({data.taxRate}%)</span>
-              <span>{formatMoney(data.tax)}</span>
+          </section>
+
+          {/* Totals card */}
+          <aside className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <div className="text-sm text-gray-500">Totals</div>
+              <div className="text-lg font-semibold text-gray-900">To pay</div>
             </div>
-          </div>
-          <div className="border-t border-white/25 pt-4">
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-semibold">Total</span>
-              <span className="text-4xl font-bold text-white">{formatMoney(data.total)}</span>
+            <div className="p-6 space-y-3">
+              <div className="flex items-center justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span className="font-medium text-gray-900">{formatMoney(data.subtotal)}</span>
+              </div>
+              {data.discount > 0 ? (
+                <div className="flex items-center justify-between text-gray-600">
+                  <span>Discount</span>
+                  <span className="font-medium text-gray-900">-{formatMoney(data.discount)}</span>
+                </div>
+              ) : null}
+              <div className="flex items-center justify-between text-gray-600">
+                <span>Sales Tax ({data.taxRate}%)</span>
+                <span className="font-medium text-gray-900">{formatMoney(data.tax)}</span>
+              </div>
+              <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">
+                <div className="text-sm font-semibold text-gray-900">TOTAL</div>
+                <div className="text-3xl font-semibold" style={{ color: brandBlue }}>
+                  {formatMoney(data.total)}
+                </div>
+              </div>
             </div>
-          </div>
+          </aside>
         </div>
-      </footer>
+      </main>
 
       {showUnlock && (
         <div className="fixed inset-0 z-[9999] bg-black/70 flex items-center justify-center p-6">
