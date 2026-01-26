@@ -44,6 +44,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [isOwner, setIsOwner] = useState(true); // Por defecto true hasta verificar
+  const isAdminAllowed = Boolean(allowedModules?.has('admin'));
+  const isPrivilegedUser = Boolean(isOwner || isAdminAllowed);
+  const effectiveHasAccess = () => (isPrivilegedUser ? true : hasAccess());
   const [restrictedModal, setRestrictedModal] = useState<{ show: boolean; moduleName: string; requiredPlan: string }>({
     show: false,
     moduleName: '',
@@ -164,6 +167,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Verificar si es usuario nuevo y mostrar modal de selección de plan
   useEffect(() => {
     if (!user?.id) return;
+
+    if (isPrivilegedUser) {
+      setShowInitialPlanModal(false);
+      setShowTrialExpiredModal(false);
+      return;
+    }
     
     // Verificar si ya usó el trial
     const trialUsed = hasUsedTrial();
@@ -181,7 +190,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     if (trialInfo.hasExpired && !currentPlan?.active && !isAllowedPath) {
       setShowTrialExpiredModal(true);
     }
-  }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active, location.pathname]);
+  }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active, location.pathname, isPrivilegedUser]);
 
   useEffect(() => {
     const STORAGE_PREFIX = 'contabi_rbac_';
@@ -226,8 +235,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     };
     fetchAllowed();
   }, [user?.id]);
-
-  const isAdminAllowed = (allowedModules && allowedModules.has('admin')) || false;
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -612,13 +619,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const handlePlanSelection = async (planId: string) => {
-    const result = startTrialWithPlan(planId);
+    const result = await startTrialWithPlan(planId);
     if (result.success) {
       setShowInitialPlanModal(false);
       // Recargar la página para aplicar el nuevo plan
       window.location.reload();
     } else {
-      console.error('Error starting trial:', result.error);
+      setShowInitialPlanModal(false);
+      setSaveMessage((result as any).error || 'Error starting trial');
     }
   };
 
@@ -747,8 +755,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div className="ml-3 flex-1 min-w-0">
                   <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
                   <p className="text-xs text-stone-500 truncate">
-                    {currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')}
-                    {!currentPlan && trialStatus !== 'expired' && (
+                    {isPrivilegedUser ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
+                    {!isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
                       trialInfo.daysLeft > 0
                         ? ` (${trialInfo.daysLeft}d left)`
                         : trialInfo.hoursLeft > 0
@@ -1286,12 +1294,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Modal de selección de plan inicial para usuarios nuevos */}
-      {showInitialPlanModal && (
+      {showInitialPlanModal && !isPrivilegedUser && (
         <InitialPlanSelectionModal onPlanSelected={handlePlanSelection} />
       )}
 
       {/* Modal de trial expirado - bloqueo total */}
-      {showTrialExpiredModal && !hasAccess() && !['/plans', '/statistics', '/profile', '/dashboard', '/referrals'].some(p => location.pathname.startsWith(p)) && (
+      {showTrialExpiredModal && !effectiveHasAccess() && !isPrivilegedUser && !['/plans', '/statistics', '/profile', '/dashboard', '/referrals'].some(p => location.pathname.startsWith(p)) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 text-center">

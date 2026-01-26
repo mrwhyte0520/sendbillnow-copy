@@ -38,6 +38,16 @@ interface ShiftMovement {
   created_at: string;
 }
 
+interface ClosedShiftHistoryItem {
+  id: string;
+  opened_at: string;
+  closed_at: string;
+  opening_cash: number;
+  closing_cash: number;
+  difference: number;
+  notes: string;
+}
+
 interface PettyCashItem {
   id: string;
   date: string;
@@ -45,6 +55,7 @@ interface PettyCashItem {
   amount: number;
   type: 'in' | 'out';
   category: string;
+  created_at?: string;
 }
 
 interface ExpenseItem {
@@ -119,10 +130,18 @@ export default function CashFinancePage() {
   const [closingNotes, setClosingNotes] = useState('');
 
   // Opening
-  const [openingAmount, setOpeningAmount] = useState(0);
+  const [openingAmount, setOpeningAmount] = useState<string>('');
+  const [showOpenRegisterModal, setShowOpenRegisterModal] = useState(false);
+  const [openRegisterAmount, setOpenRegisterAmount] = useState<number>(0);
+
+  // Close confirmation
+  const [showCloseConfirmModal, setShowCloseConfirmModal] = useState(false);
 
   // Movements
   const [movements, setMovements] = useState<ShiftMovement[]>([]);
+
+  // Closed shift history
+  const [closedShifts, setClosedShifts] = useState<ClosedShiftHistoryItem[]>([]);
 
   // Petty Cash
   const [pettyCashItems, setPettyCashItems] = useState<PettyCashItem[]>([]);
@@ -156,10 +175,70 @@ export default function CashFinancePage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (selectedRegisterId) {
-      loadShiftForRegister(selectedRegisterId);
-    }
+    if (!selectedRegisterId || !user?.id) return;
+    (async () => {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return;
+      await loadShiftForRegister(selectedRegisterId);
+      await loadClosedShiftHistory(tenantId, selectedRegisterId);
+    })();
   }, [selectedRegisterId]);
+
+  const loadClosedShiftHistory = async (tenantId: string, registerId: string) => {
+    try {
+      const { data: shifts, error } = await supabase
+        .from('cash_shifts')
+        .select('id, opened_at, closed_at, opening_cash, closing_cash, notes')
+        .eq('tenant_id', tenantId)
+        .eq('register_id', registerId)
+        .eq('status', 'closed')
+        .order('closed_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      const shiftRows = (shifts || []).filter((s: any) => s.closed_at) as any[];
+      const shiftIds = shiftRows.map((s) => s.id);
+
+      let closingTxByShift = new Map<string, { type: 'in' | 'out'; amount: number }>();
+      if (shiftIds.length > 0) {
+        const { data: txs, error: txErr } = await supabase
+          .from('cash_shift_transactions')
+          .select('shift_id, type, amount, description')
+          .eq('tenant_id', tenantId)
+          .in('shift_id', shiftIds);
+
+        if (txErr) throw txErr;
+
+        (txs || []).forEach((tx: any) => {
+          const desc = String(tx.description || '');
+          if (!desc.startsWith('Shift closed.')) return;
+          const shiftId = String(tx.shift_id);
+          if (closingTxByShift.has(shiftId)) return;
+          closingTxByShift.set(shiftId, { type: tx.type, amount: Number(tx.amount) || 0 });
+        });
+      }
+
+      setClosedShifts(
+        shiftRows.map((s: any) => {
+          const closingTx = closingTxByShift.get(String(s.id));
+          const signedDiff = closingTx ? (closingTx.type === 'in' ? closingTx.amount : -closingTx.amount) : 0;
+          return {
+            id: s.id,
+            opened_at: s.opened_at,
+            closed_at: s.closed_at,
+            opening_cash: Number(s.opening_cash) || 0,
+            closing_cash: Number(s.closing_cash) || 0,
+            difference: signedDiff,
+            notes: s.notes || '',
+          };
+        })
+      );
+    } catch (error) {
+      console.error('Error loading closed shift history:', error);
+      setClosedShifts([]);
+    }
+  };
 
   const pickMainRegister = (regs: CashRegister[]) => {
     if (!regs || regs.length === 0) return null;
@@ -187,15 +266,26 @@ export default function CashFinancePage() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const regs = await settingsService.getCashRegisters();
+      const [regs, assignments] = await Promise.all([
+        settingsService.getCashRegisters(),
+        settingsService.getUserCashRegisterAssignments(),
+      ]);
+
       const list = (regs as CashRegister[]) || [];
-      const main = pickMainRegister(list);
+      const assigned = (assignments || []).find((a: any) => String(a.user_id) === String(user.id));
+      const assignedRegisterId = assigned?.cash_register_id ? String(assigned.cash_register_id) : '';
+      const assignedRegister = assignedRegisterId
+        ? list.find((r) => String(r.id) === String(assignedRegisterId))
+        : null;
+
+      const main = assignedRegister || pickMainRegister(list);
       if (main) {
         setRegisters([main]);
         setSelectedRegisterId(main.id);
       } else {
         setRegisters([]);
         setSelectedRegisterId('');
+        setMessage({ type: 'error', text: 'No cash register configured. Please create/assign a register in Settings.' });
       }
 
       // Load all finance data
@@ -213,6 +303,7 @@ export default function CashFinancePage() {
         amount: Number(p.amount) || 0,
         type: p.type as 'in' | 'out',
         category: p.category,
+        created_at: p.created_at,
       }));
       setPettyCashItems(mappedPettyCash);
       setPettyCashBalance(mappedPettyCash.reduce((sum, p) => p.type === 'in' ? sum + p.amount : sum - p.amount, 0));
@@ -256,13 +347,16 @@ export default function CashFinancePage() {
     try {
       const date = new Date().toISOString().slice(0, 10);
       const saved = await cashFinanceService.savePettyCash(user.id, { ...pettyCashForm, date });
-      setPettyCashItems(items => [...items, { id: String((saved as any)?.id || `PC-${Date.now()}`), date, ...pettyCashForm }]);
+      setPettyCashItems(items => [...items, { id: String((saved as any)?.id || `PC-${Date.now()}`), date, ...pettyCashForm, created_at: (saved as any)?.created_at || new Date().toISOString() }]);
       setPettyCashBalance(b => pettyCashForm.type === 'in' ? b + pettyCashForm.amount : b - pettyCashForm.amount);
 
       if (currentShift?.id && pettyCashForm.amount > 0) {
+        const tenantId = await resolveTenantId(user.id);
+        if (!tenantId) throw new Error('Tenant not found');
         const { error: txError } = await supabase
           .from('cash_shift_transactions')
           .insert({
+            tenant_id: tenantId,
             shift_id: currentShift.id,
             type: pettyCashForm.type,
             amount: Number(pettyCashForm.amount) || 0,
@@ -270,8 +364,8 @@ export default function CashFinancePage() {
           });
 
         if (txError) throw txError;
-        await loadShiftStats(await resolveTenantId(user.id) as string, currentShift);
-        await loadShiftMovements(currentShift.id);
+        await loadShiftStats(tenantId, currentShift);
+        await loadShiftMovements(tenantId, currentShift.id);
       }
 
       setPettyCashForm({ description: '', amount: 0, type: 'out', category: 'Office Supplies' });
@@ -291,9 +385,12 @@ export default function CashFinancePage() {
       setExpenses(items => [...items, { id: String((saved as any)?.id || `EXP-${Date.now()}`), date, ...expenseForm }]);
 
       if (currentShift?.id && expenseForm.amount > 0) {
+        const tenantId = await resolveTenantId(user.id);
+        if (!tenantId) throw new Error('Tenant not found');
         const { error: txError } = await supabase
           .from('cash_shift_transactions')
           .insert({
+            tenant_id: tenantId,
             shift_id: currentShift.id,
             type: 'out',
             amount: Number(expenseForm.amount) || 0,
@@ -301,8 +398,8 @@ export default function CashFinancePage() {
           });
 
         if (txError) throw txError;
-        await loadShiftStats(await resolveTenantId(user.id) as string, currentShift);
-        await loadShiftMovements(currentShift.id);
+        await loadShiftStats(tenantId, currentShift);
+        await loadShiftMovements(tenantId, currentShift.id);
       }
 
       setExpenseForm({ description: '', amount: 0, category: 'Operations', vendor: '', status: 'pending' });
@@ -322,9 +419,12 @@ export default function CashFinancePage() {
       setIncomeItems(items => [...items, { id: String((saved as any)?.id || `INC-${Date.now()}`), date, ...incomeForm }]);
 
       if (currentShift?.id && incomeForm.amount > 0) {
+        const tenantId = await resolveTenantId(user.id);
+        if (!tenantId) throw new Error('Tenant not found');
         const { error: txError } = await supabase
           .from('cash_shift_transactions')
           .insert({
+            tenant_id: tenantId,
             shift_id: currentShift.id,
             type: 'in',
             amount: Number(incomeForm.amount) || 0,
@@ -332,8 +432,8 @@ export default function CashFinancePage() {
           });
 
         if (txError) throw txError;
-        await loadShiftStats(await resolveTenantId(user.id) as string, currentShift);
-        await loadShiftMovements(currentShift.id);
+        await loadShiftStats(tenantId, currentShift);
+        await loadShiftMovements(tenantId, currentShift.id);
       }
 
       setIncomeForm({ description: '', amount: 0, source: '', category: 'Other Income' });
@@ -443,15 +543,15 @@ export default function CashFinancePage() {
   };
 
   const loadCashSalesForShift = async (tenantId: string, shift: CashShift) => {
-    const startDate = (shift.opened_at || new Date().toISOString()).slice(0, 10);
-    const endDate = (shift.closed_at || new Date().toISOString()).slice(0, 10);
+    const startTs = shift.opened_at || new Date().toISOString();
+    const endTs = shift.closed_at || new Date().toISOString();
 
     const { data, error } = await supabase
       .from('receipts')
-      .select('amount, receipt_date, payment_method, status')
+      .select('amount, receipt_date, payment_method, status, created_at')
       .eq('user_id', tenantId)
-      .gte('receipt_date', startDate)
-      .lte('receipt_date', endDate)
+      .gte('created_at', startTs)
+      .lte('created_at', endTs)
       .neq('status', 'void')
       .or('payment_method.ilike.*cash*,payment_method.ilike.*efectivo*');
 
@@ -481,7 +581,7 @@ export default function CashFinancePage() {
         const shift = shifts[0] as CashShift;
         setCurrentShift(shift);
         await loadShiftStats(tenantId, shift);
-        await loadShiftMovements(shift.id);
+        await loadShiftMovements(tenantId, shift.id);
       } else {
         setCurrentShift(null);
         setCashOnHand(0);
@@ -499,40 +599,42 @@ export default function CashFinancePage() {
       const { data: txs, error } = await supabase
         .from('cash_shift_transactions')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('shift_id', shift.id);
 
       if (error) throw error;
 
-      let income = 0;
-      let outflows = 0;
+      let manualIn = 0;
+      let manualOut = 0;
 
       (txs || []).forEach((tx: any) => {
         if (tx.type === 'in') {
-          income += Number(tx.amount) || 0;
+          manualIn += Number(tx.amount) || 0;
         } else {
-          outflows += Number(tx.amount) || 0;
+          manualOut += Number(tx.amount) || 0;
         }
       });
 
       const cashSales = await loadCashSalesForShift(tenantId, shift);
-      const totalIncome = cashSales + income;
 
-      setShiftIncome(totalIncome);
-      setShiftOutflows(outflows);
+      // Shift income (UI) should represent cash sales only
+      setShiftIncome(cashSales);
+      setShiftOutflows(manualOut);
 
-      // Cash on hand = opening + (cash sales) + (manual income) - outflows
+      // Expected / Cash on hand = opening + cash sales + manual in - manual out
       const opening = Number(shift.opening_cash) || 0;
-      setCashOnHand(opening + totalIncome - outflows);
+      setCashOnHand(opening + cashSales + manualIn - manualOut);
     } catch (error) {
       console.error('Error loading shift stats:', error);
     }
   };
 
-  const loadShiftMovements = async (shiftId: string) => {
+  const loadShiftMovements = async (tenantId: string, shiftId: string) => {
     try {
       const { data, error } = await supabase
         .from('cash_shift_transactions')
         .select('*')
+        .eq('tenant_id', tenantId)
         .eq('shift_id', shiftId)
         .order('created_at', { ascending: false })
         .limit(2000);
@@ -551,20 +653,22 @@ export default function CashFinancePage() {
     }
   };
 
-  const handleOpenRegister = async () => {
+  const handleOpenRegister = async (amountOverride?: number) => {
     if (!user?.id || !selectedRegisterId) return;
     setLoading(true);
     try {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) throw new Error('Tenant not found');
 
-      const { data, error } = await supabase
+      const opening = typeof amountOverride === 'number' ? amountOverride : openingAmountValue;
+
+      const { error } = await supabase
         .from('cash_shifts')
         .insert({
           tenant_id: tenantId,
           register_id: selectedRegisterId,
           opened_at: new Date().toISOString(),
-          opening_cash: openingAmount,
+          opening_cash: opening,
           status: 'open',
         })
         .select()
@@ -572,11 +676,10 @@ export default function CashFinancePage() {
 
       if (error) throw error;
 
-      setCurrentShift(data as CashShift);
-      setCashOnHand(openingAmount);
-      setShiftIncome(0);
-      setShiftOutflows(0);
-      setMovements([]);
+      // Reload from DB so stats/movements are consistent
+      await loadShiftForRegister(selectedRegisterId);
+      await loadClosedShiftHistory(tenantId, selectedRegisterId);
+      setOpeningAmount(String(opening));
       setMessage({ type: 'success', text: 'Register opened successfully' });
     } catch (error) {
       console.error('Error opening register:', error);
@@ -590,10 +693,29 @@ export default function CashFinancePage() {
   const expectedCash = cashOnHand;
   const difference = countedCashTotal - expectedCash;
 
+  const openingAmountValue = Number(openingAmount) || 0;
+
+  const pettyCashItemsForShift = (() => {
+    if (!currentShift?.opened_at) return [] as PettyCashItem[];
+    const startTs = new Date(currentShift.opened_at).getTime();
+    return pettyCashItems.filter((p) => {
+      const raw = p.created_at || (p.date ? `${p.date}T00:00:00` : '');
+      const t = raw ? new Date(raw).getTime() : 0;
+      return t >= startTs;
+    });
+  })();
+
+  const pettyCashBalanceForShift = pettyCashItemsForShift.reduce(
+    (sum, p) => (p.type === 'in' ? sum + p.amount : sum - p.amount),
+    0
+  );
+
   const handleCloseRegister = async () => {
     if (!user?.id || !currentShift) return;
     setLoading(true);
     try {
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('Tenant not found');
       const { error } = await supabase
         .from('cash_shifts')
         .update({
@@ -602,7 +724,8 @@ export default function CashFinancePage() {
           status: 'closed',
           notes: closingNotes || null,
         })
-        .eq('id', currentShift.id);
+        .eq('id', currentShift.id)
+        .eq('tenant_id', tenantId);
 
       if (error) throw error;
 
@@ -613,6 +736,7 @@ export default function CashFinancePage() {
       const { error: closeTxError } = await supabase
         .from('cash_shift_transactions')
         .insert({
+          tenant_id: tenantId,
           shift_id: currentShift.id,
           type: closeTxType,
           amount: closeTxAmount,
@@ -620,6 +744,15 @@ export default function CashFinancePage() {
         });
 
       if (closeTxError) throw closeTxError;
+
+      await loadShiftMovements(tenantId, currentShift.id);
+
+      if (selectedRegisterId) {
+        await loadClosedShiftHistory(tenantId, selectedRegisterId);
+      }
+
+      // Prepare the next opening amount with the last counted cash
+      setOpeningAmount(String(countedCashTotal));
 
       setCurrentShift(null);
       setDenominations(DEFAULT_DENOMINATIONS);
@@ -736,7 +869,15 @@ export default function CashFinancePage() {
 
                 {!currentShift && (
                   <button
-                    onClick={handleOpenRegister}
+                    onClick={() => {
+                      const hasValue = String(openingAmount || '').trim() !== '';
+                      if (hasValue) {
+                        handleOpenRegister(openingAmountValue);
+                        return;
+                      }
+                      setOpenRegisterAmount(0);
+                      setShowOpenRegisterModal(true);
+                    }}
                     disabled={loading || !selectedRegisterId}
                     className="px-4 py-2 bg-[#3B4A2A] text-white rounded-lg hover:bg-[#2D3B1E] disabled:opacity-50 text-sm font-medium"
                   >
@@ -745,11 +886,46 @@ export default function CashFinancePage() {
                 )}
               </div>
 
+              {showOpenRegisterModal && !currentShift && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-sm">
+                    <h3 className="text-lg font-semibold mb-2">Open register</h3>
+                    <p className="text-sm text-gray-500 mb-4">How much cash are you starting with?</p>
+                    <input
+                      type="number"
+                      value={openRegisterAmount}
+                      onChange={(e) => setOpenRegisterAmount(Number(e.target.value) || 0)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                      step="0.01"
+                      min="0"
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2 mt-6">
+                      <button
+                        onClick={() => setShowOpenRegisterModal(false)}
+                        className="px-4 py-2 border rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setShowOpenRegisterModal(false);
+                          await handleOpenRegister(openRegisterAmount);
+                        }}
+                        className="px-4 py-2 bg-[#3B4A2A] text-white rounded-lg"
+                      >
+                        Open
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Stats row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <p className="text-xs text-gray-500">Opening</p>
-                  <p className="text-lg font-semibold">{formatCurrency(currentShift?.opening_cash || openingAmount)}</p>
+                  <p className="text-lg font-semibold">{formatCurrency(currentShift?.opening_cash || openingAmountValue)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Sales (cash)</p>
@@ -772,7 +948,7 @@ export default function CashFinancePage() {
                   <input
                     type="number"
                     value={openingAmount}
-                    onChange={(e) => setOpeningAmount(Number(e.target.value) || 0)}
+                    onChange={(e) => setOpeningAmount(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm w-40"
                     step="0.01"
                     min="0"
@@ -878,20 +1054,65 @@ export default function CashFinancePage() {
                       type="text"
                       value={countedCashTotal.toFixed(2)}
                       readOnly
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Calculated automatically from denominations</p>
-                    <div className="mt-4 flex justify-end">
-                      <button
-                        onClick={handleCloseRegister}
-                        disabled={loading}
-                        className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 text-sm font-medium"
-                      >
-                        Close register
-                      </button>
-                    </div>
                   </div>
                 </div>
+
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => {
+                      setShowCloseConfirmModal(true);
+                    }}
+                    disabled={loading}
+                    className="px-6 py-2 bg-[#3B4A2A] text-white rounded-lg hover:bg-[#2D3B1E] disabled:opacity-50 text-sm font-medium"
+                  >
+                    Close register
+                  </button>
+                </div>
+
+                {showCloseConfirmModal && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                      <h3 className="text-lg font-semibold mb-2">Confirm close register</h3>
+                      <p className="text-sm text-gray-500 mb-4">Please confirm the cash count before closing.</p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                        <div className="p-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs text-gray-500">Expected</p>
+                          <p className="text-sm font-semibold text-[#1F2618]">{formatCurrency(expectedCash)}</p>
+                        </div>
+                        <div className="p-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs text-gray-500">Counted</p>
+                          <p className="text-sm font-semibold text-[#1F2618]">{formatCurrency(countedCashTotal)}</p>
+                        </div>
+                        <div className="p-3 border border-gray-200 rounded-lg">
+                          <p className="text-xs text-gray-500">Difference</p>
+                          <p className={`text-sm font-semibold ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(difference)}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2 mt-6">
+                        <button
+                          onClick={() => setShowCloseConfirmModal(false)}
+                          className="px-4 py-2 border rounded-lg"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setShowCloseConfirmModal(false);
+                            await handleCloseRegister();
+                          }}
+                          disabled={loading}
+                          className="px-4 py-2 bg-[#3B4A2A] text-white rounded-lg hover:bg-[#2D3B1E] disabled:opacity-50"
+                        >
+                          Confirm close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -931,6 +1152,41 @@ export default function CashFinancePage() {
                   </table>
                 </div>
               )}
+
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-semibold text-[#1F2618]">Close history</h4>
+                  <span className="text-sm text-gray-500">Last 20</span>
+                </div>
+                {closedShifts.length === 0 ? (
+                  <p className="text-gray-500 text-sm">No closed shifts yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b">
+                          <th className="py-2">Opened</th>
+                          <th>Closed</th>
+                          <th className="text-right">Opening</th>
+                          <th className="text-right">Closing</th>
+                          <th className="text-right">Difference</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {closedShifts.map((s) => (
+                          <tr key={s.id} className="border-b border-gray-100">
+                            <td className="py-2">{new Date(s.opened_at).toLocaleString()}</td>
+                            <td>{new Date(s.closed_at).toLocaleString()}</td>
+                            <td className="text-right">{formatCurrency(s.opening_cash)}</td>
+                            <td className="text-right">{formatCurrency(s.closing_cash)}</td>
+                            <td className={`text-right font-medium ${s.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(s.difference)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -941,15 +1197,15 @@ export default function CashFinancePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <p className="text-sm text-gray-500">Fund Balance</p>
-                <p className="text-2xl font-bold text-[#1F2618]">{formatCurrency(pettyCashBalance)}</p>
+                <p className="text-2xl font-bold text-[#1F2618]">{formatCurrency(pettyCashBalanceForShift)}</p>
               </div>
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <p className="text-sm text-gray-500">Total In</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(pettyCashItems.filter(i => i.type === 'in').reduce((s, i) => s + i.amount, 0))}</p>
+                <p className="text-2xl font-bold text-green-600">{formatCurrency(pettyCashItemsForShift.filter(i => i.type === 'in').reduce((s, i) => s + i.amount, 0))}</p>
               </div>
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <p className="text-sm text-gray-500">Total Out</p>
-                <p className="text-2xl font-bold text-red-600">{formatCurrency(pettyCashItems.filter(i => i.type === 'out').reduce((s, i) => s + i.amount, 0))}</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrency(pettyCashItemsForShift.filter(i => i.type === 'out').reduce((s, i) => s + i.amount, 0))}</p>
               </div>
             </div>
 
@@ -960,13 +1216,13 @@ export default function CashFinancePage() {
                   <i className="ri-add-line mr-1"></i> Add Transaction
                 </button>
               </div>
-              {pettyCashItems.length === 0 ? (
+              {pettyCashItemsForShift.length === 0 ? (
                 <p className="text-gray-500 text-sm">No petty cash transactions yet.</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead><tr className="text-left text-gray-500 border-b"><th className="py-2">Date</th><th>Type</th><th>Category</th><th>Description</th><th className="text-right">Amount</th></tr></thead>
                   <tbody>
-                    {pettyCashItems.map(item => (
+                    {pettyCashItemsForShift.map(item => (
                       <tr key={item.id} className="border-b border-gray-100">
                         <td className="py-2">{item.date}</td>
                         <td><span className={`text-xs px-2 py-1 rounded ${item.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{item.type === 'in' ? 'Fund' : 'Expense'}</span></td>
