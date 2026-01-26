@@ -81,6 +81,21 @@ const isGeneralCustomerName = (name?: string | null) => {
   return String(name).trim().toLowerCase() === 'general customer';
 };
 
+const formatInvoiceNumberDisplay = (raw: string): string => {
+  const s = String(raw || '').trim();
+  const prefix = '4873';
+  if (!s) return s;
+  if (!s.startsWith(prefix)) return s;
+  const suffixRaw = s.slice(prefix.length);
+  if (!/^[0-9]+$/.test(suffixRaw)) return s;
+  const counter = Number.parseInt(suffixRaw, 10);
+  if (!Number.isFinite(counter) || counter < 0) return s;
+  const block = Math.floor(counter / 1000);
+  const remainder = counter % 1000;
+  const padded = String(remainder).padStart(3, '0');
+  return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+};
+
 const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/script>/gi, '');
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -521,8 +536,10 @@ export default function InvoicingPage() {
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = invoice.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         invoice.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      invoice.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      formatInvoiceNumberDisplay(invoice.id).toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -665,7 +682,7 @@ export default function InvoicingPage() {
     if (!invoiceToPrint) return;
     const fullCustomer = invoiceToPrint.customerId ? customers.find((c) => c.id === invoiceToPrint.customerId) : undefined;
     const invoiceData = {
-      invoiceNumber: invoiceToPrint.id,
+      invoiceNumber: formatInvoiceNumberDisplay(invoiceToPrint.id),
       date: invoiceToPrint.date,
       dueDate: invoiceToPrint.dueDate,
       amount: invoiceToPrint.total,
@@ -687,6 +704,13 @@ export default function InvoicingPage() {
       email: (companyInfo as any)?.email,
       address: (companyInfo as any)?.address,
       logo: (companyInfo as any)?.logo,
+      facebook: (companyInfo as any)?.facebook,
+      instagram: (companyInfo as any)?.instagram,
+      twitter: (companyInfo as any)?.twitter,
+      linkedin: (companyInfo as any)?.linkedin,
+      youtube: (companyInfo as any)?.youtube,
+      tiktok: (companyInfo as any)?.tiktok,
+      whatsapp: (companyInfo as any)?.whatsapp,
     };
     printInvoice(invoiceData, customerData, companyData, type);
     setInvoiceToPrint(null);
@@ -733,7 +757,7 @@ export default function InvoicingPage() {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Invoice ${invoice.id}</title>
+          <title>Invoice ${formatInvoiceNumberDisplay(invoice.id)}</title>
           <style>
             :root {
               --primary: #0b2a6f;
@@ -799,7 +823,7 @@ export default function InvoicingPage() {
               </div>
               <div class="doc">
                 <div class="doc-title">INVOICE ${invoice.saleType === 'cash' ? 'CASH' : 'CREDIT'}</div>
-                <div class="doc-number">NCF: ${invoice.id}</div>
+                <div class="doc-number">NCF: ${formatInvoiceNumberDisplay(invoice.id)}</div>
                 <div class="doc-kv">
                   ${invoice.ncfExpiryDate ? `<div><strong>Valid until:</strong> ${new Date(invoice.ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
                   ${invoice.sequentialNumber ? `<div><strong>Invoice Number:</strong> ${invoice.sequentialNumber}</div>` : ''}
@@ -879,7 +903,8 @@ export default function InvoicingPage() {
       </html>
     `;
 
-    openHtmlPreview(html, `Invoice #${invoice.id}`, `invoice-${invoice.id}.html`);
+    const displayId = formatInvoiceNumberDisplay(invoice.id);
+    openHtmlPreview(html, `Invoice #${displayId}`, `invoice-${displayId}.html`);
   };
 
   const handleExportInvoiceExcel = async (invoiceId: string) => {
@@ -917,7 +942,7 @@ export default function InvoicingPage() {
 
     const headerStartRow = 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
-    worksheet.getCell(`A${headerStartRow}`).value = `Invoice #${invoice.id}`;
+    worksheet.getCell(`A${headerStartRow}`).value = `Invoice #${formatInvoiceNumberDisplay(invoice.id)}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
 
     if (String(invoice.id || '').toUpperCase().startsWith('B')) {
@@ -998,7 +1023,7 @@ export default function InvoicingPage() {
     const blob = new Blob([buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    saveAs(blob, `invoice_${invoice.id}.xlsx`);
+    saveAs(blob, `invoice_${formatInvoiceNumberDisplay(invoice.id)}.xlsx`);
   };
 
   const handleDuplicateInvoice = (invoiceId: string) => {
@@ -1112,7 +1137,7 @@ export default function InvoicingPage() {
     });
 
     const data = filteredInvoices.map(invoice => [
-      invoice.id,
+      formatInvoiceNumberDisplay(invoice.id),
       invoice.customer,
       new Date(invoice.date).toLocaleDateString('es-DO'),
       new Date(invoice.dueDate).toLocaleDateString('es-DO'),
@@ -1169,7 +1194,7 @@ export default function InvoicingPage() {
     ];
     
     const data = filteredInvoices.map(invoice => [
-      invoice.id,
+      formatInvoiceNumberDisplay(invoice.id),
       invoice.customer,
       new Date(invoice.date).toLocaleDateString('es-DO'),
       new Date(invoice.dueDate).toLocaleDateString('es-DO'),
@@ -1462,8 +1487,8 @@ export default function InvoicingPage() {
 
         {/* Invoices Table */}
         <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-[#e8e0d0] overflow-hidden">
-          <div className="p-6 border-b border-[#e8e0d0] bg-gradient-to-r from-[#f8f6f0] to-[#f0ece0]">
-            <h3 className="text-xl font-bold text-[#2f3e1e] drop-shadow-sm">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-gray-900">
               Invoices ({filteredInvoices.length})
             </h3>
           </div>
@@ -1487,7 +1512,7 @@ export default function InvoicingPage() {
                   return (
                     <tr key={invoice.id} className="hover:bg-gradient-to-r hover:from-[#f8f6f0] hover:to-transparent transition-all duration-200">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{invoice.id}</div>
+                        <div className="text-sm font-medium text-gray-900">{formatInvoiceNumberDisplay(invoice.id)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{invoice.customer}</div>

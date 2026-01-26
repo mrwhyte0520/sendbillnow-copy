@@ -30,6 +30,20 @@ const settingsSections: SettingsSection[] = [
     description: 'Configure basic company data, logo, and contact details',
     icon: 'ri-building-line',
     href: '/settings/company'
+  },
+  {
+    id: 'inventory',
+    name: 'Inventory',
+    description: 'Configure inventory options, tracking and defaults',
+    icon: 'ri-archive-line',
+    href: '/settings/inventory'
+  },
+  {
+    id: 'backups',
+    name: 'Backups',
+    description: 'Manage backups and restore points',
+    icon: 'ri-database-2-line',
+    href: '/settings/backup'
   }
 ];
 

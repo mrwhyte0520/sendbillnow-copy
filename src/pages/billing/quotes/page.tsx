@@ -878,6 +878,13 @@ export default function QuotesPage() {
       email: companyInfo?.email,
       address: companyInfo?.address,
       logo: companyInfo?.logo,
+      facebook: companyInfo?.facebook,
+      instagram: companyInfo?.instagram,
+      twitter: companyInfo?.twitter,
+      linkedin: companyInfo?.linkedin,
+      youtube: companyInfo?.youtube,
+      tiktok: companyInfo?.tiktok,
+      whatsapp: companyInfo?.whatsapp,
     };
     printInvoice(quoteData, customerData, companyData, type);
     setQuoteToPrint(null);

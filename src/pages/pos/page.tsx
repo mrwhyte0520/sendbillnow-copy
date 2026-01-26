@@ -134,6 +134,7 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 
 interface Sale {
   id: string;
+  invoiceNumber?: string;
   date: string;
   time: string;
   customer: Customer | null;
@@ -150,6 +151,8 @@ interface Sale {
 
 export default function POSPage() {
   const { user } = useAuth();
+
+  const [registerLabel, setRegisterLabel] = useState('Register #1');
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -238,6 +241,49 @@ export default function POSPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const loadAssignedRegisterLabel = async () => {
+      let nextLabel = 'Register #1';
+
+      try {
+        if (user?.id) {
+          const [assignments, registers] = await Promise.all([
+            settingsService.getUserCashRegisterAssignments(),
+            settingsService.getCashRegisters(),
+          ]);
+
+          const assignment = (assignments || []).find((a: any) => String(a.user_id) === String(user.id));
+          const registerId = assignment?.cash_register_id ? String(assignment.cash_register_id) : null;
+          const reg = registerId ? (registers || []).find((r: any) => String(r.id) === String(registerId)) : null;
+          const name = reg?.name ? String(reg.name) : '';
+
+          const match = name.match(/(\d+)/);
+          if (match?.[1]) {
+            nextLabel = `Register #${match[1]}`;
+          } else if (name.trim()) {
+            nextLabel = name.trim();
+          }
+        }
+      } catch (err) {
+        // ignore and fallback
+      }
+
+      if (nextLabel === 'Register #1') {
+        try {
+          const rawRegister = localStorage.getItem('pos_register_number');
+          const n = rawRegister ? String(rawRegister).trim() : '';
+          if (n) {
+            nextLabel = `Register #${n}`;
+          }
+        } catch {}
+      }
+
+      setRegisterLabel(nextLabel);
+    };
+
+    loadAssignedRegisterLabel();
+  }, [user?.id]);
+
   // Sync cart to customer display whenever cart or totals change
   useEffect(() => {
     if (!customerDisplayChannel.current) return;
@@ -254,15 +300,6 @@ export default function POSPage() {
       (user as any)?.user_metadata?.name ||
       user?.email ||
       'Cashier';
-
-    let registerLabel = 'Register #1';
-    try {
-      const rawRegister = localStorage.getItem('pos_register_number');
-      const n = rawRegister ? String(rawRegister).trim() : '';
-      if (n) {
-        registerLabel = `Register #${n}`;
-      }
-    } catch {}
 
     const payload = {
       cart: cart.map(item => ({
@@ -292,7 +329,7 @@ export default function POSPage() {
     } catch {}
 
     customerDisplayChannel.current.postMessage(payload);
-  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction]);
+  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction, registerLabel]);
 
   // Load available extras from localStorage on mount
   useEffect(() => {
@@ -890,6 +927,7 @@ export default function POSPage() {
     const received = parseAmountInput(amountReceived) || total;
     
     if (received >= total || paymentMethod !== 'cash') {
+      let generatedInvoiceNumber: string | undefined;
       const newSale: Sale = {
         id: `SALE-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
@@ -1024,6 +1062,11 @@ export default function POSPage() {
 
           const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
 
+          const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
+          if (createdInvoiceNumber) {
+            generatedInvoiceNumber = createdInvoiceNumber;
+          }
+
           // Create receipt only when sale is fully paid (which is the only case permitido ahora)
           const receiptNumber = `REC-${Date.now()}`;
           await receiptsService.create(user.id, {
@@ -1102,7 +1145,8 @@ export default function POSPage() {
       }
       
       // Store the completed sale and open print modal
-      setCompletedSale(newSale);
+      const saleToPrint = generatedInvoiceNumber ? { ...newSale, invoiceNumber: generatedInvoiceNumber } : newSale;
+      setCompletedSale(saleToPrint);
       setShowPrintTypeModal(true);
       
       setCart([]);
@@ -1112,28 +1156,32 @@ export default function POSPage() {
       setPaymentMethod('');
       setShowPaymentModal(false);
       loadProducts();
-    } else {
-      alert('Insufficient amount');
+
+      return;
     }
+
+    alert('Payment is insufficient');
   };
 
   const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
     if (!completedSale) return;
-    
+
     const saleData = {
-      invoiceNumber: completedSale.id,
+      invoiceNumber: completedSale.invoiceNumber || completedSale.id,
       date: completedSale.date,
       dueDate: completedSale.date,
       amount: completedSale.total,
       subtotal: completedSale.subtotal,
       tax: completedSale.tax,
-      items: completedSale.items.map(item => ({
-        description: item.name + (item.extras?.length ? ` + ${item.extras.map(e => e.name).join(', ')}` : ''),
+      items: completedSale.items.map((item) => ({
+        description:
+          item.name + (item.extras?.length ? ` + ${item.extras.map((e) => e.name).join(', ')}` : ''),
         quantity: item.quantity,
         price: item.price,
         total: item.total,
       })),
     };
+
     const customerData = {
       name: completedSale.customer?.name || 'Customer',
       document: completedSale.customer?.document,
@@ -1141,8 +1189,14 @@ export default function POSPage() {
       email: completedSale.customer?.email,
       address: completedSale.customer?.address,
     };
+
     let companyInfo: any = null;
-    try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
+    try {
+      companyInfo = await settingsService.getCompanyInfo();
+    } catch {
+      companyInfo = null;
+    }
+
     const companyData = {
       name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
       rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
@@ -1150,9 +1204,17 @@ export default function POSPage() {
       email: companyInfo?.email || '',
       address: companyInfo?.address || '',
       logo: companyInfo?.logo,
+      facebook: companyInfo?.facebook,
+      instagram: companyInfo?.instagram,
+      twitter: companyInfo?.twitter,
+      linkedin: companyInfo?.linkedin,
+      youtube: companyInfo?.youtube,
+      tiktok: companyInfo?.tiktok,
+      whatsapp: companyInfo?.whatsapp,
     };
 
     printInvoice(saleData, customerData, companyData, type);
+    setShowPrintTypeModal(false);
     setCompletedSale(null);
   };
 
@@ -2791,8 +2853,6 @@ export default function POSPage() {
               { id: 'dashboard', name: 'Dashboard', icon: 'ri-dashboard-line' },
               { id: 'pos', name: 'Point of Sale', icon: 'ri-shopping-cart-line' },
               { id: 'inventory', name: 'Inventory', icon: 'ri-archive-line' },
-              { id: 'cash-diff', name: 'Surplus / Shortage', icon: 'ri-scales-3-line' },
-              { id: 'cash-closing', name: 'Cash Closing', icon: 'ri-safe-line' },
               { id: 'sales', name: 'Sales', icon: 'ri-file-list-line' },
               { id: 'invoicing', name: 'Invoicing', icon: 'ri-file-text-line' },
               { id: 'reports', name: 'Reports', icon: 'ri-bar-chart-line' }
@@ -2802,8 +2862,6 @@ export default function POSPage() {
                 onClick={() => {
                   if (tab.id === 'invoicing') {
                     navigate('/billing/invoicing');
-                  } else if (tab.id === 'cash-closing') {
-                    navigate('/billing/cash-closing');
                   } else {
                     setActiveTab(tab.id);
                   }
@@ -2825,7 +2883,6 @@ export default function POSPage() {
         {activeTab === 'dashboard' && renderDashboard()}
         {activeTab === 'pos' && renderPOS()}
         {activeTab === 'inventory' && renderInventoryView()}
-        {activeTab === 'cash-diff' && renderCashCount()}
         {activeTab === 'sales' && renderSales()}
         {activeTab === 'reports' && renderReports()}
 
@@ -3541,7 +3598,7 @@ export default function POSPage() {
             }
 
             const saleData = {
-              invoiceNumber: completedSale.id,
+              invoiceNumber: completedSale.invoiceNumber || completedSale.id,
               date: completedSale.date,
               dueDate: completedSale.date,
               amount: completedSale.total,

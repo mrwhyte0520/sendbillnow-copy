@@ -362,6 +362,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Home', href: '/inventory' },
       ]
     },
+    // 8. Cash & Finance
+    {
+      name: 'Cash & Finance',
+      href: '/cash-finance',
+      icon: 'ri-money-dollar-box-line',
+      current: location.pathname.startsWith('/cash-finance'),
+      submenu: [
+        { name: 'Open/Close', href: '/cash-finance' },
+        { name: 'Petty Cash', href: '/cash-finance/petty-cash' },
+        { name: 'Expenses', href: '/cash-finance/expenses' },
+        { name: 'Income', href: '/cash-finance/income' },
+        { name: 'Reports', href: '/cash-finance/reports' },
+      ]
+    },
     // Plans
     {
       name: 'Plans',

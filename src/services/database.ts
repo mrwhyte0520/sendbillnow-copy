@@ -8764,6 +8764,24 @@ export const invoicesService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      const formatInvoiceNumber = (raw: string): string => {
+        const s = String(raw || '').trim();
+        const prefix = '4873';
+        if (!s) return s;
+        if (!s.startsWith(prefix)) return s;
+
+        const suffixRaw = s.slice(prefix.length);
+        if (!/^[0-9]+$/.test(suffixRaw)) return s;
+
+        const counter = Number.parseInt(suffixRaw, 10);
+        if (!Number.isFinite(counter) || counter < 0) return s;
+
+        const block = Math.floor(counter / 1000);
+        const remainder = counter % 1000;
+        const padded = String(remainder).padStart(3, '0');
+        return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+      };
+
       // Determinar si omitir validación de período (planes básicos no la requieren)
       const skipValidation = options?.skipPeriodValidation ?? shouldSkipPeriodValidation();
 
@@ -8798,7 +8816,7 @@ export const invoicesService = {
           p_tenant_id: tenantId,
         });
         if (nextErr) throw nextErr;
-        invoiceToInsert.invoice_number = String(nextNumber || '').trim();
+        invoiceToInsert.invoice_number = formatInvoiceNumber(String(nextNumber || '').trim());
         if (!invoiceToInsert.invoice_number) {
           throw new Error('Could not generate invoice number');
         }
@@ -14800,7 +14818,16 @@ export const settingsService = {
 
       // When the table is empty Supabase returns error code "PGRST116"
       if (error && error.code !== 'PGRST116') throw error;
-      return data ?? null;
+      if (!data) return null;
+
+      const socialLinks = (data as any)?.social_links && typeof (data as any).social_links === 'object'
+        ? (data as any).social_links
+        : null;
+
+      return {
+        ...data,
+        ...(socialLinks || {}),
+      };
     } catch (error) {
       console.error('Error getting company info:', error);
       return null;
@@ -14817,10 +14844,30 @@ export const settingsService = {
       const tenantId = await resolveTenantId(user.id);
       if (!tenantId) throw new Error('No se pudo resolver el tenant');
 
+      const social_links = {
+        facebook: companyInfo?.facebook || null,
+        instagram: companyInfo?.instagram || null,
+        twitter: companyInfo?.twitter || null,
+        linkedin: companyInfo?.linkedin || null,
+        youtube: companyInfo?.youtube || null,
+        tiktok: companyInfo?.tiktok || null,
+        whatsapp: companyInfo?.whatsapp || null,
+      };
+
       const payload: any = {
         ...companyInfo,
         user_id: tenantId,
+        social_links,
       };
+
+      // Guardamos redes sociales dentro de social_links (JSON) porque las columnas individuales pueden no existir
+      delete payload.facebook;
+      delete payload.instagram;
+      delete payload.twitter;
+      delete payload.linkedin;
+      delete payload.youtube;
+      delete payload.tiktok;
+      delete payload.whatsapp;
 
       // No enviar id en el upsert para evitar conflicto con la PK (company_info_pkey)
       delete payload.id;
@@ -14834,9 +14881,268 @@ export const settingsService = {
       if (error) {
         throw new Error(describeSupabaseError(error));
       }
-      return data;
+
+      const savedSocialLinks = (data as any)?.social_links && typeof (data as any).social_links === 'object'
+        ? (data as any).social_links
+        : null;
+
+      return {
+        ...data,
+        ...(savedSocialLinks || {}),
+      };
     } catch (error) {
       console.error('Error saving company info:', error);
+      throw error;
+    }
+  },
+
+  async getCashRegisters() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return [];
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error getting cash registers:', error);
+      return [];
+    }
+  },
+
+  async saveCashRegister(register: any) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const payload: any = {
+        ...register,
+        tenant_id: tenantId,
+      };
+
+      if (!payload.id) {
+        const { data, error } = await supabase
+          .from('cash_registers')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
+
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .upsert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error saving cash register:', error);
+      throw error;
+    }
+  },
+
+  async deleteCashRegister(registerId: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const { error } = await supabase
+        .from('cash_registers')
+        .delete()
+        .eq('id', registerId)
+        .eq('tenant_id', tenantId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting cash register:', error);
+      throw error;
+    }
+  },
+
+  async getPrinters() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return [];
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('printers')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error getting printers:', error);
+      return [];
+    }
+  },
+
+  async savePrinter(printer: any) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const payload: any = {
+        ...printer,
+        tenant_id: tenantId,
+      };
+
+      if (!payload.id) {
+        const { data, error } = await supabase
+          .from('printers')
+          .insert(payload)
+          .select()
+          .single();
+        if (error) throw new Error(describeSupabaseError(error));
+        return data;
+      }
+
+      const { data, error } = await supabase
+        .from('printers')
+        .upsert(payload)
+        .select()
+        .single();
+
+      if (error) throw new Error(describeSupabaseError(error));
+      return data;
+    } catch (error) {
+      console.error('Error saving printer:', error);
+      throw error;
+    }
+  },
+
+  async deletePrinter(printerId: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const { error } = await supabase
+        .from('printers')
+        .delete()
+        .eq('id', printerId)
+        .eq('tenant_id', tenantId);
+
+      if (error) throw new Error(describeSupabaseError(error));
+      return true;
+    } catch (error) {
+      console.error('Error deleting printer:', error);
+      throw error;
+    }
+  },
+
+  async getUserCashRegisterAssignments() {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) return [];
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('user_cash_registers')
+        .select('*')
+        .eq('tenant_id', tenantId);
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error getting user cash register assignments:', error);
+      return [];
+    }
+  },
+
+  async assignCashRegisterToUser(userId: string, registerId: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const payload = {
+        tenant_id: tenantId,
+        user_id: userId,
+        cash_register_id: registerId,
+      };
+
+      const { data, error } = await supabase
+        .from('user_cash_registers')
+        .upsert(payload, { onConflict: 'tenant_id,user_id' })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error assigning cash register to user:', error);
+      throw error;
+    }
+  },
+
+  async unassignCashRegisterFromUser(userId: string) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Usuario no autenticado');
+
+      const tenantId = await resolveTenantId(user.id);
+      if (!tenantId) throw new Error('No se pudo resolver el tenant');
+
+      const { error } = await supabase
+        .from('user_cash_registers')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error unassigning cash register from user:', error);
       throw error;
     }
   },
@@ -17485,6 +17791,183 @@ export const productCategoriesService = {
       if (error) throw error;
     } catch (error) {
       console.error('productCategoriesService.delete error', error);
+      throw error;
+    }
+  },
+};
+
+/* ==========================================================
+   Cash Finance Services (Petty Cash, Expenses, Income, Accounts Payable)
+========================================================== */
+export const cashFinanceService = {
+  // Petty Cash
+  async getPettyCash(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('cash_finance_petty_cash')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('cashFinanceService.getPettyCash error', error);
+      return [];
+    }
+  },
+
+  async savePettyCash(userId: string, item: { description: string; amount: number; type: 'in' | 'out'; category: string; date: string }) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Tenant not found');
+      const { data, error } = await supabase
+        .from('cash_finance_petty_cash')
+        .insert({ tenant_id: tenantId, ...item })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.savePettyCash error', error);
+      throw error;
+    }
+  },
+
+  // Expenses
+  async getExpenses(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('cash_finance_expenses')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('cashFinanceService.getExpenses error', error);
+      return [];
+    }
+  },
+
+  async saveExpense(userId: string, item: { description: string; amount: number; category: string; vendor: string; status: string; date: string }) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Tenant not found');
+      const { data, error } = await supabase
+        .from('cash_finance_expenses')
+        .insert({ tenant_id: tenantId, ...item })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.saveExpense error', error);
+      throw error;
+    }
+  },
+
+  async updateExpenseStatus(id: string, status: string) {
+    try {
+      const { data, error } = await supabase
+        .from('cash_finance_expenses')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.updateExpenseStatus error', error);
+      throw error;
+    }
+  },
+
+  // Income
+  async getIncome(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('cash_finance_income')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('cashFinanceService.getIncome error', error);
+      return [];
+    }
+  },
+
+  async saveIncome(userId: string, item: { description: string; amount: number; source: string; category: string; date: string }) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Tenant not found');
+      const { data, error } = await supabase
+        .from('cash_finance_income')
+        .insert({ tenant_id: tenantId, ...item })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.saveIncome error', error);
+      throw error;
+    }
+  },
+
+  // Accounts Payable
+  async getAccountsPayable(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('cash_finance_accounts_payable')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('due_date', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('cashFinanceService.getAccountsPayable error', error);
+      return [];
+    }
+  },
+
+  async saveAccountPayable(userId: string, item: { vendor: string; description: string; amount: number; due_date: string; status: string }) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Tenant not found');
+      const { data, error } = await supabase
+        .from('cash_finance_accounts_payable')
+        .insert({ tenant_id: tenantId, ...item })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.saveAccountPayable error', error);
+      throw error;
+    }
+  },
+
+  async updateAccountPayableStatus(id: string, status: string) {
+    try {
+      const { data, error } = await supabase
+        .from('cash_finance_accounts_payable')
+        .update({ status })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('cashFinanceService.updateAccountPayableStatus error', error);
       throw error;
     }
   },

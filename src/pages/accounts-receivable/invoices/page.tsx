@@ -1041,6 +1041,13 @@ export default function InvoicesPage() {
       email: (companyInfo as any)?.email,
       address: (companyInfo as any)?.address,
       logo: (companyInfo as any)?.logo,
+      facebook: (companyInfo as any)?.facebook,
+      instagram: (companyInfo as any)?.instagram,
+      twitter: (companyInfo as any)?.twitter,
+      linkedin: (companyInfo as any)?.linkedin,
+      youtube: (companyInfo as any)?.youtube,
+      tiktok: (companyInfo as any)?.tiktok,
+      whatsapp: (companyInfo as any)?.whatsapp,
     };
     printInvoice(invoiceToPrint, customerData, companyData, type);
     setInvoiceToPrint(null);

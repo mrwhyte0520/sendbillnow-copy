@@ -80,6 +80,9 @@ const CustomersPage = lazy(() => import('../pages/customers/page'));
 const UsersPage = lazy(() => import('../pages/users/page'));
 const InventoryPage = lazy(() => import('../pages/inventory/page'));
 const InventoryReportsPage = lazy(() => import('../pages/inventory/reports/page'));
+
+// Cash & Finance Pages
+const CashFinancePage = lazy(() => import('../pages/cash-finance/page'));
 const InventoryPhysicalCountPage = lazy(() => import('../pages/inventory/physical-count/page'));
 const InventoryPhysicalResultPage = lazy(() => import('../pages/inventory/physical-result/page'));
 const InventoryCostRevaluationPage = lazy(() => import('../pages/inventory/cost-revaluation/page'));
@@ -476,6 +479,27 @@ const routes: RouteObject[] = [
   {
     path: '/inventory/cost-revaluation',
     element: <ProtectedRoute><InventoryCostRevaluationPage /></ProtectedRoute>
+  },
+  // Cash & Finance Routes
+  {
+    path: '/cash-finance',
+    element: <ProtectedRoute><CashFinancePage /></ProtectedRoute>
+  },
+  {
+    path: '/cash-finance/petty-cash',
+    element: <ProtectedRoute><CashFinancePage /></ProtectedRoute>
+  },
+  {
+    path: '/cash-finance/expenses',
+    element: <ProtectedRoute><CashFinancePage /></ProtectedRoute>
+  },
+  {
+    path: '/cash-finance/income',
+    element: <ProtectedRoute><CashFinancePage /></ProtectedRoute>
+  },
+  {
+    path: '/cash-finance/reports',
+    element: <ProtectedRoute><CashFinancePage /></ProtectedRoute>
   },
   {
     path: '/fixed-assets',
