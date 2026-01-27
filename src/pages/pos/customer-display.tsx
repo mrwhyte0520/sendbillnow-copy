@@ -316,7 +316,7 @@ export default function CustomerDisplayPage() {
                 </div>
               ) : null}
               <div className="flex items-center justify-between text-gray-600">
-                <span>Sales Tax ({data.taxRate}%)</span>
+                <span>Sales Tax</span>
                 <span className="font-medium text-gray-900">{formatMoney(data.tax)}</span>
               </div>
               <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between">

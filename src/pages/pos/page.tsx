@@ -2185,7 +2185,7 @@ export default function POSPage() {
                   <span className="font-medium text-[#2f3e1e]">{money(getSubtotal())}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Tax ({currentItbisRate}%):</span>
+                  <span>Sales Tax:</span>
                   <span className="font-medium text-[#2f3e1e]">{money(getTax())}</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold border-t border-[#e0d8c8] pt-3">
