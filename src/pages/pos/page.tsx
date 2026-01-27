@@ -179,6 +179,12 @@ export default function POSPage() {
     type: 'regular' as 'regular' | 'vip',
     secondEmail: ''
   });
+  const [emailSendModal, setEmailSendModal] = useState<{ open: boolean; title: string; message: string; variant: 'success' | 'error' }>({
+    open: false,
+    title: '',
+    message: '',
+    variant: 'success',
+  });
   const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
   const amountInputRef = useRef<HTMLInputElement | null>(null);
@@ -1218,6 +1224,8 @@ export default function POSPage() {
     setCompletedSale(null);
   };
 
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
   const addNewCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
       alert('Full name and phone are required');
@@ -1228,6 +1236,16 @@ export default function POSPage() {
     const phoneOk = /^\d{3}-\d{3}-\d{4}$/.test(newCustomer.phone);
     if (!phoneOk) {
       alert('Invalid phone. Expected format: 000-000-0000');
+      return;
+    }
+
+    if (newCustomer.email && !emailPattern.test(newCustomer.email.trim())) {
+      alert('Invalid email. Please use the format name@example.com');
+      return;
+    }
+
+    if (newCustomer.secondEmail && !emailPattern.test(newCustomer.secondEmail.trim())) {
+      alert('Invalid second email. Please use the format name@example.com');
       return;
     }
 
@@ -3586,8 +3604,23 @@ export default function POSPage() {
           onSendEmail={async (templateType) => {
             if (!completedSale) return;
             const email = completedSale.customer?.email;
-            if (!email || !email.includes('@')) {
-              alert('Customer email not available');
+            const emailTrimmed = (email || '').trim();
+            if (!emailTrimmed) {
+              setEmailSendModal({
+                open: true,
+                title: 'Cannot Send Email',
+                message: 'Customer email is required to send the receipt.',
+                variant: 'error',
+              });
+              return;
+            }
+            if (!emailPattern.test(emailTrimmed)) {
+              setEmailSendModal({
+                open: true,
+                title: 'Invalid Email',
+                message: 'Please use the format name@example.com',
+                variant: 'error',
+              });
               return;
             }
             let companyInfo: any = null;
@@ -3634,7 +3667,12 @@ export default function POSPage() {
               const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
 
               if (!pdfBase64 || pdfBase64.length < 1000) {
-                alert('Failed to generate PDF');
+                setEmailSendModal({
+                  open: true,
+                  title: 'Cannot Send Email',
+                  message: 'Failed to generate PDF attachment.',
+                  variant: 'error',
+                });
                 return;
               }
 
@@ -3642,7 +3680,7 @@ export default function POSPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  to: email,
+                  to: emailTrimmed,
                   customerName: completedSale.customer?.name || 'Customer',
                   companyName: companyInfo?.company_name || companyInfo?.name || 'Send Bill Now',
                   templateType,
@@ -3665,19 +3703,83 @@ export default function POSPage() {
 
               const result = await response.json().catch(() => null);
               if (!response.ok || !result?.success) {
-                alert(result?.error || 'Failed to send email');
+                const apiError = typeof result?.error === 'string' ? result.error : null;
+                if (apiError) {
+                  setEmailSendModal({
+                    open: true,
+                    title: 'Email Not Sent',
+                    message: apiError,
+                    variant: 'error',
+                  });
+                  return;
+                }
+                setEmailSendModal({
+                  open: true,
+                  title: 'Email Not Sent',
+                  message: `Server response (HTTP ${response.status})`,
+                  variant: 'error',
+                });
                 return;
               }
 
-              alert('Email sent successfully');
+              setEmailSendModal({
+                open: true,
+                title: 'Email Sent',
+                message: `Receipt sent to ${emailTrimmed}`,
+                variant: 'success',
+              });
               setShowPrintTypeModal(false);
               setCompletedSale(null);
             } catch (error) {
               console.error('Send receipt email failed:', error);
-              alert('Failed to send email');
+              const message = error instanceof Error ? error.message : 'Failed to send email';
+              setEmailSendModal({
+                open: true,
+                title: 'Email Not Sent',
+                message,
+                variant: 'error',
+              });
             }
           }}
         />
+
+        {emailSendModal.open && (
+          <Modal>
+            <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold">{emailSendModal.title}</h3>
+                <button
+                  onClick={() => setEmailSendModal((prev) => ({ ...prev, open: false }))}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="ri-close-line"></i>
+                </button>
+              </div>
+
+              <div
+                className={`p-3 rounded-lg text-sm mb-4 ${
+                  emailSendModal.variant === 'success'
+                    ? 'bg-gray-50 text-green-900 border border-green-200'
+                    : 'bg-red-50 text-red-900 border border-red-200'
+                }`}
+              >
+                <div className="text-left whitespace-pre-wrap break-words break-all">
+                  {emailSendModal.message}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEmailSendModal((prev) => ({ ...prev, open: false }))}
+                  className="px-4 py-2 bg-[#008000] text-white rounded-lg hover:bg-[#006600] transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </div>
     </DashboardLayout>
   );

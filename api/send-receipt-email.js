@@ -37,6 +37,13 @@ function formatMoney(n) {
   return num.toFixed(2);
 }
 
+function isValidEmail(input) {
+  const email = String(input || '').trim();
+  if (!email) return false;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+}
+
 function buildReceiptHtml({ companyName, customerName, sale, templateType }) {
   const safeCompanyName = escapeHtml(companyName || 'Send Bill Now');
   const safeCustomerName = escapeHtml(customerName || 'Customer');
@@ -156,7 +163,8 @@ export default async function handler(req, res) {
     pdfBase64,
   } = body;
 
-  if (!to || typeof to !== 'string' || !to.includes('@')) {
+  const toEmail = typeof to === 'string' ? to.trim() : '';
+  if (!isValidEmail(toEmail)) {
     return res.status(400).json({ success: false, error: 'Valid recipient email is required' });
   }
 
@@ -213,6 +221,10 @@ export default async function handler(req, res) {
         }
       : null;
 
+  if (!attachment) {
+    return res.status(400).json({ success: false, error: 'Missing PDF attachment' });
+  }
+
   if (attachment && typeof attachment === 'object') {
     const filename = attachment.filename;
     const content = attachment.content;
@@ -248,6 +260,10 @@ export default async function handler(req, res) {
     }
   }
 
+  if (!attachments.length) {
+    return res.status(400).json({ success: false, error: 'Invalid PDF attachment' });
+  }
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -257,7 +273,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: resendFrom,
-        to: [to],
+        to: [toEmail],
         ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
         subject,
         html,
@@ -275,9 +291,13 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       console.error('Resend error response:', responseJson);
+      const resendMessage =
+        (responseJson && typeof responseJson === 'object' && responseJson.message)
+          ? String(responseJson.message)
+          : null;
       return res.status(502).json({
         success: false,
-        error: (responseJson && responseJson.message) || 'Failed to send email via Resend',
+        error: resendMessage || 'Failed to send email via Resend',
       });
     }
 
