@@ -14,7 +14,6 @@ import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImp
 import { useAuth } from '../../../hooks/useAuth';
 import { usePlanPermissions } from '../../../hooks/usePlanPermissions';
 import {
-  bankAccountsService,
   bankCurrenciesService,
   bankExchangeRatesService,
   customerPaymentsService,
@@ -195,6 +194,14 @@ export default function InvoicingPage() {
 
   const [taxConfig, setTaxConfig] = useState<{ itbis_rate: number } | null>(null);
 
+  type NewItem = {
+    itemId?: string;
+    description: string;
+    quantity: number;
+    price: number;
+    total: number;
+  };
+
   const [newInvoiceCustomerId, setNewInvoiceCustomerId] = useState('');
   const [newInvoiceCustomerSearch, setNewInvoiceCustomerSearch] = useState('');
   const [newInvoiceDate, setNewInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
@@ -209,12 +216,8 @@ export default function InvoicingPage() {
   const [newInvoiceStoreName, setNewInvoiceStoreName] = useState('Main Store');
   const [newInvoiceSaleType, setNewInvoiceSaleType] = useState<'credit' | 'cash'>('credit');
   const [newInvoicePaymentMethod, setNewInvoicePaymentMethod] = useState<string>('');
-  const [newInvoiceBankAccountId, setNewInvoiceBankAccountId] = useState<string>('');
   const [newInvoicePaymentReference, setNewInvoicePaymentReference] = useState<string>('');
 
-  const [bankAccounts, setBankAccounts] = useState<Array<{ id: string; name: string; chartAccountId: string | null }>>([]);
-
-  type NewItem = { itemId?: string; description: string; quantity: number; price: number; total: number };
   const [newInvoiceItems, setNewInvoiceItems] = useState<NewItem[]>([
     { itemId: undefined, description: '', quantity: 1, price: 0, total: 0 },
   ]);
@@ -447,25 +450,6 @@ export default function InvoicingPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    const loadBankAccounts = async () => {
-      if (!user?.id) return;
-      try {
-        const data = await bankAccountsService.getAll(user.id);
-        const mapped = (data || []).map((b: any) => ({
-          id: String(b.id),
-          name: String(b.name || ''),
-          chartAccountId: b.chart_account_id ? String(b.chart_account_id) : null,
-        }));
-        setBankAccounts(mapped);
-      } catch (error) {
-        console.error('Error loading bank accounts for invoicing:', error);
-        setBankAccounts([]);
-      }
-    };
-    loadBankAccounts();
-  }, [user?.id]);
-
-  useEffect(() => {
     const loadCustomersAndTypes = async () => {
       if (!user?.id) {
         setCustomers([]);
@@ -567,7 +551,6 @@ export default function InvoicingPage() {
     setNewInvoiceCustomerSearch('');
     setNewInvoiceSaleType('credit');
     setNewInvoicePaymentMethod('');
-    setNewInvoiceBankAccountId('');
     setNewInvoicePaymentReference('');
 
     const defaultStore = stores.find((s) => s.is_active !== false) || stores[0];
@@ -857,7 +840,7 @@ export default function InvoicingPage() {
                 <div class="totals-head">Summary</div>
                 <div class="totals-body">
                   <div class="totals-row"><div class="label">Subtotal</div><div class="value"> ${formatAmount(invoice.amount)}</div></div>
-                  <div class="totals-row"><div class="label">ITBIS (${itbisLabel}%)</div><div class="value"> ${formatAmount(invoice.tax)}</div></div>
+                  <div class="totals-row"><div class="label">Tax (${itbisLabel}%)</div><div class="value"> ${formatAmount(invoice.tax)}</div></div>
                   <div class="totals-row total"><div class="label">Total</div><div class="value"> ${formatAmount(invoice.total)}</div></div>
                 </div>
               </div>
@@ -1303,7 +1286,6 @@ export default function InvoicingPage() {
           const paymentPayload: any = {
             customer_id: newInvoiceCustomerId,
             invoice_id: invoiceId,
-            bank_account_id: newInvoiceBankAccountId ? newInvoiceBankAccountId : null,
             amount: amountToPay,
             payment_method: newInvoicePaymentMethod,
             payment_date: paymentDate,
@@ -1817,7 +1799,7 @@ export default function InvoicingPage() {
                               <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">{formatMoney(invoice.amount)}</td>
                             </tr>
                             <tr>
-                              <td colSpan={3} className="px-4 py-2 text-right text-xs text-gray-500">ITBIS ({(taxConfig?.itbis_rate ?? 18).toFixed(2)}%)</td>
+                              <td colSpan={3} className="px-4 py-2 text-right text-xs text-gray-500">Tax ({(taxConfig?.itbis_rate ?? 18).toFixed(2)}%)</td>
                               <td className="px-4 py-2 text-right text-sm font-semibold text-gray-900">{formatMoney(invoice.tax)}</td>
                             </tr>
                             <tr>
@@ -2072,20 +2054,6 @@ export default function InvoicingPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account (optional)</label>
-                    <select
-                      value={newInvoiceBankAccountId}
-                      onChange={(e) => setNewInvoiceBankAccountId(e.target.value)}
-                      disabled={newInvoiceSaleType !== 'cash'}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    >
-                      <option value="">Select account</option>
-                      {bankAccounts.map((b) => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Reference (optional)</label>
                     <input
                       type="text"
@@ -2318,7 +2286,7 @@ export default function InvoicingPage() {
                         </div>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">ITBIS ({currentItbisRate.toFixed(2)}%):</span>
+                        <span className="text-sm text-gray-600">Tax ({currentItbisRate.toFixed(2)}%):</span>
                         <span className="text-sm font-medium">{formatMoney(newInvoiceTax)}</span>
                       </div>
                       <div className="border-t border-gray-200 pt-2">
