@@ -486,7 +486,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
     </div>
   </div>
   <div class="footer">
-    <p>Thank you for your business.</p>
+    <p>Thank you for your purchase.</p>
     ${generateSocialLinksHtml(company)}
     <div class="powered">Powered by: sendbillnow.com</div>
   </div>

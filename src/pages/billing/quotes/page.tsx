@@ -553,12 +553,59 @@ export default function QuotesPage() {
   useEffect(() => {
     // Esperar a que la autenticación termine de cargar
     if (authLoading) return;
-    
+
+    const fetchSecondaryData = async (currentUserId: string) => {
+      try {
+        const [terms, currs, reps, storesData, invItems] = await Promise.all([
+          paymentTermsService.getAll(currentUserId),
+          bankCurrenciesService.getAll(currentUserId),
+          salesRepsService.getAll(currentUserId),
+          storesService.getAll(currentUserId),
+          inventoryService.getItems(currentUserId),
+        ]);
+
+        const mappedCurrencies = (currs || []).map((c: any) => ({
+          code: c.code as string,
+          name: c.name as string,
+          symbol: c.symbol as string,
+          is_base: !!c.is_base,
+          is_active: c.is_active !== false,
+        })).filter((c: any) => c.is_active);
+        setCurrencies(mappedCurrencies);
+
+        const mappedTerms = (terms || []).map((t: any) => ({
+          id: t.id as string,
+          name: t.name as string,
+          days: typeof t.days === 'number' ? t.days : undefined,
+        }));
+        setPaymentTerms(mappedTerms);
+
+        setSalesReps((reps || []).filter((r: any) => r.is_active));
+        setStores((storesData || []).filter((s: any) => s.is_active !== false));
+
+        const mappedProducts = (invItems || []).map((p: any) => {
+          const rawPrice =
+            p.selling_price ??
+            p.sale_price ??
+            p.unit_price ??
+            p.price ??
+            0;
+          return {
+            id: String(p.id),
+            name: String(p.name || p.description || '').trim(),
+            price: Number(rawPrice) || 0,
+          };
+        }).filter((p: any) => p.name);
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error('Error al cargar datos secundarios:', error);
+      }
+    };
+
     const loadInitialData = async () => {
       try {
         setLoading(true);
         if (!user?.id) {
-          // Usuario no autenticado - limpiar estado silenciosamente
           setQuotes([]);
           setCustomers([]);
           setServices([]);
@@ -566,14 +613,9 @@ export default function QuotesPage() {
           return;
         }
 
-        const [cust, qts, terms, currs, reps, storesData, invItems] = await Promise.all([
+        const [cust, qts] = await Promise.all([
           customersService.getAll(user.id),
           quotesService.getAll(user.id),
-          paymentTermsService.getAll(user.id),
-          bankCurrenciesService.getAll(user.id),
-          salesRepsService.getAll(user.id),
-          storesService.getAll(user.id),
-          inventoryService.getItems(user.id),
         ]);
 
         const mappedCustomers = (cust || []).map((c: any) => ({
@@ -631,43 +673,10 @@ export default function QuotesPage() {
           } as Quote;
         });
         setQuotes(mapped);
-
-        const mappedCurrencies = (currs || []).map((c: any) => ({
-          code: c.code as string,
-          name: c.name as string,
-          symbol: c.symbol as string,
-          is_base: !!c.is_base,
-          is_active: c.is_active !== false,
-        })).filter((c: any) => c.is_active);
-        setCurrencies(mappedCurrencies);
-
-        const mappedTerms = (terms || []).map((t: any) => ({
-          id: t.id as string,
-          name: t.name as string,
-          days: typeof t.days === 'number' ? t.days : undefined,
-        }));
-        setPaymentTerms(mappedTerms);
-
-        setSalesReps((reps || []).filter((r: any) => r.is_active));
-        setStores((storesData || []).filter((s: any) => s.is_active !== false));
-
-        const mappedProducts = (invItems || []).map((p: any) => {
-          const rawPrice =
-            p.selling_price ??
-            p.sale_price ??
-            p.unit_price ??
-            p.price ??
-            0;
-          return {
-            id: String(p.id),
-            name: String(p.name || p.description || '').trim(),
-            price: Number(rawPrice) || 0,
-          };
-        }).filter((p: any) => p.name);
-        setProducts(mappedProducts);
+        setLoading(false);
+        void fetchSecondaryData(user.id);
       } catch (error) {
         console.error('Error al cargar datos:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -1318,10 +1327,49 @@ export default function QuotesPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold mb-6">Cotizaciones de Ventas</h1>
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="space-y-6 p-6">
+          <div>
+            <div className="h-7 w-56 bg-gray-200 rounded animate-pulse" />
+            <div className="h-4 w-80 bg-gray-100 rounded mt-3 animate-pulse" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, idx) => (
+              <div
+                key={`loading-card-${idx}`}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2 w-full">
+                    <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+                    <div className="h-6 w-16 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gray-100 animate-pulse" />
+                </div>
+                <div className="h-3 w-32 bg-gray-100 rounded mt-6 animate-pulse" />
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-100 p-6">
+            <div className="h-5 w-40 bg-gray-100 rounded animate-pulse mb-4" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[...Array(3)].map((_, idx) => (
+                <div key={`filter-skeleton-${idx}`} className="space-y-2">
+                  <div className="h-3 w-24 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-10 w-full bg-gray-50 border border-gray-100 rounded-lg animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-100 p-6">
+            <div className="h-5 w-32 bg-gray-100 rounded animate-pulse mb-4" />
+            <div className="space-y-3">
+              {[...Array(4)].map((_, idx) => (
+                <div key={`row-skeleton-${idx}`} className="h-10 w-full bg-gray-50 rounded animate-pulse" />
+              ))}
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -1932,6 +1980,13 @@ export default function QuotesPage() {
               email: companyInfo?.email || '',
               address: companyInfo?.address || '',
               logo: companyInfo?.logo,
+              facebook: companyInfo?.facebook || '',
+              instagram: companyInfo?.instagram || '',
+              twitter: companyInfo?.twitter || '',
+              linkedin: companyInfo?.linkedin || '',
+              youtube: companyInfo?.youtube || '',
+              tiktok: companyInfo?.tiktok || '',
+              whatsapp: companyInfo?.whatsapp || '',
             };
             try {
               const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType);
@@ -1944,6 +1999,7 @@ export default function QuotesPage() {
                   subject: `Quote ${quoteToPrint.id}`,
                   invoiceNumber: quoteToPrint.id,
                   customerName: customerData.name,
+                  companyName: companyData.name,
                   total: quoteToPrint.total,
                   pdfBase64,
                 }),

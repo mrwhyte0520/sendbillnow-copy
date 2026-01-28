@@ -44,6 +44,41 @@ function isValidEmail(input) {
   return emailPattern.test(email);
 }
 
+function buildReceiptText({ companyName, customerName, sale, templateType }) {
+  const safeCompanyName = String(companyName || 'Send Bill Now').trim();
+  const safeCustomerName = String(customerName || 'Customer').trim();
+  const safeTemplate = String(templateType || 'receipt').trim();
+  const safeDate = String(sale?.date || '').trim();
+  const safeTime = String(sale?.time || '').trim();
+
+  const lines = [];
+  lines.push(`${safeCompanyName}`);
+  lines.push('');
+  lines.push(`Document: ${safeTemplate}`);
+  if (safeCustomerName) lines.push(`Customer: ${safeCustomerName}`);
+  if (safeDate || safeTime) lines.push(`Date: ${[safeDate, safeTime].filter(Boolean).join(' ')}`);
+  lines.push('');
+
+  const items = Array.isArray(sale?.items) ? sale.items : [];
+  if (items.length) {
+    lines.push('Items:');
+    for (const i of items) {
+      const name = String(i?.name || 'Item');
+      const qty = Number(i?.quantity ?? 0);
+      const total = formatMoney(i?.total ?? 0);
+      lines.push(`- ${name} (x${Number.isFinite(qty) ? qty : 0}): $${total}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(`Subtotal: $${formatMoney(sale?.subtotal ?? 0)}`);
+  lines.push(`Tax: $${formatMoney(sale?.tax ?? 0)}`);
+  lines.push(`Total: $${formatMoney(sale?.total ?? 0)}`);
+  lines.push('');
+  lines.push('Your PDF is attached.');
+  return lines.join('\n');
+}
+
 function buildReceiptHtml({ companyName, customerName, sale, templateType }) {
   const safeCompanyName = escapeHtml(companyName || 'Send Bill Now');
   const safeCustomerName = escapeHtml(customerName || 'Customer');
@@ -210,6 +245,13 @@ export default async function handler(req, res) {
     templateType,
   });
 
+  const text = buildReceiptText({
+    companyName,
+    customerName,
+    sale,
+    templateType,
+  });
+
   const attachments = [];
   const attachment = (attachmentRaw && typeof attachmentRaw === 'object')
     ? attachmentRaw
@@ -276,6 +318,7 @@ export default async function handler(req, res) {
         to: [toEmail],
         ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
         subject,
+        text,
         html,
         ...(attachments.length ? { attachments } : {}),
       }),
