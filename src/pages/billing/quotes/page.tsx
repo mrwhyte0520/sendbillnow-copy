@@ -1996,7 +1996,7 @@ export default function QuotesPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   to: email,
-                  subject: `Quote ${quoteToPrint.id}`,
+                  subject: 'Estimate',
                   invoiceNumber: quoteToPrint.id,
                   customerName: customerData.name,
                   companyName: companyData.name,
