@@ -563,7 +563,7 @@ export const exportToPdf = async (
           doc.setFontSize(8);
           doc.setTextColor(150);
           doc.text(
-            `Página ${data.pageNumber} de ${data.pageCount}`, 
+            `Page ${data.pageNumber} of ${data.pageCount}`, 
             pageSize.width / 2, 
             pageHeight - 10,
             { align: 'center' }
@@ -607,10 +607,10 @@ export const exportToPdf = async (
     try {
       const doc = new jsPDF();
       doc.setFontSize(16);
-      doc.text('Error al generar el informe', 20, 20);
+      doc.text('Error generating report', 20, 20);
       doc.setFontSize(12);
-      doc.text('Ocurrió un error al generar el PDF. Por favor, intente nuevamente.', 20, 40);
-      doc.text(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`, 20, 50);
+      doc.text('An error occurred while generating the PDF. Please try again.', 20, 40);
+      doc.text(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 20, 50);
       doc.save(`error_${new Date().getTime()}.pdf`);
     } catch (e) {
       console.error('Error al generar PDF de error:', e);

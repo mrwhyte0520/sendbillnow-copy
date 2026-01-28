@@ -62,15 +62,15 @@ const stripPrintScripts = (html: string) => {
 
 const tuneHtmlForEmailPdf = (html: string) =>
   html
-    .replace(/min-height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
-    .replace(/margin-top\s*:\s*auto\s*(?:!important)?\s*;?/gi, '')
-    .replace(/height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
+    .replace(/min-height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, 'min-height:100%!important;')
+    .replace(/height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, 'height:100%!important;')
     .replace(/<img(?![^>]*\bcrossorigin=)([^>]*?)\ssrc=("|')((?!data:)[^"']+)\2/gi, '<img crossorigin="anonymous"$1 src=$2$3$2')
     .replace(
       /<\/style>/i,
       [
         '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}',
-        'html,body{background:#fff!important;padding:0!important;margin:0!important;}',
+        'html,body{background:#fff!important;padding:0!important;margin:0!important;height:100%!important;}',
+        '.invoice,.quote{width:100%!important;max-width:100%!important;margin:0!important;border-radius:0!important;box-shadow:none!important;min-height:100%!important;height:auto!important;display:flex!important;flex-direction:column!important;}',
         '</style>',
       ].join('')
     );
@@ -91,8 +91,8 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
   iframe.style.position = 'fixed';
   iframe.style.left = '-10000px';
   iframe.style.top = '0';
-  iframe.style.width = '1024px';
-  iframe.style.height = '1400px';
+  iframe.style.width = '816px';
+  iframe.style.height = '1056px';
   iframe.style.border = '0';
   iframe.style.opacity = '0';
 
@@ -119,23 +119,36 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
   });
 
   const imgData = canvas.toDataURL('image/jpeg', 0.65);
-  const pdf = new jsPDF('p', 'pt', 'a4');
+  const pdf = new jsPDF('p', 'pt', 'letter');
 
-  const margin = 28;
+  const marginX = 10;
+  const marginY = 14;
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
-  const contentWidth = pdfWidth - margin * 2;
-  const contentHeight = pdfHeight - margin * 2;
+  const contentWidth = pdfWidth - marginX * 2;
+  const contentHeight = pdfHeight - marginY * 2;
 
-  const scale = contentWidth / canvas.width;
-  const scaledHeight = canvas.height * scale;
+  const pxToPt = 72 / 96;
+  const canvasWidthPt = canvas.width * pxToPt;
+  const canvasHeightPt = canvas.height * pxToPt;
+
+  let scale = contentWidth / canvasWidthPt;
+  let scaledHeight = canvasHeightPt * scale;
+
+  const epsilon = 2;
+  const overflow = scaledHeight - contentHeight;
+  if (overflow > 0 && overflow < 24) {
+    const shrink = (contentHeight / scaledHeight) * 0.995;
+    scale *= shrink;
+    scaledHeight = canvasHeightPt * scale;
+  }
 
   let y = 0;
   let remaining = scaledHeight;
-  while (remaining > 0) {
-    pdf.addImage(imgData, 'JPEG', margin, margin + y, contentWidth, scaledHeight, undefined, 'FAST');
+  while (remaining > epsilon) {
+    pdf.addImage(imgData, 'JPEG', marginX, marginY + y, contentWidth, scaledHeight, undefined, 'FAST');
     remaining -= contentHeight;
-    if (remaining > 0) {
+    if (remaining > epsilon) {
       pdf.addPage();
       y -= contentHeight;
     }
@@ -3718,6 +3731,7 @@ export default function POSPage() {
                   customerName: completedSale.customer?.name || 'Customer',
                   companyName: companyInfo?.company_name || companyInfo?.name || 'Send Bill Now',
                   templateType,
+                  invoiceHtml,
                   sale: {
                     id: completedSale.id,
                     date: completedSale.date,

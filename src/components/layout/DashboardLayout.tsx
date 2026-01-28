@@ -9,9 +9,10 @@ import InitialPlanSelectionModal from '../common/InitialPlanSelectionModal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  hideSidebar?: boolean;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function DashboardLayout({ children, hideSidebar = false }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -696,89 +697,87 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen flex bg-[#f6f1e3]">
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#faf8f3] via-[#f5f2ea] to-[#efe9dc] border-r border-[#e0d6c4] shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform overflow-hidden transition-all duration-500 ease-in-out ${
-          sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
-        } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
-      >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className={`flex shrink-0 items-center justify-between bg-gradient-to-br from-[#008000] to-[#006600] shadow-[0_4px_20px_rgb(0,128,0,0.4)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'h-16 px-3' : 'h-16 px-4'}`}>
-            {!sidebarCollapsed && (
-              <div className="flex flex-col">
-                <span className="brand-serif text-white text-xl font-bold italic drop-shadow-sm">Send Bill Now</span>
-                <span className="brand-serif text-white/80 text-xs font-bold italic">Complete POS & Invoicing System</span>
+      {!hideSidebar && (
+        <div
+          className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#faf8f3] via-[#f5f2ea] to-[#efe9dc] border-r border-[#e0d6c4] shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform overflow-hidden transition-all duration-500 ease-in-out ${
+            sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
+          } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
+        >
+          <div className="flex h-full flex-col">
+            <div className={`flex shrink-0 items-center justify-between bg-gradient-to-br from-[#008000] to-[#006600] shadow-[0_4px_20px_rgb(0,128,0,0.4)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'h-16 px-3' : 'h-16 px-4'}`}>
+              {!sidebarCollapsed && (
+                <div className="flex flex-col">
+                  <span className="brand-serif text-white text-xl font-bold italic drop-shadow-sm">Send Bill Now</span>
+                  <span className="brand-serif text-white/80 text-xs font-bold italic">Complete POS & Invoicing System</span>
+                </div>
+              )}
+              {sidebarCollapsed && (
+                <span className="brand-serif text-white text-xl font-bold mx-auto italic drop-shadow-sm">SBN</span>
+              )}
+              
+              <button
+                type="button"
+                onClick={toggleSidebarCollapsed}
+                className="p-1.5 text-white/80 hover:text-white transition-all duration-300 hidden lg:flex"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <i className={`${sidebarCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} text-lg`}></i>
+              </button>
+            </div>
+
+            <nav className={`flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#c5b89a] scrollbar-track-transparent transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
+              <div className="space-y-1">
+                {navigation.map(renderNavItem)}
+
+                <div className="mb-1">
+                  <button
+                    onClick={handleProfileClick}
+                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl w-full transition-all duration-300 text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)] ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    title={sidebarCollapsed ? 'My Profile' : undefined}
+                  >
+                    <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
+                    {!sidebarCollapsed && <span className="truncate">My Profile</span>}
+                  </button>
+                </div>
               </div>
-            )}
-            {sidebarCollapsed && (
-              <span className="brand-serif text-white text-xl font-bold mx-auto italic drop-shadow-sm">SBN</span>
-            )}
-            
-            {/* Toggle button */}
-            <button
-              type="button"
-              onClick={toggleSidebarCollapsed}
-              className="p-1.5 text-white/80 hover:text-white transition-all duration-300 hidden lg:flex"
-              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-              <i className={`${sidebarCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} text-lg`}></i>
-            </button>
-          </div>
+            </nav>
 
-          <nav className={`flex-1 py-6 overflow-y-auto scrollbar-thin scrollbar-thumb-[#c5b89a] scrollbar-track-transparent transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
-            <div className="space-y-1">
-              {navigation.map(renderNavItem)}
-
-              {/* Mi Perfil Button */}
-              <div className="mb-1">
+            <div className={`border-t border-[#e0d6c4] bg-gradient-to-r from-[#f5f2ea] to-[#efe9dc] shadow-[0_-4px_15px_rgb(0,0,0,0.05)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
+              <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#008000] to-[#008000] flex items-center justify-center shadow-lg">
+                  <span className="text-sm font-bold text-white">
+                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+                {!sidebarCollapsed && (
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
+                    <p className="text-xs text-stone-500 truncate">
+                      {isPrivilegedUser ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
+                      {!isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
+                        trialInfo.daysLeft > 0
+                          ? ` (${trialInfo.daysLeft}d left)`
+                          : trialInfo.hoursLeft > 0
+                            ? ` (${trialInfo.hoursLeft}h left)`
+                            : trialInfo.minutesLeft > 0
+                              ? ` (${trialInfo.minutesLeft}m left)`
+                              : ''
+                      )}
+                    </p>
+                  </div>
+                )}
                 <button
-                  onClick={handleProfileClick}
-                  className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl w-full transition-all duration-300 text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)] ${sidebarCollapsed ? 'justify-center' : ''}`}
-                  title={sidebarCollapsed ? 'My Profile' : undefined}
+                  onClick={handleSignOut}
+                  className={`${sidebarCollapsed ? 'ml-0' : 'ml-2'} p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200`}
+                  title="Sign Out"
                 >
-                  <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
-                  {!sidebarCollapsed && <span className="truncate">My Profile</span>}
+                  <i className="ri-logout-box-line text-lg"></i>
                 </button>
               </div>
             </div>
-          </nav>
-
-          {/* User info */}
-          <div className={`border-t border-[#e0d6c4] bg-gradient-to-r from-[#f5f2ea] to-[#efe9dc] shadow-[0_-4px_15px_rgb(0,0,0,0.05)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'p-3' : 'p-4'}`}>
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#008000] to-[#008000] flex items-center justify-center shadow-lg">
-                <span className="text-sm font-bold text-white">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              {!sidebarCollapsed && (
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
-                  <p className="text-xs text-stone-500 truncate">
-                    {isPrivilegedUser ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
-                    {!isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
-                      trialInfo.daysLeft > 0
-                        ? ` (${trialInfo.daysLeft}d left)`
-                        : trialInfo.hoursLeft > 0
-                          ? ` (${trialInfo.hoursLeft}h left)`
-                          : trialInfo.minutesLeft > 0
-                            ? ` (${trialInfo.minutesLeft}m left)`
-                            : ''
-                    )}
-                  </p>
-                </div>
-              )}
-              <button
-                onClick={handleSignOut}
-                className={`${sidebarCollapsed ? 'ml-0' : 'ml-2'} p-2 text-stone-500 hover:text-stone-900 transition-colors duration-200 rounded-md hover:bg-stone-200`}
-                title="Sign Out"
-              >
-                <i className="ri-logout-box-line text-lg"></i>
-              </button>
-            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Profile Panel */}
       {profilePanelOpen && (
@@ -1063,17 +1062,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex-1 flex flex-col lg:ml-0">
         {/* Top navigation */}
         <div className="flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            className="-m-2.5 p-2.5 text-gray-700 lg:hidden hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <i className="ri-menu-line text-xl"></i>
-          </button>
+          {!hideSidebar && (
+            <>
+              <button
+                type="button"
+                className="-m-2.5 p-2.5 text-gray-700 lg:hidden hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <span className="sr-only">Open sidebar</span>
+                <i className="ri-menu-line text-xl"></i>
+              </button>
 
-          {/* Separator */}
-          <div className="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true" />
+              <div className="h-6 w-px bg-gray-200 lg:hidden" aria-hidden="true" />
+            </>
+          )}
 
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="relative flex flex-1 items-center">
@@ -1132,18 +1134,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Mobile sidebar overlay */}
-      <div 
-        className={`fixed inset-0 z-30 lg:hidden transition-all duration-500 ease-in-out ${
-          sidebarOpen 
-            ? 'opacity-100 pointer-events-auto' 
-            : 'opacity-0 pointer-events-none'
-        }`}
-      >
+      {!hideSidebar && (
         <div 
-          className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm" 
-          onClick={() => setSidebarOpen(false)} 
-        />
-      </div>
+          className={`fixed inset-0 z-30 lg:hidden transition-all duration-500 ease-in-out ${
+            sidebarOpen 
+              ? 'opacity-100 pointer-events-auto' 
+              : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          <div 
+            className="fixed inset-0 bg-gray-900/80 backdrop-blur-sm" 
+            onClick={() => setSidebarOpen(false)} 
+          />
+        </div>
+      )}
 
       {/* Click outside to close dropdowns */}
       {(profileDropdownOpen || notificationsOpen) && (

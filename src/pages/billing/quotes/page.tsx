@@ -735,34 +735,37 @@ export default function QuotesPage() {
     try {
       // Preparar los datos para la exportación
       const columns = [
-        { key: 'id', label: 'Número' },
-        { key: 'customer', label: 'Cliente' },
-        { key: 'project', label: 'Proyecto' },
-        { key: 'date', label: 'Fecha' },
-        { key: 'validUntil', label: 'Válida Hasta' },
+        { key: 'index', label: '#' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'date', label: 'Date' },
         { key: 'total', label: 'Total' },
-        { key: 'status', label: 'Estado' },
-        { key: 'probability', label: 'Probabilidad (%)' }
+        { key: 'status', label: 'Status' }
       ];
 
+      const statusTextEn: Record<string, string> = {
+        pending: 'Pending',
+        under_review: 'Under Review',
+        approved: 'Approved',
+        invoiced: 'Invoiced',
+        rejected: 'Rejected',
+        expired: 'Expired',
+      };
+
       // Formatear los datos para la exportación
-      const dataToExport = quotes.map(quote => ({
-        id: quote.id,
+      const dataToExport = quotes.map((quote, idx) => ({
+        index: idx + 1,
         customer: quote.customer,
-        project: quote.project || 'Sin proyecto',
-        date: new Date(quote.date).toLocaleDateString('es-DO'),
-        validUntil: new Date(quote.validUntil).toLocaleDateString('es-DO'),
-        total: formatAmount(quote.total),
-        status: getStatusText(quote.status),
-        probability: `${quote.probability}%`
+        date: new Date(quote.date).toLocaleDateString('en-US'),
+        total: quote.total,
+        status: statusTextEn[quote.status] || String(quote.status || ''),
       }));
 
       // Llamar a la función de exportación
       exportToPdf(
         dataToExport, 
         columns, 
-        'cotizaciones_ventas', 
-        'Reporte de Cotizaciones de Ventas'
+        'sales_estimates', 
+        'Sales Estimates Report'
       );
       
     } catch (error) {

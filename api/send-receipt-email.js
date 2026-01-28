@@ -103,13 +103,16 @@ function buildReceiptHtml({ companyName, customerName, sale, templateType }) {
   const safeTemplate = escapeHtml(templateType || 'receipt');
 
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px;">
-      <div style="background: linear-gradient(135deg, #008000, #006600); padding: 18px 20px; border-radius: 14px 14px 0 0;">
-        <div style="color:#fff; font-size:18px; font-weight:700;">${safeCompanyName}</div>
-        <div style="color: rgba(255,255,255,0.85); font-size: 13px; margin-top: 4px;">Receipt • ${safeTemplate}</div>
-      </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin:0; padding:0; border-collapse:collapse;">
+      <tr>
+        <td style="padding:0; margin:0;">
+          <div style="font-family: Arial, sans-serif; width: 100%; max-width: 100%; margin: 0; padding: 0;">
+            <div style="background: linear-gradient(135deg, #008000, #006600); padding: 18px 20px; border-radius: 0;">
+              <div style="color:#fff; font-size:18px; font-weight:700;">${safeCompanyName}</div>
+              <div style="color: rgba(255,255,255,0.85); font-size: 13px; margin-top: 4px;">Receipt • ${safeTemplate}</div>
+            </div>
 
-      <div style="background:#fff; border:1px solid #e6e6e6; border-top:none; border-radius: 0 0 14px 14px; padding: 20px;">
+            <div style="background:#fff; border:1px solid #e6e6e6; border-top:none; border-radius: 0; padding: 20px;">
         <div style="display:flex; justify-content:space-between; gap: 16px; flex-wrap: wrap;">
           <div>
             <div style="font-size: 13px; color:#666;">Billed To</div>
@@ -153,9 +156,47 @@ function buildReceiptHtml({ companyName, customerName, sale, templateType }) {
         <div style="margin-top: 18px; font-size: 12px; color:#777;">
           Thank you for your purchase!
         </div>
-      </div>
-    </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
   `;
+}
+
+function stripHtmlScripts(html) {
+  return String(html || '').replace(/<script[\s\S]*?<\/script>/gi, '');
+}
+
+function tuneInvoiceHtmlForEmail(html) {
+  let cleaned = stripHtmlScripts(html);
+
+  cleaned = cleaned.replace(/<body(\s[^>]*)?>/i, '<body style="margin:0!important;padding:0!important;background:#fff!important;width:100%!important;">');
+  cleaned = cleaned
+    .replace(
+      /<div\s+class=("|')invoice\1>/i,
+      '<div class="invoice" style="width:100%!important;max-width:100%!important;margin:0!important;border-radius:0!important;box-shadow:none!important;min-height:0!important;height:auto!important;">'
+    )
+    .replace(
+      /<div\s+class=("|')quote\1>/i,
+      '<div class="quote" style="width:100%!important;max-width:100%!important;margin:0!important;border-radius:0!important;box-shadow:none!important;min-height:0!important;height:auto!important;">'
+    );
+
+  const overrides = [
+    '<style>',
+    'html,body{margin:0!important;padding:0!important;background:#fff!important;width:100%!important;}',
+    'body{padding:0!important;}',
+    '.invoice,.quote{width:100%!important;max-width:100%!important;margin:0!important;border-radius:0!important;box-shadow:none!important;min-height:0!important;height:auto!important;display:block!important;}',
+    '.invoice table,.quote table{width:100%!important;max-width:100%!important;}',
+    'img{max-width:100%!important;height:auto!important;}',
+    '</style>',
+  ].join('');
+
+  if (/<\/head>/i.test(cleaned)) {
+    return cleaned.replace(/<\/head>/i, `${overrides}</head>`);
+  }
+
+  return `${overrides}${cleaned}`;
 }
 
 export default async function handler(req, res) {
@@ -188,6 +229,7 @@ export default async function handler(req, res) {
     companyName,
     sale: saleRaw,
     templateType,
+    invoiceHtml: invoiceHtmlRaw,
     attachment: attachmentRaw,
     subject: subjectRaw,
     invoiceNumber,
@@ -238,12 +280,15 @@ export default async function handler(req, res) {
     ? subjectRaw.trim()
     : `Your Receipt - $${totalFormatted}`;
 
-  const html = buildReceiptHtml({
-    companyName,
-    customerName,
-    sale,
-    templateType,
-  });
+  const invoiceHtml = typeof invoiceHtmlRaw === 'string' ? invoiceHtmlRaw.trim() : '';
+  const html = invoiceHtml
+    ? tuneInvoiceHtmlForEmail(invoiceHtml)
+    : buildReceiptHtml({
+        companyName,
+        customerName,
+        sale,
+        templateType,
+      });
 
   const text = buildReceiptText({
     companyName,

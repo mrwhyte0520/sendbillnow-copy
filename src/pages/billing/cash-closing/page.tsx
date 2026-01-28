@@ -5,6 +5,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { cashClosingService, invoicesService, receiptsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
+import { useNavigate } from 'react-router-dom';
 
 // Importación dinámica de jsPDF para evitar errores de compilación
 const loadJsPDF = async () => {
@@ -15,11 +16,13 @@ const loadJsPDF = async () => {
 
 export default function CashClosingPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [showNewClosingModal, setShowNewClosingModal] = useState(false);
   const [showViewClosingModal, setShowViewClosingModal] = useState(false);
   const [viewClosing, setViewClosing] = useState<any | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
+
   const [cashClosings, setCashClosings] = useState<any[]>([]);
   const [dailyReceipts, setDailyReceipts] = useState<any[]>([]);
 
@@ -317,7 +320,7 @@ export default function CashClosingPage() {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout hideSidebar>
       <div className="space-y-6 p-6 bg-gradient-to-br from-[#f6f1e3] to-[#ebe5d5] min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -326,6 +329,13 @@ export default function CashClosingPage() {
             <p className="text-gray-600">Daily cash control and reconciliation</p>
           </div>
           <div className="flex space-x-3">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 bg-white text-[#2f3e1e] rounded-lg border border-[#d8cfb6] hover:bg-[#f7f3e5] transition-colors whitespace-nowrap"
+            >
+              <i className="ri-arrow-left-line mr-2"></i>
+              Back to Dashboard
+            </button>
             <button
               onClick={exportToPDF}
               className="px-4 py-2 bg-[#4f5f33] text-white rounded-lg hover:bg-[#3b4d2d] transition-colors whitespace-nowrap"
