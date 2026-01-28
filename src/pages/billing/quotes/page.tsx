@@ -115,40 +115,55 @@ interface NewQuoteFormProps {
 }
 
 function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, products, onCancel, onSaved, userId }: NewQuoteFormProps) {
-  const [customerId, setCustomerId] = useState('');
-  const [project, setProject] = useState('');
-  const [validUntil, setValidUntil] = useState<string>(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-  const [probability, setProbability] = useState<number>(50);
-  const [paymentTermId, setPaymentTermId] = useState<string | null>(null);
+  const [validUntil] = useState<string>(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [probability] = useState<number>(50);
+  const [paymentTermId] = useState<string | null>(null);
 
   const [items, setItems] = useState<QuoteItem[]>([
     { item_id: null, description: '', quantity: 1, price: 0, total: 0 }
   ]);
   const baseCurrency = currencies.find(c => c.is_base) || currencies[0];
-  const [currencyCode, setCurrencyCode] = useState<string>(baseCurrency?.code || 'DOP');
+  const [currencyCode] = useState<string>(baseCurrency?.code || 'DOP');
   const ITBIS_RATE = 0.18;
 
-  const [storeName, setStoreName] = useState('Tienda principal');
-  const [salesRepId, setSalesRepId] = useState<string | null>(null);
-  const [notes, setNotes] = useState('');
-  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
-  const [discountValue, setDiscountValue] = useState<number>(0);
+  const [storeName] = useState('Tienda principal');
+  const [salesRepId] = useState<string | null>(null);
+
+  const [businessName, setBusinessName] = useState('');
+  const [businessPhone, setBusinessPhone] = useState('');
+  const [businessEmail, setBusinessEmail] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+
+  const formatPhone = (value: string) => {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  };
+
+  const isValidEmail = (value: string) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  };
+
+  const phoneDigitsCount = (value: string) => (String(value || '').match(/\d/g) || []).length;
+  const isValidPhone = (value: string) => {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return true;
+    return phoneDigitsCount(trimmed) >= 10;
+  };
 
   const recomputeTotals = (its: QuoteItem[]) => {
     return its.map(it => ({ ...it, total: (it.quantity || 0) * (it.price || 0) }));
   };
 
   const grossSubtotal = items.reduce((s, it) => s + (it.total || 0), 0);
-  let totalDiscount = 0;
-  if (discountType === 'percentage') {
-    totalDiscount = grossSubtotal * (discountValue / 100);
-  } else if (discountType === 'fixed') {
-    totalDiscount = discountValue;
-  }
-  if (totalDiscount > grossSubtotal) {
-    totalDiscount = grossSubtotal;
-  }
-  const subtotal = grossSubtotal - totalDiscount;
+  const subtotal = grossSubtotal;
   const tax = Math.round(subtotal * ITBIS_RATE * 100) / 100;
   const total = subtotal + tax;
 
@@ -157,7 +172,19 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
     return `${prefix ? `${prefix} ` : ''}${formatAmount(value)}`;
   };
 
-  const selectedCustomer = customers.find((c) => String(c.id) === String(customerId));
+  const buildNotes = (freeNotes: string) => {
+    const block = [
+      '---',
+      `Business Name: ${businessName || ''}`,
+      `Business Phone: ${businessPhone || ''}`,
+      `Business Email: ${businessEmail || ''}`,
+      `Business Address: ${businessAddress || ''}`,
+      `Contact Name: ${contactName || ''}`,
+      `Contact Phone: ${contactPhone || ''}`,
+      `Contact Email: ${contactEmail || ''}`,
+    ].join('\n');
+    return [String(freeNotes || '').trim(), block].filter(Boolean).join('\n\n');
+  };
 
   const addRow = () => setItems(prev => [...prev, { item_id: null, description: '', quantity: 1, price: 0, total: 0 }]);
   const removeRow = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
@@ -201,8 +228,24 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         toast.error('You must sign in to create an estimate');
         return;
       }
-      if (!customerId) {
-        toast.error('Select a valid customer');
+      if (!businessName || !String(businessName).trim()) {
+        toast.error('Enter a business name');
+        return;
+      }
+      if (!isValidEmail(businessEmail)) {
+        toast.error('Enter a valid business email');
+        return;
+      }
+      if (!isValidPhone(businessPhone)) {
+        toast.error('Enter a valid business phone number');
+        return;
+      }
+      if (!isValidEmail(contactEmail)) {
+        toast.error('Enter a valid contact email');
+        return;
+      }
+      if (!isValidPhone(contactPhone)) {
+        toast.error('Enter a valid contact phone number');
         return;
       }
       if (items.length === 0 || items.every(it => !it.description || !it.quantity || !it.price)) {
@@ -210,28 +253,26 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         return;
       }
 
-      const customer = customers.find(c => c.id === customerId);
+      const mergedNotes = buildNotes('');
       const quotePayload = {
-        customer_id: customerId,
-        customer_name: customer?.name || '',
-        customer_email: customer?.email || '',
+        customer_id: null,
+        customer_name: String(businessName || '').trim(),
+        customer_email: String(businessEmail || '').trim(),
         payment_term_id: paymentTermId || null,
-        project,
+        project: String(businessName || '').trim(),
         date: new Date().toISOString().slice(0, 10),
         valid_until: validUntil,
         probability,
-        amount: grossSubtotal,
-        tax: 0,
-        total: 0,
+        amount: subtotal,
+        tax,
+        total,
         status: 'pending' as StatusType,
         currency: currencyCode,
         store_name: storeName || null,
         sales_rep_id: salesRepId || null,
-        notes: notes || null,
-        discount_type: discountType,
-        discount_value: discountValue,
-        total_discount: totalDiscount,
+        notes: mergedNotes || null,
       };
+
       const linePayloads = items
         .filter(it => it.description && it.quantity > 0 && it.price >= 0)
         .map(it => ({ description: it.description, quantity: it.quantity, price: it.price, total: it.total }));
@@ -247,157 +288,75 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
-          <select
-            value={customerId}
-            onChange={e => setCustomerId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-          >
-            <option value="">Select customer...</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-
-          {selectedCustomer && (
-            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-              <div className="font-medium text-gray-900">{selectedCustomer.name}</div>
-              <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-gray-600">
-                <div>{selectedCustomer.email ? `Email: ${selectedCustomer.email}` : 'Email: -'}</div>
-                <div>{selectedCustomer.phone ? `Phone: ${selectedCustomer.phone}` : 'Phone: -'}</div>
-                <div>{selectedCustomer.document ? `Document/RNC: ${selectedCustomer.document}` : 'Document/RNC: -'}</div>
-                <div>{selectedCustomer.address ? `Address: ${selectedCustomer.address}` : 'Address: -'}</div>
-                <div>{selectedCustomer.documentType ? `Document type: ${selectedCustomer.documentType}` : 'Document type: -'}</div>
-                <div>{selectedCustomer.ncfType ? `NCF: ${selectedCustomer.ncfType}` : 'NCF: -'}</div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-          <select
-            value={currencyCode}
-            onChange={e => setCurrencyCode(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-          >
-            {currencies.length === 0 && (
-              <option value="DOP">DOP - Peso Dominicano</option>
-            )}
-            {currencies.map(c => (
-              <option key={c.code} value={c.code}>
-                {c.code} - {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Estimate Name</label>
-          <input
-            type="text"
-            value={project}
-            onChange={e => setProject(e.target.value)}
-            placeholder="Descriptive name for the estimate"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Payment terms</label>
-          <select
-            value={paymentTermId ?? ''}
-            onChange={e => setPaymentTermId(e.target.value || null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-          >
-            <option value="">No specific terms</option>
-            {paymentTerms.map(term => (
-              <option key={term.id} value={term.id}>
-                {term.name}{typeof term.days === 'number' ? ` (${term.days} days)` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Valid Until</label>
-          <input
-            type="date"
-            value={validUntil}
-            onChange={e => setValidUntil(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Closing probability (%)</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={probability}
-            onChange={e => setProbability(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Store / Branch</label>
-          {stores.length > 0 ? (
-            <select
-              value={storeName}
-              onChange={e => setStoreName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-            >
-              <option value="">Select store...</option>
-              {stores.map((s) => (
-                <option key={s.id} value={s.name}>{s.name}</option>
-              ))}
-            </select>
-          ) : (
+      <div className="border border-gray-200 rounded-lg p-4">
+        <h5 className="text-sm font-medium text-gray-900 mb-3">Business</h5>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name of Business</label>
             <input
               type="text"
-              value={storeName}
-              onChange={e => setStoreName(e.target.value)}
-              placeholder="Ex: Main store"
+              value={businessName}
+              onChange={e => setBusinessName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Sales rep (optional)</label>
-          <select
-            value={salesRepId ?? ''}
-            onChange={e => setSalesRepId(e.target.value || null)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-          >
-            <option value="">No sales rep assigned</option>
-            {salesReps.map((rep) => (
-              <option key={rep.id} value={rep.id}>{rep.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Global discount type</label>
-          <select
-            value={discountType}
-            onChange={e => setDiscountType(e.target.value as 'percentage' | 'fixed')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-          >
-            <option value="percentage">Percentage (%)</option>
-            <option value="fixed">Fixed amount</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Discount value</label>
-          <div className="flex items-center space-x-2">
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={discountValue}
-              onChange={e => setDiscountValue(Number(e.target.value) || 0)}
+              type="text"
+              value={formatPhone(businessPhone)}
+              onChange={e => setBusinessPhone(formatPhone(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <span className="text-sm text-gray-500">
-              {discountType === 'percentage' ? '%' : currencyCode}
-            </span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              value={businessEmail}
+              onChange={e => setBusinessEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <input
+              type="text"
+              value={businessAddress}
+              onChange={e => setBusinessAddress(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        <h5 className="text-sm font-medium text-gray-900 mt-6 mb-3">Contact</h5>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+            <input
+              type="text"
+              value={contactName}
+              onChange={e => setContactName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+            <input
+              type="text"
+              value={formatPhone(contactPhone)}
+              onChange={e => setContactPhone(formatPhone(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={e => setContactEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
         </div>
       </div>
@@ -477,16 +436,6 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
       </div>
 
       <div className="mt-6 grid grid-cols-1 md-grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Terms & Conditions</label>
-          <textarea
-            rows={4}
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Proposal terms and conditions..."
-          ></textarea>
-        </div>
         <div className="bg-gray-50 p-4 rounded-lg">
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -494,11 +443,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
               <span className="text-sm font-medium">{money(grossSubtotal, { forTotals: true })}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Discount:</span>
-              <span className="text-sm font-medium">- {money(totalDiscount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">ITBIS (18%):</span>
+              <span className="text-sm text-gray-600">Sales Tax:</span>
               <span className="text-sm font-medium">{money(tax)}</span>
             </div>
             <div className="border-t border-gray-200 pt-2">
@@ -661,8 +606,8 @@ export default function QuotesPage() {
           // Calcular totales: usar BD si tiene valor, sino calcular desde items
           const itemsSum = items.reduce((acc: number, item: { total: number }) => acc + item.total, 0);
           const subtotal = Number(q.subtotal) || Number(q.amount) || itemsSum;
-          const tax = Number(q.tax_amount) || 0;
-          const total = Number(q.total_amount) || (subtotal + tax) || itemsSum;
+          const tax = Number(q.tax) || Number(q.tax_amount) || 0;
+          const total = Number(q.total) || Number(q.total_amount) || (subtotal + tax) || itemsSum;
 
           return {
             id: q.id,
@@ -1171,11 +1116,6 @@ export default function QuotesPage() {
       return;
     }
 
-    if (!quote.customerId) {
-      toast.error('La cotización no tiene un cliente válido');
-      return;
-    }
-
     if (!confirm(`¿Convertir cotización ${quoteId} en factura?`)) return;
 
     (async () => {
@@ -1219,9 +1159,6 @@ export default function QuotesPage() {
         }
         
         console.log('DEBUG NCF - documentType final:', documentType);
-
-        // Mostrar al usuario qué tipo de NCF se usará
-        toast.info(`Cliente: ${freshCustomer?.name || 'N/A'} | NCF configurado: "${freshCustomer?.ncfType || '(vacío)'}" → Usando: ${documentType}`);
 
         // Obtener NCF desde la serie configurada - obligatorio
         let invoiceNumber = '';
@@ -1413,7 +1350,7 @@ export default function QuotesPage() {
               className="px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
-              New Quote
+              New Estimate
             </button>
           </div>
         </div>
@@ -1551,11 +1488,11 @@ export default function QuotesPage() {
           </div>
         </div>
 
-        {/* Quotes Table */}
+        {/* Estimates Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">
-              Quotes ({filteredQuotes.length})
+              Estimates ({filteredQuotes.length})
             </h3>
 
           </div>
@@ -1567,22 +1504,13 @@ export default function QuotesPage() {
                     #
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Valid Until
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Probability
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -1600,10 +1528,6 @@ export default function QuotesPage() {
                       <div className="text-sm font-medium text-gray-900">{index + 1}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{quote.project || 'Untitled'}</div>
-
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{quote.customer}</div>
                       <div className="text-sm text-gray-500">{quote.customerEmail}</div>
                     </td>
@@ -1611,17 +1535,8 @@ export default function QuotesPage() {
                       {new Date(quote.date).toLocaleDateString('en-US')}
 
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(quote.validUntil).toLocaleDateString('en-US')}
-
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatAmount(quote.total)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm font-medium ${getProbabilityColor(quote.probability)}`}>
-                        {quote.probability}%
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(quote.status)}`}>
@@ -1633,23 +1548,15 @@ export default function QuotesPage() {
                         <button
                           onClick={() => handleViewQuote(quote.id)}
                           className="text-blue-600 hover:text-blue-900 p-1"
-                          title="View quote"
+                          title="View estimate"
 
                         >
                           <i className="ri-eye-line"></i>
                         </button>
                         <button
-                          onClick={() => handleEditQuote(quote.id)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Edit quote"
-
-                        >
-                          <i className="ri-edit-line"></i>
-                        </button>
-                        <button
                           onClick={() => { void handlePrintQuote(quote.id); }}
                           className="text-gray-600 hover:text-gray-900 p-1"
-                          title="Print quote"
+                          title="Print estimate"
 
                         >
                           <i className="ri-printer-line"></i>
@@ -1658,7 +1565,7 @@ export default function QuotesPage() {
                           onClick={() => handleApproveQuote(quote.id)}
                           disabled={quote.status === 'approved' || quote.status === 'invoiced'}
                           className={`p-1 ${(quote.status === 'approved' || quote.status === 'invoiced') ? 'text-green-300 cursor-not-allowed' : 'text-green-600 hover:text-green-900'}`}
-                          title="Approve quote"
+                          title="Approve estimate"
 
                         >
                           <i className="ri-check-line"></i>
@@ -1667,7 +1574,7 @@ export default function QuotesPage() {
                           onClick={() => handleRejectQuote(quote.id)}
                           disabled={quote.status === 'rejected' || quote.status === 'invoiced'}
                           className={`p-1 ${(quote.status === 'rejected' || quote.status === 'invoiced') ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
-                          title="Reject quote"
+                          title="Reject estimate"
 
                         >
                           <i className="ri-close-circle-line"></i>
@@ -1685,7 +1592,7 @@ export default function QuotesPage() {
                         <button
                           onClick={() => handleDuplicateQuote(quote.id)}
                           className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Duplicate quote"
+                          title="Duplicate estimate"
 
                         >
                           <i className="ri-file-copy-line"></i>
@@ -1694,7 +1601,7 @@ export default function QuotesPage() {
                           onClick={() => handleDeleteQuote(quote.id)}
                           disabled={quote.status === 'invoiced'}
                           className={`p-1 ${quote.status === 'invoiced' ? 'text-red-300 cursor-not-allowed' : 'text-red-600 hover:text-red-900'}`}
-                          title="Delete quote"
+                          title="Delete estimate"
 
                         >
                           <i className="ri-delete-bin-line"></i>
@@ -1708,12 +1615,12 @@ export default function QuotesPage() {
           </div>
         </div>
 
-        {/* View Quote Modal */}
+        {/* View Estimate Modal */}
         {viewQuote && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Detalle de Cotización</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Estimate Details</h3>
                 <button
                   onClick={() => setViewQuote(null)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1724,17 +1631,17 @@ export default function QuotesPage() {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700">
                   <div>
-                    <p><span className="font-medium">Nombre:</span> {viewQuote.project || 'Sin nombre'}</p>
-                    <p><span className="font-medium">Cliente:</span> {viewQuote.customer}</p>
+                    <p><span className="font-medium">Name:</span> {viewQuote.project || 'Untitled'}</p>
+                    <p><span className="font-medium">Customer:</span> {viewQuote.customer}</p>
                     {viewQuote.customerEmail && (
                       <p><span className="font-medium">Email:</span> {viewQuote.customerEmail}</p>
                     )}
                   </div>
                   <div>
-                    <p><span className="font-medium">Fecha:</span> {new Date(viewQuote.date).toLocaleDateString('es-DO')}</p>
-                    <p><span className="font-medium">Válida hasta:</span> {new Date(viewQuote.validUntil).toLocaleDateString('es-DO')}</p>
-                    <p><span className="font-medium">Probabilidad:</span> {viewQuote.probability}%</p>
-                    <p><span className="font-medium">Estado:</span> {getStatusText(viewQuote.status)}</p>
+                    <p><span className="font-medium">Date:</span> {new Date(viewQuote.date).toLocaleDateString('en-US')}</p>
+                    <p><span className="font-medium">Valid until:</span> {new Date(viewQuote.validUntil).toLocaleDateString('en-US')}</p>
+                    <p><span className="font-medium">Probability:</span> {viewQuote.probability}%</p>
+                    <p><span className="font-medium">Status:</span> {getStatusText(viewQuote.status)}</p>
                   </div>
                 </div>
 
@@ -1742,9 +1649,9 @@ export default function QuotesPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descripción</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Precio</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                       </tr>
                     </thead>
@@ -1764,7 +1671,7 @@ export default function QuotesPage() {
                         <td className="px-4 py-2 font-semibold">{formatAmount(viewQuote.amount)}</td>
                       </tr>
                       <tr>
-                        <td colSpan={3} className="px-4 py-2 text-right font-medium">Impuestos:</td>
+                        <td colSpan={3} className="px-4 py-2 text-right font-medium">Sales Tax:</td>
                         <td className="px-4 py-2 font-semibold">{formatAmount(viewQuote.tax)}</td>
                       </tr>
                       <tr>
@@ -1777,7 +1684,7 @@ export default function QuotesPage() {
 
                 {viewQuote.notes && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-900 mb-1">Notas</h4>
+                    <h4 className="text-sm font-medium text-gray-900 mb-1">Notes</h4>
                     <p className="text-sm text-gray-700 whitespace-pre-line">{viewQuote.notes}</p>
                   </div>
                 )}
@@ -1786,9 +1693,9 @@ export default function QuotesPage() {
                   <button
                     type="button"
                     onClick={() => setViewQuote(null)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap"
                   >
-                    Cerrar
+                    Close
                   </button>
                 </div>
               </div>
@@ -1796,7 +1703,7 @@ export default function QuotesPage() {
           </div>
         )}
 
-        {/* Edit Quote Modal */}
+        {/* Edit Estimate Modal */}
         {editingQuote && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -1906,13 +1813,13 @@ export default function QuotesPage() {
           </div>
         )}
 
-        {/* New Quote Modal */}
+        {/* New Estimate Modal */}
         {showNewQuoteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Nueva Cotización de Ventas</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">New Estimate</h3>
                   <button
                     onClick={() => setShowNewQuoteModal(false)}
                     className="text-gray-400 hover:text-gray-600"
@@ -1922,7 +1829,7 @@ export default function QuotesPage() {
                 </div>
               </div>
               <div className="p-6">
-                {/* Form state for new quote */}
+                {/* Form state for new estimate */}
                 <NewQuoteForm
                   customers={customers}
                   paymentTerms={paymentTerms}

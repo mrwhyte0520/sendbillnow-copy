@@ -60,6 +60,21 @@ const stripPrintScripts = (html: string) => {
   return html.replace(/<script>[\s\S]*?<\/script>/gi, '');
 };
 
+const tuneHtmlForEmailPdf = (html: string) =>
+  html
+    .replace(/min-height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
+    .replace(/margin-top\s*:\s*auto\s*(?:!important)?\s*;?/gi, '')
+    .replace(/height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
+    .replace(/<img(?![^>]*\bcrossorigin=)([^>]*?)\ssrc=("|')((?!data:)[^"']+)\2/gi, '<img crossorigin="anonymous"$1 src=$2$3$2')
+    .replace(
+      /<\/style>/i,
+      [
+        '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}',
+        'html,body{background:#fff!important;padding:0!important;margin:0!important;}',
+        '</style>',
+      ].join('')
+    );
+
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
   const chunkSize = 0x8000;
@@ -83,12 +98,11 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 
   document.body.appendChild(iframe);
 
-  const safeHtml = stripPrintScripts(html);
-  const loaded = new Promise<void>((resolve) => {
+  const safeHtml = tuneHtmlForEmailPdf(stripPrintScripts(html));
+  await new Promise<void>((resolve) => {
     iframe.onload = () => resolve();
+    iframe.srcdoc = safeHtml;
   });
-  iframe.srcdoc = safeHtml;
-  await loaded;
 
   const doc = iframe.contentDocument;
   const body = doc?.body;
@@ -97,39 +111,39 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
     throw new Error('Failed to render invoice for PDF');
   }
 
-  const canvas = await html2canvas(body, {
-    scale: 1.25,
+  const printable = (doc?.querySelector('.invoice') || doc?.querySelector('.quote') || body) as HTMLElement;
+  const canvas = await html2canvas(printable, {
+    scale: 1,
     useCORS: true,
     backgroundColor: '#ffffff',
   });
 
-  const imgData = canvas.toDataURL('image/jpeg', 0.72);
+  const imgData = canvas.toDataURL('image/jpeg', 0.65);
   const pdf = new jsPDF('p', 'pt', 'a4');
 
+  const margin = 28;
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
+  const contentWidth = pdfWidth - margin * 2;
+  const contentHeight = pdfHeight - margin * 2;
 
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-  const scale = pdfWidth / imgWidth;
-  const scaledHeight = imgHeight * scale;
+  const scale = contentWidth / canvas.width;
+  const scaledHeight = canvas.height * scale;
 
   let y = 0;
   let remaining = scaledHeight;
   while (remaining > 0) {
-    pdf.addImage(imgData, 'JPEG', 0, y, pdfWidth, scaledHeight);
-    remaining -= pdfHeight;
+    pdf.addImage(imgData, 'JPEG', margin, margin + y, contentWidth, scaledHeight, undefined, 'FAST');
+    remaining -= contentHeight;
     if (remaining > 0) {
       pdf.addPage();
-      y -= pdfHeight;
+      y -= contentHeight;
     }
   }
 
-  const buffer = pdf.output('arraybuffer') as ArrayBuffer;
-  const base64 = arrayBufferToBase64(buffer);
-
   document.body.removeChild(iframe);
-  return base64;
+  const buffer = pdf.output('arraybuffer') as ArrayBuffer;
+  return arrayBufferToBase64(buffer);
 };
 
 interface Sale {
@@ -930,22 +944,42 @@ export default function POSPage() {
     }
 
     const total = getTotal();
-    const received = parseAmountInput(amountReceived) || total;
-    
+    const amountReceivedTrimmed = String(amountReceived ?? '').trim();
+    const receivedInput = parseAmountInput(amountReceivedTrimmed);
+    const received = amountReceivedTrimmed ? receivedInput : total;
+
+    if (paymentMethod === 'cash') {
+      if (!amountReceivedTrimmed) {
+        toast.error('Enter the amount received.');
+        return;
+      }
+      if (receivedInput <= 0) {
+        toast.error('Amount received must be greater than 0.');
+        return;
+      }
+      if (receivedInput < total) {
+        toast.error('Amount received is less than the total.');
+        return;
+      }
+    }
+
     if (received >= total || paymentMethod !== 'cash') {
-      let generatedInvoiceNumber: string | undefined;
+      const cartSnapshot = [...cart];
+      const productsSnapshot = [...products];
+      const customerTypeSnapshot = getSelectedCustomerType();
+      const selectedCustomerSnapshot = selectedCustomer;
       const newSale: Sale = {
         id: `SALE-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toTimeString().split(' ')[0],
         customer: selectedCustomer,
-        items: [...cart],
+        items: cartSnapshot,
         subtotal: getSubtotal(),
         tax: getTax(),
         total: total,
         paymentMethod,
-        amountReceived: received,
-        change: paymentMethod === 'cash' ? received - total : 0,
+        amountReceived: paymentMethod === 'cash' ? receivedInput : received,
+        change: paymentMethod === 'cash' ? receivedInput - total : 0,
         status: 'completed',
         cashier: 'Admin'
       };
@@ -954,205 +988,8 @@ export default function POSPage() {
       // Guardamos máximo 500 ventas y protegemos contra QuotaExceededError
       const updatedSales = [newSale, ...sales].slice(0, 500);
       setSales(updatedSales);
-      try {
-        localStorage.setItem('contabi_pos_sales', JSON.stringify(updatedSales));
-      } catch (error) {
-        // Si el storage está lleno, no interrumpir el flujo del POS
-        // eslint-disable-next-line no-console
-        console.error('[POS] Error saving contabi_pos_sales to localStorage (ignorado):', error);
-      }
-
-      // If logged in and a concrete customer is selected, create AR invoice/receipt in Supabase
-      if (user?.id && selectedCustomer) {
-        try {
-          let customerForAr: Customer | null = selectedCustomer;
-          if (customerForAr && !isUuid(String(customerForAr.id || ''))) {
-            // Ensure we never send a non-UUID customer_id to Supabase
-            const rows = await customersService.getAll(user.id);
-            let generalDb = (rows || []).find((c: any) => String(c?.name || '').trim().toLowerCase() === 'general customer');
-            if (!generalDb) {
-              try {
-                generalDb = await customersService.create(user.id, {
-                  name: 'General Customer',
-                  document: '',
-                  phone: '',
-                  email: '',
-                  address: '',
-                  creditLimit: 0,
-                  status: 'active',
-                });
-              } catch (e) {
-                console.warn('[POS] Could not create General Customer in DB:', e);
-              }
-            }
-
-            if (generalDb?.id && isUuid(String(generalDb.id))) {
-              customerForAr = {
-                id: String(generalDb.id),
-                name: String(generalDb.name || 'General Customer'),
-                document: String(generalDb.document || ''),
-                phone: String(generalDb.phone || ''),
-                email: String(generalDb.email || ''),
-                address: String(generalDb.address || ''),
-                type: 'regular',
-                customerTypeId: (generalDb as any).customerType || null,
-                paymentTermId: (generalDb as any).paymentTermId || null,
-              } as Customer;
-              setSelectedCustomer(customerForAr);
-            } else {
-              // Can't safely create AR records without a valid UUID
-              throw new Error('No valid customer UUID available for Accounts Receivable');
-            }
-          }
-
-          const todayStr = newSale.date;
-
-          const isImmediatePayment = ['cash', 'card', 'transfer'].includes(newSale.paymentMethod);
-
-          let dueDateStr = todayStr;
-          const type = getSelectedCustomerType();
-          if (type && typeof type.allowedDelayDays === 'number' && type.allowedDelayDays > 0) {
-            const base = new Date(todayStr);
-            const d = new Date(base);
-            d.setDate(base.getDate() + type.allowedDelayDays);
-            dueDateStr = d.toISOString().slice(0, 10);
-          }
-
-          const invoicePayload = {
-            customer_id: customerForAr.id,
-            invoice_date: todayStr,
-            due_date: dueDateStr,
-            currency: 'DOP',
-            subtotal: newSale.subtotal,
-            tax_amount: newSale.tax,
-            total_amount: newSale.total,
-            paid_amount: isImmediatePayment ? newSale.total : 0,
-            status: isImmediatePayment ? 'paid' : 'pending',
-            notes: `POS Sale ${newSale.id}`,
-          };
-
-          // Enlazar líneas de factura con ítems de inventario cuando el id sea un UUID válido.
-          // Esto permite que invoicesService.create calcule el Costo de Ventas (COGS) y
-          // genere el asiento contable Costo de Ventas vs Inventario.
-          const linesPayload: { description: string; quantity: number; unit_price: number; line_total: number; item_id: string | null }[] = [];
-          
-          for (const item of newSale.items) {
-            const itemId = isUuid(item.id) ? item.id : null;
-            
-            // Add main product line
-            linesPayload.push({
-              description: item.name,
-              quantity: item.quantity,
-              unit_price: item.price,
-              line_total: item.price * item.quantity,
-              item_id: itemId,
-            });
-            
-            // Add extras as separate lines (indented with arrow to show they're add-ons)
-            if (item.extras && item.extras.length > 0) {
-              for (const extra of item.extras) {
-                // Find the extra product to get its ID for inventory tracking
-                const extraProduct = products.find(p => p.name === extra.name);
-                const extraItemId = extraProduct && isUuid(extraProduct.id) ? extraProduct.id : null;
-                
-                linesPayload.push({
-                  description: `  ↳ ${extra.name} (extra)`,
-                  quantity: extra.quantity,
-                  unit_price: extra.price,
-                  line_total: extra.price * extra.quantity,
-                  item_id: extraItemId,
-                });
-              }
-            }
-          }
-
-          const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
-
-          const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
-          if (createdInvoiceNumber) {
-            generatedInvoiceNumber = createdInvoiceNumber;
-          }
-
-          // Create receipt only when sale is fully paid (which is the only case permitido ahora)
-          const receiptNumber = `REC-${Date.now()}`;
-          await receiptsService.create(user.id, {
-            customer_id: customerForAr.id,
-            receipt_number: receiptNumber,
-            receipt_date: todayStr,
-            amount: newSale.total,
-            payment_method: newSale.paymentMethod,
-            reference: newSale.id,
-            concept: `POS sale payment ${created.invoice.invoice_number}`,
-            status: 'active',
-          });
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('[POS] Error creando factura/recibo en CxC', error);
-          // Sale is still saved locally, just log any AR/receipt errors
-        }
-      }
-
-      // Update product stock in local POS cache
-      const updatedProducts = products.map(product => {
-        const cartItem = cart.find(item => item.id === product.id);
-        if (cartItem) {
-          return { ...product, stock: product.stock - cartItem.quantity };
-        }
-        return product;
-      });
-      
-      const allProducts = JSON.parse(localStorage.getItem('contabi_products') || '[]');
-      const finalProducts = allProducts.map((product: Product) => {
-        const updatedProduct = updatedProducts.find(p => p.id === product.id);
-        return updatedProduct || product;
-      });
-      
-      localStorage.setItem('contabi_products', JSON.stringify(finalProducts));
-      window.dispatchEvent(new CustomEvent('productsUpdated'));
-
-      // If logged in, also sync stock and movements with Inventory module in Supabase
-      if (user?.id) {
-        try {
-          for (const cartItem of cart) {
-            const current = products.find(p => p.id === cartItem.id);
-            // Solo sincronizar con Supabase cuando el id del producto sea un UUID válido
-            if (!current || !isUuid(current.id)) {
-              // eslint-disable-next-line no-console
-              console.warn('[POS] Skipping inventory sync for non-UUID product id', current?.id ?? cartItem.id);
-              continue;
-            }
-
-            // 1) Update inventory item stock
-            const newStock = (current.stock ?? 0) - cartItem.quantity;
-            await inventoryService.updateItem(user.id, current.id, {
-              current_stock: newStock < 0 ? 0 : newStock,
-            });
-
-            // 2) Create inventory movement (exit)
-            await inventoryService.createMovement(user.id, {
-              item_id: current.id,
-              movement_type: 'exit',
-              quantity: cartItem.quantity,
-              unit_cost: cartItem.cost ?? 0,
-              movement_date: newSale.date,
-              reference: newSale.id,
-              total_cost: (cartItem.quantity || 0) * (cartItem.cost ?? 0),
-              notes: `Exit from POS sale ${newSale.id}`,
-              source_type: 'pos_sale',
-              source_id: null,
-              source_number: newSale.id,
-            });
-          }
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('[POS] Error syncing inventory from POS sale', error);
-          alert('The sale was registered, but there was a problem updating inventory in the database. Check the Inventory module.');
-        }
-      }
-      
       // Store the completed sale and open print modal
-      const saleToPrint = generatedInvoiceNumber ? { ...newSale, invoiceNumber: generatedInvoiceNumber } : newSale;
-      setCompletedSale(saleToPrint);
+      setCompletedSale(newSale);
       setShowPrintTypeModal(true);
       
       setCart([]);
@@ -1161,7 +998,188 @@ export default function POSPage() {
       setAmountReceived('');
       setPaymentMethod('');
       setShowPaymentModal(false);
-      loadProducts();
+
+      setTimeout(() => {
+        try {
+          localStorage.setItem('contabi_pos_sales', JSON.stringify(updatedSales));
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('[POS] Error saving contabi_pos_sales to localStorage (ignorado):', error);
+        }
+
+        try {
+          // Update product stock in local POS cache
+          const updatedProducts = productsSnapshot.map(product => {
+            const cartItem = cartSnapshot.find(item => item.id === product.id);
+            if (cartItem) {
+              return { ...product, stock: product.stock - cartItem.quantity };
+            }
+            return product;
+          });
+
+          const allProducts = JSON.parse(localStorage.getItem('contabi_products') || '[]');
+          const finalProducts = allProducts.map((product: Product) => {
+            const updatedProduct = updatedProducts.find(p => p.id === product.id);
+            return updatedProduct || product;
+          });
+
+          localStorage.setItem('contabi_products', JSON.stringify(finalProducts));
+          window.dispatchEvent(new CustomEvent('productsUpdated'));
+        } catch (e) {
+          console.error('[POS] Error updating local POS cache', e);
+        }
+
+        loadProducts();
+
+        // If logged in and a concrete customer is selected, create AR invoice/receipt in Supabase
+        void (async () => {
+          if (!user?.id || !selectedCustomerSnapshot) return;
+          try {
+            let customerForAr: Customer | null = selectedCustomerSnapshot;
+            if (customerForAr && !isUuid(String(customerForAr.id || ''))) {
+              const rows = await customersService.getAll(user.id);
+              let generalDb = (rows || []).find((c: any) => String(c?.name || '').trim().toLowerCase() === 'general customer');
+              if (!generalDb) {
+                try {
+                  generalDb = await customersService.create(user.id, {
+                    name: 'General Customer',
+                    document: '',
+                    phone: '',
+                    email: '',
+                    address: '',
+                    creditLimit: 0,
+                    status: 'active',
+                  });
+                } catch (e) {
+                  console.warn('[POS] Could not create General Customer in DB:', e);
+                }
+              }
+
+              if (generalDb?.id && isUuid(String(generalDb.id))) {
+                customerForAr = {
+                  id: String(generalDb.id),
+                  name: String(generalDb.name || 'General Customer'),
+                  document: String(generalDb.document || ''),
+                  phone: String(generalDb.phone || ''),
+                  email: String(generalDb.email || ''),
+                  address: String(generalDb.address || ''),
+                  type: 'regular',
+                  customerTypeId: (generalDb as any).customerType || null,
+                  paymentTermId: (generalDb as any).paymentTermId || null,
+                } as Customer;
+              } else {
+                throw new Error('No valid customer UUID available for Accounts Receivable');
+              }
+            }
+
+            const todayStr = newSale.date;
+            const isImmediatePayment = ['cash', 'card', 'transfer'].includes(newSale.paymentMethod);
+
+            let dueDateStr = todayStr;
+            if (customerTypeSnapshot && typeof (customerTypeSnapshot as any).allowedDelayDays === 'number' && (customerTypeSnapshot as any).allowedDelayDays > 0) {
+              const base = new Date(todayStr);
+              const d = new Date(base);
+              d.setDate(base.getDate() + (customerTypeSnapshot as any).allowedDelayDays);
+              dueDateStr = d.toISOString().slice(0, 10);
+            }
+
+            const invoicePayload = {
+              customer_id: customerForAr.id,
+              invoice_date: todayStr,
+              due_date: dueDateStr,
+              currency: 'DOP',
+              subtotal: newSale.subtotal,
+              tax_amount: newSale.tax,
+              total_amount: newSale.total,
+              paid_amount: isImmediatePayment ? newSale.total : 0,
+              status: isImmediatePayment ? 'paid' : 'pending',
+              notes: `POS Sale ${newSale.id}`,
+            };
+
+            const linesPayload: { description: string; quantity: number; unit_price: number; line_total: number; item_id: string | null }[] = [];
+
+            for (const item of cartSnapshot) {
+              const itemId = isUuid(item.id) ? item.id : null;
+
+              linesPayload.push({
+                description: item.name,
+                quantity: item.quantity,
+                unit_price: item.price,
+                line_total: item.price * item.quantity,
+                item_id: itemId,
+              });
+
+              if (item.extras && item.extras.length > 0) {
+                for (const extra of item.extras) {
+                  const extraProduct = productsSnapshot.find(p => p.name === extra.name);
+                  const extraItemId = extraProduct && isUuid(extraProduct.id) ? extraProduct.id : null;
+
+                  linesPayload.push({
+                    description: `  ↳ ${extra.name} (extra)`,
+                    quantity: extra.quantity,
+                    unit_price: extra.price,
+                    line_total: extra.price * extra.quantity,
+                    item_id: extraItemId,
+                  });
+                }
+              }
+            }
+
+            const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
+            const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
+            if (createdInvoiceNumber) {
+              setCompletedSale((prev) => (prev && prev.id === newSale.id ? { ...prev, invoiceNumber: createdInvoiceNumber } : prev));
+            }
+
+            const receiptNumber = `REC-${Date.now()}`;
+            await receiptsService.create(user.id, {
+              customer_id: customerForAr.id,
+              receipt_number: receiptNumber,
+              receipt_date: todayStr,
+              amount: newSale.total,
+              payment_method: newSale.paymentMethod,
+              reference: newSale.id,
+              concept: `POS sale payment ${(created as any)?.invoice?.invoice_number || ''}`,
+              status: 'active',
+            });
+          } catch (error) {
+            console.error('[POS] Error creando factura/recibo en CxC', error);
+          }
+
+          // If logged in, also sync stock and movements with Inventory module in Supabase
+          if (!user?.id) return;
+          try {
+            for (const cartItem of cartSnapshot) {
+              const current = productsSnapshot.find(p => p.id === cartItem.id);
+              if (!current || !isUuid(current.id)) {
+                console.warn('[POS] Skipping inventory sync for non-UUID product id', current?.id ?? cartItem.id);
+                continue;
+              }
+
+              const newStock = (current.stock ?? 0) - cartItem.quantity;
+              await inventoryService.updateItem(user.id, current.id, {
+                current_stock: newStock < 0 ? 0 : newStock,
+              });
+
+              await inventoryService.createMovement(user.id, {
+                item_id: current.id,
+                movement_type: 'exit',
+                quantity: cartItem.quantity,
+                unit_cost: cartItem.cost ?? 0,
+                movement_date: newSale.date,
+                reference: newSale.id,
+                total_cost: (cartItem.quantity || 0) * (cartItem.cost ?? 0),
+                notes: `Exit from POS sale ${newSale.id}`,
+                source_type: 'pos_sale',
+                source_id: null,
+                source_number: newSale.id,
+              });
+            }
+          } catch (error) {
+            console.error('[POS] Error syncing inventory from POS sale', error);
+          }
+        })();
+      }, 0);
 
       return;
     }
@@ -1585,6 +1603,15 @@ export default function POSPage() {
                 <option value="normal">Common</option>
                 <option value="custom">Custom</option>
               </select>
+              <button
+                type="button"
+                onClick={() => navigate('/billing/quotes')}
+                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
+                title="Go to Estimates"
+              >
+                <i className="ri-file-list-line mr-2 text-[#7a8c45]"></i>
+                Estimate
+              </button>
               {/* Modelo Button - Configure extras for Custom mode */}
               <button
                 type="button"

@@ -346,7 +346,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         { name: 'Pre-invoicing', href: '/billing/pre-invoicing' },
         { name: 'Recurring Billing', href: '/billing/recurring' },
         { name: 'Cash Closing', href: '/billing/cash-closing' },
-        { name: 'Quotes', href: '/billing/quotes' },
+        { name: 'Estimate', href: '/billing/quotes' },
       ]
     },
     // 6. Point of Sale

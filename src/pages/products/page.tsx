@@ -208,13 +208,28 @@ export default function ProductsPage() {
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData(prev => ({ ...prev, imageUrl: e.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file size (max 2MB)
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSizeBytes) {
+      alert('Image too large. Maximum size is 2MB.');
+      event.target.value = '';
+      return;
     }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, imageUrl: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1414,6 +1429,7 @@ export default function ProductsPage() {
                             {formData.imageUrl ? 'Cambiar imagen' : 'Subir imagen'}
                           </span>
                         </button>
+                        <div className="mt-1 text-xs text-gray-500">Máximo 2MB</div>
                       </div>
                     </div>
                   </div>

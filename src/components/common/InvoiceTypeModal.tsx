@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate';
 
@@ -24,6 +24,15 @@ export default function InvoiceTypeModal({
   onSendEmail,
 }: InvoiceTypeModalProps) {
   const [selectedType, setSelectedType] = useState<InvoiceTemplateType>('simple');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (documentType === 'quote' || documentType === 'supplier_invoice') {
+      setSelectedType('quotation');
+      return;
+    }
+    setSelectedType('simple');
+  }, [documentType, isOpen]);
 
   if (!isOpen) return null;
 

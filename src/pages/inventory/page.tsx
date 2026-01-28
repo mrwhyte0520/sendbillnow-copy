@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId, productCategoriesService } from '../../services/database';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
 
@@ -467,6 +468,22 @@ export default function InventoryPage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file size (max 2MB)
+    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSizeBytes) {
+      toast.error('Image too large. Maximum size is 2MB.');
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file.');
+      e.target.value = '';
+      return;
+    }
+
     try {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -475,7 +492,7 @@ export default function InventoryPage() {
       reader.readAsDataURL(file);
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Error uploading image');
+      toast.error('Error uploading image');
     }
   };
 
@@ -2337,6 +2354,7 @@ export default function InventoryPage() {
                             {formData.image_url ? 'Change image' : 'Upload image'}
                           </span>
                         </button>
+                        <div className="mt-1 text-xs text-gray-500">Max 2MB</div>
                       </div>
                     </div>
                   </div>
