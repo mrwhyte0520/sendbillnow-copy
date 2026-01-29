@@ -55,6 +55,21 @@ interface Customer {
   paymentTermId?: string | null;
 }
 
+const formatInvoiceNumberDisplay = (raw: string): string => {
+  const s = String(raw || '').trim();
+  const prefix = '4873';
+  if (!s) return s;
+  if (!s.startsWith(prefix)) return s;
+  const suffixRaw = s.slice(prefix.length);
+  if (!/^[0-9]+$/.test(suffixRaw)) return s;
+  const counter = Number.parseInt(suffixRaw, 10);
+  if (!Number.isFinite(counter) || counter < 0) return s;
+  const block = Math.floor(counter / 1000);
+  const remainder = counter % 1000;
+  const padded = String(remainder).padStart(3, '0');
+  return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+};
+
 const stripPrintScripts = (html: string) => {
   // Remove the auto-print/auto-close script to avoid side-effects when rendering offscreen
   return html.replace(/<script>[\s\S]*?<\/script>/gi, '');
@@ -1001,9 +1016,6 @@ export default function POSPage() {
       // Guardamos máximo 500 ventas y protegemos contra QuotaExceededError
       const updatedSales = [newSale, ...sales].slice(0, 500);
       setSales(updatedSales);
-      // Store the completed sale and open print modal
-      setCompletedSale(newSale);
-      setShowPrintTypeModal(true);
       
       setCart([]);
       setLastCartAction({ action: 'clear' });
@@ -1046,7 +1058,12 @@ export default function POSPage() {
 
         // If logged in and a concrete customer is selected, create AR invoice/receipt in Supabase
         void (async () => {
-          if (!user?.id || !selectedCustomerSnapshot) return;
+          if (!user?.id || !selectedCustomerSnapshot) {
+            // Fallback: open print modal with SALE-xxx id when not logged in or no customer
+            setCompletedSale(newSale);
+            setShowPrintTypeModal(true);
+            return;
+          }
           try {
             let customerForAr: Customer | null = selectedCustomerSnapshot;
             if (customerForAr && !isUuid(String(customerForAr.id || ''))) {
@@ -1140,9 +1157,9 @@ export default function POSPage() {
 
             const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
             const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
-            if (createdInvoiceNumber) {
-              setCompletedSale((prev) => (prev && prev.id === newSale.id ? { ...prev, invoiceNumber: createdInvoiceNumber } : prev));
-            }
+            // Open print modal with the real invoice number
+            setCompletedSale({ ...newSale, invoiceNumber: createdInvoiceNumber || newSale.id });
+            setShowPrintTypeModal(true);
 
             const receiptNumber = `REC-${Date.now()}`;
             await receiptsService.create(user.id, {
@@ -1157,6 +1174,9 @@ export default function POSPage() {
             });
           } catch (error) {
             console.error('[POS] Error creando factura/recibo en CxC', error);
+            // Fallback: open print modal with SALE-xxx id if invoice creation failed
+            setCompletedSale(newSale);
+            setShowPrintTypeModal(true);
           }
 
           // If logged in, also sync stock and movements with Inventory module in Supabase
@@ -1204,7 +1224,7 @@ export default function POSPage() {
     if (!completedSale) return;
 
     const saleData = {
-      invoiceNumber: completedSale.invoiceNumber || completedSale.id,
+      invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
       date: completedSale.date,
       dueDate: completedSale.date,
       amount: completedSale.total,
@@ -3671,7 +3691,7 @@ export default function POSPage() {
             }
 
             const saleData = {
-              invoiceNumber: completedSale.invoiceNumber || completedSale.id,
+              invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
               date: completedSale.date,
               dueDate: completedSale.date,
               amount: completedSale.total,
