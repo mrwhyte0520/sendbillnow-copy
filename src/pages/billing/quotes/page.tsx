@@ -520,6 +520,7 @@ const checkSupabaseConnection = async () => {
 
 export default function QuotesPage() {
   const { user, loading: authLoading } = useAuth();
+  const createdByName = String((user?.user_metadata as any)?.full_name || user?.email || '').trim();
   const [showNewQuoteModal, setShowNewQuoteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -814,6 +815,7 @@ export default function QuotesPage() {
     try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
     const quoteData = {
       invoiceNumber: quoteToPrint.id,
+      createdBy: createdByName,
       date: quoteToPrint.date,
       dueDate: quoteToPrint.validUntil,
       amount: quoteToPrint.total,
@@ -1003,7 +1005,7 @@ export default function QuotesPage() {
                 <div class="doc-kv">
                   <div><strong>Fecha:</strong> ${new Date(quote.date).toLocaleDateString('es-DO')}</div>
                   ${quote.validUntil ? `<div><strong>Válida hasta:</strong> ${new Date(quote.validUntil).toLocaleDateString('es-DO')}</div>` : ''}
-                  <div><strong>Created By:</strong> ${companyName}</div>
+                  <div><strong>Created By:</strong> ${createdByName}</div>
                 </div>
                 ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
               </div>
@@ -1958,6 +1960,7 @@ export default function QuotesPage() {
             try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
             const quoteData = {
               invoiceNumber: quoteToPrint.id,
+              createdBy: createdByName,
               date: quoteToPrint.date,
               dueDate: quoteToPrint.validUntil,
               amount: quoteToPrint.total,

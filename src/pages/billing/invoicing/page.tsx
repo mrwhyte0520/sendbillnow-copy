@@ -341,6 +341,7 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 export default function InvoicingPage() {
 
   const { user } = useAuth();
+  const createdByName = String((user?.user_metadata as any)?.full_name || user?.email || '').trim();
 
   const { limits } = usePlanPermissions();
 
@@ -1394,6 +1395,8 @@ export default function InvoicingPage() {
 
       items: invoiceToPrint.items.map(item => ({ description: item.description, quantity: item.quantity, price: item.price, total: item.total })),
 
+      createdBy: createdByName,
+
     };
 
     const customerData = {
@@ -1678,7 +1681,7 @@ export default function InvoicingPage() {
 
               <div><strong>Payment Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
 
-              <div><strong>Created By:</strong> ${companyInfo?.name || companyInfo?.company_name || 'Send Bill Now'}</div>
+              <div><strong>Created By:</strong> ${createdByName}</div>
 
 
             </div>
@@ -4693,104 +4696,6 @@ export default function InvoicingPage() {
 
 
 
-        {showDocumentPreviewModal && (
-
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl mx-4 max-h-[92vh] overflow-hidden flex flex-col">
-
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-3">
-
-                <div className="min-w-0">
-
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">{documentPreviewTitle}</h3>
-
-                  {documentPreviewFilename ? (
-
-                    <p className="text-xs text-gray-500 truncate">{documentPreviewFilename}</p>
-
-                  ) : null}
-
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-
-                  <button
-
-                    onClick={handleDownloadDocumentPreview}
-
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
-
-                    type="button"
-
-                  >
-
-                    Download
-
-                  </button>
-
-                  <button
-
-                    onClick={handlePrintDocumentPreview}
-
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-
-                    type="button"
-
-                  >
-
-                    Print
-
-                  </button>
-
-                  <button
-
-                    onClick={handleCloseDocumentPreview}
-
-                    className="px-3 py-2 bg-gray-900 text-white rounded-lg hover:bg-black transition-colors whitespace-nowrap"
-
-                    type="button"
-
-                  >
-
-                    Close
-
-                  </button>
-
-                </div>
-
-              </div>
-
-              <div className="flex-1 bg-gray-50">
-
-                {documentPreviewUrl ? (
-
-                  <iframe
-
-                    ref={documentPreviewIframeRef}
-
-                    title={documentPreviewTitle}
-
-                    src={documentPreviewUrl}
-
-                    className="w-full h-[80vh] bg-white"
-
-                  />
-
-                ) : (
-
-                  <div className="p-6 text-sm text-gray-600">No document to preview.</div>
-
-                )}
-
-              </div>
-
-            </div>
-
-          </div>
-
-        )}
-
         {/* Print Type Modal */}
 
         <InvoiceTypeModal
@@ -4856,6 +4761,8 @@ export default function InvoicingPage() {
             const invoiceData = {
 
               invoiceNumber: invoiceToPrint.id,
+
+              createdBy: createdByName,
 
               date: invoiceToPrint.date,
 

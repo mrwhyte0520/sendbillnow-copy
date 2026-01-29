@@ -194,6 +194,8 @@ interface Sale {
 export default function POSPage() {
   const { user } = useAuth();
 
+  const createdByName = String((user?.user_metadata as any)?.full_name || user?.email || '').trim();
+
   const [registerLabel, setRegisterLabel] = useState('Register #1');
   const navigate = useNavigate();
   const location = useLocation();
@@ -1225,6 +1227,7 @@ export default function POSPage() {
 
     const saleData = {
       invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
+      createdBy: createdByName,
       date: completedSale.date,
       dueDate: completedSale.date,
       amount: completedSale.total,
@@ -3692,6 +3695,7 @@ export default function POSPage() {
 
             const saleData = {
               invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
+              createdBy: createdByName,
               date: completedSale.date,
               dueDate: completedSale.date,
               amount: completedSale.total,
