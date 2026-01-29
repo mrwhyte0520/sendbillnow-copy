@@ -16,6 +16,8 @@ import * as QRCode from 'qrcode';
 
 import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 
+import { formatDate } from '../../../utils/dateFormat';
+
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 
 import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
@@ -1642,26 +1644,23 @@ export default function InvoicingPage() {
 
                 <div class="doc-number">NCF: ${formatInvoiceNumberDisplay(invoice.id)}</div>
 
-                <div class="doc-kv">
+                ${invoice.ncfExpiryDate ? `<div><strong>Valid until:</strong> ${formatDate(invoice.ncfExpiryDate)}</div>` : ''}
 
-                  ${invoice.ncfExpiryDate ? `<div><strong>Valid until:</strong> ${new Date(invoice.ncfExpiryDate).toLocaleDateString('es-DO')}</div>` : ''}
+                ${invoice.sequentialNumber ? `<div><strong>Invoice Number:</strong> ${invoice.sequentialNumber}</div>` : ''}
 
-                  ${invoice.sequentialNumber ? `<div><strong>Invoice Number:</strong> ${invoice.sequentialNumber}</div>` : ''}
+                ${invoice.salesRepName ? `<div><strong>Sales Rep:</strong> ${invoice.salesRepName}</div>` : ''}
 
-                  ${invoice.salesRepName ? `<div><strong>Sales Rep:</strong> ${invoice.salesRepName}</div>` : ''}
+                <div><strong>Currency:</strong> ${invoice.currency === 'DOP' ? 'Dominican Peso' : invoice.currency}</div>
 
-              <div><strong>Currency:</strong> ${invoice.currency === 'DOP' ? 'Dominican Peso' : invoice.currency}</div>
+                ${invoice.storeName ? `<div><strong>Store:</strong> ${invoice.storeName}</div>` : ''}
 
-              ${invoice.storeName ? `<div><strong>Store:</strong> ${invoice.storeName}</div>` : ''}
+                <div><strong>Payment Due Date:</strong> ${formatDate(invoice.dueDate)}</div>
 
-              <div><strong>Payment Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
+                <div><strong>Created By:</strong> ${createdByName}</div>
 
-              <div><strong>Created By:</strong> ${createdByName}</div>
-
+              </div>
 
             </div>
-
-
 
             <div class="section-grid">
 
@@ -1695,8 +1694,6 @@ export default function InvoicingPage() {
 
               </div>
 
-
-
               <div class="totals">
 
                 <div class="totals-head">Summary</div>
@@ -1714,8 +1711,6 @@ export default function InvoicingPage() {
               </div>
 
             </div>
-
-
 
             <div class="table-wrap">
 
@@ -1771,8 +1766,6 @@ export default function InvoicingPage() {
 
             </div>
 
-
-
             <div class="footer-grid">
 
               <div class="notes">
@@ -1795,8 +1788,6 @@ export default function InvoicingPage() {
 
     `;
 
-
-
     const displayId = formatInvoiceNumberDisplay(invoice.id);
 
     openHtmlPreview(html, `Invoice #${displayId}`, `invoice-${displayId}.html`);
@@ -1811,15 +1802,11 @@ export default function InvoicingPage() {
 
     if (!invoice) return;
 
-
-
     const fullCustomer = invoice.customerId
 
       ? customers.find((c) => c.id === invoice.customerId)
 
       : undefined;
-
-
 
     const companyName =
 
@@ -1828,8 +1815,6 @@ export default function InvoicingPage() {
       (companyInfo as any)?.company_name ||
 
       '';
-
-
 
     const companyRnc =
 
@@ -1841,13 +1826,9 @@ export default function InvoicingPage() {
 
       '';
 
-
-
     const workbook = new ExcelJS.Workbook();
 
     const worksheet = workbook.addWorksheet('Invoice');
-
-
 
     worksheet.mergeCells('A1:D1');
 
@@ -1869,8 +1850,6 @@ export default function InvoicingPage() {
 
     worksheet.getRow(1).height = 24;
 
-
-
     const headerStartRow = 2;
 
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
@@ -1878,8 +1857,6 @@ export default function InvoicingPage() {
     worksheet.getCell(`A${headerStartRow}`).value = `Invoice #${formatInvoiceNumberDisplay(invoice.id)}`;
 
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
-
-
 
     if (String(invoice.id || '').toUpperCase().startsWith('B')) {
 
@@ -1917,11 +1894,7 @@ export default function InvoicingPage() {
 
     }
 
-
-
     worksheet.addRow([]);
-
-
 
     const customerName = invoice.customer;
 
@@ -1930,8 +1903,6 @@ export default function InvoicingPage() {
     const customerEmail = fullCustomer?.email || invoice.customerEmail || '';
 
     const customerPhone = fullCustomer?.phone || invoice.customerPhone || '';
-
-
 
     worksheet.addRow(['Customer', customerName]);
 
@@ -1945,7 +1916,7 @@ export default function InvoicingPage() {
 
       'Date',
 
-      new Date(invoice.date).toLocaleDateString('es-DO'),
+      formatDate(invoice.date),
 
     ]);
 
@@ -1953,11 +1924,9 @@ export default function InvoicingPage() {
 
       'Due Date',
 
-      new Date(invoice.dueDate).toLocaleDateString('es-DO'),
+      formatDate(invoice.dueDate),
 
     ]);
-
-
 
     worksheet.addRow([]);
 

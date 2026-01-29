@@ -12,8 +12,6 @@ export const setGlobalDateFormatSettings = (settings: DateFormatSettings) => {
   globalDateFormat = fmt === 'DD/MM/YYYY' ? 'MM/DD/YYYY' : fmt;
 };
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
 export const formatDate = (value: string | Date | null | undefined): string => {
   if (!value) return '';
 
@@ -30,8 +28,8 @@ export const formatDate = (value: string | Date | null | undefined): string => {
   if (Number.isNaN(d.getTime())) return '';
 
   const yyyy = d.getFullYear();
-  const mm = pad2(d.getMonth() + 1);
-  const dd = pad2(d.getDate());
+  const mm = d.getMonth() + 1;
+  const dd = d.getDate();
 
   switch (globalDateFormat) {
     case 'YYYY-MM-DD':

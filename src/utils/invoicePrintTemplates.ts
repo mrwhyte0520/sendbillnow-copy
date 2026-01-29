@@ -242,9 +242,9 @@ th:nth-child(4){text-align:center;}
 .signature h4{font-size:12px;color:${BLUE};margin-bottom:14px;font-weight:700;}
 .signature-line{border-bottom:2px solid ${BLUE};width:220px;margin-bottom:6px;}
 .signature p{font-size:11px;color:${BLUE};font-weight:600;}
-.footer{padding:10px 20px;text-align:center;border-top:1px solid #eee;margin-top:auto;}
-.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
-.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
+.footer{padding:10px 20px;text-align:center;border-top:1px solid #eee;margin-top:auto;background:${BLUE};}
+.footer p{font-size:13px;color:#fff;font-weight:600;margin-bottom:8px;}
+.footer .powered{font-size:10px;color:#ccd;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{width:100%!important;max-width:100%!important;box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{margin-bottom:8mm!important;}}
 </style></head><body>
 <div class="invoice">
@@ -261,7 +261,6 @@ th:nth-child(4){text-align:center;}
     <div class="invoice-info">
       <h2>${docTitle}</h2>
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-      <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       <p><strong>Created By:</strong> ${invoice.createdBy || ''}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
@@ -432,9 +431,11 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 .summary-row span:last-child{font-weight:600;color:#333;}
 .balance-due{background:${BLUE};color:#fff;padding:14px 16px;margin:12px -16px -16px -16px;display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px;}
 .balance-due span:last-child{font-size:18px;}
-.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;margin-top:auto;}
-.footer p{font-size:13px;color:#333;font-weight:600;margin-bottom:8px;}
-.footer .powered{font-size:10px;color:#888;border-top:1px solid #ddd;padding-top:10px;margin-top:10px;}
+.footer{padding:20px 28px;text-align:center;border-top:1px solid #eee;margin-top:auto;background:${BLUE};color:#fff;}
+.footer p{font-size:13px;color:#fff;font-weight:600;margin-bottom:8px;}
+.footer a{color:#fff!important;text-decoration:none!important;}
+.footer span{color:#fff!important;}
+.footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{width:100%!important;max-width:100%!important;border:2px solid #333!important;}th{background:${BLUE}!important;color:#fff!important;}.top-header{background:${BLUE}!important;}.balance-due{background:${BLUE}!important;color:#fff!important;}.footer{margin-bottom:8mm!important;}}
 </style></head><body>
 <div class="invoice">
@@ -466,7 +467,6 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
     <div class="invoice-info">
       <h2>${docTitle}</h2>
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-      <p><strong>Invoice Date & Time:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       <p><strong>Created By:</strong> ${invoice.createdBy || ''}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
