@@ -1003,6 +1003,7 @@ export default function QuotesPage() {
                 <div class="doc-kv">
                   <div><strong>Fecha:</strong> ${new Date(quote.date).toLocaleDateString('es-DO')}</div>
                   ${quote.validUntil ? `<div><strong>Válida hasta:</strong> ${new Date(quote.validUntil).toLocaleDateString('es-DO')}</div>` : ''}
+                  <div><strong>Created By:</strong> ${companyName}</div>
                 </div>
                 ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
               </div>

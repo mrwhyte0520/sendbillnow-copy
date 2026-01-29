@@ -131,6 +131,7 @@ th:nth-child(4){text-align:center;}
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+      <p><strong>Created By:</strong> ${company.name}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
       <p style="margin-top:8px;font-size:14px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
@@ -261,6 +262,7 @@ th:nth-child(4){text-align:center;}
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+      <p><strong>Created By:</strong> ${company.name}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
@@ -355,6 +357,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
       <h2>ESTIMATED COST</h2>
       <p><strong>Estimate #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Estimate Date:</strong> ${formatDate(invoice.date)}</p>
+      <p><strong>Created By:</strong> ${company.name}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>
@@ -464,6 +467,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
       <p><strong>Invoice Date & Time:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+      <p><strong>Created By:</strong> ${company.name}</p>
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
     </div>
   </div>

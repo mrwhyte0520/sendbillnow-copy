@@ -1672,17 +1672,14 @@ export default function InvoicingPage() {
 
                   ${invoice.salesRepName ? `<div><strong>Sales Rep:</strong> ${invoice.salesRepName}</div>` : ''}
 
-                  <div><strong>Currency:</strong> ${invoice.currency === 'DOP' ? 'Dominican Peso' : invoice.currency}</div>
+              <div><strong>Currency:</strong> ${invoice.currency === 'DOP' ? 'Dominican Peso' : invoice.currency}</div>
 
-                  ${invoice.storeName ? `<div><strong>Store:</strong> ${invoice.storeName}</div>` : ''}
+              ${invoice.storeName ? `<div><strong>Store:</strong> ${invoice.storeName}</div>` : ''}
 
-                  <div><strong>Payment Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
+              <div><strong>Payment Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('es-DO')}</div>
 
-                </div>
+              <div><strong>Created By:</strong> ${companyInfo?.name || companyInfo?.company_name || 'Send Bill Now'}</div>
 
-                ${qrDataUrl ? `<img class="qr" alt="QR" src="${qrDataUrl}" />` : ''}
-
-              </div>
 
             </div>
 
