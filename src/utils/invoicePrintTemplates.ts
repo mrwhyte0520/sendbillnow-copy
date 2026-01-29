@@ -130,7 +130,6 @@ th:nth-child(4){text-align:center;}
     <div class="invoice-info">
       <h2>${docTitle}</h2>
       <p><strong>Invoice #:</strong> ${invoice.invoiceNumber}</p>
-      <p><strong>Invoice Date:</strong> ${formatDate(invoice.date)}</p>
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
       <p><strong>Created By:</strong> ${invoice.createdBy || ''}</p>
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
