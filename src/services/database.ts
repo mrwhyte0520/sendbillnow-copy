@@ -10221,16 +10221,71 @@ export const quotesService = {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
 
+      const formatInvoiceNumber = (raw: string): string => {
+        const s = String(raw || '').trim();
+        const prefix = '4873';
+        if (!s) return s;
+        if (!s.startsWith(prefix)) return s;
+        const suffixRaw = s.slice(prefix.length);
+        if (!/^[0-9]+$/.test(suffixRaw)) return s;
+        const counter = Number.parseInt(suffixRaw, 10);
+        if (!Number.isFinite(counter) || counter < 0) return s;
+        const block = Math.floor(counter / 1000);
+        const remainder = counter % 1000;
+        const padded = String(remainder).padStart(3, '0');
+        return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+      };
+
       const baseQuote = {
         ...quotePayload,
         user_id: tenantId,
       };
 
-      const { data: quote, error: quoteError } = await supabase
-        .from('quotes')
-        .insert(baseQuote)
-        .select('*')
-        .single();
+      if (!baseQuote.quote_number) {
+        try {
+          const { data: nextNumber, error: nextErr } = await supabase.rpc('next_invoice_number', {
+            p_tenant_id: tenantId,
+          });
+          if (nextErr) throw nextErr;
+          const formatted = formatInvoiceNumber(String(nextNumber || '').trim());
+          if (formatted) {
+            baseQuote.quote_number = formatted;
+          }
+        } catch {
+          // Best-effort: do not block quote creation if sequence is unavailable
+        }
+      }
+
+      const tryInsertQuote = async (payload: any) => {
+        const { data: quote, error: quoteError } = await supabase
+          .from('quotes')
+          .insert(payload)
+          .select('*')
+          .single();
+        return { quote, quoteError };
+      };
+
+      let quote: any = null;
+      let quoteError: any = null;
+      let payloadToInsert: any = baseQuote;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const res = await tryInsertQuote(payloadToInsert);
+        quote = res.quote;
+        quoteError = res.quoteError;
+        if (!quoteError) break;
+        if ((quoteError as any)?.code === 'PGRST204') {
+          const msg = String((quoteError as any)?.message || '');
+          const m = msg.match(/Could not find the '([^']+)' column/i);
+          const missingCol = m?.[1] ? String(m[1]) : null;
+          if (missingCol === 'quote_number' || String(msg).toLowerCase().includes('quote_number')) {
+            const clean = { ...payloadToInsert };
+            delete (clean as any).quote_number;
+            payloadToInsert = clean;
+            continue;
+          }
+        }
+        break;
+      }
 
       if (quoteError) throw quoteError;
 
@@ -17718,7 +17773,7 @@ export const productCategoriesService = {
         // If table doesn't exist, return empty array
         if (
           error.code === '42P01' ||
-          error.status === 404 ||
+          (error as any).status === 404 ||
           error.message?.includes('does not exist') ||
           error.message?.includes("Could not find the table 'public.product_categories'")
         ) {

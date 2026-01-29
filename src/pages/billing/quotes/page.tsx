@@ -27,6 +27,21 @@ const isGeneralCustomerName = (name?: string | null) => {
   return String(name).trim().toLowerCase() === 'general customer';
 };
 
+const formatInvoiceNumberDisplay = (raw: string): string => {
+  const s = String(raw || '').trim();
+  const prefix = '4873';
+  if (!s) return s;
+  if (!s.startsWith(prefix)) return s;
+  const suffixRaw = s.slice(prefix.length);
+  if (!/^[0-9]+$/.test(suffixRaw)) return s;
+  const counter = Number.parseInt(suffixRaw, 10);
+  if (!Number.isFinite(counter) || counter < 0) return s;
+  const block = Math.floor(counter / 1000);
+  const remainder = counter % 1000;
+  const padded = String(remainder).padStart(3, '0');
+  return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+};
+
 const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/script>/gi, '');
 
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -466,6 +481,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
 
 interface Quote {
   id: string;
+  quoteNumber?: string;
   customerId?: string;
   customer: string;
   customerEmail: string;
@@ -654,6 +670,7 @@ export default function QuotesPage() {
 
           return {
             id: q.id,
+            quoteNumber: q.quote_number || q.quoteNumber || undefined,
             customerId: q.customer_id || q.customers?.id || undefined,
             customer: q.customer_name || q.customers?.name || 'Cliente',
             customerEmail: q.customer_email || q.customers?.email || '',
@@ -810,11 +827,12 @@ export default function QuotesPage() {
 
   const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
     if (!quoteToPrint) return;
+    const estimateNumber = formatInvoiceNumberDisplay(String(quoteToPrint.quoteNumber || quoteToPrint.id));
     const fullCustomer = quoteToPrint.customerId ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId)) : undefined;
     let companyInfo: any = null;
     try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
     const quoteData = {
-      invoiceNumber: quoteToPrint.id,
+      invoiceNumber: estimateNumber,
       createdBy: createdByName,
       date: quoteToPrint.date,
       dueDate: quoteToPrint.validUntil,
@@ -852,6 +870,8 @@ export default function QuotesPage() {
   const handlePrintQuoteLegacy = async (quoteId: string) => {
     const quote = quotes.find((q) => q.id === quoteId);
     if (!quote) return;
+
+    const estimateNumber = formatInvoiceNumberDisplay(String(quote.quoteNumber || quote.id));
 
     const printWindow = window.open('', '_blank');
 
@@ -935,7 +955,7 @@ export default function QuotesPage() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>Cotización ${quote.id}</title>
+          <title>Cotización ${estimateNumber}</title>
           <style>
             :root {
               --primary: #0b2a6f;
@@ -1001,7 +1021,7 @@ export default function QuotesPage() {
               </div>
               <div class="doc">
                 <div class="doc-title">COTIZACIÓN</div>
-                <div class="doc-number">#${quote.id}</div>
+                <div class="doc-number">#${estimateNumber}</div>
                 <div class="doc-kv">
                   <div><strong>Fecha:</strong> ${new Date(quote.date).toLocaleDateString('es-DO')}</div>
                   ${quote.validUntil ? `<div><strong>Válida hasta:</strong> ${new Date(quote.validUntil).toLocaleDateString('es-DO')}</div>` : ''}
@@ -1900,6 +1920,7 @@ export default function QuotesPage() {
                       const qts = await quotesService.getAll(user.id);
                       const mapped = (qts || []).map((q: any) => ({
                         id: q.id,
+                        quoteNumber: q.quote_number || q.quoteNumber || undefined,
                         customerId: q.customer_id || q.customers?.id || undefined,
                         customer: q.customer_name || q.customers?.name || 'Cliente',
                         customerEmail: q.customer_email || q.customers?.email || '',
@@ -1948,6 +1969,7 @@ export default function QuotesPage() {
           }
           onSendEmail={async (templateType) => {
             if (!quoteToPrint) return;
+            const estimateNumber = formatInvoiceNumberDisplay(String(quoteToPrint.quoteNumber || quoteToPrint.id));
             const fullCustomer = quoteToPrint.customerId
               ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId))
               : undefined;
@@ -1959,7 +1981,7 @@ export default function QuotesPage() {
             let companyInfo: any = null;
             try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
             const quoteData = {
-              invoiceNumber: quoteToPrint.id,
+              invoiceNumber: estimateNumber,
               createdBy: createdByName,
               date: quoteToPrint.date,
               dueDate: quoteToPrint.validUntil,
@@ -1982,18 +2004,18 @@ export default function QuotesPage() {
             };
             const companyData = {
               name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
-              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
-              phone: companyInfo?.phone || '',
-              email: companyInfo?.email || '',
-              address: companyInfo?.address || '',
+              rnc: companyInfo?.rnc || companyInfo?.tax_id,
+              phone: companyInfo?.phone,
+              email: companyInfo?.email,
+              address: companyInfo?.address,
               logo: companyInfo?.logo,
-              facebook: companyInfo?.facebook || '',
-              instagram: companyInfo?.instagram || '',
-              twitter: companyInfo?.twitter || '',
-              linkedin: companyInfo?.linkedin || '',
-              youtube: companyInfo?.youtube || '',
-              tiktok: companyInfo?.tiktok || '',
-              whatsapp: companyInfo?.whatsapp || '',
+              facebook: companyInfo?.facebook,
+              instagram: companyInfo?.instagram,
+              twitter: companyInfo?.twitter,
+              linkedin: companyInfo?.linkedin,
+              youtube: companyInfo?.youtube,
+              tiktok: companyInfo?.tiktok,
+              whatsapp: companyInfo?.whatsapp,
             };
             try {
               const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType);
@@ -2004,7 +2026,7 @@ export default function QuotesPage() {
                 body: JSON.stringify({
                   to: email,
                   subject: 'Estimate',
-                  invoiceNumber: quoteToPrint.id,
+                  invoiceNumber: estimateNumber,
                   customerName: customerData.name,
                   companyName: companyData.name,
                   total: quoteToPrint.total,
