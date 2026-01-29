@@ -197,31 +197,18 @@ const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/scr
 
 
 const tuneHtmlForEmailPdf = (html: string) =>
-
   html
-
-    .replace(/min-height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
-
-    .replace(/margin-top\s*:\s*auto\s*(?:!important)?\s*;?/gi, '')
-
-    .replace(/height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, '')
-
+    .replace(/min-height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, 'min-height:100%!important;')
+    .replace(/height\s*:\s*100vh\s*(?:!important)?\s*;?/gi, 'height:100%!important;')
     .replace(/<img(?![^>]*\bcrossorigin=)([^>]*?)\ssrc=("|')((?!data:)[^"']+)\2/gi, '<img crossorigin="anonymous"$1 src=$2$3$2')
-
     .replace(
-
       /<\/style>/i,
-
       [
-
         '*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}',
-
-        'html,body{background:#fff!important;padding:0!important;margin:0!important;}',
-
+        'html,body{background:#fff!important;padding:0!important;margin:0!important;height:100%!important;}',
+        '.invoice,.quote{width:100%!important;max-width:100%!important;margin:0!important;border-radius:0!important;box-shadow:none!important;min-height:100%!important;height:auto!important;display:flex!important;flex-direction:column!important;}',
         '</style>',
-
       ].join('')
-
     );
 
 
@@ -243,16 +230,13 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   }
 
   return btoa(binary);
-
 };
-
-
 
 const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 
   const iframe = document.createElement('iframe');
 
-  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:1200px;height:1400px;border:0;opacity:0';
+  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:816px;height:1056px;border:0;opacity:0';
 
   document.body.appendChild(iframe);
 
@@ -278,54 +262,45 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 
   }
 
-
-
   const printable = (doc?.querySelector('.invoice') || doc?.querySelector('.quote') || body) as HTMLElement;
 
   const canvas = await html2canvas(printable, { scale: 1, useCORS: true, backgroundColor: '#ffffff' });
 
   const imgData = canvas.toDataURL('image/jpeg', 0.65);
 
-  const pdf = new jsPDF('p', 'pt', 'a4');
+  const pdf = new jsPDF('p', 'pt', 'letter');
 
-
-
-  const margin = 28; // ~10mm
-
+  const marginX = 10;
+  const marginY = 14;
   const pdfWidth = pdf.internal.pageSize.getWidth();
-
   const pdfHeight = pdf.internal.pageSize.getHeight();
+  const contentWidth = pdfWidth - marginX * 2;
+  const contentHeight = pdfHeight - marginY * 2;
 
-  const contentWidth = pdfWidth - margin * 2;
+  const pxToPt = 72 / 96;
+  const canvasWidthPt = canvas.width * pxToPt;
+  const canvasHeightPt = canvas.height * pxToPt;
 
-  const contentHeight = pdfHeight - margin * 2;
+  let scale = contentWidth / canvasWidthPt;
+  let scaledHeight = canvasHeightPt * scale;
 
-
-
-  const scale = contentWidth / canvas.width;
-
-  const scaledHeight = canvas.height * scale;
+  const epsilon = 2;
+  const overflow = scaledHeight - contentHeight;
+  if (overflow > 0 && overflow < 24) {
+    const shrink = (contentHeight / scaledHeight) * 0.995;
+    scale *= shrink;
+    scaledHeight = canvasHeightPt * scale;
+  }
 
   let y = 0;
-
   let remaining = scaledHeight;
-
-  while (remaining > 0) {
-
-    pdf.addImage(imgData, 'JPEG', margin, margin + y, contentWidth, scaledHeight, undefined, 'FAST');
-
+  while (remaining > epsilon) {
+    pdf.addImage(imgData, 'JPEG', marginX, marginY + y, contentWidth, scaledHeight, undefined, 'FAST');
     remaining -= contentHeight;
-
-
-
-    if (remaining > 0) {
-
+    if (remaining > epsilon) {
       pdf.addPage();
-
       y -= contentHeight;
-
     }
-
   }
 
   document.body.removeChild(iframe);
