@@ -42,6 +42,7 @@ import PayrollSalaryChangesPage from '../pages/payroll/salary-changes/page';
 import PayrollEmployeeExitsPage from '../pages/payroll/employee-exits/page';
 
 const PublicDocumentPage = lazy(() => import('../pages/public-document/page'));
+const PublicJobsPage = lazy(() => import('../pages/public-jobs/page'));
 
 const HomePage = lazy(() => import('../pages/home/page'));
 const DemoPage = lazy(() => import('../pages/demo/page'));
@@ -128,6 +129,7 @@ const QuotesPage = lazy(() => import('../pages/billing/quotes/page'));
 const AuthorizationsPage = lazy(() => import('../pages/billing/authorizations/page'));
 const SalesRepsPage = lazy(() => import('../pages/billing/sales-reps/page'));
 const SalesRepTypesPage = lazy(() => import('../pages/billing/sales-rep-types/page'));
+const BillingJobsPage = lazy(() => import('../pages/billing/jobs/page'));
 
 // Accounts Payable Pages
 const APReportsPage = lazy(() => import('../pages/accounts-payable/reports/page'));
@@ -192,6 +194,10 @@ const routes: RouteObject[] = [
   {
     path: '/public/document/:type/:token',
     element: <PublicDocumentPage />,
+  },
+  {
+    path: '/public/jobs/:token',
+    element: <PublicJobsPage />,
   },
   {
     path: '/document/:type/:id',
@@ -676,6 +682,10 @@ const routes: RouteObject[] = [
   {
     path: '/billing/quotes',
     element: <QuotesPage />
+  },
+  {
+    path: '/billing/jobs',
+    element: <ProtectedRoute><BillingJobsPage /></ProtectedRoute>
   },
   {
     path: '/billing/authorizations',

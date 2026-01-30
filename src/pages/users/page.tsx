@@ -3,7 +3,8 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { supabase } from '../../lib/supabase';
-import { resolveTenantId } from '../../services/database';
+import { jobsService, resolveTenantId } from '../../services/database';
+import { JobsModule } from '../billing/jobs/page';
 
 interface Role { id: string; name: string; description?: string }
 interface Permission { id: string; module: string; action: string }
@@ -35,7 +36,7 @@ export default function UsersPage() {
   const { user } = useAuth();
   const { limits } = usePlanPermissions();
 
-  const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee'>('roles');
+  const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee' | 'jobs'>('roles');
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -51,6 +52,9 @@ export default function UsersPage() {
   const [newUserRoleId, setNewUserRoleId] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
   const [isOwner, setIsOwner] = useState(true);
+
+  const [acceptedApplicants, setAcceptedApplicants] = useState<Array<{ email: string; position: string }>>([]);
+  const [showApplicantSuggestions, setShowApplicantSuggestions] = useState(false);
 
   const storageKey = (key: string) => `contabi_rbac_${key}`;
 
@@ -257,6 +261,57 @@ export default function UsersPage() {
 
   useEffect(() => { load(); }, [user]);
 
+  const loadAcceptedApplicants = async () => {
+    if (!user?.id) return;
+    try {
+      const apps = (await jobsService.listApplications(user.id)) as any[];
+      const items = (apps || [])
+        .filter((a: any) => String(a?.status || '').toLowerCase() === 'accepted')
+        .map((a: any) => ({
+          email: String(a?.email || '').trim().toLowerCase(),
+          position: String(a?.position || '').trim(),
+        }))
+        .filter((x: any) => x.email.length > 0);
+
+      const seen = new Set<string>();
+      const unique = items.filter((x: any) => {
+        if (seen.has(x.email)) return false;
+        seen.add(x.email);
+        return true;
+      });
+
+      setAcceptedApplicants(unique);
+    } catch {
+      setAcceptedApplicants([]);
+    }
+  };
+
+  const filteredApplicantSuggestions = useMemo(() => {
+    const q = newUserEmail.trim().toLowerCase();
+    if (!q) return acceptedApplicants;
+    return acceptedApplicants.filter((a) => a.email.includes(q));
+  }, [acceptedApplicants, newUserEmail]);
+
+  const applyApplicantSuggestion = (email: string, position: string) => {
+    setNewUserEmail(email);
+    const match = roles.find((r) => String(r?.name || '').trim().toLowerCase() === String(position || '').trim().toLowerCase());
+    if (match) setNewUserRoleId(match.id);
+    setShowApplicantSuggestions(false);
+  };
+
+  useEffect(() => {
+    loadAcceptedApplicants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    // Refresh suggestions when returning to Roles tab (after accepting in Jobs)
+    if (activeDepartment === 'roles') {
+      loadAcceptedApplicants();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDepartment]);
+
   // Ensure base permissions for modules exist (view access per module)
   useEffect(() => {
     if (permissions.length === 0) {
@@ -336,7 +391,15 @@ export default function UsersPage() {
           })
           .select()
           .single();
-        if (data) { setNewRoleName(''); setNewRoleDesc(''); await load(); return; }
+        if (data) {
+          setNewRoleName('');
+          setNewRoleDesc('');
+          await load();
+          try {
+            await jobsService.syncPortalPositionsFromRoles(user.id);
+          } catch {}
+          return;
+        }
       } catch {}
     }
     const local: Role = { id: `role-${Date.now()}`, name: newRoleName.trim(), description: newRoleDesc };
@@ -366,6 +429,9 @@ export default function UsersPage() {
           .eq('id', roleId)
           .eq('owner_user_id', user.id);
         await load();
+        try {
+          await jobsService.syncPortalPositionsFromRoles(user.id);
+        } catch {}
         return;
       } catch {}
     }
@@ -458,10 +524,25 @@ export default function UsersPage() {
             >
               Employee
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveDepartment('jobs')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeDepartment === 'jobs'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/30'
+                  : 'bg-[#FBF8EE] text-[#3E4D2C] border border-[#E2D6BD] hover:bg-[#F4EEDC]'
+              }`}
+            >
+              Jobs
+            </button>
           </div>
         </div>
 
-        {activeDepartment === 'employee' ? (
+        {activeDepartment === 'jobs' ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8]">
+            <JobsModule />
+          </div>
+        ) : activeDepartment === 'employee' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
             <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
               <div>
@@ -603,14 +684,40 @@ export default function UsersPage() {
               <div className="flex flex-col md:flex-row gap-3 md:items-end">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={newUserEmail}
-                    onChange={e => setNewUserEmail(e.target.value)}
-                    disabled={!isOwner}
-                    className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    placeholder="usuario@gmail.com"
-                  />
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={newUserEmail}
+                      onChange={e => {
+                        setNewUserEmail(e.target.value);
+                        setShowApplicantSuggestions(true);
+                      }}
+                      onFocus={() => setShowApplicantSuggestions(true)}
+                      onBlur={() => {
+                        // delay closing to allow click
+                        window.setTimeout(() => setShowApplicantSuggestions(false), 150);
+                      }}
+                      disabled={!isOwner}
+                      className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      placeholder="usuario@gmail.com"
+                    />
+
+                    {isOwner && showApplicantSuggestions && filteredApplicantSuggestions.length > 0 ? (
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-[#E2D6BD] rounded-lg shadow-lg overflow-hidden">
+                        {filteredApplicantSuggestions.slice(0, 8).map((a) => (
+                          <button
+                            key={a.email}
+                            type="button"
+                            onClick={() => applyApplicantSuggestion(a.email, a.position)}
+                            className="w-full text-left px-3 py-2 hover:bg-[#FBF8EE]"
+                          >
+                            <div className="text-sm text-gray-900">{a.email}</div>
+                            <div className="text-xs text-gray-500">{a.position}</div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>

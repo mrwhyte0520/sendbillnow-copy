@@ -17755,6 +17755,148 @@ export const revaluationService = {
 };
 
 /* ==========================================================
+   Jobs / Employments Service
+   Tablas: job_portals, job_applications
+========================================================== */
+export const jobsService = {
+  async syncPortalPositionsFromRoles(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+
+      const { data: roles, error: rolesError } = await supabase
+        .from('roles')
+        .select('name')
+        .eq('owner_user_id', tenantId)
+        .order('name');
+
+      if (rolesError) throw rolesError;
+
+      const positions = Array.from(
+        new Set(
+          (roles || [])
+            .map((r: any) => String(r?.name || '').trim())
+            .filter((n: string) => n.length > 0)
+            .filter((n: string) => n.toLowerCase() !== 'admin')
+        )
+      );
+
+      const now = new Date().toISOString();
+      const { data: updated, error: updErr } = await supabase
+        .from('job_portals')
+        .update({ positions, updated_at: now })
+        .eq('user_id', tenantId)
+        .select('*')
+        .maybeSingle();
+
+      if (updErr) throw updErr;
+      if (updated) return updated.positions ?? positions;
+      return positions;
+    } catch (error) {
+      console.error('jobsService.syncPortalPositionsFromRoles error', error);
+      throw error;
+    }
+  },
+
+  async getOrCreatePortal(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('userId required');
+
+      const { data: existing, error: selErr } = await supabase
+        .from('job_portals')
+        .select('*')
+        .eq('user_id', tenantId)
+        .limit(1)
+        .maybeSingle();
+
+      if (!selErr && existing) {
+        try {
+          const positions = await jobsService.syncPortalPositionsFromRoles(userId);
+          if (positions) return { ...existing, positions };
+        } catch {
+          // ignore sync failures; portal still usable
+        }
+        return existing;
+      }
+
+      if (selErr) {
+        const selMsg = String((selErr as any)?.message || '').toLowerCase();
+        if (
+          (selErr as any)?.code === '42P01' ||
+          selMsg.includes("could not find the table 'public.job_portals'") ||
+          selMsg.includes('relation "public.job_portals" does not exist')
+        ) {
+          throw new Error('Jobs module database tables are missing. Please apply migration 20260129000002_create_jobs_module.sql in Supabase.');
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('job_portals')
+        .insert({ user_id: tenantId })
+        .select('*')
+        .single();
+
+      if (error) {
+        const msg = String((error as any)?.message || '').toLowerCase();
+        if (
+          (error as any)?.code === '42P01' ||
+          msg.includes("could not find the table 'public.job_portals'") ||
+          msg.includes('relation "public.job_portals" does not exist')
+        ) {
+          throw new Error('Jobs module database tables are missing. Please apply migration 20260129000002_create_jobs_module.sql in Supabase.');
+        }
+        throw error;
+      }
+      try {
+        const positions = await jobsService.syncPortalPositionsFromRoles(userId);
+        return { ...(data as any), positions };
+      } catch {
+        return data;
+      }
+    } catch (error) {
+      console.error('jobsService.getOrCreatePortal error', error);
+      throw error;
+    }
+  },
+
+  async listApplications(userId: string) {
+    try {
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from('job_applications')
+        .select('*')
+        .eq('user_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) return handleDatabaseError(error, []);
+      return data ?? [];
+    } catch (error) {
+      return handleDatabaseError(error, []);
+    }
+  },
+
+  async updateApplicationStatus(applicationId: string, status: string) {
+    try {
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('job_applications')
+        .update({ status, updated_at: now })
+        .eq('id', applicationId)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('jobsService.updateApplicationStatus error', error);
+      throw error;
+    }
+  },
+};
+
+/* ==========================================================
    Product Categories Service
    Tabla: product_categories
 ========================================================== */
