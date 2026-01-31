@@ -273,6 +273,11 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         customer_id: null,
         customer_name: String(businessName || '').trim(),
         customer_email: String(businessEmail || '').trim(),
+        customer_phone: String(businessPhone || '').trim(),
+        address: String(businessAddress || '').trim(),
+        contact_name: String(contactName || '').trim(),
+        contact_phone: String(contactPhone || '').trim(),
+        contact_email: String(contactEmail || '').trim(),
         payment_term_id: paymentTermId || null,
         project: String(businessName || '').trim(),
         date: new Date().toISOString().slice(0, 10),
@@ -485,6 +490,11 @@ interface Quote {
   customerId?: string;
   customer: string;
   customerEmail: string;
+  customerPhone?: string;
+  address?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
   project: string;
   amount: number;
   tax: number;
@@ -548,6 +558,9 @@ export default function QuotesPage() {
     email: string;
     phone: string;
     address: string;
+    contactName?: string;
+    contactPhone?: string;
+    contactEmail?: string;
     documentType?: string | null;
     ncfType?: string | null;
     document?: string | null;
@@ -641,6 +654,9 @@ export default function QuotesPage() {
           email: c.email || c.contact_email || '',
           phone: c.phone || c.contact_phone || '',
           address: c.address || c.company_address || c.billing_address || c.address_line || '',
+          contactName: c.contact_name || c.contactName || '',
+          contactPhone: c.contact_phone || c.contactPhone || '',
+          contactEmail: c.contact_email || c.contactEmail || '',
           documentType: c.document_type || c.documentType || null,
           ncfType: c.ncfType || c.ncf_type || null,
           document: c.document || null,
@@ -674,6 +690,11 @@ export default function QuotesPage() {
             customerId: q.customer_id || q.customers?.id || undefined,
             customer: q.customer_name || q.customers?.name || 'Cliente',
             customerEmail: q.customer_email || q.customers?.email || '',
+            customerPhone: q.customer_phone || q.customerPhone || '',
+            address: q.address || '',
+            contactName: q.contact_name || q.contactName || '',
+            contactPhone: q.contact_phone || q.contactPhone || '',
+            contactEmail: q.contact_email || q.contactEmail || '',
             project: q.project || '',
             amount: subtotal,
             tax,
@@ -844,9 +865,12 @@ export default function QuotesPage() {
     const customerData = {
       name: quoteToPrint.customer || fullCustomer?.name || 'Customer',
       document: fullCustomer?.document || undefined,
-      phone: fullCustomer?.phone,
+      phone: fullCustomer?.phone || quoteToPrint.customerPhone,
       email: fullCustomer?.email || quoteToPrint.customerEmail,
-      address: fullCustomer?.address,
+      address: fullCustomer?.address || quoteToPrint.address,
+      contactName: fullCustomer?.contactName || quoteToPrint.contactName,
+      contactPhone: fullCustomer?.contactPhone || quoteToPrint.contactPhone,
+      contactEmail: fullCustomer?.contactEmail || quoteToPrint.contactEmail,
     };
     const companyData = {
       name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
@@ -903,6 +927,9 @@ export default function QuotesPage() {
     const customerPhone = (fullCustomer as any)?.phone || '';
     const customerEmail = (fullCustomer as any)?.email || quote.customerEmail || '';
     const customerAddress = (fullCustomer as any)?.address || '';
+    const customerContactName = (fullCustomer as any)?.contactName || '';
+    const customerContactPhone = (fullCustomer as any)?.contactPhone || '';
+    const customerContactEmail = (fullCustomer as any)?.contactEmail || '';
 
     let companyInfo: any = null;
     try {
@@ -1043,6 +1070,9 @@ export default function QuotesPage() {
                     ${customerPhone ? `<div class="k">Teléfono</div><div class="v">${customerPhone}</div>` : ''}
                     ${customerEmail ? `<div class="k">Email</div><div class="v">${customerEmail}</div>` : ''}
                     ${customerAddress ? `<div class="k">Dirección</div><div class="v">${customerAddress}</div>` : ''}
+                    ${customerContactName ? `<div class="k">Nombre de contacto</div><div class="v">${customerContactName}</div>` : ''}
+                    ${customerContactPhone ? `<div class="k">Teléfono de contacto</div><div class="v">${customerContactPhone}</div>` : ''}
+                    ${customerContactEmail ? `<div class="k">Email de contacto</div><div class="v">${customerContactEmail}</div>` : ''}
                     ${quote.project ? `<div class="k">Nombre</div><div class="v">${quote.project}</div>` : ''}
                     <div class="k">Probabilidad</div>
                     <div class="v">${quote.probability}%</div>
@@ -1924,6 +1954,11 @@ export default function QuotesPage() {
                         customerId: q.customer_id || q.customers?.id || undefined,
                         customer: q.customer_name || q.customers?.name || 'Cliente',
                         customerEmail: q.customer_email || q.customers?.email || '',
+                        customerPhone: q.customer_phone || q.customerPhone || '',
+                        address: q.address || '',
+                        contactName: q.contact_name || q.contactName || '',
+                        contactPhone: q.contact_phone || q.contactPhone || '',
+                        contactEmail: q.contact_email || q.contactEmail || '',
                         project: q.project || '',
                         amount: q.amount || 0,
                         tax: q.tax || 0,
@@ -1998,9 +2033,12 @@ export default function QuotesPage() {
             const customerData = {
               name: quoteToPrint.customer || fullCustomer?.name || 'Customer',
               document: fullCustomer?.document || undefined,
-              phone: fullCustomer?.phone,
+              phone: fullCustomer?.phone || quoteToPrint.customerPhone,
               email: fullCustomer?.email || quoteToPrint.customerEmail,
-              address: fullCustomer?.address,
+              address: fullCustomer?.address || quoteToPrint.address,
+              contactName: fullCustomer?.contactName || quoteToPrint.contactName,
+              contactPhone: fullCustomer?.contactPhone || quoteToPrint.contactPhone,
+              contactEmail: fullCustomer?.contactEmail || quoteToPrint.contactEmail,
             };
             const companyData = {
               name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
