@@ -76,10 +76,7 @@ export default function UsersPage() {
 
   const companyLogoSrc = useMemo(() => companyLogoDataUrl || companyLogoUrl, [companyLogoDataUrl, companyLogoUrl]);
 
-  const [idCardPublicToken, setIdCardPublicToken] = useState('');
-  const [idCardPublicUrl, setIdCardPublicUrl] = useState('');
   const [idCardQrDataUrl, setIdCardQrDataUrl] = useState('');
-  const [idCardQrError, setIdCardQrError] = useState('');
 
   const storageKey = (key: string) => `contabi_rbac_${key}`;
 
@@ -576,10 +573,7 @@ export default function UsersPage() {
     const syncPublicCard = async () => {
       if (!user?.id) return;
       if (!selectedCardUserId) {
-        setIdCardPublicToken('');
-        setIdCardPublicUrl('');
         setIdCardQrDataUrl('');
-        setIdCardQrError('');
         return;
       }
 
@@ -617,10 +611,8 @@ export default function UsersPage() {
 
         const token = String((data as any)?.public_token || '').trim();
         if (!token) return;
-        setIdCardPublicToken(token);
 
         const url = `${window.location.origin}/public/id-card/${encodeURIComponent(token)}`;
-        setIdCardPublicUrl(url);
 
         const qr = await QRCode.toDataURL(url, {
           margin: 0,
@@ -629,13 +621,10 @@ export default function UsersPage() {
           color: { dark: '#0f172a', light: '#ffffff' },
         });
         setIdCardQrDataUrl(qr);
-        setIdCardQrError('');
-      } catch {
+      } catch (e) {
         // If the table/RPC doesn't exist yet in this environment, keep UI working.
-        setIdCardPublicToken('');
-        setIdCardPublicUrl('');
         setIdCardQrDataUrl('');
-        setIdCardQrError('QR could not be generated. Please apply the Supabase migration for public_id_cards and verify RLS permissions.');
+        console.error('ID card public QR generation failed:', e);
       }
     };
 
@@ -985,39 +974,6 @@ export default function UsersPage() {
                         <option key={u.id} value={u.id}>{u.email} ({u.role_name})</option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Public link (QR)</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        value={idCardPublicUrl || ''}
-                        readOnly
-                        className="flex-1 p-2 border border-[#E2D6BD] rounded-lg bg-gray-50"
-                        placeholder="Select an employee to generate link"
-                      />
-                      <button
-                        type="button"
-                        disabled={!idCardPublicUrl}
-                        onClick={async () => {
-                          try {
-                            if (!idCardPublicUrl) return;
-                            await navigator.clipboard.writeText(idCardPublicUrl);
-                          } catch {
-                            // ignore
-                          }
-                        }}
-                        className="px-3 py-2 border border-[#E2D6BD] rounded-lg bg-white hover:bg-[#F4EEDC] disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    {idCardPublicToken ? (
-                      <div className="text-xs text-gray-500 mt-1">Token: {idCardPublicToken}</div>
-                    ) : null}
-                    {idCardQrError ? (
-                      <div className="text-xs text-red-600 mt-1">{idCardQrError}</div>
-                    ) : null}
                   </div>
 
                   <div>
