@@ -6,13 +6,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'sonner';
-import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService, settingsService } from '../../services/database';
+import { customersService, invoicesService, receiptsService, inventoryService, customerTypesService, cashClosingService, taxService, settingsService, resolveTenantId } from '../../services/database';
 import { exportToExcelStyled } from '../../utils/exportImportUtils';
 import { formatAmount, formatMoney } from '../../utils/numberFormat';
 import InvoiceTypeModal from '../../components/common/InvoiceTypeModal';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
+import QRCode from 'qrcode';
+import { supabase } from '../../lib/supabase';
 
 const Modal = ({ children }: { children: ReactNode }) =>
   createPortal(
@@ -294,6 +296,16 @@ export default function POSPage() {
   const [lastCartAction, setLastCartAction] = useState<{ action: 'add' | 'remove' | 'update' | 'clear'; itemName?: string } | null>(null);
   const customerDisplayChannel = useRef<BroadcastChannel | null>(null);
 
+  const [posCheckoutToken, setPosCheckoutToken] = useState('');
+  const [posCheckoutUrl, setPosCheckoutUrl] = useState('');
+  const [posCheckoutQrDataUrl, setPosCheckoutQrDataUrl] = useState('');
+  const prevCartEmptyRef = useRef(true);
+
+  const [posCheckoutCustomerEmail, setPosCheckoutCustomerEmail] = useState('');
+  const [posCheckoutCustomerSecondEmail, setPosCheckoutCustomerSecondEmail] = useState('');
+
+  const [receiptCheckoutToken, setReceiptCheckoutToken] = useState('');
+
   // Initialize BroadcastChannel for customer display
   useEffect(() => {
     customerDisplayChannel.current = new BroadcastChannel('pos_customer_display');
@@ -382,6 +394,8 @@ export default function POSPage() {
       cashierName,
       registerLabel,
       updatedAt: new Date().toISOString(),
+      checkoutUrl: posCheckoutUrl || undefined,
+      checkoutQrDataUrl: posCheckoutQrDataUrl || undefined,
     };
 
     // Persist last known state so a newly-opened customer screen can render immediately
@@ -390,7 +404,99 @@ export default function POSPage() {
     } catch {}
 
     customerDisplayChannel.current.postMessage(payload);
-  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction, registerLabel]);
+  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction, registerLabel, posCheckoutUrl, posCheckoutQrDataUrl]);
+
+  // Create a new public checkout QR when cart transitions from empty -> non-empty
+  useEffect(() => {
+    const wasEmpty = prevCartEmptyRef.current;
+    const isEmpty = cart.length === 0;
+    prevCartEmptyRef.current = isEmpty;
+
+    if (isEmpty) {
+      // IMPORTANT: when a payment completes, we clear the cart which would normally clear
+      // the checkout token. We must keep it while the print modal is open so the cashier
+      // can send the receipt to the email captured via QR.
+      if (!showPrintTypeModal && !receiptCheckoutToken) {
+        if (posCheckoutToken || posCheckoutUrl || posCheckoutQrDataUrl) {
+          setPosCheckoutToken('');
+          setPosCheckoutUrl('');
+          setPosCheckoutQrDataUrl('');
+          setPosCheckoutCustomerEmail('');
+          setPosCheckoutCustomerSecondEmail('');
+        }
+      }
+      return;
+    }
+
+    if (!wasEmpty) return;
+    if (!user?.id) return;
+
+    const run = async () => {
+      try {
+        const tenantId = (await resolveTenantId(user.id)) || user.id;
+        if (!tenantId) return;
+
+        const payload = {
+          created_at: new Date().toISOString(),
+          registerLabel,
+        };
+
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 12).toISOString();
+        const { data, error } = await supabase
+          .from('public_pos_checkouts')
+          .insert({ tenant_id: tenantId, payload, public_expires_at: expiresAt })
+          .select('checkout_token')
+          .single();
+        if (error) throw error;
+
+        const token = String((data as any)?.checkout_token || '').trim();
+        if (!token) return;
+        setPosCheckoutToken(token);
+
+        const url = `${window.location.origin}/public/checkout/${encodeURIComponent(token)}`;
+        setPosCheckoutUrl(url);
+        const qr = await QRCode.toDataURL(url, {
+          margin: 0,
+          width: 420,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#0f172a', light: '#ffffff' },
+        });
+        setPosCheckoutQrDataUrl(qr);
+      } catch (e) {
+        console.error('[POS] Failed to create public checkout token:', e);
+      }
+    };
+
+    void run();
+  }, [cart.length, user?.id, registerLabel, posCheckoutToken, posCheckoutUrl, posCheckoutQrDataUrl]);
+
+  // When the print modal opens, try to resolve customer email from the public checkout token
+  useEffect(() => {
+    if (!showPrintTypeModal) return;
+    const tokenToUse = (receiptCheckoutToken || posCheckoutToken || '').trim();
+    if (!tokenToUse) return;
+    if (!user?.id) return;
+
+    const run = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('public_pos_checkouts')
+          .select('customer_email, customer_second_email')
+          .eq('checkout_token', tokenToUse)
+          .maybeSingle();
+        if (error) throw error;
+
+        const primary = String((data as any)?.customer_email || '').trim();
+        const second = String((data as any)?.customer_second_email || '').trim();
+        setPosCheckoutCustomerEmail(primary);
+        setPosCheckoutCustomerSecondEmail(second);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    void run();
+  }, [showPrintTypeModal, posCheckoutToken, receiptCheckoutToken, user?.id]);
 
   // Load available extras from localStorage on mount
   useEffect(() => {
@@ -1032,6 +1138,10 @@ export default function POSPage() {
       const updatedSales = [newSale, ...sales].slice(0, 500);
       setSales(updatedSales);
       
+      // Keep the QR checkout token for the completed sale so the print modal can
+      // send the receipt to the email captured on the customer screen.
+      setReceiptCheckoutToken(posCheckoutToken || '');
+
       setCart([]);
       setLastCartAction({ action: 'clear' });
       setSelectedCustomer(null);
@@ -1173,6 +1283,85 @@ export default function POSPage() {
 
             const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
             const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
+            const createdInvoiceId = (created as any)?.invoice?.id ? String((created as any).invoice.id) : '';
+
+            // If customer scanned QR and submitted details, email invoice link automatically.
+            try {
+              if (posCheckoutToken && createdInvoiceId) {
+                const { data: invoiceToken, error: tokenErr } = await supabase.rpc('issue_invoice_public_token', {
+                  p_invoice_id: createdInvoiceId,
+                });
+                if (tokenErr) throw tokenErr;
+                const invTok = String(invoiceToken || '').trim();
+
+                const { data: checkoutRow, error: checkoutErr } = await supabase
+                  .from('public_pos_checkouts')
+                  .select('customer_email, customer_second_email, customer_full_name')
+                  .eq('checkout_token', posCheckoutToken)
+                  .maybeSingle();
+                if (checkoutErr) throw checkoutErr;
+
+                const primaryEmail = String((checkoutRow as any)?.customer_email || '').trim();
+                const second = String((checkoutRow as any)?.customer_second_email || '').trim();
+                const customerNameForEmail = String((checkoutRow as any)?.customer_full_name || selectedCustomerSnapshot?.name || 'Customer');
+
+                if (invTok && primaryEmail) {
+                  // Associate invoice to checkout (best-effort)
+                  try {
+                    await supabase
+                      .from('public_pos_checkouts')
+                      .update({ invoice_id: createdInvoiceId, invoice_public_token: invTok, status: 'paid' })
+                      .eq('checkout_token', posCheckoutToken);
+                  } catch {}
+
+                  const publicInvoiceUrl = `${window.location.origin}/public/document/invoice/${encodeURIComponent(invTok)}`;
+                  const subject = `Your Invoice - ${createdInvoiceNumber || createdInvoiceId}`;
+                  const html = `
+                    <div style="font-family: Arial, sans-serif; padding: 16px;">
+                      <div style="font-size: 18px; font-weight: 700; color:#0f172a;">Invoice ready</div>
+                      <div style="margin-top: 6px; color:#334155;">Hello <strong>${customerNameForEmail}</strong>, your invoice is ready.</div>
+                      <div style="margin-top: 14px;">
+                        <a href="${publicInvoiceUrl}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:700;">Open Invoice</a>
+                      </div>
+                      <div style="margin-top: 12px; font-size: 12px; color:#64748b;">If the button doesn't work, copy and paste this link:</div>
+                      <div style="margin-top: 6px; font-size: 12px; color:#0f172a; word-break: break-all;">${publicInvoiceUrl}</div>
+                    </div>
+                  `.trim();
+
+                  const saleForEmail = {
+                    date: String(newSale.date || new Date().toISOString().slice(0, 10)),
+                    time: new Date().toLocaleTimeString(),
+                    items: [{ name: 'Invoice link', quantity: 1, total: 0 }],
+                    subtotal: Number(newSale.subtotal || 0),
+                    tax: Number(newSale.tax || 0),
+                    total: Number(newSale.total || 0),
+                  };
+
+                  const sendOne = async (toEmail: string) => {
+                    const r = await fetch('/api/send-receipt-email', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        to: toEmail,
+                        subject,
+                        companyName: (settingsService as any)?.companyName || 'Company',
+                        customerName: customerNameForEmail,
+                        templateType: 'invoice-link',
+                        sale: saleForEmail,
+                        invoiceHtml: html,
+                      }),
+                    });
+                    return r.ok;
+                  };
+
+                  await sendOne(primaryEmail);
+                  if (second) await sendOne(second);
+                }
+              }
+            } catch (emailErr) {
+              console.error('[POS] Failed to send invoice link email:', emailErr);
+            }
+
             // Open print modal with the real invoice number
             setCompletedSale({ ...newSale, invoiceNumber: createdInvoiceNumber || newSale.id });
             setShowPrintTypeModal(true);
@@ -3688,19 +3877,17 @@ export default function POSPage() {
           onClose={() => {
             setShowPrintTypeModal(false);
             setCompletedSale(null);
+            setReceiptCheckoutToken('');
+            setPosCheckoutCustomerEmail('');
+            setPosCheckoutCustomerSecondEmail('');
           }}
           onSelect={handlePrintTypeSelect}
           documentType="invoice"
           title="Print Receipt"
-          customerEmail={
-            completedSale?.customer?.name?.toLowerCase() !== 'general customer'
-              ? completedSale?.customer?.email
-              : undefined
-          }
+          customerEmail={(posCheckoutCustomerEmail || completedSale?.customer?.email || '').trim() || undefined}
           onSendEmail={async (templateType) => {
             if (!completedSale) return;
-            const email = completedSale.customer?.email;
-            const emailTrimmed = (email || '').trim();
+            const emailTrimmed = (posCheckoutCustomerEmail || completedSale.customer?.email || '').trim();
             if (!emailTrimmed) {
               setEmailSendModal({
                 open: true,
@@ -3834,6 +4021,38 @@ export default function POSPage() {
                 message: `Receipt sent to ${emailTrimmed}`,
                 variant: 'success',
               });
+
+              // Optional: also send to second email captured via QR
+              const secondEmail = (posCheckoutCustomerSecondEmail || '').trim();
+              if (secondEmail && emailPattern.test(secondEmail)) {
+                try {
+                  await fetch('/api/send-receipt-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      to: secondEmail,
+                      customerName: completedSale.customer?.name || 'Customer',
+                      companyName: companyInfo?.company_name || companyInfo?.name || 'Send Bill Now',
+                      templateType,
+                      invoiceHtml,
+                      sale: {
+                        id: completedSale.id,
+                        date: completedSale.date,
+                        time: completedSale.time,
+                        items: completedSale.items,
+                        subtotal: completedSale.subtotal,
+                        tax: completedSale.tax,
+                        total: completedSale.total,
+                      },
+                      attachment: {
+                        filename: `Receipt-${completedSale.id}.pdf`,
+                        content: pdfBase64,
+                        contentType: 'application/pdf',
+                      },
+                    }),
+                  });
+                } catch {}
+              }
               setShowPrintTypeModal(false);
               setCompletedSale(null);
             } catch (error) {

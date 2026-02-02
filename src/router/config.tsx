@@ -44,6 +44,7 @@ import PayrollEmployeeExitsPage from '../pages/payroll/employee-exits/page';
 const PublicDocumentPage = lazy(() => import('../pages/public-document/page'));
 const PublicJobsPage = lazy(() => import('../pages/public-jobs/page'));
 const PublicIdCardPage = lazy(() => import('../pages/public-id-card/page'));
+const PublicCheckoutPage = lazy(() => import('../pages/public-checkout/page'));
 
 const HomePage = lazy(() => import('../pages/home/page'));
 const DemoPage = lazy(() => import('../pages/demo/page'));
@@ -203,6 +204,10 @@ const routes: RouteObject[] = [
   {
     path: '/public/id-card/:token',
     element: <PublicIdCardPage />,
+  },
+  {
+    path: '/public/checkout/:token',
+    element: <PublicCheckoutPage />,
   },
   {
     path: '/document/:type/:id',

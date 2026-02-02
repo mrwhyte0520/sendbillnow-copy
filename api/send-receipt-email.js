@@ -298,7 +298,11 @@ export default async function handler(req, res) {
   });
 
   const normalizedTemplateType = String(templateType || '').trim().toLowerCase();
-  const allowNoAttachment = normalizedTemplateType === 'id-card' || normalizedTemplateType === 'idcard';
+  const allowNoAttachment =
+    normalizedTemplateType === 'id-card' ||
+    normalizedTemplateType === 'idcard' ||
+    normalizedTemplateType === 'invoice-link' ||
+    normalizedTemplateType === 'pos-invoice-link';
 
   const attachments = [];
   const attachment = (attachmentRaw && typeof attachmentRaw === 'object')

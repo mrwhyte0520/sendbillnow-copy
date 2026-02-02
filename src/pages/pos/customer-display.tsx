@@ -24,6 +24,8 @@ interface CustomerDisplayData {
   cashierName?: string;
   registerLabel?: string;
   updatedAt?: string;
+  checkoutUrl?: string;
+  checkoutQrDataUrl?: string;
 }
 
 export default function CustomerDisplayPage() {
@@ -325,6 +327,20 @@ export default function CustomerDisplayPage() {
                   {formatMoney(data.total)}
                 </div>
               </div>
+
+              {data.checkoutQrDataUrl ? (
+                <div className="pt-5 mt-4 border-t border-gray-100 flex items-end justify-between gap-4">
+                  <div className="text-sm text-gray-600 leading-snug">
+                    <div className="font-semibold text-gray-900">Get your invoice by email</div>
+                    <div className="text-gray-600">Scan the QR code and enter your details.</div>
+                  </div>
+                  <div className="w-[140px] h-[140px] rounded-[24px] bg-white shadow-[0_18px_40px_rgba(15,23,42,0.18)] border border-gray-200 p-[8px]">
+                    <div className="w-full h-full rounded-[18px] bg-white overflow-hidden flex items-center justify-center p-[6px]">
+                      <img src={data.checkoutQrDataUrl} alt="QR" className="w-full h-full object-contain" />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </aside>
         </div>
