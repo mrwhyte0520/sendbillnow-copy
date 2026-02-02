@@ -230,6 +230,8 @@ export default async function handler(req, res) {
     sale: saleRaw,
     templateType,
     invoiceHtml: invoiceHtmlRaw,
+    html: htmlRaw,
+    invoice_html: invoiceHtmlSnakeRaw,
     attachment: attachmentRaw,
     subject: subjectRaw,
     invoiceNumber,
@@ -280,9 +282,17 @@ export default async function handler(req, res) {
     ? subjectRaw.trim()
     : `Your Receipt - $${totalFormatted}`;
 
-  const invoiceHtml = typeof invoiceHtmlRaw === 'string' ? invoiceHtmlRaw.trim() : '';
-  const html = invoiceHtml
-    ? tuneInvoiceHtmlForEmail(invoiceHtml)
+  const preferredHtml =
+    (typeof invoiceHtmlRaw === 'string' && invoiceHtmlRaw.trim())
+      ? invoiceHtmlRaw.trim()
+      : (typeof htmlRaw === 'string' && htmlRaw.trim())
+        ? htmlRaw.trim()
+        : (typeof invoiceHtmlSnakeRaw === 'string' && invoiceHtmlSnakeRaw.trim())
+          ? invoiceHtmlSnakeRaw.trim()
+          : '';
+
+  const html = preferredHtml
+    ? tuneInvoiceHtmlForEmail(preferredHtml)
     : buildReceiptHtml({
         companyName,
         customerName,
