@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -301,10 +301,31 @@ export default function POSPage() {
   const [posCheckoutQrDataUrl, setPosCheckoutQrDataUrl] = useState('');
   const prevCartEmptyRef = useRef(true);
 
+  const [posCheckoutCustomerName, setPosCheckoutCustomerName] = useState('');
   const [posCheckoutCustomerEmail, setPosCheckoutCustomerEmail] = useState('');
+  const [posCheckoutCustomerPhone, setPosCheckoutCustomerPhone] = useState('');
   const [posCheckoutCustomerSecondEmail, setPosCheckoutCustomerSecondEmail] = useState('');
 
   const [receiptCheckoutToken, setReceiptCheckoutToken] = useState('');
+
+  const effectiveSelectedCustomer = useMemo(() => {
+    const base = selectedCustomer;
+    if (!base) return null;
+    const isGeneral = String(base.name || '').trim().toLowerCase() === 'general customer';
+    if (!isGeneral) return base;
+
+    const overrideName = String(posCheckoutCustomerName || '').trim();
+    const overrideEmail = String(posCheckoutCustomerEmail || '').trim();
+    const overridePhone = String(posCheckoutCustomerPhone || '').trim();
+
+    if (!overrideName && !overrideEmail && !overridePhone) return base;
+    return {
+      ...base,
+      name: overrideName || base.name,
+      email: overrideEmail || base.email,
+      phone: overridePhone || base.phone,
+    };
+  }, [selectedCustomer, posCheckoutCustomerName, posCheckoutCustomerEmail, posCheckoutCustomerPhone]);
 
   // Initialize BroadcastChannel for customer display
   useEffect(() => {
@@ -388,7 +409,7 @@ export default function POSPage() {
       tax,
       total,
       taxRate: currentItbisRate,
-      customerName: selectedCustomer?.name,
+      customerName: effectiveSelectedCustomer?.name,
       lastAction: lastCartAction?.action,
       lastItemName: lastCartAction?.itemName,
       cashierName,
@@ -404,7 +425,7 @@ export default function POSPage() {
     } catch {}
 
     customerDisplayChannel.current.postMessage(payload);
-  }, [cart, selectedCustomer, customerTypes, currentItbisRate, lastCartAction, registerLabel, posCheckoutUrl, posCheckoutQrDataUrl]);
+  }, [cart, effectiveSelectedCustomer, selectedCustomer, customerTypes, currentItbisRate, lastCartAction, registerLabel, posCheckoutUrl, posCheckoutQrDataUrl]);
 
   // Create a new public checkout QR when cart transitions from empty -> non-empty
   useEffect(() => {
@@ -421,7 +442,9 @@ export default function POSPage() {
           setPosCheckoutToken('');
           setPosCheckoutUrl('');
           setPosCheckoutQrDataUrl('');
+          setPosCheckoutCustomerName('');
           setPosCheckoutCustomerEmail('');
+          setPosCheckoutCustomerPhone('');
           setPosCheckoutCustomerSecondEmail('');
         }
       }
@@ -470,7 +493,53 @@ export default function POSPage() {
     void run();
   }, [cart.length, user?.id, registerLabel, posCheckoutToken, posCheckoutUrl, posCheckoutQrDataUrl]);
 
-  // When the print modal opens, try to resolve customer email from the public checkout token
+  // Poll for customer details submitted via the public checkout page so POS updates immediately
+  useEffect(() => {
+    const tokenToUse = (posCheckoutToken || '').trim();
+    if (!tokenToUse) return;
+    if (!user?.id) return;
+
+    let isCancelled = false;
+    let timeoutId: number | null = null;
+
+    const runOnce = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('public_pos_checkouts')
+          .select('customer_full_name, customer_email, customer_phone, customer_second_email')
+          .eq('checkout_token', tokenToUse)
+          .maybeSingle();
+        if (error) throw error;
+        if (isCancelled) return;
+
+        const fullName = String((data as any)?.customer_full_name || '').trim();
+        const primary = String((data as any)?.customer_email || '').trim();
+        const phone = String((data as any)?.customer_phone || '').trim();
+        const second = String((data as any)?.customer_second_email || '').trim();
+
+        if (fullName) setPosCheckoutCustomerName(fullName);
+        if (primary) setPosCheckoutCustomerEmail(primary);
+        if (phone) setPosCheckoutCustomerPhone(phone);
+        if (second) setPosCheckoutCustomerSecondEmail(second);
+
+        // Stop polling once we have at least a primary email (required on the public form)
+        if (!primary) {
+          timeoutId = window.setTimeout(runOnce, 2500);
+        }
+      } catch {
+        if (!isCancelled) timeoutId = window.setTimeout(runOnce, 2500);
+      }
+    };
+
+    void runOnce();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [posCheckoutToken, user?.id]);
+
+  // When the print modal opens, try to resolve customer details from the public checkout token
   useEffect(() => {
     if (!showPrintTypeModal) return;
     const tokenToUse = (receiptCheckoutToken || posCheckoutToken || '').trim();
@@ -481,14 +550,18 @@ export default function POSPage() {
       try {
         const { data, error } = await supabase
           .from('public_pos_checkouts')
-          .select('customer_email, customer_second_email')
+          .select('customer_full_name, customer_email, customer_phone, customer_second_email')
           .eq('checkout_token', tokenToUse)
           .maybeSingle();
         if (error) throw error;
 
+        const fullName = String((data as any)?.customer_full_name || '').trim();
         const primary = String((data as any)?.customer_email || '').trim();
+        const phone = String((data as any)?.customer_phone || '').trim();
         const second = String((data as any)?.customer_second_email || '').trim();
+        setPosCheckoutCustomerName(fullName);
         setPosCheckoutCustomerEmail(primary);
+        setPosCheckoutCustomerPhone(phone);
         setPosCheckoutCustomerSecondEmail(second);
       } catch (e) {
         // ignore
@@ -1080,7 +1153,8 @@ export default function POSPage() {
   const getTotal = () => getSubtotal() + getTax();
 
   const processPayment = async () => {
-    if (!selectedCustomer) {
+    const customerForSale = effectiveSelectedCustomer || selectedCustomer;
+    if (!customerForSale) {
       alert('You must select a customer before processing the sale');
       return;
     }
@@ -1115,22 +1189,22 @@ export default function POSPage() {
       const cartSnapshot = [...cart];
       const productsSnapshot = [...products];
       const customerTypeSnapshot = getSelectedCustomerType();
-      const selectedCustomerSnapshot = selectedCustomer;
+      const selectedCustomerSnapshot = customerForSale;
       const newSale: Sale = {
         id: `SALE-${Date.now()}`,
         date: new Date().toISOString().split('T')[0],
         time: new Date().toTimeString().split(' ')[0],
-        customer: selectedCustomer,
+        customer: customerForSale,
         items: cartSnapshot,
         subtotal: getSubtotal(),
         tax: getTax(),
-        total: total,
+        total: getTotal(),
         paymentMethod,
-        amountReceived: paymentMethod === 'cash' ? receivedInput : received,
-        change: paymentMethod === 'cash' ? receivedInput - total : 0,
-        notes: saleNotesTrimmed,
+        amountReceived: parseAmountInput(amountReceived),
+        change: Math.max(0, parseAmountInput(amountReceived) - getTotal()),
+        notes: saleNotesTrimmed || undefined,
         status: 'completed',
-        cashier: 'Admin'
+        cashier: 'POS',
       };
 
       // Update sales locally (sólo como historial rápido en este dispositivo)
@@ -1226,6 +1300,10 @@ export default function POSPage() {
               } else {
                 throw new Error('No valid customer UUID available for Accounts Receivable');
               }
+            }
+
+            if (!customerForAr) {
+              throw new Error('No customer available for Accounts Receivable');
             }
 
             const todayStr = newSale.date;
@@ -1351,7 +1429,15 @@ export default function POSPage() {
                         invoiceHtml: html,
                       }),
                     });
-                    return r.ok;
+                    if (!r.ok) {
+                      const err = await r.json().catch(() => null);
+                      const msg = typeof (err as any)?.error === 'string'
+                        ? String((err as any).error)
+                        : `HTTP ${r.status}`;
+                      console.error('[POS] send-receipt-email failed (invoice-link):', msg, err);
+                      return false;
+                    }
+                    return true;
                   };
 
                   await sendOne(primaryEmail);

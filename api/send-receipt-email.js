@@ -342,10 +342,11 @@ export default async function handler(req, res) {
     const contentType = attachment.contentType || attachment.content_type;
 
     if (typeof filename === 'string' && filename.trim() && typeof content === 'string' && content.trim()) {
+      const normalizedContent = content.trim().replace(/^data:application\/pdf;base64,/i, '');
       let sizeBytes = 0;
       let buf = null;
       try {
-        buf = Buffer.from(content.trim(), 'base64');
+        buf = Buffer.from(normalizedContent, 'base64');
         sizeBytes = buf.length;
       } catch {
         return res.status(400).json({ success: false, error: 'Invalid attachment base64' });
@@ -365,7 +366,7 @@ export default async function handler(req, res) {
 
       attachments.push({
         filename: filename.trim(),
-        content: content.trim(),
+        content: normalizedContent,
         content_type: typeof contentType === 'string' && contentType.trim() ? contentType.trim() : 'application/pdf',
       });
     }
