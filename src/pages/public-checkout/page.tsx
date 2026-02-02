@@ -17,7 +17,7 @@ export default function PublicCheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [savedInfoMessage, setSavedInfoMessage] = useState('');
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
 
   const [fullName, setFullName] = useState('');
@@ -36,7 +36,7 @@ export default function PublicCheckoutPage() {
     (async () => {
       setLoading(true);
       setError('');
-      setSuccess('');
+      setSavedInfoMessage('');
       setCheckout(null);
 
       if (!token) {
@@ -73,7 +73,7 @@ export default function PublicCheckoutPage() {
 
     setSubmitting(true);
     setError('');
-    setSuccess('');
+    setSavedInfoMessage('');
 
     try {
       const { data, error: rpcError } = await supabase.rpc('submit_public_pos_checkout_details', {
@@ -88,7 +88,7 @@ export default function PublicCheckoutPage() {
         throw new Error('Could not save details');
       }
 
-      setSuccess('Saved. Please pay at the cashier. Your invoice will be emailed after payment.');
+      setSavedInfoMessage('Information saved');
     } catch (e: any) {
       setError(e?.message || 'Could not save');
     } finally {
@@ -122,8 +122,8 @@ export default function PublicCheckoutPage() {
               <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">{error}</div>
             ) : null}
 
-            {success ? (
-              <div className="mb-4 text-sm text-green-800 bg-green-50 border border-green-200 rounded-xl p-3">{success}</div>
+            {savedInfoMessage ? (
+              <div className="mb-4 text-sm text-slate-700">{savedInfoMessage}</div>
             ) : null}
 
             {!loading && !error ? (
@@ -177,7 +177,7 @@ export default function PublicCheckoutPage() {
                       setPhone('');
                       setSecondEmail('');
                       setError('');
-                      setSuccess('');
+                      setSavedInfoMessage('');
                     }}
                     className="px-5 py-3 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50"
                   >
