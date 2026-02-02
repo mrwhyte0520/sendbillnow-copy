@@ -150,6 +150,8 @@ interface UiInvoice {
 
   sequentialNumber?: number | null;
 
+  notes?: string | null;
+
 }
 
 
@@ -838,6 +840,8 @@ export default function InvoicingPage() {
 
           sequentialNumber: (inv as any).sequential_number || null,
 
+          notes: (inv as any).notes ?? null,
+
         };
 
       }));
@@ -1374,6 +1378,8 @@ export default function InvoicingPage() {
 
       createdBy: createdByName,
 
+      notes: (invoiceToPrint as any).notes ?? null,
+
     };
 
     const customerData = {
@@ -1772,7 +1778,7 @@ export default function InvoicingPage() {
 
                 <div class="notes-head">Notes</div>
 
-                <div class="notes-body">Thank you for your purchase.</div>
+                <div class="notes-body">${invoice.notes}</div>
 
               </div>
 
@@ -2103,6 +2109,8 @@ export default function InvoicingPage() {
         invoice_date: invoice.date,
 
         due_date: invoice.dueDate,
+
+        notes: (invoice as any).notes ?? null,
 
       };
 
@@ -2480,6 +2488,9 @@ export default function InvoicingPage() {
 
     const total = newInvoiceTotal;
 
+    const notesTrimmed = String(newInvoiceNotes ?? '').trim();
+ 
+
 
 
     const invoicePayload = {
@@ -2506,7 +2517,7 @@ export default function InvoicingPage() {
 
       sales_rep_id: newInvoiceSalesRepId || null,
 
-      notes: newInvoiceNotes || null,
+      notes: notesTrimmed || null,
 
       store_name: newInvoiceStoreName || null,
 
@@ -4729,6 +4740,8 @@ export default function InvoicingPage() {
                 total: item.total,
 
               })),
+
+              notes: (invoiceToPrint as any).notes || null,
 
             };
 

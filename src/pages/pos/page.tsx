@@ -14,6 +14,15 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
 
+const Modal = ({ children }: { children: ReactNode }) =>
+  createPortal(
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" />
+      <div className="relative w-full max-w-lg">{children}</div>
+    </div>,
+    document.body
+  );
+
 interface Product {
   id: string;
   name: string;
@@ -187,6 +196,7 @@ interface Sale {
   paymentMethod: string;
   amountReceived: number;
   change: number;
+  notes?: string;
   status: 'completed' | 'cancelled' | 'refunded';
   cashier: string;
 }
@@ -206,6 +216,7 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
+  const [saleNotes, setSaleNotes] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
@@ -470,10 +481,19 @@ export default function POSPage() {
     if (showPaymentModal) {
       // Pequeño delay para asegurar que el input exista en el DOM antes de enfocar
       setTimeout(() => {
-        amountInputRef.current?.focus();
+        const active = document.activeElement as HTMLElement | null;
+        const activeTag = active?.tagName?.toLowerCase();
+        const isTypingTarget =
+          activeTag === 'input' ||
+          activeTag === 'textarea' ||
+          (active && (active as any).isContentEditable);
+
+        if (!isTypingTarget) {
+          amountInputRef.current?.focus();
+        }
       }, 0);
     }
-  }, [showPaymentModal, amountReceived]);
+  }, [showPaymentModal]);
 
   useEffect(() => {
     if (showNewCustomerModal) {
@@ -518,15 +538,6 @@ export default function POSPage() {
       setShowEditCustomerModal(false);
     }
   }, [activeTab]);
-
-  const Modal = ({ children }: { children: ReactNode }) =>
-    createPortal(
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative w-full max-w-lg">{children}</div>
-      </div>,
-      document.body
-    );
 
   // Load data (productos desde Supabase si hay usuario; si no, desde localStorage)
   useEffect(() => {
@@ -977,6 +988,7 @@ export default function POSPage() {
     const amountReceivedTrimmed = String(amountReceived ?? '').trim();
     const receivedInput = parseAmountInput(amountReceivedTrimmed);
     const received = amountReceivedTrimmed ? receivedInput : total;
+    const saleNotesTrimmed = String(saleNotes ?? '').trim();
 
     if (paymentMethod === 'cash') {
       if (!amountReceivedTrimmed) {
@@ -1010,6 +1022,7 @@ export default function POSPage() {
         paymentMethod,
         amountReceived: paymentMethod === 'cash' ? receivedInput : received,
         change: paymentMethod === 'cash' ? receivedInput - total : 0,
+        notes: saleNotesTrimmed,
         status: 'completed',
         cashier: 'Admin'
       };
@@ -1024,6 +1037,7 @@ export default function POSPage() {
       setSelectedCustomer(null);
       setAmountReceived('');
       setPaymentMethod('');
+      setSaleNotes('');
       setShowPaymentModal(false);
 
       setTimeout(() => {
@@ -1125,7 +1139,7 @@ export default function POSPage() {
               total_amount: newSale.total,
               paid_amount: isImmediatePayment ? newSale.total : 0,
               status: isImmediatePayment ? 'paid' : 'pending',
-              notes: `POS Sale ${newSale.id}`,
+              notes: saleNotesTrimmed || `POS Sale ${newSale.id}`,
             };
 
             const linesPayload: { description: string; quantity: number; unit_price: number; line_total: number; item_id: string | null }[] = [];
@@ -1240,6 +1254,7 @@ export default function POSPage() {
         price: item.price,
         total: item.total,
       })),
+      notes: completedSale.notes || null,
     };
 
     const customerData = {
@@ -2279,6 +2294,7 @@ export default function POSPage() {
                 onClick={() => {
                   setPaymentMethod('');
                   setAmountReceived('');
+                  setSaleNotes('');
                   setShowPaymentModal(true);
                 }}
                 className="w-full bg-gradient-to-br from-[#008000] to-[#006600] text-white py-4 rounded-xl font-bold text-lg hover:from-[#006600] hover:to-[#005500] hover:shadow-lg hover:shadow-[#008000]/30 hover:-translate-y-0.5 transition-all duration-300 shadow-md whitespace-nowrap"
@@ -3035,7 +3051,11 @@ export default function POSPage() {
         {/* Payment Modal */}
         {showPaymentModal && (
           <Modal>
-            <div className="bg-white rounded-lg p-6 w-96">
+            <div
+              className="bg-white rounded-lg p-6 w-96"
+              onKeyDownCapture={(e) => e.stopPropagation()}
+              tabIndex={-1}
+            >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Process Payment</h3>
                 <button
@@ -3043,6 +3063,7 @@ export default function POSPage() {
                     setShowPaymentModal(false);
                     setPaymentMethod('');
                     setAmountReceived('');
+                    setSaleNotes('');
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -3091,6 +3112,18 @@ export default function POSPage() {
                     )}
                   </div>
                 )}
+
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                  <textarea
+                    rows={3}
+                    value={saleNotes}
+                    onChange={(e) => setSaleNotes(e.target.value)}
+                    onKeyDownCapture={(e) => e.stopPropagation()}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Additional notes..."
+                  />
+                </div>
               </div>
               
               <button
@@ -3709,6 +3742,7 @@ export default function POSPage() {
                 price: item.price,
                 total: item.total,
               })),
+              notes: completedSale.notes || null,
             };
             const customerData = {
               name: completedSale.customer?.name || 'Customer',

@@ -10268,7 +10268,7 @@ export const quotesService = {
       let quote: any = null;
       let quoteError: any = null;
       let payloadToInsert: any = baseQuote;
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
         const res = await tryInsertQuote(payloadToInsert);
         quote = res.quote;
         quoteError = res.quoteError;
@@ -10277,9 +10277,18 @@ export const quotesService = {
           const msg = String((quoteError as any)?.message || '');
           const m = msg.match(/Could not find the '([^']+)' column/i);
           const missingCol = m?.[1] ? String(m[1]) : null;
-          if (missingCol === 'quote_number' || String(msg).toLowerCase().includes('quote_number')) {
+          if (missingCol) {
             const clean = { ...payloadToInsert };
-            delete (clean as any).quote_number;
+            if (missingCol === 'terms') {
+              const termsValue = String((clean as any).terms || '').trim();
+              if (termsValue) {
+                const existingNotes = String((clean as any).notes || '').trim();
+                (clean as any).notes = [existingNotes, '---', 'GENERAL TERMS AND CONDITIONS:', termsValue]
+                  .filter(Boolean)
+                  .join('\n');
+              }
+            }
+            delete (clean as any)[missingCol];
             payloadToInsert = clean;
             continue;
           }
@@ -10343,17 +10352,45 @@ export const quotesService = {
 
   async update(id: string, patch: any) {
     try {
-      const { data, error } = await supabase
-        .from('quotes')
-        .update({
-          ...patch,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select('*')
-        .single();
-      if (error) throw error;
-      return data;
+      let patchToUpdate: any = { ...(patch || {}) };
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const { data, error } = await supabase
+          .from('quotes')
+          .update({
+            ...patchToUpdate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .select('*')
+          .single();
+
+        if (!error) return data;
+
+        if ((error as any)?.code === 'PGRST204') {
+          const msg = String((error as any)?.message || '');
+          const m = msg.match(/Could not find the '([^']+)' column/i);
+          const missingCol = m?.[1] ? String(m[1]) : null;
+          if (missingCol) {
+            const clean = { ...patchToUpdate };
+            if (missingCol === 'terms') {
+              const termsValue = String((clean as any).terms || '').trim();
+              if (termsValue) {
+                const existingNotes = String((clean as any).notes || '').trim();
+                (clean as any).notes = [existingNotes, '---', 'GENERAL TERMS AND CONDITIONS:', termsValue]
+                  .filter(Boolean)
+                  .join('\n');
+              }
+            }
+            delete (clean as any)[missingCol];
+            patchToUpdate = clean;
+            continue;
+          }
+        }
+
+        throw error;
+      }
+
+      throw new Error('Could not update quote');
     } catch (error) {
       console.error('quotesService.update error', error);
       throw error;

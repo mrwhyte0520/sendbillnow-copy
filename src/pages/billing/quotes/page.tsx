@@ -55,6 +55,25 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
   return btoa(binary);
 };
 
+const extractTermsFromNotes = (notesRaw?: string | null): { notes: string | null; terms: string | null } => {
+  const notesText = String(notesRaw || '');
+  if (!notesText.trim()) return { notes: null, terms: null };
+
+  const marker = '---\nGENERAL TERMS AND CONDITIONS:';
+  const idx = notesText.indexOf(marker);
+  if (idx === -1) return { notes: notesText.trim() || null, terms: null };
+
+  const before = notesText.slice(0, idx).trim();
+  const after = notesText.slice(idx + marker.length).trim();
+
+  // Remove optional leading newline after the marker
+  const terms = after.replace(/^\n+/, '').trim();
+  return {
+    notes: before || null,
+    terms: terms || null,
+  };
+};
+
 const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:1024px;height:1400px;border:0;opacity:0';
@@ -153,6 +172,10 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
 
+  const [quoteNotes, setQuoteNotes] = useState('');
+
+  const [quoteTerms, setQuoteTerms] = useState('');
+
   const formatPhone = (value: string) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
     if (digits.length <= 3) return digits;
@@ -188,17 +211,7 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
   };
 
   const buildNotes = (freeNotes: string) => {
-    const block = [
-      '---',
-      `Business Name: ${businessName || ''}`,
-      `Business Phone: ${businessPhone || ''}`,
-      `Business Email: ${businessEmail || ''}`,
-      `Business Address: ${businessAddress || ''}`,
-      `Contact Name: ${contactName || ''}`,
-      `Contact Phone: ${contactPhone || ''}`,
-      `Contact Email: ${contactEmail || ''}`,
-    ].join('\n');
-    return [String(freeNotes || '').trim(), block].filter(Boolean).join('\n\n');
+    return String(freeNotes || '').trim();
   };
 
   const addRow = () => setItems(prev => [...prev, { item_id: null, description: '', quantity: 1, price: 0, total: 0 }]);
@@ -268,7 +281,8 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         return;
       }
 
-      const mergedNotes = buildNotes('');
+      const mergedNotes = buildNotes(quoteNotes);
+      const termsTrimmed = String(quoteTerms || '').trim();
       const quotePayload = {
         customer_id: null,
         customer_name: String(businessName || '').trim(),
@@ -291,6 +305,8 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         store_name: storeName || null,
         sales_rep_id: salesRepId || null,
         notes: mergedNotes || null,
+
+        terms: termsTrimmed || null,
       };
 
       const linePayloads = items
@@ -476,6 +492,28 @@ function NewQuoteForm({ customers, paymentTerms, currencies, salesReps, stores, 
         </div>
       </div>
 
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+        <textarea
+          rows={4}
+          value={quoteNotes}
+          onChange={(e) => setQuoteNotes(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Additional notes..."
+        />
+      </div>
+
+      <div className="mt-6">
+        <label className="block text-sm font-medium text-gray-700 mb-1">General Terms and Conditions</label>
+        <textarea
+          rows={4}
+          value={quoteTerms}
+          onChange={(e) => setQuoteTerms(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="General terms and conditions..."
+        />
+      </div>
+
       <div className="p-6 border-t border-gray-200 flex justify-end space-x-3 mt-6">
         <button onClick={onCancel} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">Cancel</button>
         <button onClick={save} className="px-4 py-2 bg-[#6b7a40] text-white rounded-lg hover:bg-[#4f5f33] transition-colors whitespace-nowrap">Create Quote</button>
@@ -510,6 +548,8 @@ interface Quote {
   storeName?: string | null;
   salesRepId?: string | null;
   notes?: string | null;
+
+  terms?: string | null;
 }
 
 interface Customer {
@@ -684,6 +724,8 @@ export default function QuotesPage() {
           const tax = Number(q.tax) || Number(q.tax_amount) || 0;
           const total = Number(q.total) || Number(q.total_amount) || (subtotal + tax) || itemsSum;
 
+          const extracted = extractTermsFromNotes(q.notes as string);
+
           return {
             id: q.id,
             quoteNumber: q.quote_number || q.quoteNumber || undefined,
@@ -708,7 +750,9 @@ export default function QuotesPage() {
             paymentTermId: (q.payment_term_id as string) || null,
             storeName: (q.store_name as string) || null,
             salesRepId: (q.sales_rep_id as string) || null,
-            notes: (q.notes as string) || null,
+            notes: extracted.notes,
+
+            terms: (q.terms as string) || extracted.terms,
           } as Quote;
         });
         setQuotes(mapped);
@@ -849,7 +893,9 @@ export default function QuotesPage() {
   const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
     if (!quoteToPrint) return;
     const estimateNumber = formatInvoiceNumberDisplay(String(quoteToPrint.quoteNumber || quoteToPrint.id));
-    const fullCustomer = quoteToPrint.customerId ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId)) : undefined;
+    const fullCustomer = quoteToPrint.customerId
+      ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId))
+      : undefined;
     let companyInfo: any = null;
     try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
     const quoteData = {
@@ -861,6 +907,9 @@ export default function QuotesPage() {
       subtotal: quoteToPrint.amount,
       tax: quoteToPrint.tax,
       items: quoteToPrint.items.map(item => ({ description: item.description, quantity: item.quantity, price: item.price, total: item.total })),
+      notes: (quoteToPrint as any).notes ?? null,
+
+      terms: (quoteToPrint as any).terms ?? null,
     };
     const customerData = {
       name: quoteToPrint.customer || fullCustomer?.name || 'Customer',
@@ -932,12 +981,7 @@ export default function QuotesPage() {
     const customerContactEmail = (fullCustomer as any)?.contactEmail || '';
 
     let companyInfo: any = null;
-    try {
-      companyInfo = await settingsService.getCompanyInfo();
-    } catch {
-      companyInfo = null;
-    }
-
+    try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
     const companyName =
       companyInfo?.name ||
       companyInfo?.company_name ||
@@ -1793,6 +1837,13 @@ export default function QuotesPage() {
                   </div>
                 )}
 
+                {viewQuote.terms && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-1">Terms and Conditions</h4>
+                    <p className="text-sm text-gray-700 whitespace-pre-line">{viewQuote.terms}</p>
+                  </div>
+                )}
+
                 <div className="flex justify-end pt-4">
                   <button
                     type="button"
@@ -1879,6 +1930,17 @@ export default function QuotesPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Terms and Conditions</label>
+                  <textarea
+                    rows={3}
+                    value={editingQuote.terms || ''}
+                    onChange={(e) => setEditingQuote(prev => prev ? { ...prev, terms: e.target.value } : prev)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Terms and conditions..."
+                  />
+                </div>
+
                 <div className="flex justify-end space-x-3 pt-2">
                   <button
                     type="button"
@@ -1898,6 +1960,7 @@ export default function QuotesPage() {
                           probability: editingQuote.probability,
                           status: editingQuote.status,
                           notes: editingQuote.notes ?? null,
+                          terms: editingQuote.terms ?? null,
                         });
                         setQuotes(prev => prev.map(q => q.id === editingQuote.id ? editingQuote : q));
                         toast.success(`Cotización ${editingQuote.id} actualizada`);
@@ -1949,6 +2012,7 @@ export default function QuotesPage() {
                       setLoading(true);
                       const qts = await quotesService.getAll(user.id);
                       const mapped = (qts || []).map((q: any) => ({
+                        ...(extractTermsFromNotes(q.notes as string) ? {} : {}),
                         id: q.id,
                         quoteNumber: q.quote_number || q.quoteNumber || undefined,
                         customerId: q.customer_id || q.customers?.id || undefined,
@@ -1973,7 +2037,10 @@ export default function QuotesPage() {
                           quantity: it.quantity || 1,
                           price: it.price || 0,
                           total: it.total || 0,
-                        }))
+                        })),
+                        notes: extractTermsFromNotes(q.notes as string).notes,
+
+                        terms: (q.terms as string) || extractTermsFromNotes(q.notes as string).terms,
                       }));
                       setQuotes(mapped);
                       setLoading(false);
@@ -2029,6 +2096,9 @@ export default function QuotesPage() {
                 price: item.price,
                 total: item.total,
               })),
+              notes: (quoteToPrint as any).notes ?? null,
+
+              terms: (quoteToPrint as any).terms ?? null,
             };
             const customerData = {
               name: quoteToPrint.customer || fullCustomer?.name || 'Customer',

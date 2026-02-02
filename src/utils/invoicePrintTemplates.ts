@@ -26,6 +26,26 @@ interface InvoiceData {
 
   items: { description: string; quantity: number; price: number; total: number }[];
 
+  notes?: string | null;
+
+  terms?: string | null;
+
+}
+
+function escapeHtml(input: string): string {
+
+  return input
+
+    .replace(/&/g, '&amp;')
+
+    .replace(/</g, '&lt;')
+
+    .replace(/>/g, '&gt;')
+
+    .replace(/"/g, '&quot;')
+
+    .replace(/'/g, '&#39;');
+
 }
 
 
@@ -141,6 +161,8 @@ function generateSimpleTemplate(
   docTitle: string
 
 ): string {
+
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
 
   // Generate rows with alternating colors
 
@@ -310,7 +332,7 @@ th:nth-child(4){text-align:center;}
 
   <div class="totals">
 
-    <div class="notes"><h4>Additional Notes:</h4><div class="notes-box"></div></div>
+    <div class="notes"><h4>Additional Notes:</h4><div class="notes-box">${notesHtml || '-'}</div></div>
 
     <div class="summary">
 
@@ -383,6 +405,8 @@ function generateDetailedTemplate(
   docTitle: string
 
 ): string {
+
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
 
   // Generate rows with alternating colors
 
@@ -576,7 +600,7 @@ th:nth-child(4){text-align:center;}
 
   <div class="totals">
 
-    <div class="notes"><h4>Additional Notes:</h4><div class="notes-box"></div></div>
+    <div class="notes"><h4>Additional Notes:</h4><div class="notes-box">${notesHtml || '-'}</div></div>
 
     <div class="summary">
 
@@ -619,6 +643,10 @@ function generateQuotationTemplate(
   company: CompanyData
 
 ): string {
+
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+  const termsHtml = invoice.terms ? escapeHtml(String(invoice.terms)) : '';
 
   const quoteRows = (invoice.items || []).map((item) =>
 
@@ -778,9 +806,9 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
   </div>
 
-  <div class="notes"><h4>NOTE:</h4><div class="notes-box"></div></div>
+  <div class="notes"><h4>NOTE:</h4><div class="notes-box">${notesHtml || '-'}</div></div>
 
-  <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box"></div></div>
+  <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box">${termsHtml || '-'}</div></div>
 
   <div class="footer">
 
@@ -813,6 +841,8 @@ function generateCorporateTemplate(
   docTitle: string
 
 ): string {
+
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
 
   const coloredRows = (invoice.items || []).map((item, idx) => 
 
@@ -984,7 +1014,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
       <h4>Additional Notes:</h4>
 
-      <div class="notes-box"></div>
+      <div class="notes-box">${notesHtml || '-'}</div>
 
     </div>
 
