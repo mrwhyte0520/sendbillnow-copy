@@ -203,7 +203,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'content-type');
-  res.setHeader('X-Send-Receipt-Email-Version', '2026-02-02-1');
+  const handlerVersion = '2026-02-02-2';
+  res.setHeader('X-Send-Receipt-Email-Version', handlerVersion);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -292,6 +293,7 @@ export default async function handler(req, res) {
           ? invoiceHtmlSnakeRaw.trim()
           : '';
 
+  const usedCustomHtml = Boolean(preferredHtml);
   const html = preferredHtml
     ? tuneInvoiceHtmlForEmail(preferredHtml)
     : buildReceiptHtml({
@@ -410,6 +412,8 @@ export default async function handler(req, res) {
     console.log('[send-receipt-email] Resend success:', responseJson);
     return res.status(200).json({
       success: true,
+      version: handlerVersion,
+      usedCustomHtml,
       data: responseJson,
       attachment: attachments.length
         ? { filename: attachments[0].filename, contentType: attachments[0].content_type }
