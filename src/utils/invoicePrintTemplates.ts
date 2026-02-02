@@ -4,7 +4,20 @@ import { formatDate } from './dateFormat';
 
 
 
-export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate';
+export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate' | 'job-estimate' | 'classic';
+
+export interface JobEstimateSignatureFields {
+  clientName?: string;
+  clientSignature?: string;
+  clientDate?: string;
+  contractorName?: string;
+  contractorSignature?: string;
+  contractorDate?: string;
+}
+
+export interface InvoicePrintOptions {
+  jobEstimate?: JobEstimateSignatureFields;
+}
 
 
 
@@ -30,6 +43,334 @@ interface InvoiceData {
 
   terms?: string | null;
 
+}
+
+function generateClassicInvoiceTemplate(
+
+  invoice: InvoiceData,
+
+  customer: CustomerData,
+
+  company: CompanyData
+
+): string {
+
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+  const rows = (invoice.items || [])
+    .map(
+      (item) => `
+        <tr>
+          <td style="padding:8px 10px;border:1px solid ${BLUE};">${escapeHtml(String(item.description || ''))}</td>
+          <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:center;">${item.quantity}</td>
+          <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:right;">${formatAmount(item.total)}</td>
+        </tr>
+      `.trim()
+    )
+    .join('');
+
+  const footerLinksParts: string[] = [];
+  if (company.facebook) footerLinksParts.push('Facebook');
+  if (company.instagram) footerLinksParts.push('Instagram');
+  if (company.twitter) footerLinksParts.push('X');
+  if (company.linkedin) footerLinksParts.push('LinkedIn');
+  if (company.youtube) footerLinksParts.push('YouTube');
+  if (company.tiktok) footerLinksParts.push('TikTok');
+  if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+  const footerLinksText = footerLinksParts.join(' | ');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+@page{margin:12mm;}
+body{font-family:Arial, sans-serif;background:#fff;color:#000;}
+.invoice{max-width:900px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:200px;}
+.top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 10px 0 10px;}
+.logo{width:170px;height:95px;border:none;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.logo img{max-width:170px;max-height:95px;object-fit:contain;}
+.company{font-size:12px;line-height:1.4;text-align:right;}
+.company .companyName{font-weight:800;font-size:16px;}
+.title{margin-top:8px;text-align:center;font-size:44px;font-weight:800;text-decoration:underline;letter-spacing:1px;color:${BLUE};}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:34px;padding:0 10px;font-size:12px;transform:translateY(28px);}
+.meta .billTo{justify-self:start;transform:translateX(40px);}
+.meta .invoiceInfo{justify-self:center;transform:translateX(90px);}
+.meta .box{min-height:60px;}
+.meta .label{font-weight:700;}
+.table-wrap{margin-top:110px;padding:0 10px;}
+table{width:100%;border-collapse:collapse;}
+th{border:2px solid ${BLUE};padding:8px 10px;text-align:left;font-size:12px;background-color:${BLUE} !important;color:#fff !important;}
+th:nth-child(2){text-align:center;width:80px;}
+th:nth-child(3){text-align:right;width:140px;}
+td{font-size:12px;}
+.bottom{display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;margin-top:28px;padding:0 10px;}
+.notes{border:2px solid ${BLUE};min-height:180px;padding:10px;}
+.notes .label{font-weight:700;margin-bottom:6px;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
+.totals{font-size:12px;line-height:1.9;}
+.totals .row{display:flex;justify-content:space-between;}
+.footer{margin-top:26px;text-align:center;font-size:12px;padding-bottom:16px;}
+.footerBlue{background-color:${BLUE} !important;color:#fff !important;padding:16px 14px;text-align:center;position:absolute;left:10px;right:10px;bottom:0;}
+.footerBlue .thanks{font-weight:700;font-size:12px;margin-bottom:8px;}
+.footerBlue .links{font-size:10px;opacity:0.95;}
+.footerBlue .divider{height:1px;background:rgba(255,255,255,0.35);margin:10px 0;}
+.footerBlue .powered{font-size:10px;opacity:0.9;}
+</style>
+</head><body>
+  <div class="invoice">
+    <div class="top">
+      <div class="logo">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
+      <div class="company">
+        <div class="companyName">${escapeHtml(company.name || 'COMPANY NAME')}</div>
+        ${company.address ? `<div>${escapeHtml(company.address)}</div>` : ''}
+        ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
+        ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="title">INVOICE</div>
+
+    <div class="meta">
+      <div class="box billTo">
+        <div class="label">Bill To:</div>
+        <div>${escapeHtml(customer.name || 'Customer')}</div>
+        ${customer.address ? `<div>${escapeHtml(customer.address)}</div>` : ''}
+      </div>
+      <div class="box invoiceInfo">
+        <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
+        <div class="row"><span class="label">Invoice Date:</span> ${escapeHtml(formatDate(invoice.date))}</div>
+        <div class="row"><span class="label">Due Date:</span> ${escapeHtml(formatDate(invoice.dueDate))}</div>
+        ${invoice.createdBy ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Description of Service</th>
+            <th>Qty</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bottom">
+      <div class="notes">
+        <div class="label">Notes:</div>
+        <div style="white-space:pre-wrap;">${notesHtml}</div>
+      </div>
+      <div class="totals">
+        <div class="row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+        <div class="row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+        <div class="row" style="font-weight:800;"><span>Total:</span><span>${formatAmount(invoice.amount)}</span></div>
+        <div class="row"><span>Balance Due:</span><span>${formatAmount(invoice.amount)}</span></div>
+      </div>
+    </div>
+
+    <div class="footerBlue">
+      <div class="thanks">Thank you for your purchase.</div>
+      ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+      <div class="divider"></div>
+      <div class="powered">Powered by: sendbillnow.com</div>
+    </div>
+  </div>
+
+<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+
+</body></html>`;
+}
+
+function generateJobEstimateTemplate(
+
+  invoice: InvoiceData,
+
+  customer: CustomerData,
+
+  company: CompanyData,
+
+  options?: InvoicePrintOptions
+
+): string {
+
+  const terms = invoice.terms ? escapeHtml(String(invoice.terms)) : '';
+  const notes = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+  const rows = (invoice.items || [])
+    .map(
+      (item) => `
+        <tr>
+          <td style="border:1px solid ${BLUE};padding:8px 10px;">${escapeHtml(String(item.description || ''))}</td>
+          <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:center;">${item.quantity}</td>
+          <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:right;">${formatAmount(item.price)}</td>
+          <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:right;">${formatAmount(item.total)}</td>
+        </tr>
+      `.trim()
+    )
+    .join('');
+
+  const paymentTermsHtml = terms
+    ? `<div style="white-space:pre-wrap;">${terms}</div>`
+    : `
+      <div>-20% Due Upon Contract Signing</div>
+      <div>-40% Due at Product Midpoint (Date)</div>
+      <div>-20% Due to Close to Completion (Date)</div>
+      <div>-10% Upon Final Inspection and Approval</div>
+    `.trim();
+
+  const footerLinksParts: string[] = [];
+  if (company.facebook) footerLinksParts.push('Facebook');
+  if (company.instagram) footerLinksParts.push('Instagram');
+  if (company.twitter) footerLinksParts.push('X');
+  if (company.linkedin) footerLinksParts.push('LinkedIn');
+  if (company.youtube) footerLinksParts.push('YouTube');
+  if (company.tiktok) footerLinksParts.push('TikTok');
+  if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+  const footerLinksText = footerLinksParts.join(' | ');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Job Estimate ${invoice.invoiceNumber}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+@page{margin:12mm;}
+body{font-family:Arial, sans-serif;background:#fff;color:#000;}
+.estimate{max-width:900px;margin:0 auto;min-height:100vh;padding:18px 10px 16px 10px;}
+.top{display:flex;justify-content:space-between;align-items:flex-start;}
+.title{font-size:34px;font-weight:900;letter-spacing:1px;color:${BLUE};}
+.companyBox{border:2px solid ${BLUE};padding:10px;width:240px;font-size:11px;line-height:1.35;background-color:${BLUE} !important;color:#fff !important;}
+.companyBox img{background:#fff;padding:4px;border-radius:4px;}
+.line{border-top:2px solid ${BLUE};margin:14px 0;}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11px;}
+.grid .label{font-weight:800;}
+.items{margin-top:18px;}
+table{width:100%;border-collapse:collapse;}
+th{border:1px solid ${BLUE};padding:8px 10px;font-size:12px;text-align:left;background-color:${BLUE} !important;color:#fff !important;}
+th:nth-child(2){width:80px;text-align:center;}
+th:nth-child(3){width:120px;text-align:right;}
+th:nth-child(4){width:140px;text-align:right;}
+.below{display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:18px;}
+.box{border:2px solid ${BLUE};padding:10px;font-size:11px;min-height:120px;}
+.box .head{font-weight:900;margin-bottom:6px;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
+.totals{font-size:12px;}
+.totals .row{display:flex;justify-content:space-between;margin:6px 0;}
+.totals .grand{font-weight:900;border-top:2px solid ${BLUE};padding-top:8px;margin-top:8px;}
+.termsBox{border:2px solid ${BLUE};padding:10px;font-size:11px;margin-top:16px;}
+.termsHead{font-weight:900;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
+.termsBody{white-space:pre-wrap;}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:40px;font-size:12px;}
+.sign .line{border-top:1px solid ${BLUE};margin:18px 0 6px 0;}
+.footerBlue{margin-top:26px;background-color:${BLUE} !important;color:#fff !important;padding:16px 14px;text-align:center;}
+.footerBlue .thanks{font-weight:700;font-size:12px;margin-bottom:8px;}
+.footerBlue .links{font-size:10px;opacity:0.95;}
+.footerBlue .divider{height:1px;background:rgba(255,255,255,0.35);margin:10px 0;}
+.footerBlue .powered{font-size:10px;opacity:0.9;}
+</style>
+</head><body>
+  <div class="estimate">
+    <div class="top">
+      <div>
+        <div class="title">JOB ESTIMATE</div>
+        <div style="margin-top:10px;font-size:11px;line-height:1.5;">
+          <div><span class="label">CUSTOMER:</span> ${escapeHtml(customer.name || '')}</div>
+          ${customer.address ? `<div><span class="label">ADDRESS:</span> ${escapeHtml(customer.address)}</div>` : ''}
+          ${customer.phone ? `<div><span class="label">PHONE:</span> ${escapeHtml(customer.phone)}</div>` : ''}
+          ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
+        </div>
+      </div>
+      <div class="companyBox">
+        ${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}" style="display:block;max-width:110px;max-height:60px;object-fit:contain;margin-bottom:8px;"/>` : `<div style="font-weight:900;">LOGO</div>`}
+        <div style="margin-top:6px;">
+          <div style="font-weight:800;">${escapeHtml(company.name || 'COMPANY NAME')}</div>
+          ${company.address ? `<div>${escapeHtml(company.address)}</div>` : ''}
+          ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
+          ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="grid">
+      <div>
+        <div><span class="label">ESTIMATE #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
+        <div><span class="label">PO #:</span> </div>
+      </div>
+      <div>
+        <div><span class="label">ESTIMATE DATE:</span> ${escapeHtml(formatDate(invoice.date))}</div>
+        <div><span class="label">MATERIAL COST:</span> </div>
+      </div>
+      <div>
+        <div><span class="label">CREATED BY:</span> ${escapeHtml(invoice.createdBy || '')}</div>
+        <div><span class="label">ESTIMATED COST:</span> ${formatAmount(invoice.amount)}</div>
+      </div>
+    </div>
+
+    <div class="items">
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Price</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows || `<tr><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="below">
+      <div class="box">
+        <div class="head">Payment Terms:</div>
+        ${paymentTermsHtml}
+      </div>
+      <div class="totals">
+        <div class="row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+        <div class="row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+        <div class="row grand"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
+      </div>
+    </div>
+
+    <div class="termsBox">
+      <div class="termsHead">Terms and Conditions:</div>
+      <div class="termsBody">${notes || 'This project estimate is based on information and requirements provided by the client and is not guaranteed. Actual cost and terms may change once all project elements are discussed, negotiated and finalized.'}</div>
+    </div>
+
+    <div class="sign">
+      <div>
+        <div style="font-weight:800;">CLIENT</div>
+        <div class="line"></div>
+        <div>Name: ${escapeHtml(String(options?.jobEstimate?.clientName || ''))}</div>
+        <div class="line"></div>
+        <div>Signature: ${escapeHtml(String(options?.jobEstimate?.clientSignature || ''))}</div>
+        <div class="line"></div>
+        <div>Date: ${escapeHtml(String(options?.jobEstimate?.clientDate || ''))}</div>
+      </div>
+      <div>
+        <div style="font-weight:800;">CONTRACTOR</div>
+        <div class="line"></div>
+        <div>Name: ${escapeHtml(String(options?.jobEstimate?.contractorName || ''))}</div>
+        <div class="line"></div>
+        <div>Signature: ${escapeHtml(String(options?.jobEstimate?.contractorSignature || ''))}</div>
+        <div class="line"></div>
+        <div>Date: ${escapeHtml(String(options?.jobEstimate?.contractorDate || ''))}</div>
+      </div>
+    </div>
+
+    <div class="footerBlue">
+      <div class="thanks">Thank you for your purchase.</div>
+      ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+      <div class="divider"></div>
+      <div class="powered">Powered by: sendbillnow.com</div>
+    </div>
+  </div>
+
+<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+
+</body></html>`;
 }
 
 function escapeHtml(input: string): string {
@@ -120,7 +461,9 @@ export function generateInvoiceHtml(
 
   company: CompanyData,
 
-  templateType: InvoiceTemplateType
+  templateType: InvoiceTemplateType,
+
+  options?: InvoicePrintOptions
 
 ): string {
 
@@ -136,9 +479,17 @@ export function generateInvoiceHtml(
 
     return generateDetailedTemplate(invoice, customer, company, docTitle);
 
+  } else if (templateType === 'classic') {
+
+    return generateClassicInvoiceTemplate(invoice, customer, company);
+
   } else if (templateType === 'corporate') {
 
     return generateCorporateTemplate(invoice, customer, company, docTitle);
+
+  } else if (templateType === 'job-estimate') {
+
+    return generateJobEstimateTemplate(invoice, customer, company, options);
 
   } else {
 
@@ -1064,7 +1415,9 @@ export function printInvoice(
 
   company: CompanyData,
 
-  templateType: InvoiceTemplateType
+  templateType: InvoiceTemplateType,
+
+  options?: InvoicePrintOptions
 
 ): void {
 
@@ -1078,7 +1431,7 @@ export function printInvoice(
 
   }
 
-  const html = generateInvoiceHtml(invoice, customer, company, templateType);
+  const html = generateInvoiceHtml(invoice, customer, company, templateType, options);
 
   printWindow.document.write(html);
 

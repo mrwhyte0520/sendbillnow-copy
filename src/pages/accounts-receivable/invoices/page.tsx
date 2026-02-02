@@ -26,7 +26,7 @@ import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
 import { accountsReceivableTheme as theme } from '../../../theme/accountsReceivable';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType, type InvoicePrintOptions } from '../../../utils/invoicePrintTemplates';
 
 const isGeneralCustomerName = (name?: string | null) => {
   if (!name) return false;
@@ -1024,7 +1024,7 @@ export default function InvoicesPage() {
     setShowPrintTypeModal(true);
   };
 
-  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!invoiceToPrint) return;
     const fullCustomer = invoiceToPrint.customerId ? customers.find((c) => c.id === invoiceToPrint.customerId) : undefined;
     const customerData = {
@@ -1049,7 +1049,7 @@ export default function InvoicesPage() {
       tiktok: (companyInfo as any)?.tiktok,
       whatsapp: (companyInfo as any)?.whatsapp,
     };
-    printInvoice(invoiceToPrint, customerData, companyData, type);
+    printInvoice(invoiceToPrint, customerData, companyData, type, options);
     setInvoiceToPrint(null);
   };
 
@@ -2213,7 +2213,7 @@ export default function InvoicesPage() {
               ? customers.find((c) => c.id === invoiceToPrint.customerId)?.email
               : undefined
           }
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!invoiceToPrint) return;
             const fullCustomer = customers.find((c) => c.id === invoiceToPrint.customerId);
             const email = fullCustomer?.email;
@@ -2246,7 +2246,7 @@ export default function InvoicesPage() {
               logo: companyInfo?.logo,
             };
             try {
-              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType);
+              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
               const res = await fetch('/api/send-receipt-email', {
                 method: 'POST',

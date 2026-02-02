@@ -10,7 +10,7 @@ import { purchaseOrdersService, purchaseOrderItemsService, suppliersService, inv
 import { formatMoney } from '../../../utils/numberFormat';
 import { useNavigate } from 'react-router-dom';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType, type InvoicePrintOptions } from '../../../utils/invoicePrintTemplates';
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 const isGeneralSupplierName = (name?: string | null) => {
@@ -735,7 +735,7 @@ export default function PurchaseOrdersPage() {
     setShowPrintTypeModal(true);
   };
 
-  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!orderToPrint) return;
     const supplier = suppliers.find((s: any) => String(s.id) === String(orderToPrint.supplierId));
     const orderData = {
@@ -762,7 +762,7 @@ export default function PurchaseOrdersPage() {
       address: (companyInfo as any)?.address,
       logo: (companyInfo as any)?.logo,
     };
-    printInvoice(orderData, supplierData, companyData, type);
+    printInvoice(orderData, supplierData, companyData, type, options);
     setOrderToPrint(null);
   };
 
@@ -1050,6 +1050,69 @@ export default function PurchaseOrdersPage() {
     });
     const safeNumber = order.number || order.id;
     saveAs(blob, `orden_compra_${safeNumber}.xlsx`);
+  };
+
+  const onSendEmail = async (templateType: InvoiceTemplateType, options?: InvoicePrintOptions) => {
+    if (!orderToPrint) return;
+    const fullSupplier = suppliers.find((s: any) => s.id === orderToPrint.supplierId);
+    const email = fullSupplier?.email;
+    if (!email || !email.includes('@')) {
+      alert('Supplier email not available');
+      return;
+    }
+    const orderData = {
+      invoiceNumber: orderToPrint.orderNumber || `PO-${orderToPrint.id}`,
+      date: orderToPrint.startDate || orderToPrint.orderDate,
+      dueDate: orderToPrint.deliveryDate || orderToPrint.startDate,
+      amount: orderToPrint.total || 0,
+      subtotal: orderToPrint.total || 0,
+      tax: 0,
+      items: Array.isArray(orderToPrint.products) ? orderToPrint.products.map((p: any) => ({
+        description: p.name || 'Product',
+        quantity: p.quantity || 1,
+        price: p.price || 0,
+        total: (p.quantity || 1) * (p.price || 0),
+      })) : [{ description: 'Purchase Order', quantity: 1, price: orderToPrint.total || 0, total: orderToPrint.total || 0 }],
+    };
+    const customerData = {
+      name: orderToPrint.supplierName || fullSupplier?.name || 'Supplier',
+      document: fullSupplier?.taxId,
+      phone: fullSupplier?.phone,
+      email: fullSupplier?.email,
+      address: fullSupplier?.address,
+    };
+    const companyData = {
+      name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
+      rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
+      phone: companyInfo?.phone || '',
+      email: companyInfo?.email || '',
+      address: companyInfo?.address || '',
+      logo: companyInfo?.logo,
+    };
+    try {
+      const orderHtml = generateInvoiceHtml(orderData, customerData, companyData, templateType, options);
+      const pdfBase64 = await generatePdfBase64FromHtml(orderHtml);
+      const res = await fetch('/api/send-receipt-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: `Purchase Order ${orderData.invoiceNumber}`,
+          invoiceNumber: orderData.invoiceNumber,
+          customerName: customerData.name,
+          total: orderToPrint.total || 0,
+          pdfBase64,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to send email');
+      }
+      alert('Email sent successfully!');
+    } catch (err: any) {
+      console.error('Error sending purchase order email:', err);
+      alert(err.message || 'Failed to send email');
+    }
   };
 
   return (
@@ -1486,68 +1549,7 @@ export default function PurchaseOrdersPage() {
               ? suppliers.find((s: any) => s.id === orderToPrint.supplierId)?.email
               : undefined
           }
-          onSendEmail={async (templateType) => {
-            if (!orderToPrint) return;
-            const fullSupplier = suppliers.find((s: any) => s.id === orderToPrint.supplierId);
-            const email = fullSupplier?.email;
-            if (!email || !email.includes('@')) {
-              alert('Supplier email not available');
-              return;
-            }
-            const orderData = {
-              invoiceNumber: orderToPrint.orderNumber || `PO-${orderToPrint.id}`,
-              date: orderToPrint.startDate || orderToPrint.orderDate,
-              dueDate: orderToPrint.deliveryDate || orderToPrint.startDate,
-              amount: orderToPrint.total || 0,
-              subtotal: orderToPrint.total || 0,
-              tax: 0,
-              items: Array.isArray(orderToPrint.products) ? orderToPrint.products.map((p: any) => ({
-                description: p.name || 'Product',
-                quantity: p.quantity || 1,
-                price: p.price || 0,
-                total: (p.quantity || 1) * (p.price || 0),
-              })) : [{ description: 'Purchase Order', quantity: 1, price: orderToPrint.total || 0, total: orderToPrint.total || 0 }],
-            };
-            const customerData = {
-              name: orderToPrint.supplierName || fullSupplier?.name || 'Supplier',
-              document: fullSupplier?.taxId,
-              phone: fullSupplier?.phone,
-              email: fullSupplier?.email,
-              address: fullSupplier?.address,
-            };
-            const companyData = {
-              name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
-              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
-              phone: companyInfo?.phone || '',
-              email: companyInfo?.email || '',
-              address: companyInfo?.address || '',
-              logo: companyInfo?.logo,
-            };
-            try {
-              const orderHtml = generateInvoiceHtml(orderData, customerData, companyData, templateType);
-              const pdfBase64 = await generatePdfBase64FromHtml(orderHtml);
-              const res = await fetch('/api/send-receipt-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: email,
-                  subject: `Purchase Order ${orderData.invoiceNumber}`,
-                  invoiceNumber: orderData.invoiceNumber,
-                  customerName: customerData.name,
-                  total: orderToPrint.total || 0,
-                  pdfBase64,
-                }),
-              });
-              if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || 'Failed to send email');
-              }
-              alert('Email sent successfully!');
-            } catch (err: any) {
-              console.error('Error sending purchase order email:', err);
-              alert(err.message || 'Failed to send email');
-            }
-          }}
+          onSendEmail={onSendEmail}
         />
       </div>
     </DashboardLayout>

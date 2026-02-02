@@ -12,7 +12,7 @@ import { formatAmount, formatMoney } from '../../utils/numberFormat';
 import InvoiceTypeModal from '../../components/common/InvoiceTypeModal';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoicePrintOptions, type InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabase';
 
@@ -1511,7 +1511,7 @@ export default function POSPage() {
     alert('Payment is insufficient');
   };
 
-  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!completedSale) return;
 
     const saleData = {
@@ -1563,7 +1563,7 @@ export default function POSPage() {
       whatsapp: companyInfo?.whatsapp,
     };
 
-    printInvoice(saleData, customerData, companyData, type);
+    printInvoice(saleData, customerData, companyData, type, options);
     setShowPrintTypeModal(false);
     setCompletedSale(null);
   };
@@ -3971,7 +3971,7 @@ export default function POSPage() {
           documentType="invoice"
           title="Print Receipt"
           customerEmail={(posCheckoutCustomerEmail || completedSale?.customer?.email || '').trim() || undefined}
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!completedSale) return;
             const emailTrimmed = (posCheckoutCustomerEmail || completedSale.customer?.email || '').trim();
             if (!emailTrimmed) {
@@ -4041,7 +4041,7 @@ export default function POSPage() {
             };
 
             try {
-              const invoiceHtml = generateInvoiceHtml(saleData, customerData, companyData, templateType);
+              const invoiceHtml = generateInvoiceHtml(saleData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
 
               if (!pdfBase64 || pdfBase64.length < 1000) {

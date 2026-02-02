@@ -13,7 +13,7 @@ import { formatDate } from '../../../utils/dateFormat';
 import { formatAmount } from '../../../utils/numberFormat';
 import DateInput from '../../../components/common/DateInput';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoicePrintOptions, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 const isGeneralCustomerName = (name?: string | null) => {
@@ -670,7 +670,7 @@ export default function ReceiptsPage() {
     setShowPrintTypeModal(true);
   };
 
-  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!receiptToPrint) return;
     const enriched = await enrichReceiptWithInvoices(receiptToPrint);
     const customer = customers.find((c) => c.id === enriched.customerId);
@@ -705,7 +705,7 @@ export default function ReceiptsPage() {
       logo: companyInfo?.logo,
     };
 
-    printInvoice(receiptData, customerData, companyData, type);
+    printInvoice(receiptData, customerData, companyData, type, options);
     setReceiptToPrint(null);
   };
 
@@ -1634,7 +1634,7 @@ export default function ReceiptsPage() {
               ? customers.find((c) => c.id === receiptToPrint.customerId)?.email
               : undefined
           }
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!receiptToPrint) return;
             const fullCustomer = customers.find((c) => c.id === receiptToPrint.customerId);
             const email = fullCustomer?.email;
@@ -1668,8 +1668,9 @@ export default function ReceiptsPage() {
               address: companyInfo?.address || '',
               logo: companyInfo?.logo,
             };
+
             try {
-              const receiptHtml = generateInvoiceHtml(receiptData, customerData, companyData, templateType);
+              const receiptHtml = generateInvoiceHtml(receiptData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(receiptHtml);
               const res = await fetch('/api/send-receipt-email', {
                 method: 'POST',

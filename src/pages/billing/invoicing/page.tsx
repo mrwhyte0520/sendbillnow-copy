@@ -20,7 +20,7 @@ import { formatDate } from '../../../utils/dateFormat';
 
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType, type InvoicePrintOptions } from '../../../utils/invoicePrintTemplates';
 
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
@@ -1366,7 +1366,7 @@ export default function InvoicingPage() {
 
 
 
-  const handlePrintTypeSelect = (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
 
     if (!invoiceToPrint) return;
 
@@ -1438,7 +1438,7 @@ export default function InvoicingPage() {
 
     };
 
-    printInvoice(invoiceData, customerData, companyData, type);
+    printInvoice(invoiceData, customerData, companyData, type, options);
 
     setInvoiceToPrint(null);
 
@@ -4693,7 +4693,7 @@ export default function InvoicingPage() {
 
           }
 
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
 
             if (!invoiceToPrint) return;
 
@@ -4775,13 +4775,13 @@ export default function InvoicingPage() {
 
               name: (freshCompanyInfo as any)?.name || (freshCompanyInfo as any)?.company_name || 'Send Bill Now',
 
-              rnc: (freshCompanyInfo as any)?.rnc || (freshCompanyInfo as any)?.tax_id || '',
+              rnc: (freshCompanyInfo as any)?.rnc || (freshCompanyInfo as any)?.tax_id,
 
-              phone: (freshCompanyInfo as any)?.phone || '',
+              phone: (freshCompanyInfo as any)?.phone,
 
-              email: (freshCompanyInfo as any)?.email || '',
+              email: (freshCompanyInfo as any)?.email,
 
-              address: (freshCompanyInfo as any)?.address || '',
+              address: (freshCompanyInfo as any)?.address,
 
               logo: (freshCompanyInfo as any)?.logo,
 
@@ -4803,7 +4803,7 @@ export default function InvoicingPage() {
 
             try {
 
-              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType);
+              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType, options);
 
               const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
 

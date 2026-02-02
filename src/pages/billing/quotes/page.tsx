@@ -2069,8 +2069,9 @@ export default function QuotesPage() {
               ? quoteToPrint.customerEmail
               : undefined
           }
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!quoteToPrint) return;
+
             const estimateNumber = formatInvoiceNumberDisplay(String(quoteToPrint.quoteNumber || quoteToPrint.id));
             const fullCustomer = quoteToPrint.customerId
               ? customers.find((c) => String(c.id) === String(quoteToPrint.customerId))
@@ -2126,8 +2127,9 @@ export default function QuotesPage() {
               whatsapp: companyInfo?.whatsapp,
             };
             try {
-              const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType);
+              const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(quoteHtml);
+
               const res = await fetch('/api/send-receipt-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

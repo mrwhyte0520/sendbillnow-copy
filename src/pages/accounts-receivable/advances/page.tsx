@@ -10,7 +10,7 @@ import { exportToExcelWithHeaders, addPdfBrandedHeader, getPdfTableStyles } from
 import { formatMoney } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoicePrintOptions, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 const isGeneralCustomerName = (name?: string | null) => {
   if (!name) return false;
@@ -373,7 +373,7 @@ export default function AdvancesPage() {
     setShowPrintTypeModal(true);
   };
 
-  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!advanceToPrint) return;
     const customer = customers.find((c) => c.id === advanceToPrint.customerId);
     let companyInfo: any = {};
@@ -404,7 +404,7 @@ export default function AdvancesPage() {
       logo: companyInfo?.logo,
     };
 
-    printInvoice(advanceData, customerData, companyData, type);
+    printInvoice(advanceData, customerData, companyData, type, options);
     setAdvanceToPrint(null);
   };
 
@@ -1173,7 +1173,7 @@ export default function AdvancesPage() {
               ? customers.find((c) => c.id === advanceToPrint.customerId)?.email
               : undefined
           }
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!advanceToPrint) return;
             const fullCustomer = customers.find((c) => c.id === advanceToPrint.customerId);
             const email = fullCustomer?.email;
@@ -1207,8 +1207,9 @@ export default function AdvancesPage() {
               address: companyInfo?.address || '',
               logo: companyInfo?.logo,
             };
+
             try {
-              const advanceHtml = generateInvoiceHtml(advanceData, customerData, companyData, templateType);
+              const advanceHtml = generateInvoiceHtml(advanceData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(advanceHtml);
               const res = await fetch('/api/send-receipt-email', {
                 method: 'POST',

@@ -10,7 +10,7 @@ import { useBankCatalog } from '../../../hooks/useBankCatalog';
 import { apSupplierAdvancesService, suppliersService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
+import { generateInvoiceHtml, printInvoice, type InvoicePrintOptions, type InvoiceTemplateType } from '../../../utils/invoicePrintTemplates';
 
 const isGeneralSupplierName = (name?: string | null) => {
   if (!name) return false;
@@ -375,7 +375,7 @@ export default function AdvancesPage() {
     setShowPrintTypeModal(true);
   };
 
-  const handlePrintTypeSelect = async (type: InvoiceTemplateType) => {
+  const handlePrintTypeSelect = async (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
     if (!advanceToPrint) return;
     let companyInfo: any = {};
     try { companyInfo = await settingsService.getCompanyInfo() || {}; } catch { /* ignore */ }
@@ -404,7 +404,7 @@ export default function AdvancesPage() {
       address: companyInfo?.address,
       logo: companyInfo?.logo,
     };
-    printInvoice(advanceData, supplierData, companyData, type);
+    printInvoice(advanceData, supplierData, companyData, type, options);
     setAdvanceToPrint(null);
   };
 
@@ -1047,7 +1047,7 @@ export default function AdvancesPage() {
               ? (suppliers.find((s) => s.id === advanceToPrint.supplierId) as any)?.email
               : undefined
           }
-          onSendEmail={async (templateType) => {
+          onSendEmail={async (templateType, options) => {
             if (!advanceToPrint) return;
             const fullSupplier = suppliers.find((s) => s.id === advanceToPrint.supplierId) as any;
             const email = fullSupplier?.email;
@@ -1082,7 +1082,7 @@ export default function AdvancesPage() {
               logo: companyInfo?.logo,
             };
             try {
-              const advanceHtml = generateInvoiceHtml(advanceData, customerData, companyData, templateType);
+              const advanceHtml = generateInvoiceHtml(advanceData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(advanceHtml);
               const res = await fetch('/api/send-receipt-email', {
                 method: 'POST',
