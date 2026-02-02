@@ -8691,6 +8691,7 @@ export const invoicesService = {
           invoice_lines (*)
         `)
         .eq('user_id', tenantId)
+        .order('created_at', { ascending: false })
         .order('invoice_date', { ascending: false });
       if (error) return handleDatabaseError(error, []);
       return data ?? [];

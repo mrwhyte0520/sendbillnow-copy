@@ -800,7 +800,7 @@ export default function InvoicingPage() {
 
           customer: customerData.name || 'Customer',
 
-          customerEmail: customerData.email || '',
+          customerEmail: customerData.email || customerData.contact_email || '',
 
           customerDocument: customerData.document || customerData.tax_id || '',
 
@@ -848,7 +848,19 @@ export default function InvoicingPage() {
 
 
 
-      setInvoices(mapped);
+      const sorted = [...mapped].sort((a, b) => {
+
+        const da = Date.parse(a.date || '') || 0;
+
+        const db = Date.parse(b.date || '') || 0;
+
+        if (db !== da) return db - da;
+
+        return String(b.internalId || b.id).localeCompare(String(a.internalId || a.id));
+
+      });
+
+      setInvoices(sorted);
 
     } catch (error) {
 

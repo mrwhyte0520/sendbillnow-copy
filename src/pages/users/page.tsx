@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 import { supabase } from '../../lib/supabase';
-import { jobsService, resolveTenantId } from '../../services/database';
+import { jobsService, resolveTenantId, settingsService } from '../../services/database';
 import { JobsModule } from '../billing/jobs/page';
 
 interface Role { id: string; name: string; description?: string }
@@ -36,7 +37,7 @@ export default function UsersPage() {
   const { user } = useAuth();
   const { limits } = usePlanPermissions();
 
-  const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee' | 'jobs'>('roles');
+  const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee' | 'jobs' | 'idcards'>('roles');
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -55,6 +56,30 @@ export default function UsersPage() {
 
   const [acceptedApplicants, setAcceptedApplicants] = useState<Array<{ email: string; position: string }>>([]);
   const [showApplicantSuggestions, setShowApplicantSuggestions] = useState(false);
+
+  const [selectedCardUserId, setSelectedCardUserId] = useState('');
+  const [cardFullName, setCardFullName] = useState('');
+  const [cardDepartment, setCardDepartment] = useState('');
+  const [cardEmployeeId, setCardEmployeeId] = useState('');
+  const [cardBloodGroup, setCardBloodGroup] = useState('');
+  const [cardPhone, setCardPhone] = useState('');
+  const [cardEmail, setCardEmail] = useState('');
+  const [cardAddress, setCardAddress] = useState('');
+  const [cardPhotoUrl, setCardPhotoUrl] = useState<string>('');
+  const [cardPhotoName, setCardPhotoName] = useState('');
+  const [cardPhotoDataUrl, setCardPhotoDataUrl] = useState('');
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [companyName, setCompanyName] = useState('');
+  const [companyLogoUrl, setCompanyLogoUrl] = useState('');
+  const [companyLogoDataUrl, setCompanyLogoDataUrl] = useState('');
+
+  const companyLogoSrc = useMemo(() => companyLogoDataUrl || companyLogoUrl, [companyLogoDataUrl, companyLogoUrl]);
+
+  const [idCardPublicToken, setIdCardPublicToken] = useState('');
+  const [idCardPublicUrl, setIdCardPublicUrl] = useState('');
+  const [idCardQrDataUrl, setIdCardQrDataUrl] = useState('');
+  const [idCardQrError, setIdCardQrError] = useState('');
 
   const storageKey = (key: string) => `contabi_rbac_${key}`;
 
@@ -490,6 +515,381 @@ export default function UsersPage() {
     []
   );
 
+  const selectedCardUser = useMemo(() => {
+    if (!selectedCardUserId) return null;
+    return usersWithRoles.find((u) => u.id === selectedCardUserId) || null;
+  }, [selectedCardUserId, usersWithRoles]);
+
+  useEffect(() => {
+    if (!selectedCardUser) return;
+    const email = String(selectedCardUser.email || '').trim();
+    const defaultName = email && email.includes('@') ? email.split('@')[0] : email;
+    setCardFullName(defaultName);
+    setCardDepartment(String(selectedCardUser.role_name || '').trim());
+    setCardEmployeeId(String(selectedCardUser.id || '').slice(0, 8).toUpperCase());
+    setCardEmail(email);
+  }, [selectedCardUser]);
+
+  useEffect(() => {
+    const loadCompany = async () => {
+      try {
+        const info: any = await settingsService.getCompanyInfo();
+        const resolvedName =
+          (info as any)?.name ||
+          (info as any)?.company_name ||
+          (info as any)?.legal_name ||
+          '';
+        setCompanyName(String(resolvedName || '').trim());
+
+        const logo = String((info as any)?.logo || '').trim();
+        setCompanyLogoUrl(logo);
+
+        // Try to convert logo URL to DataURL for reliable printing
+        if (logo && /^https?:\/\//i.test(logo)) {
+          try {
+            const res = await fetch(logo);
+            const blob = await res.blob();
+            const dataUrl = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+              reader.onerror = () => resolve('');
+              reader.readAsDataURL(blob);
+            });
+            setCompanyLogoDataUrl(dataUrl);
+          } catch {
+            setCompanyLogoDataUrl('');
+          }
+        } else {
+          setCompanyLogoDataUrl('');
+        }
+      } catch {
+        setCompanyName('');
+        setCompanyLogoUrl('');
+        setCompanyLogoDataUrl('');
+      }
+    };
+
+    loadCompany();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const syncPublicCard = async () => {
+      if (!user?.id) return;
+      if (!selectedCardUserId) {
+        setIdCardPublicToken('');
+        setIdCardPublicUrl('');
+        setIdCardQrDataUrl('');
+        setIdCardQrError('');
+        return;
+      }
+
+      try {
+        const tenantId = (await resolveTenantId(user.id)) || user.id;
+        if (!tenantId) return;
+
+        const payload = {
+          companyName: companyName || null,
+          companyLogo: (companyLogoDataUrl || companyLogoUrl) || null,
+          fullName: cardFullName || null,
+          department: cardDepartment || null,
+          employeeId: cardEmployeeId || null,
+          bloodGroup: cardBloodGroup || null,
+          phone: cardPhone || null,
+          email: cardEmail || null,
+          address: cardAddress || null,
+          photoDataUrl: cardPhotoDataUrl || null,
+        };
+
+        const { data, error } = await supabase
+          .from('public_id_cards')
+          .upsert(
+            {
+              tenant_id: tenantId,
+              employee_user_id: selectedCardUserId,
+              payload,
+              public_expires_at: null,
+            },
+            { onConflict: 'tenant_id,employee_user_id' },
+          )
+          .select('public_token')
+          .single();
+        if (error) throw error;
+
+        const token = String((data as any)?.public_token || '').trim();
+        if (!token) return;
+        setIdCardPublicToken(token);
+
+        const url = `${window.location.origin}/public/id-card/${encodeURIComponent(token)}`;
+        setIdCardPublicUrl(url);
+
+        const qr = await QRCode.toDataURL(url, {
+          margin: 0,
+          width: 240,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#0f172a', light: '#ffffff' },
+        });
+        setIdCardQrDataUrl(qr);
+        setIdCardQrError('');
+      } catch {
+        // If the table/RPC doesn't exist yet in this environment, keep UI working.
+        setIdCardPublicToken('');
+        setIdCardPublicUrl('');
+        setIdCardQrDataUrl('');
+        setIdCardQrError('QR could not be generated. Please apply the Supabase migration for public_id_cards and verify RLS permissions.');
+      }
+    };
+
+    // Debounce slightly to avoid spamming upserts while typing
+    const t = window.setTimeout(() => { void syncPublicCard(); }, 350);
+    return () => window.clearTimeout(t);
+  }, [
+    user?.id,
+    selectedCardUserId,
+    companyName,
+    companyLogoUrl,
+    companyLogoDataUrl,
+    cardFullName,
+    cardDepartment,
+    cardEmployeeId,
+    cardBloodGroup,
+    cardPhone,
+    cardEmail,
+    cardAddress,
+    cardPhotoDataUrl,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (cardPhotoUrl && cardPhotoUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(cardPhotoUrl);
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [cardPhotoUrl]);
+
+  const handlePrintIdCard = () => {
+    const safe = (v: any) => String(v ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[c] as string));
+
+    const photoHtml = cardPhotoDataUrl
+      ? `<img src="${safe(cardPhotoDataUrl)}" alt="photo" />`
+      : (cardPhotoUrl ? `<img src="${safe(cardPhotoUrl)}" alt="photo" />` : '👤');
+
+    const logoHtml = companyLogoDataUrl
+      ? `<img class="company-logo" src="${safe(companyLogoDataUrl)}" alt="logo" />`
+      : (companyLogoUrl ? `<img class="company-logo" src="${safe(companyLogoUrl)}" alt="logo" />` : '🏢');
+
+    const qrHtml = idCardQrDataUrl
+      ? `<img class="qr-img" src="${safe(idCardQrDataUrl)}" alt="QR" />`
+      : '▦▦▦<br/>▦▦▦<br/>▦▦▦';
+
+    const headerTitle = safe(companyName || 'Company');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ID Card</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { font-family: Arial, sans-serif; background: #f3f4f6; padding: 20px; }
+    .print-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card-container { display: block; }
+    .id-card { width: 350px; height: 550px; background: white; border-radius: 22px; overflow: hidden; box-shadow: 0 18px 55px rgba(0,0,0,0.22); position: relative; border: 1px solid rgba(229,231,235,0.9); }
+    .scale-wrap { width: 100%; height: 100%; position: relative; }
+    .pattern { position: absolute; inset: 0; pointer-events: none; opacity: 0.10; background-image: radial-gradient(circle at 20px 20px, rgba(2,132,199,0.35) 1px, transparent 1px); background-size: 22px 22px; mix-blend-mode: multiply; }
+    .accent-strip { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: linear-gradient(90deg, #2563eb, #06b6d4, #22c55e); opacity: 0.95; }
+    .footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(226,232,240,0.9); }
+    .footer-text { font-size: 11px; color: #64748b; font-weight: 600; letter-spacing: 0.4px; }
+    .microtext { font-size: 10px; color: #94a3b8; letter-spacing: 0.8px; text-transform: uppercase; }
+    .wave-bg { position: absolute; width: 100%; height: 100%; overflow: hidden; }
+    .wave { position: absolute; width: 200%; height: 200%; background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); border-radius: 45%; }
+    .wave-top { top: -120%; left: -50%; opacity: 0.1; }
+    .wave-bottom { bottom: -120%; right: -50%; opacity: 0.15; }
+    .card-front, .card-back { position: relative; z-index: 1; padding: 30px; height: 100%; display: flex; flex-direction: column; }
+    .card-front { background: linear-gradient(to bottom, #1e293b 0%, #1e293b 35%, white 35%, white 100%); }
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .logo { width: 60px; height: 60px; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.0) 55%), linear-gradient(135deg, #3b82f6, #06b6d4); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; color: white; overflow: hidden; box-shadow: 0 14px 30px rgba(59,130,246,0.22); border: 1px solid rgba(255,255,255,0.10); }
+    .company-logo { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .hospital-name { color: white; font-weight: 800; font-size: 18px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.6px; max-width: 235px; }
+    .photo-container { width: 180px; height: 180px; background: linear-gradient(135deg, #3b82f6, #06b6d4); border-radius: 30px; padding: 8px; margin: 0 auto 20px; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3); }
+    .photo { width: 100%; height: 100%; background: #e5e7eb; border-radius: 25px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .doctor-name { font-size: 30px; font-weight: 800; color: #0f172a; margin-bottom: 6px; text-align: center; letter-spacing: -0.5px; }
+    .specialty { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 0 auto 20px; }
+    .info-table { width: 100%; margin-top: auto; }
+    .info-row { display: flex; border-bottom: 1px solid #e5e7eb; padding: 12px 0; }
+    .info-label { font-weight: 700; color: #0f172a; width: 40%; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+    .info-value { color: #334155; width: 60%; font-size: 14px; font-weight: 600; }
+    .qr-code { width: 60px; height: 60px; background: #0f172a; position: absolute; bottom: 18px; right: 18px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 10px; color: white; border: 1px solid rgba(255,255,255,0.10); box-shadow: 0 14px 30px rgba(15,23,42,0.26); overflow: hidden; }
+    .qr-code::after { content: ''; position: absolute; inset: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); }
+    .qr-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-back { background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 55%, #ffffff 100%); }
+    .card-back .hospital-name { color: #1e293b; }
+    .contact-info { margin-bottom: 30px; }
+    .contact-row { display: flex; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
+    .contact-label { font-weight: bold; color: #1e293b; width: 100px; font-size: 14px; }
+    .contact-value { color: #475569; font-size: 14px; flex: 1; }
+    .disclaimer { background: linear-gradient(135deg, #2563eb, #06b6d4); padding: 16px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 12px 30px rgba(37, 99, 235, 0.20); }
+    .disclaimer-title { color: white; font-weight: bold; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
+    .disclaimer-text { color: white; font-size: 12px; line-height: 1.5; display: flex; align-items: start; gap: 10px; }
+    .check-icon { width: 20px; height: 20px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #3b82f6; font-weight: bold; flex-shrink: 0; }
+    .signature-section { margin-top: auto; text-align: center; padding-top: 20px; border-top: 2px solid #1e293b; }
+    .signature-label { font-weight: bold; color: #1e293b; font-size: 14px; text-transform: uppercase; }
+    @media print {
+      @page { margin: 10mm; }
+      html, body { height: auto; }
+      body { background: white !important; padding: 0 !important; margin: 0 !important; }
+
+      /* Preserve gradients/backgrounds when printing (user may still need to enable “Background graphics”). */
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+      .print-page { page-break-after: always; break-after: page; }
+      .print-page:last-child { page-break-after: auto; break-after: auto; }
+
+      /* Bigger on page (not real ID size) */
+      .id-card {
+        margin: 0;
+        box-shadow: none;
+        page-break-inside: avoid;
+        break-inside: avoid-page;
+        transform: scale(1.25);
+        transform-origin: center;
+      }
+      .scale-wrap { transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card-container">
+    <div class="print-page">
+      <div class="id-card">
+        <div class="scale-wrap">
+          <div class="pattern"></div>
+          <div class="wave-bg"><div class="wave wave-top"></div><div class="wave wave-bottom"></div></div>
+          <div class="card-front">
+            <div class="header">
+              <div class="logo">${logoHtml}</div>
+              <div class="hospital-name">${headerTitle}<br/>ID CARD</div>
+            </div>
+            <div class="photo-container"><div class="photo">${photoHtml}</div></div>
+            <div class="doctor-name">${safe(cardFullName)}</div>
+            <div class="specialty">${safe(cardDepartment)}</div>
+            <div class="info-table">
+              <div class="info-row"><div class="info-label">Department:</div><div class="info-value">${safe(cardDepartment)}</div></div>
+              <div class="info-row"><div class="info-label">Employee ID:</div><div class="info-value">${safe(cardEmployeeId)}</div></div>
+              <div class="info-row"><div class="info-label">Blood Group:</div><div class="info-value">${safe(cardBloodGroup)}</div></div>
+            </div>
+            <div class="footer">
+              <div class="footer-text">${safe((companyName || 'company').toLowerCase().replace(/\s+/g, ''))}.com</div>
+              <div class="microtext">Issued ${safe(new Date().toISOString().slice(0, 10))}</div>
+            </div>
+            <div class="qr-code">${qrHtml}</div>
+            <div class="accent-strip"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-page">
+      <div class="id-card">
+        <div class="scale-wrap">
+          <div class="pattern"></div>
+          <div class="wave-bg"><div class="wave wave-top"></div><div class="wave wave-bottom"></div></div>
+          <div class="card-back">
+            <div class="header">
+              <div class="logo">${logoHtml}</div>
+              <div class="hospital-name">${headerTitle}<br/>ID CARD</div>
+            </div>
+            <div class="contact-info">
+              <div class="contact-row"><div class="contact-label">Phone:</div><div class="contact-value">${safe(cardPhone)}</div></div>
+              <div class="contact-row"><div class="contact-label">Email:</div><div class="contact-value">${safe(cardEmail)}</div></div>
+              <div class="contact-row"><div class="contact-label">Address:</div><div class="contact-value">${safe(cardAddress)}</div></div>
+            </div>
+            <div class="disclaimer">
+              <div class="disclaimer-title">Disclaimer:</div>
+              <div class="disclaimer-text"><div class="check-icon">✓</div><div>This ID card is the property of the company and must be returned upon request or termination of employment.</div></div>
+            </div>
+            <div class="signature-section"><div class="signature-label">Authorized Signature</div></div>
+            <div class="footer">
+              <div class="footer-text">${safe((companyName || 'company').toLowerCase().replace(/\s+/g, ''))}.com</div>
+              <div class="microtext">Keep this card safe</div>
+            </div>
+            <div class="qr-code">${qrHtml}</div>
+            <div class="accent-strip"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      function done(){
+        setTimeout(function(){
+          try { window.focus(); } catch(e) {}
+          try { window.print(); } catch(e) {}
+        }, 250);
+      }
+      var img = document.querySelector('.photo img');
+      if (!img) return done();
+      if (img.complete) return done();
+      img.addEventListener('load', done);
+      img.addEventListener('error', done);
+    })();
+  </script>
+</body>
+</html>`;
+
+    // Print via hidden iframe to avoid popup blockers.
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const cleanup = () => {
+      try {
+        document.body.removeChild(iframe);
+      } catch {
+        // ignore
+      }
+    };
+
+    const win = iframe.contentWindow;
+    const doc = iframe.contentDocument || win?.document;
+    if (!doc) {
+      cleanup();
+      alert('Could not open print preview.');
+      return;
+    }
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        window.setTimeout(cleanup, 2_000);
+      }
+    };
+  };
+
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 bg-[#F8F3E7] min-h-full">
@@ -535,12 +935,279 @@ export default function UsersPage() {
             >
               Jobs
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveDepartment('idcards')}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                activeDepartment === 'idcards'
+                  ? 'bg-[#566738] text-white shadow shadow-[#566738]/30'
+                  : 'bg-[#FBF8EE] text-[#3E4D2C] border border-[#E2D6BD] hover:bg-[#F4EEDC]'
+              }`}
+            >
+              ID Cards
+            </button>
           </div>
         </div>
 
         {activeDepartment === 'jobs' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8]">
             <JobsModule />
+          </div>
+        ) : activeDepartment === 'idcards' ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+            <div className="flex items-start justify-between gap-4 flex-col lg:flex-row">
+              <div>
+                <h3 className="text-lg font-semibold text-[#1F2618]">Employee ID Cards</h3>
+                <p className="text-sm text-[#5B6844]">Select an employee, upload a photo, preview, and print an ID card.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handlePrintIdCard}
+                disabled={!selectedCardUserId}
+                className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap shadow shadow-[#566738]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Print
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-[#E0E7C8] p-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+                    <select
+                      value={selectedCardUserId}
+                      onChange={(e) => setSelectedCardUserId(e.target.value)}
+                      className="w-full p-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383]"
+                    >
+                      <option value="">Select…</option>
+                      {usersWithRoles.map((u) => (
+                        <option key={u.id} value={u.id}>{u.email} ({u.role_name})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Public link (QR)</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={idCardPublicUrl || ''}
+                        readOnly
+                        className="flex-1 p-2 border border-[#E2D6BD] rounded-lg bg-gray-50"
+                        placeholder="Select an employee to generate link"
+                      />
+                      <button
+                        type="button"
+                        disabled={!idCardPublicUrl}
+                        onClick={async () => {
+                          try {
+                            if (!idCardPublicUrl) return;
+                            await navigator.clipboard.writeText(idCardPublicUrl);
+                          } catch {
+                            // ignore
+                          }
+                        }}
+                        className="px-3 py-2 border border-[#E2D6BD] rounded-lg bg-white hover:bg-[#F4EEDC] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    {idCardPublicToken ? (
+                      <div className="text-xs text-gray-500 mt-1">Token: {idCardPublicToken}</div>
+                    ) : null}
+                    {idCardQrError ? (
+                      <div className="text-xs text-red-600 mt-1">{idCardQrError}</div>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Photo</label>
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const url = URL.createObjectURL(f);
+                        setCardPhotoUrl(url);
+                        setCardPhotoName(f.name || '');
+
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const result = typeof reader.result === 'string' ? reader.result : '';
+                          setCardPhotoDataUrl(result);
+                        };
+                        reader.onerror = () => {
+                          setCardPhotoDataUrl('');
+                        };
+                        reader.readAsDataURL(f);
+                      }}
+                      className="hidden"
+                    />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="px-4 py-2 border border-[#E2D6BD] rounded-lg bg-white hover:bg-[#F4EEDC]"
+                      >
+                        Choose file
+                      </button>
+                      <div className="text-sm text-gray-600 truncate">
+                        {cardPhotoName ? cardPhotoName : 'No file chosen'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
+                      <input value={cardFullName} onChange={(e) => setCardFullName(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                      <input value={cardDepartment} onChange={(e) => setCardDepartment(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                      <input value={cardEmployeeId} onChange={(e) => setCardEmployeeId(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Blood group</label>
+                      <input value={cardBloodGroup} onChange={(e) => setCardBloodGroup(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <input value={cardPhone} onChange={(e) => setCardPhone(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input value={cardEmail} onChange={(e) => setCardEmail(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input value={cardAddress} onChange={(e) => setCardAddress(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#E0E7C8] p-4">
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <div className="w-[350px] h-[550px] bg-white rounded-[20px] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.15)] relative">
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] top-[-120%] left-[-50%] opacity-10" />
+                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] bottom-[-120%] right-[-50%] opacity-15" />
+                    </div>
+                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20px 20px, rgba(2,132,199,0.35) 1px, transparent 1px)', backgroundSize: '22px 22px', mixBlendMode: 'multiply' }} />
+                    <div className="relative z-[1] p-[30px] h-full flex flex-col" style={{ background: 'linear-gradient(to bottom, #1e293b 0%, #1e293b 35%, white 35%, white 100%)' }}>
+                      <div className="flex items-center gap-3 mb-7">
+                        <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-white text-2xl overflow-hidden shadow-[0_14px_30px_rgba(59,130,246,0.22)] border border-white/10" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.0) 55%), linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+                          {companyLogoSrc ? <img src={companyLogoSrc} alt="Logo" className="w-full h-full object-cover" /> : '🏢'}
+                        </div>
+                        <div className="text-white font-extrabold text-[18px] leading-[1.1] uppercase tracking-[0.6px] max-w-[235px]">
+                          {(companyName || 'Company')}<br />ID Card
+                        </div>
+                      </div>
+                      <div className="w-[180px] h-[180px] rounded-[30px] p-2 mx-auto mb-5 shadow-[0_10px_30px_rgba(59,130,246,0.3)]" style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+                        <div className="w-full h-full bg-[#e5e7eb] rounded-[25px] overflow-hidden flex items-center justify-center text-5xl text-[#9ca3af]">
+                          {cardPhotoUrl ? <img src={cardPhotoUrl} alt="Employee" className="w-full h-full object-cover" /> : '👤'}
+                        </div>
+                      </div>
+                      <div className="text-[28px] font-extrabold text-[#0f172a] text-center mb-1 tracking-[-0.5px]">{cardFullName || 'Employee'}</div>
+                      <div className="mx-auto mb-5 px-5 py-2 rounded-[20px] text-white text-[13px] font-bold uppercase" style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+                        {cardDepartment || 'Department'}
+                      </div>
+                      <div className="w-full mt-auto">
+                        <div className="flex border-b border-[#e5e7eb] py-3">
+                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Department</div>
+                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardDepartment || '—'}</div>
+                        </div>
+                        <div className="flex border-b border-[#e5e7eb] py-3">
+                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Employee ID</div>
+                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardEmployeeId || '—'}</div>
+                        </div>
+                        <div className="flex border-b border-[#e5e7eb] py-3">
+                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Blood Group</div>
+                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardBloodGroup || '—'}</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/90 flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-slate-500 font-semibold tracking-[0.4px]">
+                          {(companyName || 'company').toLowerCase().replace(/\s+/g, '')}.com
+                        </div>
+                        <div className="text-[10px] text-slate-400 tracking-[0.8px] uppercase">Issued {new Date().toISOString().slice(0, 10)}</div>
+                      </div>
+                      <div className="absolute bottom-5 right-5">
+                        <div className="w-[64px] h-[64px] rounded-[14px] bg-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] border border-slate-200 p-[4px]">
+                          <div className="w-full h-full rounded-[10px] bg-[#0f172a] border border-white/10 overflow-hidden flex items-center justify-center text-white text-[10px]">
+                            {idCardQrDataUrl ? <img src={idCardQrDataUrl} alt="QR" className="w-full h-full object-cover" /> : <>▦▦▦<br />▦▦▦<br />▦▦▦</>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="absolute left-0 right-0 bottom-0 h-[10px]" style={{ background: 'linear-gradient(90deg, #2563eb, #06b6d4, #22c55e)' }} />
+                    </div>
+                  </div>
+
+                  <div className="w-[350px] h-[550px] bg-white rounded-[22px] overflow-hidden shadow-[0_18px_55px_rgba(0,0,0,0.15)] relative border border-[#e5e7eb]">
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] top-[-120%] left-[-50%] opacity-10" />
+                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] bottom-[-120%] right-[-50%] opacity-15" />
+                    </div>
+                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20px 20px, rgba(2,132,199,0.35) 1px, transparent 1px)', backgroundSize: '22px 22px', mixBlendMode: 'multiply' }} />
+                    <div className="relative z-[1] p-[30px] h-full flex flex-col">
+                      <div className="flex items-center gap-3 mb-10">
+                        <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-white text-2xl overflow-hidden shadow-[0_14px_30px_rgba(59,130,246,0.22)] border border-white/10" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.0) 55%), linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
+                          {companyLogoSrc ? <img src={companyLogoSrc} alt="Logo" className="w-full h-full object-cover" /> : '🏢'}
+                        </div>
+                        <div className="text-[#0f172a] font-extrabold text-[18px] leading-[1.1] uppercase tracking-[0.6px] max-w-[235px]">
+                          {(companyName || 'Company')}<br />ID Card
+                        </div>
+                      </div>
+                      <div className="mb-7">
+                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
+                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Phone:</div>
+                          <div className="text-[#475569] text-sm flex-1">{cardPhone || '—'}</div>
+                        </div>
+                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
+                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Email:</div>
+                          <div className="text-[#475569] text-sm flex-1">{cardEmail || '—'}</div>
+                        </div>
+                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
+                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Address:</div>
+                          <div className="text-[#475569] text-sm flex-1">{cardAddress || '—'}</div>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-[16px] mb-5 shadow-[0_12px_30px_rgba(37,99,235,0.20)]" style={{ background: 'linear-gradient(135deg, #2563eb, #06b6d4)' }}>
+                        <div className="text-white font-bold text-[16px] mb-2 uppercase">Disclaimer:</div>
+                        <div className="text-white text-[12px] leading-[1.5] flex items-start gap-2.5">
+                          <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[#3b82f6] font-bold flex-shrink-0">✓</div>
+                          <div>This ID card is the property of the company and must be returned upon request or termination of employment.</div>
+                        </div>
+                      </div>
+                      <div className="mt-auto text-center pt-5 border-t-2 border-[#1e293b]">
+                        <div className="font-bold text-[#1e293b] text-sm uppercase">Authorized Signature</div>
+                      </div>
+                      <div className="mt-3 pt-2.5 border-t border-slate-200/90 flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-slate-500 font-semibold tracking-[0.4px]">
+                          {(companyName || 'company').toLowerCase().replace(/\s+/g, '')}.com
+                        </div>
+                        <div className="text-[10px] text-slate-400 tracking-[0.8px] uppercase">Keep this card safe</div>
+                      </div>
+                      <div className="absolute bottom-5 right-5">
+                        <div className="w-[64px] h-[64px] rounded-[14px] bg-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] border border-slate-200 p-[4px]">
+                          <div className="w-full h-full rounded-[10px] bg-[#0f172a] border border-white/10 overflow-hidden flex items-center justify-center text-white text-[10px]">
+                            {idCardQrDataUrl ? <img src={idCardQrDataUrl} alt="QR" className="w-full h-full object-cover" /> : <>▦▦▦<br />▦▦▦<br />▦▦▦</>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="absolute left-0 right-0 bottom-0 h-[10px]" style={{ background: 'linear-gradient(90deg, #2563eb, #06b6d4, #22c55e)' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : activeDepartment === 'employee' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
