@@ -210,6 +210,10 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
+  if (req.method === 'GET') {
+    return res.status(200).json({ success: true, version: handlerVersion });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST, OPTIONS');
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
