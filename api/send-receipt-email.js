@@ -297,6 +297,9 @@ export default async function handler(req, res) {
     templateType,
   });
 
+  const normalizedTemplateType = String(templateType || '').trim().toLowerCase();
+  const allowNoAttachment = normalizedTemplateType === 'id-card' || normalizedTemplateType === 'idcard';
+
   const attachments = [];
   const attachment = (attachmentRaw && typeof attachmentRaw === 'object')
     ? attachmentRaw
@@ -308,7 +311,7 @@ export default async function handler(req, res) {
         }
       : null;
 
-  if (!attachment) {
+  if (!attachment && !allowNoAttachment) {
     return res.status(400).json({ success: false, error: 'Missing PDF attachment' });
   }
 
@@ -347,7 +350,7 @@ export default async function handler(req, res) {
     }
   }
 
-  if (!attachments.length) {
+  if (!allowNoAttachment && !attachments.length) {
     return res.status(400).json({ success: false, error: 'Invalid PDF attachment' });
   }
 

@@ -76,7 +76,14 @@ export default function UsersPage() {
 
   const companyLogoSrc = useMemo(() => companyLogoDataUrl || companyLogoUrl, [companyLogoDataUrl, companyLogoUrl]);
 
+  const [idCardPublicToken, setIdCardPublicToken] = useState('');
   const [idCardQrDataUrl, setIdCardQrDataUrl] = useState('');
+
+  const [showIdCardEmailModal, setShowIdCardEmailModal] = useState(false);
+  const [idCardEmailTo, setIdCardEmailTo] = useState('');
+  const [idCardEmailSending, setIdCardEmailSending] = useState(false);
+  const [idCardEmailError, setIdCardEmailError] = useState('');
+  const [idCardEmailSuccess, setIdCardEmailSuccess] = useState('');
 
   const storageKey = (key: string) => `contabi_rbac_${key}`;
 
@@ -87,6 +94,81 @@ export default function UsersPage() {
     setPermissions(localPerms.filter((p: Permission) => p.module !== 'settings'));
     setRolePerms(JSON.parse(localStorage.getItem(storageKey('role_permissions')) || '[]'));
     setUserRoles(JSON.parse(localStorage.getItem(storageKey('user_roles')) || '[]'));
+  };
+
+  const handleSendIdCardEmail = async () => {
+    const to = String(idCardEmailTo || '').trim();
+    if (!to) {
+      setIdCardEmailError('Recipient email is required.');
+      return;
+    }
+    if (!selectedCardUserId) {
+      setIdCardEmailError('Select an employee first.');
+      return;
+    }
+    if (!idCardPublicToken) {
+      setIdCardEmailError('Public token not available yet. Apply the Supabase migration and try again.');
+      return;
+    }
+
+    setIdCardEmailSending(true);
+    setIdCardEmailError('');
+    setIdCardEmailSuccess('');
+
+    try {
+      const publicUrl = `${window.location.origin}/public/id-card/${encodeURIComponent(idCardPublicToken)}`;
+      const subject = `Employee ID Card - ${cardFullName || 'ID Card'}`;
+      const safeCompany = String(companyName || 'Company');
+      const safeName = String(cardFullName || 'Employee');
+
+      const invoiceHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 16px;">
+          <div style="font-size: 18px; font-weight: 700; color:#0f172a;">${safeCompany} - ID Card</div>
+          <div style="margin-top: 6px; color:#334155;">Employee: <strong>${safeName}</strong></div>
+          <div style="margin-top: 14px;">
+            <a href="${publicUrl}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:700;">Open ID Card</a>
+          </div>
+          <div style="margin-top: 12px; font-size: 12px; color:#64748b;">If the button doesn't work, copy and paste this link:</div>
+          <div style="margin-top: 6px; font-size: 12px; color:#0f172a; word-break: break-all;">${publicUrl}</div>
+        </div>
+      `.trim();
+
+      const sale = {
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toLocaleTimeString(),
+        items: [{ name: 'ID Card Link', quantity: 1, total: 0 }],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+      };
+
+      const res = await fetch('/api/send-receipt-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to,
+          subject,
+          companyName: safeCompany,
+          customerName: safeName,
+          templateType: 'id-card',
+          sale,
+          invoiceHtml,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        const msg = String(json?.error || 'Failed to send email');
+        throw new Error(msg);
+      }
+
+      setIdCardEmailSuccess('Email sent.');
+      setShowIdCardEmailModal(false);
+    } catch (e: any) {
+      setIdCardEmailError(e?.message || 'Failed to send email');
+    } finally {
+      setIdCardEmailSending(false);
+    }
   };
 
   const createUser = async () => {
@@ -573,6 +655,7 @@ export default function UsersPage() {
     const syncPublicCard = async () => {
       if (!user?.id) return;
       if (!selectedCardUserId) {
+        setIdCardPublicToken('');
         setIdCardQrDataUrl('');
         return;
       }
@@ -611,6 +694,7 @@ export default function UsersPage() {
 
         const token = String((data as any)?.public_token || '').trim();
         if (!token) return;
+        setIdCardPublicToken(token);
 
         const url = `${window.location.origin}/public/id-card/${encodeURIComponent(token)}`;
 
@@ -623,6 +707,7 @@ export default function UsersPage() {
         setIdCardQrDataUrl(qr);
       } catch (e) {
         // If the table/RPC doesn't exist yet in this environment, keep UI working.
+        setIdCardPublicToken('');
         setIdCardQrDataUrl('');
         console.error('ID card public QR generation failed:', e);
       }
@@ -944,20 +1029,100 @@ export default function UsersPage() {
           </div>
         ) : activeDepartment === 'idcards' ? (
           <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
-            <div className="flex items-start justify-between gap-4 flex-col lg:flex-row">
+            <div className="flex items-start justify-between gap-4 flex-col md:flex-row">
               <div>
                 <h3 className="text-lg font-semibold text-[#1F2618]">Employee ID Cards</h3>
                 <p className="text-sm text-[#5B6844]">Select an employee, upload a photo, preview, and print an ID card.</p>
               </div>
-              <button
-                type="button"
-                onClick={handlePrintIdCard}
-                disabled={!selectedCardUserId}
-                className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap shadow shadow-[#566738]/30 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Print
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIdCardEmailError('');
+                    setIdCardEmailSuccess('');
+                    setShowIdCardEmailModal(true);
+                  }}
+                  disabled={!selectedCardUserId}
+                  className="px-4 py-2 border border-[#E2D6BD] bg-white rounded-lg hover:bg-[#F4EEDC] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Send by email
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintIdCard}
+                  disabled={!selectedCardUserId}
+                  className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] whitespace-nowrap shadow shadow-[#566738]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Print
+                </button>
+              </div>
             </div>
+
+            {showIdCardEmailModal ? (
+              <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+                <div
+                  className="absolute inset-0 bg-black/40"
+                  onClick={() => {
+                    if (idCardEmailSending) return;
+                    setShowIdCardEmailModal(false);
+                  }}
+                />
+                <div className="relative w-full max-w-md rounded-2xl bg-white border border-[#E0E7C8] shadow-xl p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-semibold text-[#1F2618]">Send ID Card</div>
+                      <div className="text-sm text-[#5B6844]">We will send a public link to view and print the ID card.</div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={idCardEmailSending}
+                      onClick={() => setShowIdCardEmailModal(false)}
+                      className="px-3 py-1.5 border border-[#E2D6BD] rounded-lg bg-white hover:bg-[#F4EEDC] disabled:opacity-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Recipient email</label>
+                      <input
+                        value={idCardEmailTo}
+                        onChange={(e) => setIdCardEmailTo(e.target.value)}
+                        className="w-full p-2 border border-[#E2D6BD] rounded-lg"
+                        placeholder="name@email.com"
+                      />
+                    </div>
+
+                    {idCardEmailError ? (
+                      <div className="text-sm text-red-600">{idCardEmailError}</div>
+                    ) : null}
+                    {idCardEmailSuccess ? (
+                      <div className="text-sm text-green-700">{idCardEmailSuccess}</div>
+                    ) : null}
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        disabled={idCardEmailSending}
+                        onClick={() => setShowIdCardEmailModal(false)}
+                        className="px-4 py-2 border border-[#E2D6BD] rounded-lg bg-white hover:bg-[#F4EEDC] disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idCardEmailSending}
+                        onClick={() => void handleSendIdCardEmail()}
+                        className="px-4 py-2 bg-[#566738] text-white rounded-lg hover:bg-[#45532B] shadow shadow-[#566738]/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {idCardEmailSending ? 'Sending…' : 'Send'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-[#E0E7C8] p-4">
@@ -1443,3 +1608,4 @@ export default function UsersPage() {
     </DashboardLayout>
   );
 }
+
