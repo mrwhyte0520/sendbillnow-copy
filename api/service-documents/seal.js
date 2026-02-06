@@ -1,0 +1,977 @@
+import { jsPDF as JsPDFNamed } from 'jspdf';
+
+import {
+  getBaseUrl,
+  getBearerToken,
+  getSupabaseAdminClient,
+  getSupabaseClient,
+  insertEvent,
+  normalizeTaxRate,
+  round2,
+  readJsonBody,
+  requireUser,
+  resolveTenantId,
+} from './_shared.js';
+
+const BLUE = '#001B9E';
+
+function inferImageType(pathOrUrl) {
+  const raw = String(pathOrUrl || '').toLowerCase();
+  if (raw.includes('.jpg') || raw.includes('.jpeg')) return { format: 'JPEG', mime: 'image/jpeg' };
+  if (raw.includes('.webp')) return { format: 'WEBP', mime: 'image/webp' };
+  return { format: 'PNG', mime: 'image/png' };
+}
+
+async function fetchBufferFromUrl(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`Could not fetch url (${resp.status}): ${text}`);
+  }
+  const ab = await resp.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+async function fetchSignatureBuffer({ admin, bucket, pathOrUrl }) {
+  const raw = String(pathOrUrl || '').trim();
+  if (!raw) return null;
+
+  if (/^https?:\/\//i.test(raw)) {
+    return await fetchBufferFromUrl(raw);
+  }
+
+  const dl = await admin.storage.from(bucket).download(raw);
+  if (dl.error) throw new Error(dl.error.message || 'Could not download signature');
+  if (!dl.data) return null;
+
+  const ab = await dl.data.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+async function fetchPdfBuffer({ admin, bucket, path }) {
+  const raw = String(path || '').trim();
+  if (!raw) return null;
+  const dl = await admin.storage.from(bucket).download(raw);
+  if (dl.error) throw new Error(dl.error.message || 'Could not download PDF');
+  if (!dl.data) return null;
+  const ab = await dl.data.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+function buildEmailHtml({ companyName, clientName, docType, docNumber, sealedPdfUrl }) {
+  const safeCompany = String(companyName || 'Send Bill Now');
+  const safeClient = String(clientName || 'Client');
+  const safeDoc = String(docNumber || '').trim();
+  const safeType = docType === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice';
+  const title = safeDoc ? `${safeType} ${safeDoc}` : safeType;
+  const safeUrl = sealedPdfUrl ? String(sealedPdfUrl) : '';
+
+  return `
+  <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;">
+    <div style="background:linear-gradient(135deg,#008000,#006600);padding:18px 20px;">
+      <div style="color:#fff;font-size:18px;font-weight:700;">${safeCompany}</div>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">${title}</div>
+    </div>
+    <div style="border:1px solid #e6e6e6;border-top:none;padding:20px;">
+      <p style="margin:0 0 12px;color:#111;font-size:14px;">Hi ${safeClient},</p>
+      <p style="margin:0 0 12px;color:#333;font-size:14px;">Your agreement has been confirmed and sealed.</p>
+      <p style="margin:0 0 12px;color:#333;font-size:14px;">The sealed PDF is attached to this email.</p>
+      ${safeUrl ? `
+      <div style="margin:18px 0;">
+        <a href="${safeUrl}" style="display:inline-block;background:#008000;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;">Download Sealed PDF</a>
+      </div>
+      <p style="margin:16px 0 0;color:#666;font-size:12px;">If the button does not work, open this link:</p>
+      <p style="margin:6px 0 0;color:#006600;font-size:12px;word-break:break-all;">${safeUrl}</p>
+      ` : ''}
+    </div>
+  </div>`;
+}
+
+function safeMoney(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return '0.00';
+  return num.toFixed(2);
+}
+
+function currencyPrefix(code) {
+  const c = String(code || '').toUpperCase();
+  if (c === 'USD') return '$';
+  if (c === 'DOP' || c === 'RD$') return 'RD$';
+  if (c === 'EUR') return '€';
+  return '$';
+}
+
+function moneyWithCurrency(n, currency) {
+  const prefix = currencyPrefix(currency);
+  return `${prefix} ${safeMoney(n)}`;
+}
+
+function normalizeMoney(n) {
+  const num = Number(n);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function safeText(input) {
+  return String(input ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function splitText(pdf, text, maxWidth) {
+  const raw = String(text || '').trim();
+  if (!raw) return [];
+  try {
+    return pdf.splitTextToSize(raw, maxWidth);
+  } catch {
+    return [raw];
+  }
+}
+
+function isValidEmail(input) {
+  const email = String(input || '').trim();
+  if (!email) return false;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
+
+  try {
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (req.method !== 'POST') {
+      res.setHeader('Allow', 'POST, OPTIONS');
+      return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
+    }
+
+    const accessToken = getBearerToken(req);
+    if (!accessToken) return res.status(401).json({ ok: false, error: 'Missing access token' });
+
+    const supabase = getSupabaseClient(accessToken);
+    if (!supabase) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
+
+    const admin = getSupabaseAdminClient();
+    if (!admin) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
+
+    const { user, error: userError } = await requireUser(supabase);
+    if (userError) return res.status(401).json({ ok: false, error: userError });
+
+    const tenantId = await resolveTenantId(supabase, user);
+    if (!tenantId) return res.status(400).json({ ok: false, error: 'Missing tenant id' });
+
+    const body = await readJsonBody(req);
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ ok: false, error: 'Invalid JSON body' });
+    }
+
+    const documentId = String(body.documentId || body.document_id || body.id || '').trim();
+    if (!documentId) return res.status(400).json({ ok: false, error: 'Missing documentId' });
+
+    const forceRegenerate = Boolean(body.forceRegenerate || body.force_regenerate);
+
+  const { data: doc, error: docError } = await supabase
+    .from('service_documents')
+    .select(
+      'id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
+    )
+    .eq('id', documentId)
+    .eq('user_id', tenantId)
+    .limit(1)
+    .maybeSingle();
+
+  if (docError) return res.status(500).json({ ok: false, error: docError.message || 'Could not read document' });
+  if (!doc?.id) return res.status(404).json({ ok: false, error: 'Document not found' });
+
+  if (doc.voided_at || doc.status === 'Voided') {
+    return res.status(400).json({ ok: false, error: 'Document is voided' });
+  }
+  if (doc.expired_at || doc.status === 'Expired') {
+    return res.status(400).json({ ok: false, error: 'Document is expired' });
+  }
+
+  const { data: signature, error: sigError } = await supabase
+    .from('service_document_signatures')
+    .select('client_name, client_signature_image, client_signed_at, contractor_name, contractor_signature_image, contractor_signed_at')
+    .eq('document_id', documentId)
+    .eq('user_id', tenantId)
+    .limit(1)
+    .maybeSingle();
+
+  if (sigError) return res.status(500).json({ ok: false, error: sigError.message || 'Could not read signatures' });
+
+  const clientSig = String(signature?.client_signature_image || '').trim();
+  const contractorSig = String(signature?.contractor_signature_image || '').trim();
+
+  const status = String(doc.status || '');
+
+  const pdfBucket = 'service-documents-pdf';
+  const defaultPdfPath = `${tenantId}/${documentId}/sealed.pdf`;
+  const currentPdfPath = String(doc.sealed_pdf_path || '').trim() || defaultPdfPath;
+
+  const nowIso = new Date().toISOString();
+
+  // If already sealed and we have a PDF, don't regenerate it (unless explicitly requested).
+  if (doc.sealed_at && currentPdfPath && !forceRegenerate) {
+    const signedPdf = await admin.storage.from(pdfBucket).createSignedUrl(currentPdfPath, 7 * 24 * 60 * 60).catch(() => null);
+    const sealedPdfUrl = signedPdf?.data?.signedUrl ? String(signedPdf.data.signedUrl) : null;
+
+    // Email may not have been sent if previous attempt failed.
+    const clientEmail = String(doc.client_email || '').trim();
+    if (!doc.sealed_email_sent_at && clientEmail) {
+      const claimIso = new Date().toISOString();
+      const { data: claim } = await supabase
+        .from('service_documents')
+        .update({ sealed_email_sent_at: claimIso })
+        .eq('id', documentId)
+        .eq('user_id', tenantId)
+        .is('sealed_email_sent_at', null)
+        .select('id')
+        .maybeSingle();
+
+      if (claim?.id) {
+        try {
+          const baseUrl = getBaseUrl(req);
+          const pdfBuf = await fetchPdfBuffer({ admin, bucket: pdfBucket, path: currentPdfPath });
+          if (!pdfBuf?.length) throw new Error('Missing sealed PDF');
+
+          const html = buildEmailHtml({
+            companyName: doc.company_name,
+            clientName: doc.client_name,
+            docType: doc.doc_type,
+            docNumber: doc.doc_number,
+            sealedPdfUrl: sealedPdfUrl,
+          });
+
+          const subject = `Agreement Confirmed${doc.doc_number ? ` - ${doc.doc_number}` : ''}`;
+
+          const resp = await fetch(`${baseUrl}/api/send-receipt-email`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              to: clientEmail,
+              customerName: doc.client_name,
+              companyName: doc.company_name,
+              templateType: 'service-document-sealed',
+              subject,
+              html,
+              attachment: {
+                filename: `${doc.doc_number || 'service-document'}-sealed.pdf`,
+                content: pdfBuf.toString('base64'),
+                content_type: 'application/pdf',
+              },
+              sale: {
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString(),
+                subtotal: doc.subtotal ?? 0,
+                tax: doc.tax ?? 0,
+                total: doc.total ?? 0,
+                items: [],
+              },
+            }),
+          });
+
+          if (!resp.ok) {
+            const text = await resp.text().catch(() => '');
+            throw new Error(text || 'Email send failed');
+          }
+
+          const businessEmail = String(doc.company_email || '').trim();
+          if (businessEmail && businessEmail !== clientEmail && isValidEmail(businessEmail)) {
+            try {
+              await fetch(`${baseUrl}/api/send-receipt-email`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  to: businessEmail,
+                  customerName: doc.client_name,
+                  companyName: doc.company_name,
+                  templateType: 'service-document-sealed',
+                  subject,
+                  html,
+                  attachment: {
+                    filename: `${doc.doc_number || 'service-document'}-sealed.pdf`,
+                    content: pdfBuf.toString('base64'),
+                    content_type: 'application/pdf',
+                  },
+                  sale: {
+                    date: new Date().toLocaleDateString(),
+                    time: new Date().toLocaleTimeString(),
+                    subtotal: doc.subtotal ?? 0,
+                    tax: doc.tax ?? 0,
+                    total: doc.total ?? 0,
+                    items: [],
+                  },
+                }),
+              });
+            } catch (e) {
+              console.error('Business copy email failed', e);
+            }
+          }
+        } catch (e) {
+          await supabase
+            .from('service_documents')
+            .update({ sealed_email_sent_at: null })
+            .eq('id', documentId)
+            .eq('user_id', tenantId)
+            .eq('sealed_email_sent_at', claimIso);
+          return res.status(502).json({ ok: false, error: e?.message || 'Email send failed' });
+        }
+      }
+    }
+
+    return res.status(200).json({
+      ok: true,
+      already_sealed: true,
+      sealed_pdf_url: sealedPdfUrl,
+      sealed_pdf_path: currentPdfPath,
+    });
+  }
+
+  if (!clientSig || !contractorSig) {
+    return res.status(400).json({ ok: false, error: 'Both client and contractor signatures are required' });
+  }
+
+  if (!doc.client_signed_at || !doc.contractor_signed_at) {
+    return res.status(400).json({ ok: false, error: 'Document must be signed by both parties before sealing' });
+  }
+
+  if (!doc.sealed_at && status !== 'ContractorSigned') {
+    return res.status(400).json({ ok: false, error: 'Document cannot be sealed in current status' });
+  }
+
+  const clientBuf = await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: clientSig });
+  const contractorBuf = await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: contractorSig });
+
+  const jsPDF = typeof JsPDFNamed === 'function' ? JsPDFNamed : null;
+  if (!jsPDF) {
+    throw new Error('PDF engine not available (jsPDF)');
+  }
+
+  const pdf = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const marginX = 40;
+  const contentW = pageWidth - marginX * 2;
+
+  const docLabel = doc.doc_type === 'JOB_ESTIMATE' ? 'JOB ESTIMATE' : 'INVOICE';
+  const docNumber = safeText(doc.doc_number);
+  const estimateNo = docNumber || String(documentId).slice(0, 8);
+
+  // Title
+  pdf.setTextColor(0, 27, 158);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(30);
+  pdf.text(docLabel, marginX, 56);
+
+  // Company box width (defined early so customer text can respect it)
+  const companyBoxW = 170;
+
+  // Parse address into components
+  const rawAddr = String(doc.client_address || '').replace(/\r\n/g, '\n');
+  const addrLines = rawAddr.split('\n').map(l => l.trim()).filter(Boolean);
+  const addrStreet = addrLines[0] || '';
+  const addrSecond = addrLines.slice(1).join(' ').trim();
+  const addrSegs = addrSecond.split(',').map(x => x.trim()).filter(Boolean);
+  const addrCity = addrSegs[0] || '';
+  const addrRest = addrSegs.slice(1).join(' ').trim();
+  const addrTokens = addrRest.split(/\s+/).filter(Boolean);
+  const addrState = addrTokens[0] || '';
+  const addrZip = addrTokens.slice(1).join(' ').trim();
+
+  // Customer block (left column: Name/Email/Phone, right column: Address/City/State/Zip)
+  const maxCustTextW = (pageWidth - marginX - companyBoxW - marginX - 20) / 2; // half for each column
+  const customerY = 78;
+  const leftX = marginX;
+  const rightX = marginX + maxCustTextW + 10;
+
+  // Left column: Name, Email, Phone
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text('CUSTOMER:', leftX, customerY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 76, customerY);
+
+  pdf.setFontSize(9);
+  let customerInfoY = customerY + 14;
+  if (doc.client_email) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('EMAIL:', leftX, customerInfoY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 42, customerInfoY);
+    customerInfoY += 12;
+  }
+  if (doc.client_phone) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('PHONE:', leftX, customerInfoY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 46, customerInfoY);
+    customerInfoY += 12;
+  }
+
+  // Right column: Address, City, State, Zip
+  let rightY = customerY;
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ADDRESS:', rightX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(safeText(addrStreet || '-').substring(0, 35), rightX + 55, rightY);
+  rightY += 14;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('CITY:', rightX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(safeText(addrCity || '-').substring(0, 35), rightX + 32, rightY);
+  rightY += 12;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('STATE:', rightX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(safeText(addrState || '-').substring(0, 20), rightX + 40, rightY);
+  rightY += 12;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ZIP:', rightX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(safeText(addrZip || '-').substring(0, 20), rightX + 24, rightY);
+  rightY += 12;
+
+  customerInfoY = Math.max(customerInfoY, rightY);
+
+  // Company box (right) — centered logo + centered text
+  const companyBoxX = pageWidth - marginX - companyBoxW;
+  const companyBoxY = 52;
+
+  // Compute box height dynamically
+  const logo = String(doc.company_logo || '').trim();
+  const hasLogo = logo && /^data:image\//i.test(logo);
+  const logoSquare = 36; // small square for logo
+  const companyLines = [
+    safeText(doc.company_name || 'COMPANY'),
+    doc.company_address ? safeText(doc.company_address) : '',
+    doc.company_phone ? safeText(doc.company_phone) : '',
+    doc.company_email ? safeText(doc.company_email) : '',
+  ].filter(Boolean);
+  const companyBoxH = (hasLogo ? logoSquare + 10 : 0) + companyLines.length * 12 + 16;
+
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'F');
+
+  const centerX = companyBoxX + companyBoxW / 2;
+  let companyTextY = companyBoxY + 14;
+
+  if (hasLogo) {
+    try {
+      const logoX = centerX - logoSquare / 2;
+      const logoY = companyBoxY + 6;
+      // Dark bordered square for logo
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(1.5);
+      pdf.rect(logoX, logoY, logoSquare, logoSquare, 'S');
+      pdf.addImage(logo, 'PNG', logoX + 3, logoY + 3, logoSquare - 6, logoSquare - 6);
+      companyTextY = logoY + logoSquare + 8;
+    } catch {
+      companyTextY = companyBoxY + 14;
+    }
+  }
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text(companyLines[0], centerX, companyTextY, { align: 'center' });
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  let cY = companyTextY + 12;
+  for (let ci = 1; ci < companyLines.length; ci++) {
+    pdf.text(companyLines[ci], centerX, cY, { align: 'center' });
+    cY += 10;
+  }
+
+  // Divider line — positioned below both customer info and company box
+  const companyBoxBottom = companyBoxY + companyBoxH;
+  const dividerY = Math.max(customerInfoY + 10, companyBoxBottom + 10);
+  pdf.setDrawColor(0, 27, 158);
+  pdf.setLineWidth(2);
+  pdf.line(marginX, dividerY, pageWidth - marginX, dividerY);
+
+  // Info grid
+  const infoY = dividerY + 18;
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  const colW = contentW / 3;
+  const dateStr = doc?.created_at ? new Date(doc.created_at).toLocaleDateString() : new Date().toLocaleDateString();
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('ESTIMATE #:', marginX, infoY);
+  pdf.text('ESTIMATE DATE:', marginX + colW, infoY);
+  pdf.text('CREATED BY:', marginX + colW * 2, infoY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(estimateNo, marginX + 70, infoY);
+  pdf.text(dateStr, marginX + colW + 90, infoY);
+  const createdBy = safeText(signature?.contractor_name || '').slice(0, 26);
+  pdf.text(createdBy, marginX + contentW, infoY, { align: 'right' });
+
+  const infoY2 = infoY + 16;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('PO #:', marginX, infoY2);
+  pdf.text('MATERIAL COST:', marginX + colW, infoY2);
+  pdf.text('ESTIMATED COST:', marginX + colW * 2, infoY2);
+  pdf.setFont('helvetica', 'normal');
+  const infoY2Val = infoY2 + 10;
+  pdf.text('N/A', marginX + 40, infoY2Val);
+  const currSymbol = currencyPrefix(doc.currency);
+  const materialCostVal = Number(doc.material_cost ?? 0);
+  pdf.text(materialCostVal > 0 ? `${currSymbol}${materialCostVal.toFixed(2)}` : '', marginX + colW + 92, infoY2Val);
+  const estimatedCostVal = Number(doc.total ?? 0);
+  pdf.text(estimatedCostVal > 0 ? `${currSymbol}${estimatedCostVal.toFixed(2)}` : '', marginX + contentW, infoY2Val, { align: 'right' });
+
+  const linesY = infoY2 + 30;
+
+  const { data: lines } = await supabase
+    .from('service_document_lines')
+    .select('position, description, quantity, unit_price, line_total, taxable')
+    .eq('document_id', documentId)
+    .eq('user_id', tenantId)
+    .order('position', { ascending: true });
+
+  const safeLines = Array.isArray(lines) ? lines : [];
+
+  const rows = safeLines.map((l) => [
+    String(l?.description ?? ''),
+    String(Number(l?.quantity ?? 0)),
+    moneyWithCurrency(l?.unit_price, doc.currency),
+    moneyWithCurrency(l?.line_total, doc.currency),
+  ]);
+
+  const { data: companyInfoAll } = await supabase
+    .from('company_info')
+    .select('*')
+    .eq('user_id', tenantId)
+    .limit(1)
+    .maybeSingle();
+
+  // ── Manual table drawing (matches Job Estimate HTML template) ──
+  const tblX = marginX;
+  const tblW = contentW;
+  const colWidths = [tblW - 220, 60, 80, 80]; // Description, Qty, Price, Amount
+  const headerH = 26;
+  const rowH = 22;
+  const headers = ['Description', 'Qty', 'Price', 'Amount'];
+  const headerAligns = ['left', 'center', 'right', 'right'];
+
+  // Header row (blue fill, white text)
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(tblX, linesY, tblW, headerH, 'F');
+  pdf.setDrawColor(0, 27, 158);
+  pdf.setLineWidth(1);
+  pdf.rect(tblX, linesY, tblW, headerH, 'S');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  let hColX = tblX;
+  for (let ci = 0; ci < headers.length; ci++) {
+    const cw = colWidths[ci];
+    const align = headerAligns[ci];
+    const tx = align === 'right' ? hColX + cw - 8 : align === 'center' ? hColX + cw / 2 : hColX + 8;
+    const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
+    pdf.text(headers[ci], tx, linesY + 17, opts);
+    if (ci < headers.length - 1) pdf.line(hColX + cw, linesY, hColX + cw, linesY + headerH);
+    hColX += cw;
+  }
+
+  // Data rows
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  let dataY = linesY + headerH;
+  for (const r of rows) {
+    pdf.setDrawColor(0, 27, 158);
+    pdf.setLineWidth(1);
+    pdf.rect(tblX, dataY, tblW, rowH, 'S');
+    let dColX = tblX;
+    for (let ci = 0; ci < r.length; ci++) {
+      const cw = colWidths[ci];
+      const align = headerAligns[ci];
+      const tx = align === 'right' ? dColX + cw - 8 : align === 'center' ? dColX + cw / 2 : dColX + 8;
+      const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
+      pdf.text(String(r[ci]), tx, dataY + 15, opts);
+      if (ci < r.length - 1) pdf.line(dColX + cw, dataY, dColX + cw, dataY + rowH);
+      dColX += cw;
+    }
+    dataY += rowH;
+  }
+  // If no rows, draw one empty row
+  if (rows.length === 0) {
+    pdf.setDrawColor(0, 27, 158);
+    pdf.setLineWidth(1);
+    pdf.rect(tblX, dataY, tblW, rowH, 'S');
+    dataY += rowH;
+  }
+  const afterTableY = dataY + 16;
+
+  const safeRate = normalizeTaxRate(doc?.tax_rate);
+  const computedSubtotal = safeLines.reduce((sum, l) => sum + normalizeMoney(l?.line_total), 0);
+  const computedTaxableSubtotal = safeLines.reduce((sum, l) => {
+    if (l?.taxable === false) return sum;
+    return sum + normalizeMoney(l?.line_total);
+  }, 0);
+
+  const subtotalValue = Number.isFinite(computedSubtotal) && computedSubtotal > 0 ? computedSubtotal : normalizeMoney(doc.subtotal);
+  const taxValue = round2(computedTaxableSubtotal * safeRate);
+  const totalValue = round2(subtotalValue + taxValue);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.text(moneyWithCurrency(totalValue, doc.currency), marginX + colW * 2 + 92, infoY2);
+
+  // Below section: Payment Terms + Totals
+  const belowY = afterTableY + 18;
+  const boxGap = 16;
+  const leftBoxW = contentW * 0.58;
+  const rightBoxW = contentW - leftBoxW - boxGap;
+  const leftBoxX = marginX;
+  const rightBoxX = marginX + leftBoxW + boxGap;
+  const boxH = 80;
+
+  // Payment terms box
+  pdf.setDrawColor(0, 27, 158);
+  pdf.setLineWidth(2);
+  pdf.rect(leftBoxX, belowY, leftBoxW, boxH);
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(leftBoxX, belowY, leftBoxW, 20, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text('Payment Terms:', leftBoxX + 8, belowY + 14);
+
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  const defaultJobEstimateTerms =
+    '-20% Due Upon Contract Signing\n-40% Due at Product Midpoint (Date)\n-20% Due to Close to Completion (Date)\n-10% Upon Final Inspection and Approval';
+  const paymentTermsText = doc?.doc_type === 'JOB_ESTIMATE'
+    ? defaultJobEstimateTerms
+    : safeText(doc.terms_snapshot) || defaultJobEstimateTerms;
+  const paymentLines = splitText(pdf, paymentTermsText.replace(/\\n/g, '\n'), leftBoxW - 16);
+  let payY = belowY + 34;
+  for (const line of paymentLines) {
+    pdf.text(String(line), leftBoxX + 8, payY);
+    payY += 12;
+    if (payY > belowY + boxH - 8) break;
+  }
+
+  // Totals box (right)
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(11);
+  const t1 = `Subtotal:`;
+  const t2 = `Taxes:`;
+  const t3 = `Grand Total:`;
+  const valX = rightBoxX + rightBoxW;
+  let tY = belowY + 30;
+  pdf.text(t1, rightBoxX, tY);
+  pdf.text(moneyWithCurrency(subtotalValue, doc.currency), valX, tY, { align: 'right' });
+  tY += 18;
+  pdf.text(t2, rightBoxX, tY);
+  pdf.text(moneyWithCurrency(taxValue, doc.currency), valX, tY, { align: 'right' });
+  tY += 22;
+  pdf.setDrawColor(0, 27, 158);
+  pdf.setLineWidth(2);
+  pdf.line(rightBoxX, tY, valX, tY);
+  tY += 18;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(t3, rightBoxX, tY);
+  pdf.text(moneyWithCurrency(totalValue, doc.currency), valX, tY, { align: 'right' });
+
+  // Terms and conditions box
+  const termsBoxY = belowY + boxH + 16;
+  const termsBoxH = 60;
+  pdf.setDrawColor(0, 27, 158);
+  pdf.setLineWidth(2);
+  pdf.rect(marginX, termsBoxY, contentW, termsBoxH);
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(marginX, termsBoxY, contentW, 20, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text('Terms and Conditions:', marginX + 8, termsBoxY + 14);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  const termsText = safeText(companyInfoAll?.terms_and_conditions);
+  if (!termsText) {
+    const fallbackTerms = 'This project estimate is based on information and requirements provided by the client and is not guaranteed. Actual cost and terms may change once all project elements are discussed, negotiated and finalized.';
+    const termsLines = splitText(pdf, fallbackTerms.replace(/\\n/g, '\n'), contentW - 16);
+    let termsY = termsBoxY + 34;
+    for (const line of termsLines) {
+      pdf.text(String(line), marginX + 8, termsY);
+      termsY += 12;
+      if (termsY > termsBoxY + termsBoxH - 8) break;
+    }
+  } else {
+    const termsLines = splitText(pdf, termsText.replace(/\\n/g, '\n'), contentW - 16);
+    let termsY = termsBoxY + 34;
+    for (const line of termsLines) {
+      pdf.text(String(line), marginX + 8, termsY);
+      termsY += 12;
+      if (termsY > termsBoxY + termsBoxH - 8) break;
+    }
+  }
+
+  // Signature blocks (simple lines like Job Estimate template)
+  const sigTopY = Math.min(termsBoxY + termsBoxH + 30, pageHeight - 200);
+  const sigColW = (contentW - 50) / 2;
+  const sigLeftX = marginX;
+  const sigRightX = marginX + sigColW + 50;
+
+  const clientNameText = safeText(signature?.client_name || doc.client_name || '');
+  const contractorNameText = safeText(signature?.contractor_name || '');
+  const clientDateText = signature?.client_signed_at ? new Date(signature.client_signed_at).toLocaleDateString() : '';
+  const contractorDateText = signature?.contractor_signed_at ? new Date(signature.contractor_signed_at).toLocaleDateString() : '';
+
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.text('CLIENT', sigLeftX, sigTopY);
+  pdf.text('CONTRACTOR', sigRightX, sigTopY);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.setDrawColor(0, 0, 0);
+  pdf.setLineWidth(0.5);
+
+  const labelW = 65;
+  const lineEnd = sigColW;
+  const fieldGap = 36;
+  const nameFieldY = sigTopY + 28;
+  const sigFieldY = nameFieldY + fieldGap;
+  const dateFieldY = sigFieldY + fieldGap;
+
+  // Helper: draw label + underline
+  function drawSigField(baseX, fieldY, label) {
+    pdf.text(label, baseX, fieldY);
+    pdf.line(baseX + labelW, fieldY + 2, baseX + lineEnd, fieldY + 2);
+  }
+
+  // Left (Client)
+  drawSigField(sigLeftX, nameFieldY, 'Name:');
+  drawSigField(sigLeftX, sigFieldY, 'Signature:');
+  drawSigField(sigLeftX, dateFieldY, 'Date:');
+
+  // Right (Contractor)
+  drawSigField(sigRightX, nameFieldY, 'Name:');
+  drawSigField(sigRightX, sigFieldY, 'Signature:');
+  drawSigField(sigRightX, dateFieldY, 'Date:');
+
+  // Fill in name/date text
+  pdf.text(clientNameText, sigLeftX + labelW, nameFieldY);
+  pdf.text(clientDateText, sigLeftX + labelW, dateFieldY);
+  pdf.text(contractorNameText, sigRightX + labelW, nameFieldY);
+  pdf.text(contractorDateText, sigRightX + labelW, dateFieldY);
+
+  // Place signature images above signature line
+  const clientType = inferImageType(clientSig);
+  const contractorType = inferImageType(contractorSig);
+  const sigImgW = lineEnd - labelW - 10;
+  const sigImgH = 28;
+
+  if (clientBuf?.length) {
+    const dataUri = `data:${clientType.mime};base64,${clientBuf.toString('base64')}`;
+    try {
+      pdf.addImage(dataUri, clientType.format, sigLeftX + labelW, sigFieldY - sigImgH - 2, sigImgW, sigImgH);
+    } catch {}
+  }
+
+  if (contractorBuf?.length) {
+    const dataUri = `data:${contractorType.mime};base64,${contractorBuf.toString('base64')}`;
+    try {
+      pdf.addImage(dataUri, contractorType.format, sigRightX + labelW, sigFieldY - sigImgH - 2, sigImgW, sigImgH);
+    } catch {}
+  }
+
+  // Footer
+  const footerParts = [];
+  if (companyInfoAll?.facebook) footerParts.push('Facebook');
+  if (companyInfoAll?.instagram) footerParts.push('Instagram');
+  if (companyInfoAll?.twitter) footerParts.push('X');
+  if (companyInfoAll?.linkedin) footerParts.push('LinkedIn');
+  if (companyInfoAll?.youtube) footerParts.push('YouTube');
+  if (companyInfoAll?.tiktok) footerParts.push('TikTok');
+  if (companyInfoAll?.whatsapp) footerParts.push(`WhatsApp: ${safeText(companyInfoAll.whatsapp)}`);
+  const footerLinksText = footerParts.filter(Boolean).join(' | ');
+
+  const footerH = footerLinksText ? 60 : 46;
+  const footerY = pageHeight - 26 - footerH;
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(marginX, footerY, contentW, footerH, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text('Thank you for your purchase.', marginX + contentW / 2, footerY + 18, { align: 'center' });
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  if (footerLinksText) {
+    pdf.text(footerLinksText, marginX + contentW / 2, footerY + 34, { align: 'center' });
+    pdf.text('Powered by: sendbillnow.com', marginX + contentW / 2, footerY + 52, { align: 'center' });
+  } else {
+    pdf.text('Powered by: sendbillnow.com', marginX + contentW / 2, footerY + 36, { align: 'center' });
+  }
+
+  const pdfAb = pdf.output('arraybuffer');
+  const pdfBuf = Buffer.from(pdfAb);
+
+  const upload = await admin.storage.from(pdfBucket).upload(defaultPdfPath, pdfBuf, {
+    contentType: 'application/pdf',
+    upsert: true,
+  });
+
+  if (upload.error) {
+    return res.status(500).json({ ok: false, error: upload.error.message || 'Could not upload sealed PDF' });
+  }
+
+  const signedPdf = await admin.storage.from(pdfBucket).createSignedUrl(defaultPdfPath, 7 * 24 * 60 * 60).catch(() => null);
+  const sealedPdfUrl = signedPdf?.data?.signedUrl ? String(signedPdf.data.signedUrl) : null;
+
+  if (!doc.sealed_at) {
+    const { data: sealedRow, error: sealError } = await supabase
+      .from('service_documents')
+      .update({ status: 'Sealed', sealed_at: nowIso, sealed_pdf_path: defaultPdfPath })
+      .eq('id', documentId)
+      .eq('user_id', tenantId)
+      .is('sealed_at', null)
+      .select('id, sealed_at, sealed_pdf_path, sealed_email_sent_at')
+      .maybeSingle();
+
+    if (sealError) return res.status(500).json({ ok: false, error: sealError.message || 'Could not seal document' });
+
+    if (sealedRow?.sealed_at) {
+      await supabase
+        .from('service_document_tokens')
+        .update({ revoked_at: nowIso })
+        .eq('document_id', documentId)
+        .eq('user_id', tenantId)
+        .is('revoked_at', null);
+
+      await insertEvent({ supabase, tenantId, documentId, eventType: 'SEALED', meta: { sealed_pdf_path: defaultPdfPath } });
+    }
+  }
+
+  const { data: latest } = await supabase
+    .from('service_documents')
+    .select('sealed_at, sealed_email_sent_at')
+    .eq('id', documentId)
+    .eq('user_id', tenantId)
+    .limit(1)
+    .maybeSingle();
+
+  const alreadySealed = Boolean(doc.sealed_at || latest?.sealed_at);
+
+  const clientEmail = String(doc.client_email || '').trim();
+  if (!latest?.sealed_email_sent_at && clientEmail) {
+    const claimIso = new Date().toISOString();
+    const { data: claim } = await supabase
+      .from('service_documents')
+      .update({ sealed_email_sent_at: claimIso })
+      .eq('id', documentId)
+      .eq('user_id', tenantId)
+      .is('sealed_email_sent_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (claim?.id) {
+      try {
+        const baseUrl = getBaseUrl(req);
+
+        const html = buildEmailHtml({
+          companyName: doc.company_name,
+          clientName: doc.client_name,
+          docType: doc.doc_type,
+          docNumber: doc.doc_number,
+          sealedPdfUrl: sealedPdfUrl,
+        });
+
+        const subject = `Agreement Confirmed${doc.doc_number ? ` - ${doc.doc_number}` : ''}`;
+
+        const resp = await fetch(`${baseUrl}/api/send-receipt-email`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            to: clientEmail,
+            customerName: doc.client_name,
+            companyName: doc.company_name,
+            templateType: 'service-document-sealed',
+            subject,
+            html,
+            attachment: {
+              filename: `${doc.doc_number || 'service-document'}-sealed.pdf`,
+              content: pdfBuf.toString('base64'),
+              content_type: 'application/pdf',
+            },
+            sale: {
+              date: new Date().toLocaleDateString(),
+              time: new Date().toLocaleTimeString(),
+              subtotal: doc.subtotal ?? 0,
+              tax: doc.tax ?? 0,
+              total: doc.total ?? 0,
+              items: [],
+            },
+          }),
+        });
+
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => '');
+          throw new Error(text || 'Email send failed');
+        }
+
+        const businessEmail = String(doc.company_email || '').trim();
+        if (businessEmail && businessEmail !== clientEmail && isValidEmail(businessEmail)) {
+          try {
+            await fetch(`${baseUrl}/api/send-receipt-email`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                to: businessEmail,
+                customerName: doc.client_name,
+                companyName: doc.company_name,
+                templateType: 'service-document-sealed',
+                subject,
+                html,
+                attachment: {
+                  filename: `${doc.doc_number || 'service-document'}-sealed.pdf`,
+                  content: pdfBuf.toString('base64'),
+                  content_type: 'application/pdf',
+                },
+                sale: {
+                  date: new Date().toLocaleDateString(),
+                  time: new Date().toLocaleTimeString(),
+                  subtotal: doc.subtotal ?? 0,
+                  tax: doc.tax ?? 0,
+                  total: doc.total ?? 0,
+                  items: [],
+                },
+              }),
+            });
+          } catch (e) {
+            console.error('Business copy email failed', e);
+          }
+        }
+      } catch (e) {
+        await supabase
+          .from('service_documents')
+          .update({ sealed_email_sent_at: null })
+          .eq('id', documentId)
+          .eq('user_id', tenantId)
+          .eq('sealed_email_sent_at', claimIso);
+        return res.status(502).json({ ok: false, error: e?.message || 'Email send failed' });
+      }
+    }
+  }
+
+    return res.status(200).json({
+      ok: true,
+      already_sealed: alreadySealed,
+      sealed_pdf_url: sealedPdfUrl,
+      sealed_pdf_path: defaultPdfPath,
+    });
+  } catch (e) {
+    console.error('service-documents/seal failed', e);
+    const msg = e?.message ? String(e.message) : 'Internal Server Error';
+    return res.status(500).json({ ok: false, error: msg });
+  }
+}

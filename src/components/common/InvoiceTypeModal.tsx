@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { InvoicePrintOptions } from '../../utils/invoicePrintTemplates';
 
@@ -9,6 +9,7 @@ interface InvoiceTypeModalProps {
   onClose: () => void;
   onSelect: (type: InvoiceTemplateType, options?: InvoicePrintOptions) => void;
   documentType?: 'invoice' | 'supplier_invoice' | 'quote';
+  hiddenTypes?: InvoiceTemplateType[];
   title?: string;
   customerEmail?: string;
   onSendEmail?: (type: InvoiceTemplateType, options?: InvoicePrintOptions) => void;
@@ -23,6 +24,7 @@ export default function InvoiceTypeModal({
   onClose,
   onSelect,
   documentType = 'invoice',
+  hiddenTypes,
   title = 'Select Document Format',
   customerEmail,
   onSendEmail,
@@ -58,9 +60,8 @@ export default function InvoiceTypeModal({
     });
   }, [documentType, isOpen]);
 
-  if (!isOpen) return null;
-
-  const templates = [
+  const templates = useMemo(
+    () => [
     {
       id: 'simple' as InvoiceTemplateType,
       name: 'Simple Invoice',
@@ -303,7 +304,22 @@ export default function InvoiceTypeModal({
         </div>
       ),
     },
-  ];
+  ],
+    [documentType]
+  );
+
+  const visibleTemplates = useMemo(() => {
+    return hiddenTypes?.length ? templates.filter((t) => !hiddenTypes.includes(t.id)) : templates;
+  }, [hiddenTypes, templates]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!visibleTemplates.length) return;
+    if (visibleTemplates.some((t) => t.id === selectedType)) return;
+    setSelectedType(visibleTemplates[0].id);
+  }, [isOpen, selectedType, visibleTemplates]);
+
+  if (!isOpen) return null;
 
   const handleConfirm = () => {
     if (selectedType === 'job-estimate') {
@@ -376,7 +392,7 @@ export default function InvoiceTypeModal({
           {/* Content */}
           <div className="p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {templates.map((template) => (
+              {visibleTemplates.map((template) => (
                 <button
                   key={template.id}
                   onClick={() => setSelectedType(template.id)}
@@ -448,7 +464,7 @@ export default function InvoiceTypeModal({
                 className="px-5 py-2.5 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
               >
                 <i className="ri-printer-line"></i>
-                Print {templates.find(t => t.id === selectedType)?.name}
+                Print {visibleTemplates.find((t) => t.id === selectedType)?.name}
               </button>
             </div>
           </div>

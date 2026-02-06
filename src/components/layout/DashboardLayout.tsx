@@ -348,6 +348,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
         { name: 'Recurring Billing', href: '/billing/recurring' },
         { name: 'Cash Closing', href: '/billing/cash-closing' },
         { name: 'Estimate', href: '/billing/quotes' },
+        { name: 'Service Documents', href: '/service-documents' },
       ]
     },
     // 6. Point of Sale

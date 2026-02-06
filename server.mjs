@@ -12,6 +12,18 @@ import claimCheckoutSessionHandler from './api/claim-checkout-session.js';
 import stripeWebhookHandler from './api/stripe-webhook.js';
 import sendReceiptEmailHandler from './api/send-receipt-email.js';
 
+import serviceDocumentsCreateHandler from './api/service-documents/create.js';
+import serviceDocumentsUpdateHandler from './api/service-documents/update.js';
+import serviceDocumentsLinesUpsertHandler from './api/service-documents/lines-upsert.js';
+import serviceDocumentsRecalculateHandler from './api/service-documents/recalculate.js';
+import serviceDocumentsSendHandler from './api/service-documents/send.js';
+import serviceDocumentsGetHandler from './api/service-documents/get.js';
+import serviceDocumentsPublicGetHandler from './api/service-documents/public-get.js';
+import serviceDocumentsPublicSignHandler from './api/service-documents/public-sign.js';
+import serviceDocumentsContractorApplyDefaultHandler from './api/service-documents/contractor-apply-default.js';
+import serviceDocumentsContractorSignHandler from './api/service-documents/contractor-sign.js';
+import serviceDocumentsSealHandler from './api/service-documents/seal.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -56,6 +68,19 @@ app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandl
 app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
 app.all('/api/claim-checkout-session', (req, res) => claimCheckoutSessionHandler(req, res));
 app.all('/api/send-receipt-email', (req, res) => sendReceiptEmailHandler(req, res));
+
+// Service Documents (MVP)
+app.all('/api/service-documents/create', (req, res) => serviceDocumentsCreateHandler(req, res));
+app.all('/api/service-documents/update', (req, res) => serviceDocumentsUpdateHandler(req, res));
+app.all('/api/service-documents/lines/upsert', (req, res) => serviceDocumentsLinesUpsertHandler(req, res));
+app.all('/api/service-documents/recalculate', (req, res) => serviceDocumentsRecalculateHandler(req, res));
+app.all('/api/service-documents/send', (req, res) => serviceDocumentsSendHandler(req, res));
+app.all('/api/service-documents/get', (req, res) => serviceDocumentsGetHandler(req, res));
+app.all('/api/service-documents/public/get', (req, res) => serviceDocumentsPublicGetHandler(req, res));
+app.all('/api/service-documents/public/sign', (req, res) => serviceDocumentsPublicSignHandler(req, res));
+app.all('/api/service-documents/contractor/apply-default', (req, res) => serviceDocumentsContractorApplyDefaultHandler(req, res));
+app.all('/api/service-documents/contractor/sign', (req, res) => serviceDocumentsContractorSignHandler(req, res));
+app.all('/api/service-documents/seal', (req, res) => serviceDocumentsSealHandler(req, res));
 
 // Serve static frontend
 const distPath = path.join(__dirname, 'dist');

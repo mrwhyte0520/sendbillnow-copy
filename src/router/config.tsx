@@ -104,6 +104,10 @@ const ResetPasswordPage = lazy(() => import('../pages/auth/reset-password'));
 const NotFoundPage = lazy(() => import('../pages/NotFound'));
 const DocumentPage = lazy(() => import('../pages/document/page'));
 
+const ServiceDocumentsListPage = lazy(() => import('../pages/service-documents/list/page'));
+const ServiceDocumentsEditPage = lazy(() => import('../pages/service-documents/edit/page'));
+const ServiceDocumentsReviewPage = lazy(() => import('../pages/service-documents/review/page'));
+
 // Settings Pages
 const SettingsPage = lazy(() => import('../pages/settings/page'));
 const CompanySettingsPage = lazy(() => import('../pages/settings/company/page'));
@@ -208,6 +212,10 @@ const routes: RouteObject[] = [
   {
     path: '/public/checkout/:token',
     element: <PublicCheckoutPage />,
+  },
+  {
+    path: '/service-documents/review/:token',
+    element: <ServiceDocumentsReviewPage />,
   },
   {
     path: '/document/:type/:id',
@@ -700,6 +708,14 @@ const routes: RouteObject[] = [
   {
     path: '/billing/authorizations',
     element: <ProtectedRoute><AuthorizationsPage /></ProtectedRoute>
+  },
+  {
+    path: '/service-documents',
+    element: <ProtectedRoute><ServiceDocumentsListPage /></ProtectedRoute>
+  },
+  {
+    path: '/service-documents/:id',
+    element: <ProtectedRoute><ServiceDocumentsEditPage /></ProtectedRoute>
   },
   {
     path: '/taxes',

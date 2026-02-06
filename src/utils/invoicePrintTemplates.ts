@@ -271,11 +271,20 @@ th:nth-child(4){width:140px;text-align:right;}
     <div class="top">
       <div>
         <div class="title">JOB ESTIMATE</div>
-        <div style="margin-top:10px;font-size:11px;line-height:1.5;">
-          <div><span class="label">CUSTOMER:</span> ${escapeHtml(customer.name || '')}</div>
-          ${customer.address ? `<div><span class="label">ADDRESS:</span> ${escapeHtml(customer.address)}</div>` : ''}
-          ${customer.phone ? `<div><span class="label">PHONE:</span> ${escapeHtml(customer.phone)}</div>` : ''}
-          ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
+        <div style="margin-top:10px;font-size:11px;line-height:1.5;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <div><span class="label">CUSTOMER:</span> ${escapeHtml(customer.name || '')}</div>
+            ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
+            ${customer.phone ? `<div><span class="label">PHONE:</span> ${escapeHtml(customer.phone)}</div>` : ''}
+          </div>
+          <div>
+            ${(() => { const a = parseAddress(customer.address); return `
+            <div><span class="label">ADDRESS:</span> ${escapeHtml(a.street || '-')}</div>
+            <div><span class="label">CITY:</span> ${escapeHtml(a.city || '-')}</div>
+            <div><span class="label">STATE:</span> ${escapeHtml(a.state || '-')}</div>
+            <div><span class="label">ZIP:</span> ${escapeHtml(a.zip || '-')}</div>
+            `; })()}
+          </div>
         </div>
       </div>
       <div class="companyBox">
@@ -449,7 +458,42 @@ const BLUE = '#001B9E';
 
 const BLUE_LIGHT = '#e6e9f7';
 
- 
+function parseAddress(raw?: string): { street: string; city: string; state: string; zip: string } {
+  const s = String(raw || '').replace(/\r\n/g, '\n');
+  const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
+  const street = lines[0] || '';
+  const secondLine = lines.slice(1).join(' ').trim();
+  const segs = secondLine.split(',').map(x => x.trim()).filter(Boolean);
+  const city = segs[0] || '';
+  const rest = segs.slice(1).join(' ').trim();
+  const tokens = rest.split(/\s+/).filter(Boolean);
+  const state = tokens[0] || '';
+  const zip = tokens.slice(1).join(' ').trim();
+  return { street, city, state, zip };
+}
+
+function customerBlockHtml(customer: CustomerData): string {
+  const addr = parseAddress(customer.address);
+  return `
+    <div class="customer-section">
+      <h3>CUSTOMER</h3>
+      <div class="customer-grid">
+        <div>
+          <p><strong>Name:</strong> ${customer.name}</p>
+          <p><strong>Email:</strong> ${customer.email || '-'}</p>
+          ${customer.contactEmail ? `<p><strong>Contact Email:</strong> ${customer.contactEmail}</p>` : ''}
+          <p><strong>Phone:</strong> ${customer.phone || '-'}</p>
+          ${customer.contactPhone ? `<p><strong>Contact Phone:</strong> ${customer.contactPhone}</p>` : ''}
+        </div>
+        <div>
+          <p><strong>Address:</strong> ${addr.street || '-'}</p>
+          <p><strong>City:</strong> ${addr.city || '-'}</p>
+          <p><strong>State:</strong> ${addr.state || '-'}</p>
+          <p><strong>Zip:</strong> ${addr.zip || '-'}</p>
+        </div>
+      </div>
+    </div>`;
+}
 
 
 
@@ -555,9 +599,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 .customer-section h3{font-size:13px;color:${BLUE};margin-bottom:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
 
-.customer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 
-.customer-grid p{font-size:12px;color:#333;}
+.customer-grid p{font-size:12px;color:#333;margin:3px 0;}
 
 .customer-grid strong{color:${BLUE};}
 
@@ -657,21 +701,7 @@ th:nth-child(4){text-align:center;}
 
   </div>
 
-  <div class="customer-section">
-
-    <h3>CUSTOMER</h3>
-
-    <div class="customer-grid">
-
-      <p><strong>Name:</strong> ${customer.name}</p>
-
-      <p><strong>Email:</strong> ${customer.email || '-'}</p>
-
-      <p><strong>Phone:</strong> ${customer.phone || '-'}</p>
-
-    </div>
-
-  </div>
+  ${customerBlockHtml(customer)}
 
   <table>
 
@@ -923,23 +953,7 @@ th:nth-child(4){text-align:center;}
 
   </div>
 
-  <div class="customer-section">
-
-    <h3>CUSTOMER</h3>
-
-    <div class="customer-grid">
-
-      <p><strong>Name:</strong> ${customer.name}</p>
-
-      <p><strong>Email:</strong> ${customer.email || '-'}</p>
-
-      <p><strong>Phone:</strong> ${customer.phone || '-'}</p>
-
-      <p><strong>Address:</strong> ${customer.address || '-'}</p>
-
-    </div>
-
-  </div>
+  ${customerBlockHtml(customer)}
 
   <table>
 
@@ -1131,9 +1145,9 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
     <p><strong>Contact:</strong><br/>${customer.contactName || '-'}</p>
 
-    <p><strong>Contact Phone:</strong><br/>${customer.contactPhone || '-'}</p>
-
     <p><strong>Contact Email:</strong><br/>${customer.contactEmail || '-'}</p>
+
+    <p><strong>Contact Phone:</strong><br/>${customer.contactPhone || '-'}</p>
 
   </div>
 

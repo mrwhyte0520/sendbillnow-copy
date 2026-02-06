@@ -307,15 +307,26 @@ export default function CustomersPage() {
       return;
     }
     const formData = new FormData(e.currentTarget);
+
     const paymentTermId = String(formData.get('paymentTermId') || '');
     const selectedPaymentTerm = paymentTerms.find((t) => t.id === paymentTermId);
     const paymentTermLabel = selectedPaymentTerm ? selectedPaymentTerm.name : '';
+    const address1 = String(formData.get('address1') || '').trim();
+    const city = String(formData.get('city') || '').trim();
+    const state = String(formData.get('state') || '').trim();
+    const zip = String(formData.get('zip') || '').trim();
+    const addressParts = [
+      address1,
+      [city, state, zip].filter(Boolean).join(', ').replace(/,\s*,/g, ',').trim(),
+    ].filter(Boolean);
+    const addressCombined = addressParts.join('\n');
+
     const payload = {
       name: String(formData.get('name') || ''),
       document: String(formData.get('document') || ''),
       phone: String(formData.get('phone') || ''),
       email: String(formData.get('email') || ''),
-      address: String(formData.get('address') || ''),
+      address: addressCombined,
       creditLimit: Number(formData.get('creditLimit') || 0),
       status: String(formData.get('status') || 'active') as Customer['status'],
       documentType: String(formData.get('documentType') || ''),
@@ -569,20 +580,72 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Address
-                  </label>
-                  <textarea
-                    rows={2}
-                    name="address"
-                    defaultValue={selectedCustomer?.address || ''}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
-                    placeholder="Full customer address"
-                  />
-                </div>
+                {(() => {
+                  const raw = String(selectedCustomer?.address || '');
+                  const normalized = raw.replace(/\r\n/g, '\n');
+                  const lines = normalized.split('\n').map((x) => x.trim()).filter(Boolean);
+                  const firstLine = lines[0] || '';
+                  const secondLine = lines.slice(1).join(' ').trim();
+                  const segs = secondLine
+                    .split(',')
+                    .map((x) => x.trim())
+                    .filter(Boolean);
+                  const cityDefault = segs[0] || '';
+                  const rest = segs.slice(1).join(' ').trim();
+                  const restTokens = rest.split(/\s+/).filter(Boolean);
+                  const stateDefault = restTokens[0] || '';
+                  const zipDefault = restTokens.slice(1).join(' ').trim();
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  return (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                        <textarea
+                          rows={2}
+                          name="address1"
+                          defaultValue={firstLine}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                          placeholder="Street address"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <input
+                            type="text"
+                            name="city"
+                            defaultValue={cityDefault}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                            placeholder="City"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <input
+                            type="text"
+                            name="state"
+                            defaultValue={stateDefault}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                            placeholder="State"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Zip</label>
+                          <input
+                            type="text"
+                            name="zip"
+                            defaultValue={zipDefault}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                            placeholder="Zip"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contact person

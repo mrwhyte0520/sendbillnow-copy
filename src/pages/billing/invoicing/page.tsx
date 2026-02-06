@@ -1138,7 +1138,8 @@ export default function InvoicingPage() {
 
     setNewInvoiceNoTax(false);
 
-    setNewInvoiceNotes('');
+    const defaultNotes = String((companyInfo as any)?.default_notes || '').trim();
+    setNewInvoiceNotes(defaultNotes);
 
     setNewInvoiceCustomerSearch('');
 
@@ -4680,6 +4681,8 @@ export default function InvoicingPage() {
           onSelect={handlePrintTypeSelect}
 
           documentType="invoice"
+
+          hiddenTypes={['job-estimate', 'classic']}
 
           title="Select Invoice Format"
 

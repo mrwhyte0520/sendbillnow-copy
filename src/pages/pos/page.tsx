@@ -232,7 +232,10 @@ export default function POSPage() {
     document: '',
     phone: '',
     email: '',
-    address: '',
+    address1: '',
+    city: '',
+    state: '',
+    zip: '',
     type: 'regular' as 'regular' | 'vip',
     secondEmail: ''
   });
@@ -661,18 +664,37 @@ export default function POSPage() {
       // Pequeño delay para asegurar que el input exista en el DOM antes de enfocar
       setTimeout(() => {
         const active = document.activeElement as HTMLElement | null;
-        const activeTag = active?.tagName?.toLowerCase();
-        const isTypingTarget =
-          activeTag === 'input' ||
-          activeTag === 'textarea' ||
-          (active && (active as any).isContentEditable);
-
-        if (!isTypingTarget) {
-          amountInputRef.current?.focus();
+        if (active) {
+          active.blur();
+        }
+        if (amountInputRef.current) {
+          amountInputRef.current.focus();
         }
       }, 0);
     }
   }, [showPaymentModal]);
+
+  useEffect(() => {
+    if (!showPaymentModal) return;
+    if (String(saleNotes || '').trim()) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const info = await settingsService.getCompanyInfo();
+        const defaultNotes = String((info as any)?.default_notes || '').trim();
+        if (!cancelled && defaultNotes) {
+          setSaleNotes(defaultNotes);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [saleNotes, showPaymentModal]);
 
   useEffect(() => {
     if (showNewCustomerModal) {
@@ -1576,6 +1598,11 @@ export default function POSPage() {
       return;
     }
 
+    if (!user?.id) {
+      alert('You must sign in to create customers.');
+      return;
+    }
+
     // Basic phone validation
     const phoneOk = /^\d{3}-\d{3}-\d{4}$/.test(newCustomer.phone);
     if (!phoneOk) {
@@ -1593,31 +1620,36 @@ export default function POSPage() {
       return;
     }
 
-    if (user?.id) {
-      try {
-        await customersService.create(user.id, {
-          name: newCustomer.name,
-          document: newCustomer.document || '',
-          phone: newCustomer.phone,
-          email: newCustomer.email,
-          address: newCustomer.address || '',
-          creditLimit: 0,
-          status: 'active',
-          contactEmail: newCustomer.secondEmail || undefined,
-        });
-        await loadCustomers();
-      } catch (error) {
-        console.error('Error creating customer in DB, falling back to localStorage:', error);
-        const customer: Customer = { id: Date.now().toString(), ...newCustomer };
-        const updatedCustomers = [...customers, customer];
-        setCustomers(updatedCustomers);
-        localStorage.setItem('contabi_pos_customers', JSON.stringify(updatedCustomers));
-      }
-    } else {
-      const customer: Customer = { id: Date.now().toString(), ...newCustomer };
-      const updatedCustomers = [...customers, customer];
-      setCustomers(updatedCustomers);
-      localStorage.setItem('contabi_pos_customers', JSON.stringify(updatedCustomers));
+    const addressParts = [
+      String((newCustomer as any).address1 || '').trim(),
+      [
+        String((newCustomer as any).city || '').trim(),
+        String((newCustomer as any).state || '').trim(),
+        String((newCustomer as any).zip || '').trim(),
+      ]
+        .filter(Boolean)
+        .join(', ')
+        .replace(/,\s*,/g, ',')
+        .trim(),
+    ].filter(Boolean);
+    const combinedAddress = addressParts.join('\n');
+
+    try {
+      await customersService.create(user.id, {
+        name: newCustomer.name,
+        document: newCustomer.document || '',
+        phone: newCustomer.phone,
+        email: newCustomer.email,
+        address: combinedAddress || '',
+        creditLimit: 0,
+        status: 'active',
+        contactEmail: newCustomer.secondEmail || undefined,
+      });
+      await loadCustomers();
+    } catch (error) {
+      console.error('Error creating customer in DB:', error);
+      alert('Error creating customer. Please try again.');
+      return;
     }
     
     setNewCustomer({
@@ -1625,7 +1657,10 @@ export default function POSPage() {
       document: '',
       phone: '',
       email: '',
-      address: '',
+      address1: '',
+      city: '',
+      state: '',
+      zip: '',
       type: 'regular',
       secondEmail: ''
     });
@@ -3935,6 +3970,50 @@ export default function POSPage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                      type="text"
+                      value={(newCustomer as any).address1 || ''}
+                      onChange={(e) => setNewCustomer((prev) => ({ ...(prev as any), address1: e.target.value }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Street address"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        value={(newCustomer as any).city || ''}
+                        onChange={(e) => setNewCustomer((prev) => ({ ...(prev as any), city: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="City"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                      <input
+                        type="text"
+                        value={(newCustomer as any).state || ''}
+                        onChange={(e) => setNewCustomer((prev) => ({ ...(prev as any), state: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="State"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                      <input
+                        type="text"
+                        value={(newCustomer as any).zip || ''}
+                        onChange={(e) => setNewCustomer((prev) => ({ ...(prev as any), zip: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Zip"
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex space-x-3 pt-4">
                     <button
                       type="button"
@@ -3969,6 +4048,7 @@ export default function POSPage() {
           }}
           onSelect={handlePrintTypeSelect}
           documentType="invoice"
+          hiddenTypes={['job-estimate', 'classic']}
           title="Print Receipt"
           customerEmail={(posCheckoutCustomerEmail || completedSale?.customer?.email || '').trim() || undefined}
           onSendEmail={async (templateType, options) => {

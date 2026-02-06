@@ -319,7 +319,8 @@ export default async function handler(req, res) {
     normalizedTemplateType === 'id-card' ||
     normalizedTemplateType === 'idcard' ||
     normalizedTemplateType === 'invoice-link' ||
-    normalizedTemplateType === 'pos-invoice-link';
+    normalizedTemplateType === 'pos-invoice-link' ||
+    normalizedTemplateType === 'service-document-link';
 
   const attachments = [];
   const attachment = (attachmentRaw && typeof attachmentRaw === 'object')

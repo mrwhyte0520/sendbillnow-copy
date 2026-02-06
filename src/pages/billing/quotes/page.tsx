@@ -2039,7 +2039,6 @@ export default function QuotesPage() {
                           total: it.total || 0,
                         })),
                         notes: extractTermsFromNotes(q.notes as string).notes,
-
                         terms: (q.terms as string) || extractTermsFromNotes(q.notes as string).terms,
                       }));
                       setQuotes(mapped);
@@ -2063,6 +2062,7 @@ export default function QuotesPage() {
           }}
           onSelect={handlePrintTypeSelect}
           documentType="quote"
+          hiddenTypes={['job-estimate', 'classic']}
           title="Select Quote Format"
           customerEmail={
             quoteToPrint && !isGeneralCustomerName(quoteToPrint.customer)
@@ -2081,8 +2081,14 @@ export default function QuotesPage() {
               alert('Customer email not available');
               return;
             }
+
             let companyInfo: any = null;
-            try { companyInfo = await settingsService.getCompanyInfo(); } catch { companyInfo = null; }
+            try {
+              companyInfo = await settingsService.getCompanyInfo();
+            } catch {
+              companyInfo = null;
+            }
+
             const quoteData = {
               invoiceNumber: estimateNumber,
               createdBy: createdByName,
@@ -2098,7 +2104,6 @@ export default function QuotesPage() {
                 total: item.total,
               })),
               notes: (quoteToPrint as any).notes ?? null,
-
               terms: (quoteToPrint as any).terms ?? null,
             };
             const customerData = {
@@ -2126,6 +2131,7 @@ export default function QuotesPage() {
               tiktok: companyInfo?.tiktok,
               whatsapp: companyInfo?.whatsapp,
             };
+
             try {
               const quoteHtml = generateInvoiceHtml(quoteData, customerData, companyData, templateType, options);
               const pdfBase64 = await generatePdfBase64FromHtml(quoteHtml);

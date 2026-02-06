@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { jsPDF } from 'jspdf';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { settingsService } from '../../../services/database';
@@ -17,6 +18,11 @@ interface CompanyInfo {
   fiscal_year_start: string;
   currency: string;
   timezone: string;
+  terms_and_conditions?: string;
+  contractor_signature_name?: string;
+  contractor_signature_image?: string;
+  default_tax_rate?: number | string;
+  default_notes?: string;
   // Social links
   facebook?: string;
   instagram?: string;
@@ -75,11 +81,22 @@ export default function CompanySettingsPage() {
     website: '',
     fiscal_year_start: '01-01',
     currency: 'DOP',
-    timezone: 'America/Santo_Domingo'
+    timezone: 'America/Santo_Domingo',
+    terms_and_conditions: '',
+    contractor_signature_name: '',
+    contractor_signature_image: '',
+    default_tax_rate: 0.18,
+    default_notes: '',
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [contractorSignaturePreview, setContractorSignaturePreview] = useState<string | null>(null);
+
+  // Signature pad refs
+  const sigCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const sigContainerRef = useRef<HTMLDivElement | null>(null);
+  const sigDrawingRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
   // Registers state
   const [registers, setRegisters] = useState<CashRegister[]>([]);
@@ -124,6 +141,94 @@ export default function CompanySettingsPage() {
     setCompanyInfo(prev => ({ ...prev, logo: '' }));
   };
 
+  const configureSigCanvas = useCallback(() => {
+    const canvas = sigCanvasRef.current;
+    const container = sigContainerRef.current;
+    if (!canvas || !container) return;
+    const rect = container.getBoundingClientRect();
+    const cssWidth = Math.max(240, Math.floor(rect.width));
+    const cssHeight = 120;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+    canvas.width = Math.floor(cssWidth * dpr);
+    canvas.height = Math.floor(cssHeight * dpr);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#111827';
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+  }, []);
+
+  const onSigPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    sigDrawingRef.current = { active: true, lastX: e.clientX - rect.left, lastY: e.clientY - rect.top };
+    canvas.setPointerCapture(e.pointerId);
+  };
+
+  const onSigPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const { active, lastX, lastY } = sigDrawingRef.current;
+    if (!active) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    sigDrawingRef.current.lastX = x;
+    sigDrawingRef.current.lastY = y;
+  };
+
+  const onSigPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    sigDrawingRef.current.active = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch {}
+  };
+
+  const isSigCanvasBlank = () => {
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return true;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return true;
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 3; i < data.length; i += 4) { if (data[i] !== 0) return false; }
+    return true;
+  };
+
+  const saveSigFromCanvas = () => {
+    if (isSigCanvasBlank()) {
+      setMessage({ type: 'error', text: 'Please draw your signature first.' });
+      return;
+    }
+    const canvas = sigCanvasRef.current;
+    if (!canvas) return;
+    const base64 = canvas.toDataURL('image/png');
+    setContractorSignaturePreview(base64);
+    setCompanyInfo(prev => ({ ...prev, contractor_signature_image: base64 }));
+    setMessage({ type: 'success', text: 'Signature captured! Click Save Changes to persist.' });
+  };
+
+  const clearSigCanvas = () => {
+    configureSigCanvas();
+  };
+
+  const removeContractorSignature = () => {
+    setContractorSignaturePreview(null);
+    setCompanyInfo(prev => ({ ...prev, contractor_signature_image: '' }));
+    configureSigCanvas();
+  };
+
   useEffect(() => {
     loadCompanyInfo();
   }, []);
@@ -135,6 +240,9 @@ export default function CompanySettingsPage() {
         setCompanyInfo(data);
         if (data.logo) {
           setLogoPreview(data.logo);
+        }
+        if ((data as any).contractor_signature_image) {
+          setContractorSignaturePreview((data as any).contractor_signature_image);
         }
       }
     } catch (error) {
@@ -148,10 +256,15 @@ export default function CompanySettingsPage() {
     setMessage(null);
 
     try {
-      const saved = await settingsService.saveCompanyInfo(companyInfo);
+      const parsedTaxRate = Number((companyInfo as any)?.default_tax_rate);
+      const saved = await settingsService.saveCompanyInfo({
+        ...companyInfo,
+        default_tax_rate: Number.isFinite(parsedTaxRate) ? parsedTaxRate : null,
+      });
       if (saved) {
         setCompanyInfo(saved);
         setLogoPreview(saved.logo || null);
+        setContractorSignaturePreview((saved as any).contractor_signature_image || null);
       }
       setMessage({ type: 'success', text: 'Company information saved successfully' });
     } catch (error) {
@@ -165,7 +278,7 @@ export default function CompanySettingsPage() {
     }
   };
 
-  const handleInputChange = (field: keyof CompanyInfo, value: string) => {
+  const handleInputChange = (field: keyof CompanyInfo, value: string | number) => {
     setCompanyInfo(prev => ({ ...prev, [field]: value }));
   };
 
@@ -599,6 +712,118 @@ export default function CompanySettingsPage() {
                     onChange={(e) => handleInputChange('website', e.target.value)}
                     className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
                   />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-[#E0E7C8] p-6">
+              <h2 className="text-lg font-semibold text-[#1F2618] mb-2">Service Documents</h2>
+              <p className="text-sm text-gray-500 mb-6">Defaults used for Job Estimates and Classic Invoices.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Default Tax Rate</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    value={String((companyInfo as any).default_tax_rate ?? '')}
+                    onChange={(e) => handleInputChange('default_tax_rate', e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
+                    placeholder="0.18"
+                  />
+                  <p className="text-xs text-gray-400 mt-2">Example: 0.18 for 18%</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contractor Signature Name</label>
+                  <input
+                    type="text"
+                    value={String((companyInfo as any).contractor_signature_name || '')}
+                    onChange={(e) => handleInputChange('contractor_signature_name', e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
+                    placeholder="John Smith"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Terms & Conditions</label>
+                  <textarea
+                    rows={6}
+                    value={String((companyInfo as any).terms_and_conditions || '')}
+                    onChange={(e) => handleInputChange('terms_and_conditions', e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
+                    placeholder="Enter default terms for service documents..."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Default Notes</label>
+                  <textarea
+                    rows={4}
+                    value={String((companyInfo as any).default_notes || '')}
+                    onChange={(e) => handleInputChange('default_notes', e.target.value)}
+                    className="w-full px-3 py-2 border border-[#E2D6BD] rounded-lg focus:ring-2 focus:ring-[#C6B383] focus:border-[#C6B383] bg-white"
+                    placeholder="This note will appear by default on new invoices and POS payments."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contractor Signature</label>
+
+                  {contractorSignaturePreview || (companyInfo as any).contractor_signature_image ? (
+                    <div className="flex items-start gap-6">
+                      <div className="w-64 h-32 border-2 border-dashed border-[#E2D6BD] rounded-xl flex items-center justify-center bg-[#FDFBF7] overflow-hidden">
+                        <img
+                          src={contractorSignaturePreview || (companyInfo as any).contractor_signature_image}
+                          alt="Contractor signature"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-sm text-gray-600">Signature saved.</p>
+                        <button
+                          type="button"
+                          onClick={removeContractorSignature}
+                          className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium"
+                        >
+                          <i className="ri-delete-bin-line mr-2"></i>
+                          Clear & Redraw
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Draw your default contractor signature below.</p>
+                      <div ref={sigContainerRef} className="w-full max-w-md">
+                        <canvas
+                          ref={(el) => { sigCanvasRef.current = el; if (el) configureSigCanvas(); }}
+                          className="w-full border-2 border-dashed border-[#E2D6BD] rounded-xl bg-[#FDFBF7] cursor-crosshair touch-none"
+                          onPointerDown={onSigPointerDown}
+                          onPointerMove={onSigPointerMove}
+                          onPointerUp={onSigPointerUp}
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 mt-3">
+                        <button
+                          type="button"
+                          onClick={saveSigFromCanvas}
+                          className="px-4 py-2 bg-[#3B4A2A] text-white rounded-lg hover:bg-[#2D3B1E] transition-colors text-sm font-medium"
+                        >
+                          <i className="ri-check-line mr-2"></i>
+                          Save Signature
+                        </button>
+                        <button
+                          type="button"
+                          onClick={clearSigCanvas}
+                          className="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                        >
+                          <i className="ri-eraser-line mr-2"></i>
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
