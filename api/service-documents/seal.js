@@ -217,7 +217,7 @@ export default async function handler(req, res) {
 
     // Email may not have been sent if previous attempt failed.
     const clientEmail = String(doc.client_email || '').trim();
-    if (!doc.sealed_email_sent_at && clientEmail) {
+    if (!doc.sealed_email_sent_at && isValidEmail(clientEmail)) {
       const claimIso = new Date().toISOString();
       const { data: claim } = await supabase
         .from('service_documents')
@@ -863,7 +863,7 @@ export default async function handler(req, res) {
   const alreadySealed = Boolean(doc.sealed_at || latest?.sealed_at);
 
   const clientEmail = String(doc.client_email || '').trim();
-  if (!latest?.sealed_email_sent_at && clientEmail) {
+  if (!latest?.sealed_email_sent_at && isValidEmail(clientEmail)) {
     const claimIso = new Date().toISOString();
     const { data: claim } = await supabase
       .from('service_documents')

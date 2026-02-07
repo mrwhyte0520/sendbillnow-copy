@@ -118,7 +118,6 @@ export default function ServiceDocumentsListPage() {
               <i className="ri-file-add-line" />
               <span>New Job Estimate</span>
             </button>
-            {/* Classic Invoice button hidden for now */}
           </div>
         </div>
 

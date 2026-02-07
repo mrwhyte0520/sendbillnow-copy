@@ -100,6 +100,47 @@ function isCanvasBlank(canvas: HTMLCanvasElement) {
   return true;
 }
 
+function parseClientAddress(raw?: string): { street: string; city: string; state: string; zip: string } {
+  const s = String(raw || '').replace(/\r\n/g, '\n');
+  const lines = s
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const street = lines[0] || '';
+  const secondLine = lines.slice(1).join(' ').trim();
+  const segs = secondLine
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  const city = segs[0] || '';
+  const rest = segs.slice(1).join(' ').trim();
+  const tokens = rest.split(/\s+/).filter(Boolean);
+  const state = tokens[0] || '';
+  const zip = tokens.slice(1).join(' ').trim();
+  return { street, city, state, zip };
+}
+
+function buildClientAddress(input: { street: string; city: string; state: string; zip: string }): string {
+  const street = String(input.street || '').trim();
+  const city = String(input.city || '').trim();
+  const state = String(input.state || '').trim();
+  const zip = String(input.zip || '').trim();
+
+  const line2Parts: string[] = [];
+  if (city) line2Parts.push(city);
+
+  const stateZip = [state, zip].filter(Boolean).join(' ').trim();
+  if (stateZip) {
+    if (city) line2Parts.push(stateZip);
+    else line2Parts.push(stateZip);
+  }
+
+  const line2 = line2Parts.join(city && stateZip ? ', ' : '').trim();
+  return [street, line2].filter(Boolean).join('\n').trim();
+}
+
 export default function ServiceDocumentsEditPage() {
   const params = useParams();
   const navigate = useNavigate();
@@ -122,6 +163,9 @@ export default function ServiceDocumentsEditPage() {
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
+  const [clientCity, setClientCity] = useState('');
+  const [clientState, setClientState] = useState('');
+  const [clientZip, setClientZip] = useState('');
   const [terms, setTerms] = useState('');
   const [taxRate, setTaxRate] = useState('');
   const [materialCost, setMaterialCost] = useState('');
@@ -216,7 +260,14 @@ export default function ServiceDocumentsEditPage() {
       setClientName(String((d as any).client_name || ''));
       setClientEmail(String((d as any).client_email || ''));
       setClientPhone(String((d as any).client_phone || ''));
-      setClientAddress(String((d as any).client_address || ''));
+      {
+        const rawAddr = String((d as any).client_address || '');
+        const parsed = parseClientAddress(rawAddr);
+        setClientAddress(parsed.street);
+        setClientCity(parsed.city);
+        setClientState(parsed.state);
+        setClientZip(parsed.zip);
+      }
       setTerms(String((d as any).terms_snapshot || ''));
       setTaxRate(String((d as any).tax_rate ?? ''));
       setMaterialCost(String((d as any).material_cost ?? ''));
@@ -285,15 +336,21 @@ export default function ServiceDocumentsEditPage() {
 
   const headerDirty = useMemo(() => {
     if (!doc) return false;
+    const composedAddress = buildClientAddress({
+      street: clientAddress,
+      city: clientCity,
+      state: clientState,
+      zip: clientZip,
+    });
     return (
       clientName !== String(doc.client_name || '') ||
       clientEmail !== String(doc.client_email || '') ||
       clientPhone !== String(doc.client_phone || '') ||
-      clientAddress !== String(doc.client_address || '') ||
+      composedAddress !== String(doc.client_address || '') ||
       terms !== String(doc.terms_snapshot || '') ||
       taxRate !== String(doc.tax_rate ?? '')
     );
-  }, [clientAddress, clientEmail, clientName, clientPhone, doc, taxRate, terms]);
+  }, [clientAddress, clientCity, clientEmail, clientName, clientPhone, clientState, clientZip, doc, taxRate, terms]);
 
   const numericTaxRate = useMemo(() => {
     const raw = String(taxRate ?? '').trim();
@@ -616,7 +673,12 @@ export default function ServiceDocumentsEditPage() {
           clientName: name,
           clientEmail: clientEmail.trim(),
           clientPhone: clientPhone.trim(),
-          clientAddress: clientAddress.trim(),
+          clientAddress: buildClientAddress({
+            street: clientAddress,
+            city: clientCity,
+            state: clientState,
+            zip: clientZip,
+          }),
           termsSnapshot: terms,
           taxRate: rateNum,
         }),
@@ -1086,6 +1148,18 @@ export default function ServiceDocumentsEditPage() {
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#5F6652] mb-1">Client address</label>
                 <input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className={INPUT_CLASSES} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#5F6652] mb-1">City</label>
+                <input value={clientCity} onChange={(e) => setClientCity(e.target.value)} className={INPUT_CLASSES} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#5F6652] mb-1">State</label>
+                <input value={clientState} onChange={(e) => setClientState(e.target.value)} className={INPUT_CLASSES} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-[#5F6652] mb-1">ZIP</label>
+                <input value={clientZip} onChange={(e) => setClientZip(e.target.value)} className={INPUT_CLASSES} />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-[#5F6652] mb-1">Terms snapshot</label>
