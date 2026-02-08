@@ -348,8 +348,14 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
         { name: 'Recurring Billing', href: '/billing/recurring' },
         { name: 'Cash Closing', href: '/billing/cash-closing' },
         { name: 'Estimate', href: '/billing/quotes' },
-        { name: 'Service Documents', href: '/service-documents' },
       ]
+    },
+    // Job Estimate
+    {
+      name: 'Job Estimate',
+      href: '/service-documents',
+      icon: 'ri-file-list-line',
+      current: location.pathname.startsWith('/service-documents'),
     },
     // 6. Point of Sale
     {

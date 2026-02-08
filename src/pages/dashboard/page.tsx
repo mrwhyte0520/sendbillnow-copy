@@ -193,6 +193,7 @@ export default function DashboardPage() {
     { name: 'New Supplier', icon: 'ri-user-settings-line', href: '/accounts-payable/suppliers', color: 'from-[#008000] to-[#008000]', module: 'accounts-payable' },
     { name: 'New Invoice', icon: 'ri-file-text-line', href: '/billing/invoicing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
     { name: 'Estimate', icon: 'ri-file-list-line', href: '/billing/quotes', color: 'from-[#008000] to-[#008000]', module: 'billing' },
+    { name: 'Job Estimate', icon: 'ri-file-list-line', href: '/service-documents', color: 'from-[#008000] to-[#008000]', module: 'service-documents' },
     { name: 'POS', icon: 'ri-shopping-cart-line', href: '/pos?tab=pos', color: 'from-[#008000] to-[#008000]', module: 'pos' },
     { name: 'Cash Closing', icon: 'ri-money-dollar-box-line', href: '/billing/cash-closing', color: 'from-[#008000] to-[#008000]', module: 'billing' },
     { name: 'Cash & Finance', icon: 'ri-money-dollar-circle-line', href: '/cash-finance', color: 'from-[#008000] to-[#008000]', module: 'cash-finance' },
