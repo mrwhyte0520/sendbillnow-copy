@@ -110,6 +110,41 @@ function safeText(input) {
   return String(input ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function formatSignedAt(raw) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (!Number.isFinite(d.getTime())) return '';
+
+  try {
+    const fmt = new Intl.DateTimeFormat('es-DO', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'America/Santo_Domingo',
+    });
+    return fmt.format(d);
+  } catch {
+    // Fallback: Dominican Republic is UTC-4 (no DST)
+    const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
+    const mm = String(shifted.getUTCMonth() + 1);
+    const dd = String(shifted.getUTCDate());
+    const yyyy = String(shifted.getUTCFullYear());
+
+    let hh = shifted.getUTCHours();
+    const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+    const sec = String(shifted.getUTCSeconds()).padStart(2, '0');
+    const ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12;
+    if (hh === 0) hh = 12;
+
+    return `${mm}/${dd}/${yyyy}, ${hh}:${min}:${sec} ${ampm}`;
+  }
+}
+
 function splitText(pdf, text, maxWidth) {
   const raw = String(text || '').trim();
   if (!raw) return [];
@@ -722,22 +757,8 @@ export default async function handler(req, res) {
 
   const clientNameText = safeText(signature?.client_name || doc.client_name || '');
   const contractorNameText = safeText(signature?.contractor_name || '');
-  const sigDateFormatOptions = {
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true,
-    timeZone: 'America/Santo_Domingo',
-  };
-  const clientDateText = signature?.client_signed_at
-    ? new Date(signature.client_signed_at).toLocaleString('es-DO', sigDateFormatOptions)
-    : '';
-  const contractorDateText = signature?.contractor_signed_at
-    ? new Date(signature.contractor_signed_at).toLocaleString('es-DO', sigDateFormatOptions)
-    : '';
+  const clientDateText = formatSignedAt(signature?.client_signed_at);
+  const contractorDateText = formatSignedAt(signature?.contractor_signed_at);
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');

@@ -1134,14 +1134,14 @@ export default function ServiceDocumentsEditPage() {
                       <div className="text-right text-[#7A705A]">
                         <div>Subtotal</div>
                         <div>Tax</div>
+                        <div className="mt-1 text-xs">Material Cost</div>
                         <div className="font-semibold text-[#2F3D2E]">Total</div>
-                        {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">Material Cost</div>}
                       </div>
                       <div className="text-right">
                         <div>{Number(computedSubtotal ?? 0).toFixed(2)}</div>
                         <div>{Number(computedTax ?? 0).toFixed(2)}</div>
+                        <div className="mt-1 text-xs">{Number(numericMaterialCost ?? 0).toFixed(2)}</div>
                         <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
-                        {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">{Number(doc.material_cost).toFixed(2)}</div>}
                       </div>
                     </div>
                   </div>
