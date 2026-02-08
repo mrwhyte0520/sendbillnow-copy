@@ -115,34 +115,22 @@ function formatSignedAt(raw) {
   const d = new Date(raw);
   if (!Number.isFinite(d.getTime())) return '';
 
-  try {
-    const fmt = new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-      timeZone: 'America/Santo_Domingo',
-    });
-    return fmt.format(d);
-  } catch {
-    // Fallback: Dominican Republic is UTC-4 (no DST).
-    const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
-    const mm = String(shifted.getUTCMonth() + 1);
-    const dd = String(shifted.getUTCDate());
-    const yyyy = String(shifted.getUTCFullYear());
+  // Always format as Dominican Republic time (UTC-4, no DST).
+  // We avoid Intl timezone formatting because some production runtimes ignore
+  // the `timeZone` option without throwing, causing UTC timestamps (+4h).
+  const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
+  const mm = String(shifted.getUTCMonth() + 1);
+  const dd = String(shifted.getUTCDate());
+  const yyyy = String(shifted.getUTCFullYear());
 
-    let hh = shifted.getUTCHours();
-    const min = String(shifted.getUTCMinutes()).padStart(2, '0');
-    const sec = String(shifted.getUTCSeconds()).padStart(2, '0');
-    const ampm = hh >= 12 ? 'PM' : 'AM';
-    hh = hh % 12;
-    if (hh === 0) hh = 12;
+  let hh = shifted.getUTCHours();
+  const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+  const sec = String(shifted.getUTCSeconds()).padStart(2, '0');
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  hh = hh % 12;
+  if (hh === 0) hh = 12;
 
-    return `${mm}/${dd}/${yyyy}, ${hh}:${min}:${sec} ${ampm}`;
-  }
+  return `${mm}/${dd}/${yyyy}, ${hh}:${min}:${sec} ${ampm}`;
 }
 
 function splitText(pdf, text, maxWidth) {
