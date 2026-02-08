@@ -1420,9 +1420,13 @@ export default function ServiceDocumentsEditPage() {
                     <label className="block text-sm font-medium text-[#5F6652] mb-1">City</label>
                     <input value={clientCity} onChange={(e) => setClientCity(e.target.value)} className={INPUT_CLASSES} />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-sm font-medium text-[#5F6652] mb-1">State</label>
-                    <input value={clientState} onChange={(e) => setClientState(e.target.value)} className={INPUT_CLASSES} />
+                    <input
+                      value={clientState}
+                      onChange={(e) => setClientState(e.target.value)}
+                      className={`${INPUT_CLASSES} min-w-0 overflow-hidden text-ellipsis whitespace-nowrap`}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-[#5F6652] mb-1">ZIP</label>

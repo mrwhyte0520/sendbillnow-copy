@@ -165,6 +165,19 @@ function splitText(pdf, text, maxWidth) {
   }
 }
 
+function truncateToWidth(pdf, raw, maxWidth) {
+  const s = safeText(raw);
+  if (!s) return '';
+  if (!Number.isFinite(maxWidth) || maxWidth <= 0) return '';
+  if (pdf.getTextWidth(s) <= maxWidth) return s;
+  const ellipsis = '…';
+  let out = s;
+  while (out.length > 1 && pdf.getTextWidth(`${out}${ellipsis}`) > maxWidth) {
+    out = out.slice(0, -1);
+  }
+  return out.length ? `${out}${ellipsis}` : '';
+}
+
 function isValidEmail(input) {
   const email = String(input || '').trim();
   if (!email) return false;
@@ -419,8 +432,9 @@ export default async function handler(req, res) {
   const addrCity = addrSegs[0] || '';
   const addrRest = addrSegs.slice(1).join(' ').trim();
   const addrTokens = addrRest.split(/\s+/).filter(Boolean);
-  const addrState = addrTokens[0] || '';
-  const addrZip = addrTokens.slice(1).join(' ').trim();
+  const zipStartIdx = addrTokens.findIndex((t) => /\d/.test(t));
+  const addrState = (zipStartIdx === -1 ? addrTokens : addrTokens.slice(0, zipStartIdx)).join(' ').trim();
+  const addrZip = (zipStartIdx === -1 ? '' : addrTokens.slice(zipStartIdx).join(' ')).trim();
 
   // Customer block (left column: Name/Email/Phone, right column: Address/City/State/Zip)
   const maxCustTextW = (pageWidth - marginX - companyBoxW - marginX - 20) / 2; // half for each column
@@ -469,12 +483,16 @@ export default async function handler(req, res) {
   pdf.setFont('helvetica', 'bold');
   pdf.text('STATE:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrState || '-').substring(0, 20), rightX + 36, rightY);
+  const stateX = rightX + 36;
+  const stateMaxW = maxCustTextW - (stateX - rightX) - 6;
+  pdf.text(truncateToWidth(pdf, addrState || '-', stateMaxW), stateX, rightY);
   rightY += 12;
   pdf.setFont('helvetica', 'bold');
   pdf.text('ZIP:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrZip || '-').substring(0, 20), rightX + 20, rightY);
+  const zipX = rightX + 20;
+  const zipMaxW = maxCustTextW - (zipX - rightX) - 6;
+  pdf.text(truncateToWidth(pdf, addrZip || '-', zipMaxW), zipX, rightY);
   rightY += 12;
 
   customerInfoY = Math.max(customerInfoY, rightY);
