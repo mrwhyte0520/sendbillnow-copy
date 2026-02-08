@@ -354,7 +354,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
     {
       name: 'Job Estimate',
       href: '/service-documents',
-      icon: 'ri-file-list-line',
+      icon: 'ri-sticky-note-line',
       current: location.pathname.startsWith('/service-documents'),
     },
     // 6. Point of Sale
