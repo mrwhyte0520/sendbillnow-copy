@@ -110,10 +110,32 @@ function safeText(input) {
   return String(input ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function parseTimestampUtc(raw) {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+
+  const hasTz = /([zZ]|[+-]\d{2}:?\d{2})$/.test(s);
+  const looksIsoNoTz = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/.test(s);
+
+  const d = new Date(hasTz ? s : looksIsoNoTz ? `${s}Z` : s);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+function formatDateOnlyUtcMinus4(raw) {
+  const d = parseTimestampUtc(raw);
+  if (!d) return '';
+  const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
+  const mm = String(shifted.getUTCMonth() + 1);
+  const dd = String(shifted.getUTCDate());
+  const yyyy = String(shifted.getUTCFullYear());
+  return `${mm}/${dd}/${yyyy}`;
+}
+
 function formatSignedAt(raw) {
   if (!raw) return '';
-  const d = new Date(raw);
-  if (!Number.isFinite(d.getTime())) return '';
+  const d = parseTimestampUtc(raw);
+  if (!d) return '';
 
   // Always format as Dominican Republic time (UTC-4, no DST).
   // We avoid Intl timezone formatting because some production runtimes ignore
@@ -513,7 +535,7 @@ export default async function handler(req, res) {
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(10);
   const colW = contentW / 3;
-  const dateStr = doc?.created_at ? new Date(doc.created_at).toLocaleDateString() : new Date().toLocaleDateString();
+  const dateStr = doc?.created_at ? formatDateOnlyUtcMinus4(doc.created_at) : formatDateOnlyUtcMinus4(new Date().toISOString());
   pdf.setFont('helvetica', 'bold');
   const pad = 6;
   const l1a = 'ESTIMATE #:';
