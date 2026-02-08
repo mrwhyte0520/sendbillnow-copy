@@ -714,6 +714,10 @@ const routes: RouteObject[] = [
     element: <ProtectedRoute><ServiceDocumentsListPage /></ProtectedRoute>
   },
   {
+    path: '/service-documents/new',
+    element: <ProtectedRoute><ServiceDocumentsEditPage /></ProtectedRoute>
+  },
+  {
     path: '/service-documents/:id',
     element: <ProtectedRoute><ServiceDocumentsEditPage /></ProtectedRoute>
   },

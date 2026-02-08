@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
   const { data: doc, error: docError } = await supabase
     .from('service_documents')
-    .select('id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, sent_at, viewed_at, client_signed_at, created_at, updated_at, voided_at, expired_at')
+    .select('id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, sent_at, viewed_at, client_signed_at, created_at, updated_at, voided_at, expired_at')
     .eq('id', documentId)
     .eq('user_id', tenantId)
     .maybeSingle();

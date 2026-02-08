@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { supabase } from '../../../lib/supabase';
-import { inventoryService } from '../../../services/database';
+import { customersService, inventoryService } from '../../../services/database';
 import { toast } from 'sonner';
 
 const BASE_CARD_CLASSES =
@@ -23,6 +23,12 @@ const TERTIARY_BUTTON_CLASSES =
 
 function withDisabledStyle(base: string, disabled: boolean) {
   return `${base}${disabled ? ' opacity-50 cursor-not-allowed pointer-events-none' : ''}`;
+}
+
+function normalizeTaxRateValue(input: number): number {
+  const raw = Number(input ?? 0);
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return raw > 1 ? raw / 100 : raw;
 }
 
 type ServiceDocument = {
@@ -59,6 +65,14 @@ type InventoryItem = {
   cost_price: number;
   description?: string;
   taxable?: boolean;
+};
+
+type CustomerOption = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
 };
 
 type ServiceLine = {
@@ -146,6 +160,7 @@ export default function ServiceDocumentsEditPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const id = params.id as string | undefined;
+  const isNew = !id;
 
   const [loading, setLoading] = useState(true);
   const [savingHeader, setSavingHeader] = useState(false);
@@ -169,10 +184,10 @@ export default function ServiceDocumentsEditPage() {
   const [terms, setTerms] = useState('');
   const [taxRate, setTaxRate] = useState('');
   const [materialCost, setMaterialCost] = useState('');
+  const [defaultTaxRate, setDefaultTaxRate] = useState<number | null>(null);
 
   const [showContractorSignModal, setShowContractorSignModal] = useState(false);
-  const [showClientModal, setShowClientModal] = useState(false);
-  const [showLinesModal, setShowLinesModal] = useState(false);
+  const [showClientItemsModal, setShowClientItemsModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [latestSendLink, setLatestSendLink] = useState<string | null>(null);
   const [contractorNameInput, setContractorNameInput] = useState('');
@@ -183,6 +198,17 @@ export default function ServiceDocumentsEditPage() {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [activeSearchIdx, setActiveSearchIdx] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchEl, setActiveSearchEl] = useState<HTMLInputElement | null>(null);
+  const [searchDropdownPos, setSearchDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
+
+  // Customer search
+  const [customerOptions, setCustomerOptions] = useState<CustomerOption[]>([]);
+  const [customerQuery, setCustomerQuery] = useState('');
+  const [activeCustomerEl, setActiveCustomerEl] = useState<HTMLInputElement | null>(null);
+  const [customerDropdownPos, setCustomerDropdownPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+
+  const docIdRef = useRef<string | null>(null);
 
   const contractorCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const contractorContainerRef = useRef<HTMLDivElement | null>(null);
@@ -197,12 +223,29 @@ export default function ServiceDocumentsEditPage() {
   }, [doc?.doc_number, doc?.doc_type, location]);
 
   const flowStatus = useMemo(() => {
-    const st = String(doc?.status || '');
+    const st = String(doc?.status || (isNew ? 'Draft' : ''));
     return st === 'Viewed' ? 'Sent' : st;
-  }, [doc?.status]);
+  }, [doc?.status, isNew]);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!id) {
+      setDoc(null);
+      setLines([]);
+      setSignature(null);
+      setSealedPdfUrl(null);
+      setClientName('');
+      setClientEmail('');
+      setClientPhone('');
+      setClientAddress('');
+      setClientCity('');
+      setClientState('');
+      setClientZip('');
+      setTerms('');
+      setTaxRate('');
+      setMaterialCost('');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const { data: auth } = await supabase.auth.getUser();
@@ -283,6 +326,10 @@ export default function ServiceDocumentsEditPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    docIdRef.current = doc?.id ?? null;
+  }, [doc?.id]);
+
   // Load inventory items for product search
   const loadInventory = useCallback(async () => {
     try {
@@ -307,6 +354,53 @@ export default function ServiceDocumentsEditPage() {
     loadInventory();
   }, [loadInventory]);
 
+  const loadCompanyDefaults = useCallback(async () => {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user?.id) return;
+
+      const { data, error } = await supabase
+        .from('company_info')
+        .select('default_tax_rate')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) return;
+
+      const raw = Number((data as any)?.default_tax_rate);
+      if (Number.isFinite(raw) && raw >= 0) {
+        setDefaultTaxRate(raw);
+      }
+    } catch {
+      // silently ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCompanyDefaults();
+  }, [loadCompanyDefaults]);
+
+  const loadCustomers = useCallback(async () => {
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user?.id) return;
+      const rows = await customersService.getAll(auth.user.id);
+      setCustomerOptions((rows ?? []).map((c: any) => ({
+        id: String(c.id),
+        name: String(c.name || ''),
+        email: String(c.email || ''),
+        phone: String(c.phone || ''),
+        address: String(c.address || ''),
+      })));
+    } catch {
+      // silently ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
+
   const filteredInventory = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return inventoryItems.slice(0, 20);
@@ -314,6 +408,72 @@ export default function ServiceDocumentsEditPage() {
       .filter((item) => item.name.toLowerCase().includes(q) || (item.sku && item.sku.toLowerCase().includes(q)))
       .slice(0, 20);
   }, [inventoryItems, searchQuery]);
+
+  const filteredCustomers = useMemo(() => {
+    const q = String(customerQuery || '').toLowerCase().trim();
+    const base = customerOptions.filter((c) => String(c.name || '').trim().toLowerCase() !== 'general customer');
+    if (!q) return base.slice(0, 20);
+    return base
+      .filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.email && c.email.toLowerCase().includes(q)) ||
+          (c.phone && c.phone.toLowerCase().includes(q)),
+      )
+      .slice(0, 20);
+  }, [customerOptions, customerQuery]);
+
+  useEffect(() => {
+    if (!activeSearchEl || activeSearchIdx == null) {
+      setSearchDropdownPos(null);
+      return;
+    }
+
+    const updatePos = () => {
+      const rect = activeSearchEl.getBoundingClientRect();
+      setSearchDropdownPos({ left: rect.left, top: rect.bottom + 6, width: rect.width });
+    };
+
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [activeSearchEl, activeSearchIdx]);
+
+  useEffect(() => {
+    if (!activeCustomerEl || !customerDropdownOpen) {
+      setCustomerDropdownPos(null);
+      return;
+    }
+
+    const updatePos = () => {
+      const rect = activeCustomerEl.getBoundingClientRect();
+      setCustomerDropdownPos({ left: rect.left, top: rect.bottom + 6, width: rect.width });
+    };
+
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [activeCustomerEl, customerDropdownOpen]);
+
+  const selectCustomer = useCallback((c: CustomerOption) => {
+    setClientName(String(c.name || ''));
+    setClientEmail(String(c.email || ''));
+    setClientPhone(String(c.phone || ''));
+    const parsed = parseClientAddress(String(c.address || ''));
+    setClientAddress(parsed.street);
+    setClientCity(parsed.city);
+    setClientState(parsed.state);
+    setClientZip(parsed.zip);
+    setCustomerDropdownOpen(false);
+  }, []);
 
   const selectInventoryItem = useCallback((idx: number, item: InventoryItem) => {
     setLines((prev) =>
@@ -347,18 +507,25 @@ export default function ServiceDocumentsEditPage() {
       clientEmail !== String(doc.client_email || '') ||
       clientPhone !== String(doc.client_phone || '') ||
       composedAddress !== String(doc.client_address || '') ||
-      terms !== String(doc.terms_snapshot || '') ||
-      taxRate !== String(doc.tax_rate ?? '')
+      terms !== String(doc.terms_snapshot || '')
     );
-  }, [clientAddress, clientCity, clientEmail, clientName, clientPhone, clientState, clientZip, doc, taxRate, terms]);
+  }, [clientAddress, clientCity, clientEmail, clientName, clientPhone, clientState, clientZip, doc, terms]);
 
   const numericTaxRate = useMemo(() => {
     const raw = String(taxRate ?? '').trim();
-    if (!raw) return 0;
+    if (!raw) {
+      if (!doc) {
+        const fallback = defaultTaxRate == null ? 0.18 : Number(defaultTaxRate);
+        if (!Number.isFinite(fallback) || fallback < 0) return 0;
+        return normalizeTaxRateValue(fallback);
+      }
+      const n = Number(doc?.tax_rate ?? 0);
+      return Number.isFinite(n) && n >= 0 ? normalizeTaxRateValue(n) : 0;
+    }
     const n = Number(raw);
     if (!Number.isFinite(n) || n < 0) return 0;
-    return n;
-  }, [taxRate]);
+    return normalizeTaxRateValue(n);
+  }, [defaultTaxRate, doc?.tax_rate, taxRate]);
 
   const visibleLines = useMemo(() => lines.filter((l) => !l._deleted), [lines]);
 
@@ -393,10 +560,10 @@ export default function ServiceDocumentsEditPage() {
   );
 
   const canEdit = useMemo(() => {
-    if (!doc?.id) return false;
+    if (!doc?.id) return isNew;
     if (doc.sealed_at || flowStatus === 'Sealed' || flowStatus === 'Voided' || flowStatus === 'Expired') return false;
     return flowStatus === 'Draft' || flowStatus === 'Sent';
-  }, [doc?.id, doc?.sealed_at, flowStatus]);
+  }, [doc?.id, doc?.sealed_at, flowStatus, isNew]);
 
   const canContractorSign = useMemo(() => {
     if (!doc?.id) return false;
@@ -640,20 +807,22 @@ export default function ServiceDocumentsEditPage() {
     setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
   };
 
-  const saveHeader = async () => {
-    if (!doc?.id) return;
-
+  const saveHeader = async (): Promise<boolean> => {
     const name = clientName.trim();
     if (!name) {
       toast.error('Client name is required');
-      return;
+      return false;
     }
 
-    const rateNum = Number(taxRate);
-    if (!Number.isFinite(rateNum) || rateNum < 0) {
+    const fallbackTaxRate = defaultTaxRate == null ? 0.18 : Number(defaultTaxRate);
+    const rawEffectiveTaxRate =
+      String(taxRate ?? '').trim() === '' ? (doc ? Number(doc?.tax_rate ?? 0) : fallbackTaxRate) : Number(taxRate);
+    if (!Number.isFinite(rawEffectiveTaxRate) || rawEffectiveTaxRate < 0) {
       toast.error('Invalid tax rate');
-      return;
+      return false;
     }
+
+    const effectiveTaxRate = normalizeTaxRateValue(rawEffectiveTaxRate);
 
     setSavingHeader(true);
     try {
@@ -662,47 +831,79 @@ export default function ServiceDocumentsEditPage() {
       if (!token) throw new Error('Please login again');
 
       const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-      const resp = await fetch(`${apiBase}/api/service-documents/update`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: doc.id,
-          clientName: name,
-          clientEmail: clientEmail.trim(),
-          clientPhone: clientPhone.trim(),
-          clientAddress: buildClientAddress({
-            street: clientAddress,
-            city: clientCity,
-            state: clientState,
-            zip: clientZip,
-          }),
-          termsSnapshot: terms,
-          taxRate: rateNum,
-        }),
+
+      const addr = buildClientAddress({
+        street: clientAddress,
+        city: clientCity,
+        state: clientState,
+        zip: clientZip,
       });
+
+      const docTypeFromState = String((location as any)?.state?.docType || '').trim();
+      const docType = (doc?.doc_type || docTypeFromState || 'JOB_ESTIMATE') as 'JOB_ESTIMATE' | 'CLASSIC_INVOICE';
+
+      const resp = doc?.id
+        ? await fetch(`${apiBase}/api/service-documents/update`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              id: doc.id,
+              clientName: name,
+              clientEmail: clientEmail.trim(),
+              clientPhone: clientPhone.trim(),
+              clientAddress: addr,
+              termsSnapshot: terms,
+              taxRate: effectiveTaxRate,
+            }),
+          })
+        : await fetch(`${apiBase}/api/service-documents/create`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              docType,
+              clientName: name,
+              clientEmail: clientEmail.trim(),
+              clientPhone: clientPhone.trim(),
+              clientAddress: addr,
+              termsSnapshot: terms,
+              taxRate: effectiveTaxRate,
+            }),
+          });
 
       const json = await resp.json().catch(() => null);
       if (!resp.ok || !json?.ok) throw new Error(json?.error || 'Could not save');
 
       if (json?.document) {
+        if (json?.document?.id) {
+          docIdRef.current = String(json.document.id);
+        }
         setDoc((prev) => (prev ? { ...prev, ...json.document } : json.document));
+        if (!doc?.id && json?.document?.id) {
+          navigate(`/service-documents/${json.document.id}`, { replace: true, state: { docType } });
+        }
       } else {
         await load();
       }
 
       toast.success('Saved');
+      return true;
     } catch (e: any) {
       toast.error(e?.message || 'Could not save');
+      return false;
     } finally {
       setSavingHeader(false);
     }
   };
 
-  const saveLines = async () => {
-    if (!doc?.id) return;
+  const saveLines = async (): Promise<boolean> => {
+    const documentId = doc?.id || docIdRef.current;
+    if (!documentId) return false;
 
     const prepared = lines
       .map((l, idx) => ({
@@ -715,17 +916,17 @@ export default function ServiceDocumentsEditPage() {
       if (l._deleted) continue;
       if (!String(l.description || '').trim()) {
         toast.error('Each line needs a description');
-        return;
+        return false;
       }
       const qty = Number(l.quantity);
       const price = Number(l.unit_price);
       if (!Number.isFinite(qty) || qty < 0) {
         toast.error('Invalid quantity');
-        return;
+        return false;
       }
       if (!Number.isFinite(price) || price < 0) {
         toast.error('Invalid unit price');
-        return;
+        return false;
       }
     }
 
@@ -743,7 +944,7 @@ export default function ServiceDocumentsEditPage() {
           authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          documentId: doc.id,
+          documentId,
           materialCost: materialCost.trim() === '' ? null : Number(materialCost),
           lines: prepared.map((l) => ({
             id: l.id,
@@ -779,35 +980,21 @@ export default function ServiceDocumentsEditPage() {
       }
 
       toast.success('Lines saved');
+      return true;
     } catch (e: any) {
       toast.error(e?.message || 'Could not save lines');
+      return false;
     } finally {
       setSavingLines(false);
     }
   };
 
-  const recalc = async () => {
-    if (!doc?.id) return;
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (!token) throw new Error('Please login again');
-
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-      const resp = await fetch(`${apiBase}/api/service-documents/recalculate`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ documentId: doc.id }),
-      });
-      const json = await resp.json().catch(() => null);
-      if (!resp.ok || !json?.ok) throw new Error(json?.error || 'Could not recalculate');
-      setDoc((prev) => (prev ? { ...prev, ...json.document } : json.document));
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not recalculate');
-    }
+  const saveClientAndItems = async () => {
+    const okHeader = await saveHeader();
+    if (!okHeader) return;
+    const okLines = await saveLines();
+    if (!okLines) return;
+    setShowClientItemsModal(false);
   };
 
   const send = async () => {
@@ -876,25 +1063,30 @@ export default function ServiceDocumentsEditPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => {
-                setShowClientModal(true);
+                if (!canEdit) {
+                  toast.info('This document cannot be edited after sending it to the client for signing.');
+                  return;
+                }
+                if (String(doc?.client_name || '').trim().toLowerCase() === 'general customer') {
+                  setClientName('');
+                }
+                setShowClientItemsModal(true);
               }}
-              className={SECONDARY_BUTTON_CLASSES}
-              disabled={!doc?.id || loading || !canEdit}
+              className={`${SECONDARY_BUTTON_CLASSES} ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
               <i className="ri-user-line" />
-              <span>Client</span>
+              <span>Client & Items</span>
             </button>
             <button
-              onClick={() => setShowLinesModal(true)}
-              className={SECONDARY_BUTTON_CLASSES}
-              disabled={!doc?.id || loading || !canEdit}
+              onClick={() => {
+                window.location.reload();
+              }}
+              className={TERTIARY_BUTTON_CLASSES}
+              disabled={loading || !doc?.id}
             >
-              <i className="ri-list-check" />
-              <span>Items</span>
-            </button>
-            <button onClick={recalc} className={TERTIARY_BUTTON_CLASSES} disabled={loading || !doc?.id}>
               <i className="ri-refresh-line" />
-              <span>Recalculate</span>
+              <span>Refresh</span>
             </button>
             <button
               onClick={() => {
@@ -921,50 +1113,56 @@ export default function ServiceDocumentsEditPage() {
 
         {loading ? (
           <div className={`${BASE_CARD_CLASSES} p-6`}>Loading...</div>
-        ) : !doc ? (
+        ) : !doc && !isNew ? (
           <div className={`${BASE_CARD_CLASSES} p-6 text-[#B9583C]`}>Not found</div>
         ) : (
           <>
-            <div className={`${BASE_CARD_CLASSES} p-6`}>
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="text-sm font-semibold text-[#7A705A] tracking-[0.18em] uppercase">Client</div>
-                  <div className="text-xl font-semibold text-[#2F3D2E] mt-1">{clientName || '-'}</div>
-                  <div className="text-sm text-[#5F6652] mt-2">
-                    {clientEmail ? <div>{clientEmail}</div> : null}
-                    {clientPhone ? <div>{clientPhone}</div> : null}
-                    {clientAddress ? <div>{clientAddress}</div> : null}
-                  </div>
-                </div>
-                <div className="text-sm text-[#2F3D2E]">
-                  <div className="flex justify-end gap-10">
-                    <div className="text-right text-[#7A705A]">
-                      <div>Subtotal</div>
-                      <div>Tax</div>
-                      <div className="font-semibold text-[#2F3D2E]">Total</div>
-                      {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">Material Cost</div>}
+            <div className={`${BASE_CARD_CLASSES} overflow-hidden`}>
+              <div className="p-6 border-b border-[#D9C8A9]">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold text-[#7A705A] tracking-[0.18em] uppercase">Client</div>
+                    <div className="text-xl font-semibold text-[#2F3D2E] mt-1">{clientName || '-'}</div>
+                    <div className="text-sm text-[#5F6652] mt-2">
+                      {clientEmail ? <div>{clientEmail}</div> : null}
+                      {clientPhone ? <div>{clientPhone}</div> : null}
+                      {clientAddress ? <div>{clientAddress}</div> : null}
                     </div>
-                    <div className="text-right">
-                      <div>{Number(computedSubtotal ?? 0).toFixed(2)}</div>
-                      <div>{Number(computedTax ?? 0).toFixed(2)}</div>
-                      <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
-                      {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">{Number(doc.material_cost).toFixed(2)}</div>}
+                  </div>
+                  <div className="text-sm text-[#2F3D2E]">
+                    <div className="flex justify-end gap-10">
+                      <div className="text-right text-[#7A705A]">
+                        <div>Subtotal</div>
+                        <div>Tax</div>
+                        <div className="font-semibold text-[#2F3D2E]">Total</div>
+                        {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">Material Cost</div>}
+                      </div>
+                      <div className="text-right">
+                        <div>{Number(computedSubtotal ?? 0).toFixed(2)}</div>
+                        <div>{Number(computedTax ?? 0).toFixed(2)}</div>
+                        <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
+                        {Number(doc?.material_cost ?? 0) > 0 && <div className="mt-1 text-xs">{Number(doc.material_cost).toFixed(2)}</div>}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className={`${BASE_CARD_CLASSES} overflow-hidden`}>
               <div className="px-6 py-5 border-b border-[#D9C8A9] bg-[#FFF9EE] flex items-center justify-between gap-4 flex-wrap">
                 <div>
                   <div className="text-lg font-semibold text-[#2F3D2E]">Items</div>
                   <div className="text-sm text-[#7A705A]">Manage line items and pricing.</div>
                 </div>
                 <button
-                  onClick={() => setShowLinesModal(true)}
-                  className={SECONDARY_BUTTON_CLASSES}
-                  disabled={!canEdit}
+                  onClick={() => {
+                    if (!canEdit) {
+                      toast.info('This document cannot be edited after sending it to the client for signing.');
+                      return;
+                    }
+                    setShowClientItemsModal(true);
+                  }}
+                  className={`${SECONDARY_BUTTON_CLASSES} ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={loading}
                 >
                   <i className="ri-edit-line" />
                   <span>Edit Items</span>
@@ -1005,13 +1203,13 @@ export default function ServiceDocumentsEditPage() {
                 <div>
                   <h2 className="text-lg font-semibold text-[#2F3D2E]">Signatures</h2>
                   <p className="text-sm text-[#7A705A] mt-1">
-                    Viewed: {doc.viewed_at ? new Date(doc.viewed_at).toLocaleString() : '-'}
+                    Viewed: {doc?.viewed_at ? new Date(doc.viewed_at).toLocaleString() : '-'}
                     <br />
-                    Client signed: {doc.client_signed_at ? new Date(doc.client_signed_at).toLocaleString() : '-'}
+                    Client signed: {doc?.client_signed_at ? new Date(doc.client_signed_at).toLocaleString() : '-'}
                     <br />
-                    Contractor signed: {doc.contractor_signed_at ? new Date(doc.contractor_signed_at).toLocaleString() : '-'}
+                    Contractor signed: {doc?.contractor_signed_at ? new Date(doc.contractor_signed_at).toLocaleString() : '-'}
                     <br />
-                    Sealed: {doc.sealed_at ? new Date(doc.sealed_at).toLocaleString() : '-'}
+                    Sealed: {doc?.sealed_at ? new Date(doc.sealed_at).toLocaleString() : '-'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1111,257 +1309,285 @@ export default function ServiceDocumentsEditPage() {
         )}
       </div>
 
-      {showClientModal ? (
+      {showClientItemsModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className={`${BASE_CARD_CLASSES} w-full max-w-3xl p-6`}>
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-4 mb-4">
+          <div className={`${BASE_CARD_CLASSES} w-full max-w-5xl p-4 max-h-[85vh] flex flex-col`}>
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 mb-3 flex-none">
               <div>
-                <h3 className="text-xl font-semibold text-[#2F3D2E]">Client & Terms</h3>
-                <p className="text-sm text-[#7A705A]">Update client info, tax rate, and terms.</p>
+                <h3 className="text-xl font-semibold text-[#2F3D2E]">Client & Items</h3>
+                <p className="text-sm text-[#7A705A]">Update client info, terms, and line items.</p>
               </div>
               <button
-                onClick={() => setShowClientModal(false)}
+                onClick={() => setShowClientItemsModal(false)}
                 className="text-[#7A705A] hover:text-[#3C4F3C]"
-                disabled={savingHeader}
+                disabled={savingHeader || savingLines}
               >
                 <i className="ri-close-line text-xl" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6 flex-1 overflow-y-auto pr-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Client name</label>
-                <input value={clientName} onChange={(e) => setClientName(e.target.value)} className={INPUT_CLASSES} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">Client name</label>
+                    <input
+                      value={clientName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setClientName(v);
+                        setCustomerQuery(v);
+                        if (!String(v || '').trim()) {
+                          setClientEmail('');
+                          setClientPhone('');
+                          setClientAddress('');
+                          setClientCity('');
+                          setClientState('');
+                          setClientZip('');
+                          setCustomerDropdownOpen(false);
+                        } else {
+                          setCustomerDropdownOpen(true);
+                        }
+                      }}
+                      onFocus={(e) => {
+                        setActiveCustomerEl(e.currentTarget);
+                        setCustomerQuery(clientName);
+                        setCustomerDropdownOpen(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setCustomerDropdownOpen(false);
+                        }, 200);
+                      }}
+                      className={INPUT_CLASSES}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">Client email</label>
+                    <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">Client phone</label>
+                    <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">Client address</label>
+                    <input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">City</label>
+                    <input value={clientCity} onChange={(e) => setClientCity(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">State</label>
+                    <input value={clientState} onChange={(e) => setClientState(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">ZIP</label>
+                    <input value={clientZip} onChange={(e) => setClientZip(e.target.value)} className={INPUT_CLASSES} />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Client email</label>
-                <input value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Client phone</label>
-                <input value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Tax rate</label>
-                <input value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className={INPUT_CLASSES} placeholder="0.18" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Client address</label>
-                <input value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">City</label>
-                <input value={clientCity} onChange={(e) => setClientCity(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">State</label>
-                <input value={clientState} onChange={(e) => setClientState(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">ZIP</label>
-                <input value={clientZip} onChange={(e) => setClientZip(e.target.value)} className={INPUT_CLASSES} />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-[#5F6652] mb-1">Terms snapshot</label>
-                <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={6} className={INPUT_CLASSES} />
-              </div>
-            </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#D9C8A9] mt-6">
-              <button
-                onClick={() => setShowClientModal(false)}
-                className={SECONDARY_BUTTON_CLASSES}
-                disabled={savingHeader}
-              >
-                <i className="ri-close-line" />
-                <span>Close</span>
-              </button>
-              <button
-                onClick={async () => {
-                  await saveHeader();
-                }}
-                className={PRIMARY_BUTTON_CLASSES}
-                disabled={!canEdit || !headerDirty || savingHeader}
-              >
-                <i className="ri-save-3-line" />
-                <span>{savingHeader ? 'Saving...' : 'Save'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showLinesModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className={`${BASE_CARD_CLASSES} w-full max-w-5xl p-6`}>
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-4 mb-4">
               <div>
-                <h3 className="text-xl font-semibold text-[#2F3D2E]">Items</h3>
-                <p className="text-sm text-[#7A705A]">Add, edit, or remove line items.</p>
-              </div>
-              <button
-                onClick={() => setShowLinesModal(false)}
-                className="text-[#7A705A] hover:text-[#3C4F3C]"
-                disabled={savingLines}
-              >
-                <i className="ri-close-line text-xl" />
-              </button>
-            </div>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <button onClick={addLine} className={SECONDARY_BUTTON_CLASSES} disabled={!canEdit}>
+                    <i className="ri-add-line" />
+                    <span>Add line</span>
+                  </button>
+                  <div className="text-sm text-[#7A705A]">Subtotal/Tax/Total update after Save or Refresh.</div>
+                </div>
 
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <button onClick={addLine} className={SECONDARY_BUTTON_CLASSES} disabled={!canEdit}>
-                <i className="ri-add-line" />
-                <span>Add line</span>
-              </button>
-              <div className="text-sm text-[#7A705A]">Subtotal/Tax/Total update after Save or Recalculate.</div>
-            </div>
-
-            <div className="mt-4 overflow-x-auto bg-white border border-[#EADDC4] rounded-2xl">
-              <table className="w-full text-sm">
-                <thead className="bg-[#F8F1E3]">
-                  <tr>
-                    <th className={TABLE_HEADER_CLASSES}>Description</th>
-                    <th className={`${TABLE_HEADER_CLASSES} text-right`}>Qty</th>
-                    <th className={`${TABLE_HEADER_CLASSES} text-right`}>Unit price</th>
-                    <th className={`${TABLE_HEADER_CLASSES} text-center`}>Taxable</th>
-                    <th className={`${TABLE_HEADER_CLASSES} text-right`}>Line total</th>
-                    <th className={`${TABLE_HEADER_CLASSES} text-right`}></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#EADDC4]">
-                  {lines.filter((l) => !l._deleted).length === 0 ? (
-                    <tr>
-                      <td className="px-6 py-6 text-[#7A705A]" colSpan={6}>No lines.</td>
-                    </tr>
-                  ) : (
-                    lines.map((l, idx) =>
-                      l._deleted ? null : (
-                        <tr key={l.id || idx}>
-                          <td className="px-6 py-3 relative">
-                            <input
-                              value={activeSearchIdx === idx ? searchQuery : l.description}
-                              onChange={(e) => {
-                                if (activeSearchIdx === idx) {
-                                  setSearchQuery(e.target.value);
-                                }
-                                updateLine(idx, { description: e.target.value, inventory_item_id: null });
-                              }}
-                              onFocus={() => {
-                                setActiveSearchIdx(idx);
-                                setSearchQuery(l.description);
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => {
-                                  setActiveSearchIdx((prev) => (prev === idx ? null : prev));
-                                }, 200);
-                              }}
-                              className={INPUT_CLASSES}
-                              disabled={!canEdit}
-                              placeholder="Type or search product..."
-                              autoComplete="off"
-                            />
-                            {activeSearchIdx === idx && filteredInventory.length > 0 && (
-                              <div className="absolute left-6 right-6 top-full z-50 bg-white border border-[#D9C8A9] rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                {filteredInventory.map((item) => (
-                                  <button
-                                    key={item.id}
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 hover:bg-[#F8F1E3] text-sm flex justify-between items-center gap-2"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      selectInventoryItem(idx, item);
-                                    }}
-                                  >
-                                    <span className="truncate font-medium text-[#2F3D2E]">{item.name}</span>
-                                    <span className="text-xs text-[#7A705A] whitespace-nowrap">
-                                      {item.sku ? `${item.sku} · ` : ''}{Number(item.selling_price ?? 0).toFixed(2)}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <input
-                              value={String(l.quantity)}
-                              onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })}
-                              className={`${INPUT_CLASSES} w-24 text-right`}
-                              disabled={!canEdit}
-                            />
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <input
-                              value={String(l.unit_price)}
-                              onChange={(e) => updateLine(idx, { unit_price: Number(e.target.value) })}
-                              className={`${INPUT_CLASSES} w-32 text-right`}
-                              disabled={!canEdit}
-                            />
-                          </td>
-                          <td className="px-6 py-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={l.taxable !== false}
-                              onChange={(e) => updateLine(idx, { taxable: e.target.checked })}
-                              disabled={!canEdit}
-                            />
-                          </td>
-                          <td className="px-6 py-3 text-right font-semibold text-[#2F3D2E]">
-                            {Number(computeLineAmount(l) ?? 0).toFixed(2)}
-                          </td>
-                          <td className="px-6 py-3 text-right">
-                            <button
-                              onClick={() => markDeleteLine(idx)}
-                              className={TERTIARY_BUTTON_CLASSES}
-                              disabled={!canEdit}
-                            >
-                              <i className="ri-delete-bin-line" />
-                              <span>Remove</span>
-                            </button>
-                          </td>
+                <div className="mt-4 overflow-x-auto overflow-y-visible bg-white border border-[#EADDC4] rounded-2xl">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#F8F1E3]">
+                      <tr>
+                        <th className={TABLE_HEADER_CLASSES}>Description</th>
+                        <th className={`${TABLE_HEADER_CLASSES} text-right`}>Qty</th>
+                        <th className={`${TABLE_HEADER_CLASSES} text-right`}>Unit price</th>
+                        <th className={`${TABLE_HEADER_CLASSES} text-center`}>Taxable</th>
+                        <th className={`${TABLE_HEADER_CLASSES} text-right`}>Line total</th>
+                        <th className={`${TABLE_HEADER_CLASSES} text-right`}></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EADDC4]">
+                      {lines.filter((l) => !l._deleted).length === 0 ? (
+                        <tr>
+                          <td className="px-6 py-6 text-[#7A705A]" colSpan={6}>No lines.</td>
                         </tr>
-                      )
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        lines.map((l, idx) =>
+                          l._deleted ? null : (
+                            <tr key={l.id || idx}>
+                              <td className="px-6 py-3 relative">
+                                <input
+                                  value={activeSearchIdx === idx ? searchQuery : l.description}
+                                  onChange={(e) => {
+                                    if (activeSearchIdx === idx) {
+                                      setSearchQuery(e.target.value);
+                                    }
+                                    updateLine(idx, { description: e.target.value, inventory_item_id: null });
+                                  }}
+                                  onFocus={() => {
+                                    setActiveSearchIdx(idx);
+                                    setActiveSearchEl((document.activeElement as HTMLInputElement) || null);
+                                    setSearchQuery(l.description);
+                                  }}
+                                  onBlur={() => {
+                                    setTimeout(() => {
+                                      setActiveSearchIdx((prev) => (prev === idx ? null : prev));
+                                      setActiveSearchEl((prev) => (activeSearchIdx === idx ? null : prev));
+                                    }, 200);
+                                  }}
+                                  className={INPUT_CLASSES}
+                                  disabled={!canEdit}
+                                  placeholder="Type or search product..."
+                                  autoComplete="off"
+                                />
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <input
+                                  value={String(l.quantity)}
+                                  onChange={(e) => updateLine(idx, { quantity: Number(e.target.value) })}
+                                  className={`${INPUT_CLASSES} w-24 text-right`}
+                                  disabled={!canEdit}
+                                />
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <input
+                                  value={String(l.unit_price)}
+                                  onChange={(e) => updateLine(idx, { unit_price: Number(e.target.value) })}
+                                  className={`${INPUT_CLASSES} w-32 text-right`}
+                                  disabled={!canEdit}
+                                />
+                              </td>
+                              <td className="px-6 py-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={l.taxable !== false}
+                                  onChange={(e) => updateLine(idx, { taxable: e.target.checked })}
+                                  disabled={!canEdit}
+                                />
+                              </td>
+                              <td className="px-6 py-3 text-right font-semibold text-[#2F3D2E]">
+                                {Number(computeLineAmount(l) ?? 0).toFixed(2)}
+                              </td>
+                              <td className="px-6 py-3 text-right">
+                                <button
+                                  onClick={() => markDeleteLine(idx)}
+                                  className={TERTIARY_BUTTON_CLASSES}
+                                  disabled={!canEdit}
+                                >
+                                  <i className="ri-delete-bin-line" />
+                                  <span>Remove</span>
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-            <div className="mt-4 flex justify-end text-sm text-[#2F3D2E]">
-              <div className="bg-white border border-[#EADDC4] rounded-2xl px-4 py-3 min-w-[280px]">
-                <div className="flex justify-between gap-6">
-                  <div className="text-[#7A705A]">Subtotal</div>
-                  <div className="font-semibold">{Number(computedSubtotal ?? 0).toFixed(2)}</div>
+                <div className="mt-4 flex justify-end text-sm text-[#2F3D2E]">
+                  <div className="bg-white border border-[#EADDC4] rounded-2xl px-4 py-3 min-w-[280px]">
+                    <div className="flex justify-between gap-6">
+                      <div className="text-[#7A705A]">Subtotal</div>
+                      <div className="font-semibold">{Number(computedSubtotal ?? 0).toFixed(2)}</div>
+                    </div>
+                    <div className="flex justify-between gap-6 mt-1">
+                      <div className="text-[#7A705A]">Tax</div>
+                      <div className="font-semibold">{Number(computedTax ?? 0).toFixed(2)}</div>
+                    </div>
+                    <div className="flex justify-between gap-6 mt-1 items-center">
+                      <div className="text-[#7A705A]">Material Cost</div>
+                      <input
+                        value={materialCost}
+                        onChange={(e) => setMaterialCost(e.target.value)}
+                        className={`${INPUT_CLASSES} w-32 text-right`}
+                        disabled={!canEdit || savingLines}
+                      />
+                    </div>
+                    <div className="flex justify-between gap-6 mt-2 pt-2 border-t border-[#EADDC4]">
+                      <div className="text-[#2F3D2E] font-semibold">Total</div>
+                      <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between gap-6 mt-1">
-                  <div className="text-[#7A705A]">Tax</div>
-                  <div className="font-semibold">{Number(computedTax ?? 0).toFixed(2)}</div>
-                </div>
-                <div className="flex justify-between gap-6 mt-1 items-center">
-                  <div className="text-[#7A705A]">Material Cost</div>
-                  <input
-                    value={materialCost}
-                    onChange={(e) => setMaterialCost(e.target.value)}
-                    className={`${INPUT_CLASSES} w-32 text-right`}
-                    disabled={!canEdit || savingLines}
-                  />
-                </div>
-                <div className="flex justify-between gap-6 mt-2 pt-2 border-t border-[#EADDC4]">
-                  <div className="text-[#2F3D2E] font-semibold">Total</div>
-                  <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
-                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#5F6652] mb-1">Terms snapshot</label>
+                <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={8} className={INPUT_CLASSES} />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#D9C8A9] mt-6">
-              <button onClick={() => setShowLinesModal(false)} className={SECONDARY_BUTTON_CLASSES} disabled={savingLines}>
+            <div className="flex justify-end gap-3 pt-4 border-t border-[#D9C8A9] mt-4 flex-none">
+              <button
+                onClick={() => setShowClientItemsModal(false)}
+                className={SECONDARY_BUTTON_CLASSES}
+                disabled={savingHeader || savingLines}
+              >
                 <i className="ri-close-line" />
                 <span>Close</span>
               </button>
-              <button onClick={saveLines} className={PRIMARY_BUTTON_CLASSES} disabled={!canEdit || savingLines}>
+              <button
+                onClick={saveClientAndItems}
+                className={PRIMARY_BUTTON_CLASSES}
+                disabled={!canEdit || savingHeader || savingLines || (!headerDirty && lines.filter((l) => !l._deleted).length === 0)}
+              >
                 <i className="ri-save-3-line" />
-                <span>{savingLines ? 'Saving...' : 'Save Items'}</span>
+                <span>{savingHeader || savingLines ? 'Saving...' : 'Save'}</span>
               </button>
             </div>
+
+            {activeSearchIdx != null && searchDropdownPos && filteredInventory.length > 0 ? (
+              <div
+                className="fixed z-[60] bg-white border border-[#D9C8A9] rounded-lg shadow-lg max-h-56 overflow-y-auto"
+                style={{ left: searchDropdownPos.left, top: searchDropdownPos.top, width: searchDropdownPos.width }}
+              >
+                {filteredInventory.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-[#F8F1E3] text-sm flex justify-between items-center gap-2"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectInventoryItem(activeSearchIdx, item);
+                    }}
+                  >
+                    <span className="truncate font-medium text-[#2F3D2E]">{item.name}</span>
+                    <span className="text-xs text-[#7A705A] whitespace-nowrap">{Number(item.selling_price ?? 0).toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {customerDropdownOpen && customerDropdownPos && filteredCustomers.length > 0 ? (
+              <div
+                className="fixed z-[70] bg-white border border-[#D9C8A9] rounded-lg shadow-lg max-h-56 overflow-y-auto"
+                style={{ left: customerDropdownPos.left, top: customerDropdownPos.top, width: customerDropdownPos.width }}
+              >
+                {filteredCustomers.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-[#F8F1E3] text-sm"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectCustomer(c);
+                    }}
+                  >
+                    <div className="font-medium text-[#2F3D2E] truncate">{c.name}</div>
+                    {c.email || c.phone ? (
+                      <div className="text-xs text-[#7A705A] truncate">{[c.email, c.phone].filter(Boolean).join(' · ')}</div>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

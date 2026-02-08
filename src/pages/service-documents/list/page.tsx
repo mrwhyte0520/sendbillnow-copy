@@ -68,39 +68,6 @@ export default function ServiceDocumentsListPage() {
     load();
   }, [load]);
 
-  const create = async (docType: 'JOB_ESTIMATE' | 'CLASSIC_INVOICE') => {
-    try {
-      const { data } = await supabase.auth.getSession();
-      const token = data?.session?.access_token;
-      if (!token) {
-        toast.error('Please login again');
-        return;
-      }
-
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-
-      const resp = await fetch(`${apiBase}/api/service-documents/create`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          docType,
-          clientName: 'General Customer',
-        }),
-      });
-
-      const json = await resp.json().catch(() => null);
-      if (!resp.ok || !json?.ok || !json?.document?.id) {
-        throw new Error(json?.error || 'Could not create document');
-      }
-
-      navigate(`/service-documents/${json.document.id}`, { state: { docType } });
-    } catch (e: any) {
-      toast.error(e?.message || 'Could not create document');
-    }
-  };
 
   return (
     <DashboardLayout>
@@ -114,7 +81,12 @@ export default function ServiceDocumentsListPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => create('JOB_ESTIMATE')} className={PRIMARY_BUTTON_CLASSES}>
+            <button
+              onClick={() => {
+                navigate('/service-documents/new', { state: { docType: 'JOB_ESTIMATE' } });
+              }}
+              className={PRIMARY_BUTTON_CLASSES}
+            >
               <i className="ri-file-add-line" />
               <span>New Job Estimate</span>
             </button>

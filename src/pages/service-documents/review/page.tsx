@@ -25,6 +25,7 @@ type PublicServiceDocument = {
   subtotal: number;
   tax: number;
   total: number;
+  material_cost: number;
   sent_at: string | null;
   viewed_at: string | null;
   client_signed_at: string | null;
@@ -120,7 +121,15 @@ export default function ServiceDocumentsReviewPage() {
     }, 0);
   }, [lines, normalizedTaxRate]);
 
-  const computedTotal = useMemo(() => computedSubtotal + computedTax, [computedSubtotal, computedTax]);
+  const computedMaterialCost = useMemo(() => {
+    const n = Number(doc?.material_cost ?? 0);
+    return Number.isFinite(n) ? n : 0;
+  }, [doc?.material_cost]);
+
+  const computedTotal = useMemo(
+    () => computedSubtotal + computedTax + computedMaterialCost,
+    [computedMaterialCost, computedSubtotal, computedTax]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -435,6 +444,10 @@ export default function ServiceDocumentsReviewPage() {
                           <div className="flex justify-between py-1 text-gray-700">
                             <span>Tax</span>
                             <span className="text-gray-900">{money(Number.isFinite(computedTax) ? computedTax : 0)}</span>
+                          </div>
+                          <div className="flex justify-between py-1 text-gray-700">
+                            <span>Material Cost</span>
+                            <span className="text-gray-900">{money(Number.isFinite(computedMaterialCost) ? computedMaterialCost : 0)}</span>
                           </div>
                           <div className="flex justify-between py-2 border-t border-gray-200 font-bold text-gray-900">
                             <span>Total</span>

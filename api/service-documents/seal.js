@@ -94,16 +94,11 @@ function safeMoney(n) {
 }
 
 function currencyPrefix(code) {
-  const c = String(code || '').toUpperCase();
-  if (c === 'USD') return '$';
-  if (c === 'DOP' || c === 'RD$') return 'RD$';
-  if (c === 'EUR') return '€';
   return '$';
 }
 
 function moneyWithCurrency(n, currency) {
-  const prefix = currencyPrefix(currency);
-  return `${prefix} ${safeMoney(n)}`;
+  return `$${safeMoney(n)}`;
 }
 
 function normalizeMoney(n) {
@@ -382,7 +377,7 @@ export default async function handler(req, res) {
   const maxCustTextW = (pageWidth - marginX - companyBoxW - marginX - 20) / 2; // half for each column
   const customerY = 78;
   const leftX = marginX;
-  const rightX = marginX + maxCustTextW + 10;
+  const rightX = marginX + maxCustTextW + 22;
 
   // Left column: Name, Email, Phone
   pdf.setFont('helvetica', 'bold');
@@ -390,7 +385,7 @@ export default async function handler(req, res) {
   pdf.setTextColor(0, 0, 0);
   pdf.text('CUSTOMER:', leftX, customerY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 76, customerY);
+  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 64, customerY);
 
   pdf.setFontSize(9);
   let customerInfoY = customerY + 14;
@@ -398,14 +393,14 @@ export default async function handler(req, res) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('EMAIL:', leftX, customerInfoY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 42, customerInfoY);
+    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 36, customerInfoY);
     customerInfoY += 12;
   }
   if (doc.client_phone) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('PHONE:', leftX, customerInfoY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 46, customerInfoY);
+    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 40, customerInfoY);
     customerInfoY += 12;
   }
 
@@ -415,22 +410,22 @@ export default async function handler(req, res) {
   pdf.setFont('helvetica', 'bold');
   pdf.text('ADDRESS:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrStreet || '-').substring(0, 35), rightX + 55, rightY);
+  pdf.text(safeText(addrStreet || '-').substring(0, 35), rightX + 52, rightY);
   rightY += 14;
   pdf.setFont('helvetica', 'bold');
   pdf.text('CITY:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrCity || '-').substring(0, 35), rightX + 32, rightY);
+  pdf.text(safeText(addrCity || '-').substring(0, 35), rightX + 28, rightY);
   rightY += 12;
   pdf.setFont('helvetica', 'bold');
   pdf.text('STATE:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrState || '-').substring(0, 20), rightX + 40, rightY);
+  pdf.text(safeText(addrState || '-').substring(0, 20), rightX + 36, rightY);
   rightY += 12;
   pdf.setFont('helvetica', 'bold');
   pdf.text('ZIP:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrZip || '-').substring(0, 20), rightX + 24, rightY);
+  pdf.text(safeText(addrZip || '-').substring(0, 20), rightX + 20, rightY);
   rightY += 12;
 
   customerInfoY = Math.max(customerInfoY, rightY);
@@ -451,8 +446,11 @@ export default async function handler(req, res) {
   ].filter(Boolean);
   const companyBoxH = (hasLogo ? logoSquare + 10 : 0) + companyLines.length * 12 + 16;
 
-  pdf.setFillColor(0, 27, 158);
+  pdf.setFillColor(255, 255, 255);
   pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'F');
+  pdf.setDrawColor(64, 99, 198);
+  pdf.setLineWidth(0.6);
+  pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'S');
 
   const centerX = companyBoxX + companyBoxW / 2;
   let companyTextY = companyBoxY + 14;
@@ -461,10 +459,6 @@ export default async function handler(req, res) {
     try {
       const logoX = centerX - logoSquare / 2;
       const logoY = companyBoxY + 6;
-      // Dark bordered square for logo
-      pdf.setDrawColor(255, 255, 255);
-      pdf.setLineWidth(1.5);
-      pdf.rect(logoX, logoY, logoSquare, logoSquare, 'S');
       pdf.addImage(logo, 'PNG', logoX + 3, logoY + 3, logoSquare - 6, logoSquare - 6);
       companyTextY = logoY + logoSquare + 8;
     } catch {
@@ -472,7 +466,7 @@ export default async function handler(req, res) {
     }
   }
 
-  pdf.setTextColor(255, 255, 255);
+  pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.text(companyLines[0], centerX, companyTextY, { align: 'center' });
@@ -498,28 +492,33 @@ export default async function handler(req, res) {
   const colW = contentW / 3;
   const dateStr = doc?.created_at ? new Date(doc.created_at).toLocaleDateString() : new Date().toLocaleDateString();
   pdf.setFont('helvetica', 'bold');
-  pdf.text('ESTIMATE #:', marginX, infoY);
-  pdf.text('ESTIMATE DATE:', marginX + colW, infoY);
-  pdf.text('CREATED BY:', marginX + colW * 2, infoY);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(estimateNo, marginX + 70, infoY);
-  pdf.text(dateStr, marginX + colW + 90, infoY);
+  const pad = 6;
+  const l1a = 'ESTIMATE #:';
+  const l1b = 'ESTIMATE DATE:';
+  const l1c = 'CREATED BY:';
+  pdf.text(l1a, marginX, infoY);
+  pdf.text(l1b, marginX + colW, infoY);
+  pdf.text(l1c, marginX + colW * 2, infoY);
   const createdBy = safeText(signature?.contractor_name || '').slice(0, 26);
-  pdf.text(createdBy, marginX + contentW, infoY, { align: 'right' });
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(estimateNo, marginX + pdf.getTextWidth(l1a) + pad, infoY);
+  pdf.text(dateStr, marginX + colW + pdf.getTextWidth(l1b) + pad, infoY);
+  pdf.text(createdBy, marginX + colW * 2 + pdf.getTextWidth(l1c) + pad, infoY);
 
   const infoY2 = infoY + 16;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PO #:', marginX, infoY2);
-  pdf.text('MATERIAL COST:', marginX + colW, infoY2);
-  pdf.text('ESTIMATED COST:', marginX + colW * 2, infoY2);
+  const l2a = 'PO #:';
+  const l2b = 'MATERIAL COST:';
+  const l2c = 'ESTIMATED COST:';
+  pdf.text(l2a, marginX, infoY2);
+  pdf.text(l2b, marginX + colW, infoY2);
+  pdf.text(l2c, marginX + colW * 2, infoY2);
   pdf.setFont('helvetica', 'normal');
-  const infoY2Val = infoY2 + 10;
-  pdf.text('N/A', marginX + 40, infoY2Val);
-  const currSymbol = currencyPrefix(doc.currency);
+  pdf.text('N/A', marginX + pdf.getTextWidth(l2a) + pad, infoY2);
   const materialCostVal = Number(doc.material_cost ?? 0);
-  pdf.text(materialCostVal > 0 ? `${currSymbol}${materialCostVal.toFixed(2)}` : '', marginX + colW + 92, infoY2Val);
+  pdf.text(materialCostVal > 0 ? moneyWithCurrency(materialCostVal, doc.currency) : '', marginX + colW + pdf.getTextWidth(l2b) + pad, infoY2);
   const estimatedCostVal = Number(doc.total ?? 0);
-  pdf.text(estimatedCostVal > 0 ? `${currSymbol}${estimatedCostVal.toFixed(2)}` : '', marginX + contentW, infoY2Val, { align: 'right' });
+  pdf.text(estimatedCostVal > 0 ? moneyWithCurrency(estimatedCostVal, doc.currency) : '', marginX + colW * 2 + pdf.getTextWidth(l2c) + pad, infoY2);
 
   const linesY = infoY2 + 30;
 
@@ -616,10 +615,6 @@ export default async function handler(req, res) {
   const taxValue = round2(computedTaxableSubtotal * safeRate);
   const totalValue = round2(subtotalValue + taxValue);
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.text(moneyWithCurrency(totalValue, doc.currency), marginX + colW * 2 + 92, infoY2);
-
   // Below section: Payment Terms + Totals
   const belowY = afterTableY + 18;
   const boxGap = 16;
@@ -627,7 +622,7 @@ export default async function handler(req, res) {
   const rightBoxW = contentW - leftBoxW - boxGap;
   const leftBoxX = marginX;
   const rightBoxX = marginX + leftBoxW + boxGap;
-  const boxH = 80;
+  const boxH = 95;
 
   // Payment terms box
   pdf.setDrawColor(0, 27, 158);
@@ -661,14 +656,20 @@ export default async function handler(req, res) {
   pdf.setFontSize(11);
   const t1 = `Subtotal:`;
   const t2 = `Taxes:`;
+  const t2b = `Material Cost:`;
   const t3 = `Grand Total:`;
   const valX = rightBoxX + rightBoxW;
+  const materialCostValue = Number(doc?.material_cost ?? 0);
+  const grandTotalValue = Number(subtotalValue) + Number(taxValue) + (Number.isFinite(materialCostValue) ? materialCostValue : 0);
   let tY = belowY + 30;
   pdf.text(t1, rightBoxX, tY);
   pdf.text(moneyWithCurrency(subtotalValue, doc.currency), valX, tY, { align: 'right' });
   tY += 18;
   pdf.text(t2, rightBoxX, tY);
   pdf.text(moneyWithCurrency(taxValue, doc.currency), valX, tY, { align: 'right' });
+  tY += 18;
+  pdf.text(t2b, rightBoxX, tY);
+  pdf.text(moneyWithCurrency(materialCostValue, doc.currency), valX, tY, { align: 'right' });
   tY += 22;
   pdf.setDrawColor(0, 27, 158);
   pdf.setLineWidth(2);
@@ -676,7 +677,7 @@ export default async function handler(req, res) {
   tY += 18;
   pdf.setFont('helvetica', 'bold');
   pdf.text(t3, rightBoxX, tY);
-  pdf.text(moneyWithCurrency(totalValue, doc.currency), valX, tY, { align: 'right' });
+  pdf.text(moneyWithCurrency(grandTotalValue, doc.currency), valX, tY, { align: 'right' });
 
   // Terms and conditions box
   const termsBoxY = belowY + boxH + 16;
@@ -721,8 +722,24 @@ export default async function handler(req, res) {
 
   const clientNameText = safeText(signature?.client_name || doc.client_name || '');
   const contractorNameText = safeText(signature?.contractor_name || '');
-  const clientDateText = signature?.client_signed_at ? new Date(signature.client_signed_at).toLocaleDateString() : '';
-  const contractorDateText = signature?.contractor_signed_at ? new Date(signature.contractor_signed_at).toLocaleDateString() : '';
+  const clientDateText = signature?.client_signed_at
+    ? new Date(signature.client_signed_at).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : '';
+  const contractorDateText = signature?.contractor_signed_at
+    ? new Date(signature.contractor_signed_at).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : '';
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');
@@ -806,11 +823,23 @@ export default async function handler(req, res) {
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
+  const poweredText = 'Powered by: sendbillnow.com';
+  const poweredUrl = 'https://sendbillnow.com';
   if (footerLinksText) {
     pdf.text(footerLinksText, marginX + contentW / 2, footerY + 34, { align: 'center' });
-    pdf.text('Powered by: sendbillnow.com', marginX + contentW / 2, footerY + 52, { align: 'center' });
+    pdf.text(poweredText, marginX + contentW / 2, footerY + 52, { align: 'center' });
+    {
+      const w = pdf.getTextWidth(poweredText);
+      const x = marginX + contentW / 2 - w / 2;
+      pdf.link(x, footerY + 52 - 8, w, 10, { url: poweredUrl });
+    }
   } else {
-    pdf.text('Powered by: sendbillnow.com', marginX + contentW / 2, footerY + 36, { align: 'center' });
+    pdf.text(poweredText, marginX + contentW / 2, footerY + 36, { align: 'center' });
+    {
+      const w = pdf.getTextWidth(poweredText);
+      const x = marginX + contentW / 2 - w / 2;
+      pdf.link(x, footerY + 36 - 8, w, 10, { url: poweredUrl });
+    }
   }
 
   const pdfAb = pdf.output('arraybuffer');
