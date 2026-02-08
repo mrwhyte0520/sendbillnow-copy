@@ -722,23 +722,21 @@ export default async function handler(req, res) {
 
   const clientNameText = safeText(signature?.client_name || doc.client_name || '');
   const contractorNameText = safeText(signature?.contractor_name || '');
+  const sigDateFormatOptions = {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZone: 'America/Santo_Domingo',
+  };
   const clientDateText = signature?.client_signed_at
-    ? new Date(signature.client_signed_at).toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
+    ? new Date(signature.client_signed_at).toLocaleString('es-DO', sigDateFormatOptions)
     : '';
   const contractorDateText = signature?.contractor_signed_at
-    ? new Date(signature.contractor_signed_at).toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
+    ? new Date(signature.contractor_signed_at).toLocaleString('es-DO', sigDateFormatOptions)
     : '';
 
   pdf.setTextColor(0, 0, 0);
