@@ -116,7 +116,7 @@ function formatSignedAt(raw) {
   if (!Number.isFinite(d.getTime())) return '';
 
   try {
-    const fmt = new Intl.DateTimeFormat('es-DO', {
+    const fmt = new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
@@ -128,7 +128,7 @@ function formatSignedAt(raw) {
     });
     return fmt.format(d);
   } catch {
-    // Fallback: Dominican Republic is UTC-4 (no DST)
+    // Fallback: Dominican Republic is UTC-4 (no DST).
     const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
     const mm = String(shifted.getUTCMonth() + 1);
     const dd = String(shifted.getUTCDate());

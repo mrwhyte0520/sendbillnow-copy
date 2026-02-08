@@ -31,6 +31,36 @@ function normalizeTaxRateValue(input: number): number {
   return raw > 1 ? raw / 100 : raw;
 }
 
+function formatInSantoDomingo(raw?: string | null) {
+  if (!raw) return '-';
+  const d = new Date(raw);
+  if (!Number.isFinite(d.getTime())) return '-';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'America/Santo_Domingo',
+    }).format(d);
+  } catch {
+    const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
+    const mm = String(shifted.getUTCMonth() + 1);
+    const dd = String(shifted.getUTCDate());
+    const yyyy = String(shifted.getUTCFullYear());
+    let hh = shifted.getUTCHours();
+    const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+    const sec = String(shifted.getUTCSeconds()).padStart(2, '0');
+    const ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12;
+    if (hh === 0) hh = 12;
+    return `${mm}/${dd}/${yyyy}, ${hh}:${min}:${sec} ${ampm}`;
+  }
+}
+
 type ServiceDocument = {
   id: string;
   doc_type: 'JOB_ESTIMATE' | 'CLASSIC_INVOICE';
@@ -1202,15 +1232,15 @@ export default function ServiceDocumentsEditPage() {
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
                   <h2 className="text-lg font-semibold text-[#2F3D2E]">Signatures</h2>
-                  <p className="text-sm text-[#7A705A] mt-1">
-                    Viewed: {doc?.viewed_at ? new Date(doc.viewed_at).toLocaleString() : '-'}
+                  <div className="text-sm text-[#7A705A] mt-1">
+                    Viewed: {formatInSantoDomingo(doc?.viewed_at)}
                     <br />
-                    Client signed: {doc?.client_signed_at ? new Date(doc.client_signed_at).toLocaleString() : '-'}
+                    Client signed: {formatInSantoDomingo(doc?.client_signed_at)}
                     <br />
-                    Contractor signed: {doc?.contractor_signed_at ? new Date(doc.contractor_signed_at).toLocaleString() : '-'}
+                    Contractor signed: {formatInSantoDomingo(doc?.contractor_signed_at)}
                     <br />
-                    Sealed: {doc?.sealed_at ? new Date(doc.sealed_at).toLocaleString() : '-'}
-                  </p>
+                    Sealed: {formatInSantoDomingo(doc?.sealed_at)}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {sealedPdfUrl ? (
@@ -1246,7 +1276,7 @@ export default function ServiceDocumentsEditPage() {
                   <div className="text-xs text-[#7A705A] mt-1">
                     {signature?.client_name ? `Name: ${signature.client_name}` : 'Name: -'}
                     <br />
-                    {signature?.client_signed_at ? `Signed: ${new Date(signature.client_signed_at).toLocaleString()}` : 'Signed: -'}
+                    {signature?.client_signed_at ? `Signed: ${formatInSantoDomingo(signature.client_signed_at)}` : 'Signed: -'}
                   </div>
                   {signature?.client_signature_image ? (
                     <img
@@ -1266,7 +1296,7 @@ export default function ServiceDocumentsEditPage() {
                       <div className="text-xs text-[#7A705A] mt-1">
                         {signature?.contractor_name ? `Name: ${signature.contractor_name}` : 'Name: -'}
                         <br />
-                        {signature?.contractor_signed_at ? `Signed: ${new Date(signature.contractor_signed_at).toLocaleString()}` : 'Signed: -'}
+                        {signature?.contractor_signed_at ? `Signed: ${formatInSantoDomingo(signature.contractor_signed_at)}` : 'Signed: -'}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

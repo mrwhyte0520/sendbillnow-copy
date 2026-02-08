@@ -73,6 +73,36 @@ function isCanvasBlank(canvas: HTMLCanvasElement) {
   return true;
 }
 
+function formatInSantoDomingo(raw?: string | null) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (!Number.isFinite(d.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'America/Santo_Domingo',
+    }).format(d);
+  } catch {
+    const shifted = new Date(d.getTime() - 4 * 60 * 60 * 1000);
+    const mm = String(shifted.getUTCMonth() + 1);
+    const dd = String(shifted.getUTCDate());
+    const yyyy = String(shifted.getUTCFullYear());
+    let hh = shifted.getUTCHours();
+    const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+    const sec = String(shifted.getUTCSeconds()).padStart(2, '0');
+    const ampm = hh >= 12 ? 'PM' : 'AM';
+    hh = hh % 12;
+    if (hh === 0) hh = 12;
+    return `${mm}/${dd}/${yyyy}, ${hh}:${min}:${sec} ${ampm}`;
+  }
+}
+
 export default function ServiceDocumentsReviewPage() {
   const { token } = useParams();
 
@@ -475,7 +505,7 @@ export default function ServiceDocumentsReviewPage() {
                       <div className="mt-4 p-3 rounded-xl bg-green-50 border border-green-200">
                         <div className="text-green-800 font-semibold text-sm">Signed</div>
                         <div className="text-green-700 text-xs mt-1">
-                          {doc.client_signed_at ? new Date(doc.client_signed_at).toLocaleString() : ''}
+                          {formatInSantoDomingo(doc.client_signed_at)}
                         </div>
                         {(signature?.client_signature_image || localSignaturePreview) ? (
                           <img
