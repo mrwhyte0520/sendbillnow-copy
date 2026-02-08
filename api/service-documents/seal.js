@@ -209,6 +209,10 @@ export default async function handler(req, res) {
 
     const forceRegenerate = Boolean(body.forceRegenerate || body.force_regenerate);
 
+    // Pre-formatted dates from UI (so PDF matches exactly what user sees)
+    const formattedClientSignedAt = String(body.formattedClientSignedAt || '').trim();
+    const formattedContractorSignedAt = String(body.formattedContractorSignedAt || '').trim();
+
   const { data: doc, error: docError } = await supabase
     .from('service_documents')
     .select(
@@ -768,15 +772,9 @@ export default async function handler(req, res) {
   const clientNameText = safeText(signature?.client_name || doc.client_name || '');
   const contractorNameText = safeText(signature?.contractor_name || '');
 
-  // DEBUG: Log raw timestamps to see what format Supabase returns
-  console.log('[SEAL DEBUG] Raw client_signed_at:', signature?.client_signed_at);
-  console.log('[SEAL DEBUG] Raw contractor_signed_at:', signature?.contractor_signed_at);
-
-  const clientDateText = formatSignedAt(signature?.client_signed_at);
-  const contractorDateText = formatSignedAt(signature?.contractor_signed_at);
-
-  console.log('[SEAL DEBUG] Formatted clientDateText:', clientDateText);
-  console.log('[SEAL DEBUG] Formatted contractorDateText:', contractorDateText);
+  // Use pre-formatted dates from UI if provided, otherwise fallback to formatSignedAt
+  const clientDateText = formattedClientSignedAt || formatSignedAt(signature?.client_signed_at);
+  const contractorDateText = formattedContractorSignedAt || formatSignedAt(signature?.contractor_signed_at);
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');

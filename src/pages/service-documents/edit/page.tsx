@@ -785,6 +785,15 @@ export default function ServiceDocumentsEditPage() {
       if (!token) throw new Error('Please login again');
 
       const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+
+      // Send pre-formatted dates from the UI so PDF matches exactly
+      const formattedClientSignedAt = signature?.client_signed_at
+        ? formatInSantoDomingo(signature.client_signed_at)
+        : '';
+      const formattedContractorSignedAt = signature?.contractor_signed_at
+        ? formatInSantoDomingo(signature.contractor_signed_at)
+        : '';
+
       const resp = await fetch(`${apiBase}/api/service-documents/seal`, {
         method: 'POST',
         headers: {
@@ -794,6 +803,8 @@ export default function ServiceDocumentsEditPage() {
         body: JSON.stringify({
           documentId: doc.id,
           ...(doc.sealed_at ? { forceRegenerate: true } : {}),
+          formattedClientSignedAt,
+          formattedContractorSignedAt,
         }),
       });
 
