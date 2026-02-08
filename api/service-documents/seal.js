@@ -767,8 +767,16 @@ export default async function handler(req, res) {
 
   const clientNameText = safeText(signature?.client_name || doc.client_name || '');
   const contractorNameText = safeText(signature?.contractor_name || '');
+
+  // DEBUG: Log raw timestamps to see what format Supabase returns
+  console.log('[SEAL DEBUG] Raw client_signed_at:', signature?.client_signed_at);
+  console.log('[SEAL DEBUG] Raw contractor_signed_at:', signature?.contractor_signed_at);
+
   const clientDateText = formatSignedAt(signature?.client_signed_at);
   const contractorDateText = formatSignedAt(signature?.contractor_signed_at);
+
+  console.log('[SEAL DEBUG] Formatted clientDateText:', clientDateText);
+  console.log('[SEAL DEBUG] Formatted contractorDateText:', contractorDateText);
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');
