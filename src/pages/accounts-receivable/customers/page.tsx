@@ -532,7 +532,7 @@ export default function CustomersPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleSaveCustomer} ref={formRef} className="space-y-4">
+              <form onSubmit={handleSaveCustomer} ref={formRef} autoComplete="off" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -593,8 +593,12 @@ export default function CustomersPage() {
                   const cityDefault = segs[0] || '';
                   const rest = segs.slice(1).join(' ').trim();
                   const restTokens = rest.split(/\s+/).filter(Boolean);
-                  const stateDefault = restTokens[0] || '';
-                  const zipDefault = restTokens.slice(1).join(' ').trim();
+                  const lastToken = restTokens.length > 0 ? restTokens[restTokens.length - 1] : '';
+                  const looksLikeZip = /\d/.test(lastToken);
+                  const zipDefault = looksLikeZip ? lastToken : '';
+                  const stateDefault = looksLikeZip
+                    ? restTokens.slice(0, -1).join(' ').trim()
+                    : restTokens.join(' ').trim();
 
                   return (
                     <>
@@ -604,6 +608,7 @@ export default function CustomersPage() {
                           rows={2}
                           name="address1"
                           defaultValue={firstLine}
+                          autoComplete="street-address"
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                           placeholder="Street address"
                         />
@@ -616,6 +621,7 @@ export default function CustomersPage() {
                             type="text"
                             name="city"
                             defaultValue={cityDefault}
+                            autoComplete="address-level2"
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                             placeholder="City"
                           />
@@ -626,6 +632,7 @@ export default function CustomersPage() {
                             type="text"
                             name="state"
                             defaultValue={stateDefault}
+                            autoComplete="address-level1"
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                             placeholder="State"
                           />
@@ -636,6 +643,7 @@ export default function CustomersPage() {
                             type="text"
                             name="zip"
                             defaultValue={zipDefault}
+                            autoComplete="postal-code"
                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
                             placeholder="Zip"
                           />

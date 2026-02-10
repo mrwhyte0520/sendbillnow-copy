@@ -3196,12 +3196,40 @@ export const customersService = {
         sales_rep_id: customer.salesRepId || null,
         payment_term_id: customer.paymentTermId || null,
       };
-      const { data, error } = await supabase
-        .from('customers')
-        .insert(payload)
-        .select('*')
-        .single();
-      if (error) throw error;
+
+      const tryInsert = async (body: any) => {
+        const { data, error } = await supabase
+          .from('customers')
+          .insert(body)
+          .select('*')
+          .single();
+        if (error) throw error;
+        return data;
+      };
+
+      const droppedCols = new Set<string>();
+
+      let data: any = null;
+      let payloadToTry: any = { ...payload };
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          droppedCols.forEach((c) => {
+            delete payloadToTry[c];
+          });
+          data = await tryInsert(payloadToTry);
+          break;
+        } catch (error: any) {
+          if ((error as any)?.code !== 'PGRST204') throw error;
+          const msg = String((error as any)?.message || '');
+          const m = msg.match(/Could not find the '([^']+)' column/i);
+          const missingCol = m?.[1] ? String(m[1]) : null;
+          if (!missingCol) throw error;
+          droppedCols.add(missingCol);
+          payloadToTry = { ...payload };
+        }
+      }
+
+      if (!data) throw new Error('No se pudo crear el cliente (customers): esquema incompatible o error desconocido');
       await auditLogsService.logAction({
         action: 'create_customer',
         entity: 'customer',
@@ -8676,18 +8704,7 @@ export const invoicesService = {
         .from('invoices')
         .select(`
           *,
-          customers (
-            id,
-            name,
-            document,
-            tax_id,
-            phone,
-            email,
-            address,
-            contact_phone,
-            contact_email,
-            document_type
-          ),
+          customers (*),
           invoice_lines (*)
         `)
         .eq('user_id', tenantId)
@@ -8823,13 +8840,60 @@ export const invoicesService = {
         }
       }
 
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({ ...invoiceToInsert, user_id: tenantId })
-        .select()
-        .single();
+      const tryInsertInvoice = async (payload: any) => {
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .insert(payload)
+          .select()
+          .single();
+        if (invoiceError) throw invoiceError;
+        return invoiceData;
+      };
 
-      if (invoiceError) throw invoiceError;
+      let invoiceData: any;
+      const basePayload = { ...invoiceToInsert, user_id: tenantId } as any;
+      const colsToDropKnown = [
+        'customer_name',
+        'discount_type',
+        'discount_value',
+        'total_discount',
+        'sale_type',
+        'store_name',
+        'public_token',
+        'sequential_number',
+        'ncf_expiry_date',
+      ];
+
+      const droppedCols = new Set<string>();
+      for (const c of colsToDropKnown) droppedCols.add(c);
+
+      let payloadToTry = { ...basePayload } as any;
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        try {
+          // Remover columnas conocidas (y las detectadas) antes de intentar
+          droppedCols.forEach((c) => {
+            delete payloadToTry[c];
+          });
+
+          invoiceData = await tryInsertInvoice(payloadToTry);
+          break;
+        } catch (error: any) {
+          if ((error as any)?.code !== 'PGRST204') throw error;
+
+          const msg = String((error as any)?.message || '');
+          const m = msg.match(/Could not find the '([^']+)' column/i);
+          const missingCol = m?.[1] ? String(m[1]) : null;
+          if (!missingCol) throw error;
+
+          droppedCols.add(missingCol);
+          payloadToTry = { ...basePayload };
+          continue;
+        }
+      }
+
+      if (!invoiceData) {
+        throw new Error('No se pudo crear la factura (invoices): esquema incompatible o error desconocido');
+      }
 
       // Best-effort: registrar documento fiscal para Reporte 608 cuando aplique
       await this.upsertFiscalDocumentForInvoice(tenantId, invoiceData);
@@ -8855,38 +8919,45 @@ export const invoicesService = {
       };
 
       let linesData: any[] = [];
-      let payloadToInsert: any[] = linesWithInvoice;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          linesData = (await tryInsertLines(payloadToInsert)) as any[];
-          break;
-        } catch (error: any) {
-          // Compatibilidad: la BD puede no tener algunas columnas (ej: tax_amount, user_id, etc.)
-          if (error?.code === 'PGRST204') {
-            const msg = String(error?.message || '');
-            const m = msg.match(/Could not find the '([^']+)' column/i);
-            const missingCol = m?.[1] ? String(m[1]) : null;
+      try {
+        let payloadToInsert: any[] = linesWithInvoice;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            linesData = (await tryInsertLines(payloadToInsert)) as any[];
+            break;
+          } catch (error: any) {
+            if (error?.code === 'PGRST204') {
+              const msg = String(error?.message || '');
+              const m = msg.match(/Could not find the '([^']+)' column/i);
+              const missingCol = m?.[1] ? String(m[1]) : null;
 
-            const colsToDrop = [missingCol].filter(Boolean) as string[];
-            // Fallbacks conocidos: instalaciones sin estos campos
-            colsToDrop.push('tax_amount');
-            colsToDrop.push('user_id');
+              const colsToDrop = [missingCol].filter(Boolean) as string[];
+              colsToDrop.push('tax_amount');
+              colsToDrop.push('user_id');
 
-            payloadToInsert = (payloadToInsert || []).map((ln: any) => {
-              const clean = { ...ln };
-              colsToDrop.forEach((c) => {
-                delete (clean as any)[c];
+              payloadToInsert = (payloadToInsert || []).map((ln: any) => {
+                const clean = { ...ln };
+                colsToDrop.forEach((c) => {
+                  delete (clean as any)[c];
+                });
+                return clean;
               });
-              return clean;
-            });
-            continue;
+              continue;
+            }
+            throw error;
           }
-          throw error;
         }
-      }
 
-      if (!linesData || linesData.length === 0) {
-        throw new Error('No se pudieron insertar las líneas de la factura (invoice_lines)');
+        if (!linesData || linesData.length === 0) {
+          throw new Error('No se pudieron insertar las líneas de la factura (invoice_lines)');
+        }
+      } catch (linesInsertError) {
+        try {
+          await supabase.from('invoices').delete().eq('id', invoiceData.id).eq('user_id', tenantId);
+        } catch (cleanupError) {
+          console.error('invoicesService.create cleanup invoice after lines failure error', cleanupError);
+        }
+        throw linesInsertError;
       }
 
       // Best-effort: crear solicitud de autorización para descuento en factura si aplica
