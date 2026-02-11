@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { InvoicePrintOptions } from '../../utils/invoicePrintTemplates';
-
-export type InvoiceTemplateType = 'simple' | 'detailed' | 'quotation' | 'corporate' | 'job-estimate' | 'classic';
+import type { InvoicePrintOptions, InvoiceTemplateType } from '../../utils/invoicePrintTemplates';
 
 interface InvoiceTypeModalProps {
   isOpen: boolean;
@@ -304,6 +302,141 @@ export default function InvoiceTypeModal({
         </div>
       ),
     },
+
+    ...(documentType === 'invoice'
+      ? [
+          {
+            id: 'rent-receipt' as InvoiceTemplateType,
+            name: 'Rent Receipt',
+            description: 'Receipt-style template for rent payments',
+            icon: 'ri-home-4-line',
+            preview: (
+              <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
+                <div className="flex justify-between mb-1">
+                  <div className="font-bold text-[7px]">LOGO</div>
+                  <div className="text-right font-bold" style={{ color: BRAND_BLUE }}>
+                    RENT RECEIPT
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 my-1"></div>
+                <div className="grid grid-cols-2 gap-2 text-[5px]">
+                  <div>
+                    <div className="font-semibold">Received From</div>
+                    <div className="h-2"></div>
+                  </div>
+                  <div>
+                    <div className="font-semibold">Amount</div>
+                    <div className="h-2"></div>
+                  </div>
+                </div>
+                <div className="mt-1 border border-gray-200 rounded p-1">
+                  <div className="font-semibold text-[5px]">Description</div>
+                  <div className="h-2"></div>
+                </div>
+                <div className="mt-1 text-[5px]">Signature: X___</div>
+              </div>
+            ),
+          },
+
+          {
+            id: 'cash-receipt' as InvoiceTemplateType,
+            name: 'Cash Receipt',
+            description: 'Receipt format with red header bars and payment section',
+            icon: 'ri-receipt-line',
+            preview: (
+              <div className="bg-white border border-gray-200 rounded overflow-hidden text-[6px] leading-tight">
+                <div className="h-1" style={{ backgroundColor: BRAND_BLUE }} />
+                <div className="p-2">
+                  <div className="flex justify-between items-start">
+                    <div className="font-bold text-[7px] text-gray-500">CASH RECEIPT</div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-gray-500 text-white flex items-center justify-center text-[5px] font-bold">
+                        LOGO
+                      </div>
+                      <div className="text-[5px]">
+                        <div className="flex justify-between gap-2 border-b border-gray-200 pb-0.5 mb-0.5">
+                          <span className="font-semibold text-gray-500">Date</span>
+                          <span>__/__/__</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span className="font-semibold text-gray-500">Receipt</span>
+                          <span>___</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-[5px]">
+                    <div>
+                      <div className="font-semibold text-gray-500">From</div>
+                      <div className="h-2" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-500">To</div>
+                      <div className="h-2" />
+                    </div>
+                  </div>
+                  <div className="mt-2 border border-gray-200 rounded">
+                    <div className="flex justify-between px-1 py-0.5 text-white text-[5px] font-semibold" style={{ backgroundColor: BRAND_BLUE }}>
+                      <span>Description</span>
+                      <span>Total</span>
+                    </div>
+                    <div className="h-2" />
+                  </div>
+                </div>
+                <div className="h-1" style={{ backgroundColor: BRAND_BLUE }} />
+              </div>
+            ),
+          },
+
+          {
+            id: 'blue-invoice' as InvoiceTemplateType,
+            name: 'Blue Invoice',
+            description: 'Modern blue header layout with clean totals section',
+            icon: 'ri-file-copy-2-line',
+            preview: (
+              <div className="bg-white border border-gray-200 rounded overflow-hidden text-[6px] leading-tight">
+                <div className="p-2 text-white" style={{ backgroundColor: BRAND_BLUE }}>
+                  <div className="flex justify-between items-center">
+                    <div className="font-bold text-[7px]">COMPANY</div>
+                    <div className="font-bold">INVOICE</div>
+                  </div>
+                  <div className="text-[5px] opacity-90">Address • Phone</div>
+                </div>
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-2 mb-1 text-[5px]">
+                    <div>
+                      <span className="font-semibold">Bill To:</span>
+                      <br />
+                      Customer
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold">Invoice #</span>
+                      <br />
+                      ___
+                    </div>
+                  </div>
+                  <div className="border border-gray-200 rounded p-1 mb-1">
+                    <div className="grid grid-cols-4 gap-1 text-[5px] font-semibold border-b border-gray-100 pb-0.5">
+                      <span>Description</span>
+                      <span className="text-center">Qty</span>
+                      <span className="text-right">Price</span>
+                      <span className="text-right">Amount</span>
+                    </div>
+                    <div className="h-2"></div>
+                  </div>
+                  <div className="text-right text-[5px]">
+                    <div>Subtotal: ___</div>
+                    <div>Tax: ___</div>
+                    <div className="font-bold" style={{ color: BRAND_BLUE }}>
+                      Total: ___
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ],
     [documentType]
   );

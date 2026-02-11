@@ -8854,9 +8854,6 @@ export const invoicesService = {
       const basePayload = { ...invoiceToInsert, user_id: tenantId } as any;
       const colsToDropKnown = [
         'customer_name',
-        'discount_type',
-        'discount_value',
-        'total_discount',
         'sale_type',
         'store_name',
         'public_token',

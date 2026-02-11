@@ -226,15 +226,15 @@ export default async function handler(req, res) {
     const formattedClientSignedAt = String(body.formattedClientSignedAt || '').trim();
     const formattedContractorSignedAt = String(body.formattedContractorSignedAt || '').trim();
 
-  const { data: doc, error: docError } = await supabase
-    .from('service_documents')
-    .select(
-      'id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
-    )
-    .eq('id', documentId)
-    .eq('user_id', tenantId)
-    .limit(1)
-    .maybeSingle();
+    const { data: doc, error: docError } = await supabase
+      .from('service_documents')
+      .select(
+        'id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
+      )
+      .eq('id', documentId)
+      .eq('user_id', tenantId)
+      .limit(1)
+      .maybeSingle();
 
   if (docError) return res.status(500).json({ ok: false, error: docError.message || 'Could not read document' });
   if (!doc?.id) return res.status(404).json({ ok: false, error: 'Document not found' });
@@ -260,6 +260,29 @@ export default async function handler(req, res) {
   const contractorSig = String(signature?.contractor_signature_image || '').trim();
 
   const status = String(doc.status || '');
+
+  // Load current company info (so city/state/zip can be used even for older documents)
+  const { data: companyInfoRow } = await supabase
+    .from('company_info')
+    .select('address, city, state, zip')
+    .eq('user_id', tenantId)
+    .limit(1)
+    .maybeSingle();
+
+  const liveStreet = String(companyInfoRow?.address || '').trim();
+  const liveCity = String(companyInfoRow?.city || '').trim();
+  const liveState = String(companyInfoRow?.state || '').trim();
+  const liveZip = String(companyInfoRow?.zip || '').trim();
+  const hasLiveParts = Boolean(liveStreet || liveCity || liveState || liveZip);
+  const liveSecondLine = [
+    liveCity,
+    [liveState, liveZip].filter(Boolean).join(' '),
+  ]
+    .filter(Boolean)
+    .join(liveCity ? ', ' : '');
+  const companyAddressForPdf = hasLiveParts
+    ? [liveStreet, liveSecondLine].filter(Boolean).join('\n')
+    : String(doc.company_address || '').trim();
 
   const pdfBucket = 'service-documents-pdf';
   const defaultPdfPath = `${tenantId}/${documentId}/sealed.pdf`;
@@ -503,11 +526,28 @@ export default async function handler(req, res) {
 
   // Compute box height dynamically
   const logo = String(doc.company_logo || '').trim();
-  const hasLogo = logo && /^data:image\//i.test(logo);
+  const hasLogo = Boolean(logo);
   const logoSquare = 36; // small square for logo
+
+  // Company address formatting (address + city on one line, state + zip on the next)
+  const rawCompanyAddr = String(companyAddressForPdf || '').replace(/\r\n/g, '\n');
+  const companyAddrLines = rawCompanyAddr.split('\n').map((l) => l.trim()).filter(Boolean);
+  const companyStreet = companyAddrLines[0] || '';
+  const companySecondLine = companyAddrLines.slice(1).join(' ').trim();
+  const companySegs = companySecondLine.split(',').map((x) => x.trim()).filter(Boolean);
+  const companyCity = companySegs[0] || '';
+  const companyRest = companySegs.slice(1).join(' ').trim();
+  const companyTokens = companyRest.split(/\s+/).filter(Boolean);
+  const companyState = companyTokens[0] || '';
+  const companyZip = companyTokens.slice(1).join(' ').trim();
+
+  const companyAddrLine1 = [companyStreet, companyCity].filter(Boolean).join(companyStreet && companyCity ? ', ' : '');
+  const companyAddrLine2 = [companyState, companyZip].filter(Boolean).join(' ');
+
   const companyLines = [
     safeText(doc.company_name || 'COMPANY'),
-    doc.company_address ? safeText(doc.company_address) : '',
+    companyAddrLine1 ? safeText(companyAddrLine1) : '',
+    companyAddrLine2 ? safeText(companyAddrLine2) : '',
     doc.company_phone ? safeText(doc.company_phone) : '',
     doc.company_email ? safeText(doc.company_email) : '',
   ].filter(Boolean);
@@ -535,8 +575,10 @@ export default async function handler(req, res) {
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
+  pdf.setFontSize(12);
+  pdf.setTextColor(0, 27, 158);
   pdf.text(companyLines[0], centerX, companyTextY, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
   let cY = companyTextY + 12;
@@ -579,13 +621,25 @@ export default async function handler(req, res) {
   const l2c = 'ESTIMATED COST:';
   pdf.text(l2a, marginX, infoY2);
   pdf.text(l2b, marginX + colW, infoY2);
+  pdf.setTextColor(0, 27, 158);
   pdf.text(l2c, marginX + colW * 2, infoY2);
+  pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'normal');
   pdf.text('N/A', marginX + pdf.getTextWidth(l2a) + pad, infoY2);
   const materialCostVal = Number(doc.material_cost ?? 0);
   pdf.text(materialCostVal > 0 ? moneyWithCurrency(materialCostVal, doc.currency) : '', marginX + colW + pdf.getTextWidth(l2b) + pad, infoY2);
   const estimatedCostVal = Number(doc.total ?? 0);
-  pdf.text(estimatedCostVal > 0 ? moneyWithCurrency(estimatedCostVal, doc.currency) : '', marginX + colW * 2 + pdf.getTextWidth(l2c) + pad, infoY2);
+
+  // Estimated cost: inline next to label, green
+  const estimatedCostText = estimatedCostVal > 0 ? moneyWithCurrency(estimatedCostVal, doc.currency) : '';
+  if (estimatedCostText) {
+    const estimatedValueX = marginX + colW * 2 + pdf.getTextWidth(l2c) + pad;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(22, 163, 74);
+    pdf.text(estimatedCostText, estimatedValueX, infoY2);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+  }
 
   const linesY = infoY2 + 30;
 

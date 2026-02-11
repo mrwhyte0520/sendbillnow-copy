@@ -48,10 +48,18 @@ export default async function handler(req, res) {
 
   const { data: company } = await supabase
     .from('company_info')
-    .select('name, ruc, phone, email, address, logo, currency, terms_and_conditions, default_tax_rate')
+    .select('name, ruc, phone, email, address, city, state, zip, logo, currency, terms_and_conditions, default_tax_rate')
     .eq('user_id', tenantId)
     .limit(1)
     .maybeSingle();
+
+  const companyStreet = typeof company?.address === 'string' ? company.address.trim() : '';
+  const companyCity = typeof company?.city === 'string' ? company.city.trim() : '';
+  const companyState = typeof company?.state === 'string' ? company.state.trim() : '';
+  const companyZip = typeof company?.zip === 'string' ? company.zip.trim() : '';
+
+  const companySecondLine = [companyCity, [companyState, companyZip].filter(Boolean).join(' ')].filter(Boolean).join(companyCity ? ', ' : '');
+  const companyAddressSnapshot = [companyStreet, companySecondLine].filter(Boolean).join('\n') || null;
 
   let docNumber;
 
@@ -105,7 +113,7 @@ export default async function handler(req, res) {
     company_rnc: company?.ruc ?? null,
     company_phone: company?.phone ?? null,
     company_email: company?.email ?? null,
-    company_address: company?.address ?? null,
+    company_address: companyAddressSnapshot,
     company_logo: company?.logo ?? null,
     client_name: clientName,
     client_email: clientEmail || null,

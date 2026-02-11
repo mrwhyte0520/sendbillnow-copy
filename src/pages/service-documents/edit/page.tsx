@@ -151,6 +151,28 @@ function parseClientAddress(raw?: string): { street: string; city: string; state
     .map((l) => l.trim())
     .filter(Boolean);
 
+  if (lines.length === 0) return { street: '', city: '', state: '', zip: '' };
+
+  if (lines.length === 1) {
+    const one = lines[0] || '';
+    const parts = one
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+    if (parts.length <= 1) {
+      return { street: one, city: '', state: '', zip: '' };
+    }
+
+    const street = parts[0] || '';
+    const city = parts[1] || '';
+    const rest = parts.slice(2).join(' ').trim();
+    const tokens = rest.split(/\s+/).filter(Boolean);
+    const state = tokens[0] || '';
+    const zip = tokens.slice(1).join(' ').trim();
+    return { street, city, state, zip };
+  }
+
   const street = lines[0] || '';
   const secondLine = lines.slice(1).join(' ').trim();
   const segs = secondLine
