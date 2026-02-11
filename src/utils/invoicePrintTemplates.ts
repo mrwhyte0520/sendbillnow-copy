@@ -2318,7 +2318,17 @@ function parseAddress(raw?: string): { street: string; city: string; state: stri
 
 function customerBlockHtml(customer: CustomerData): string {
 
-  const addr = parseAddress(customer.address);
+  const addr = (() => {
+    const hasStructuredParts = Boolean((customer as any).city || (customer as any).state || (customer as any).zip);
+    const parsed = parseAddress(customer.address);
+
+    const street = String(parsed.street || customer.address || '').trim();
+    const city = String((customer as any).city || (!hasStructuredParts ? parsed.city : '') || '').trim();
+    const state = String((customer as any).state || (!hasStructuredParts ? parsed.state : '') || '').trim();
+    const zip = String((customer as any).zip || (!hasStructuredParts ? parsed.zip : '') || '').trim();
+
+    return { street, city, state, zip };
+  })();
 
   return `
 

@@ -10018,7 +10018,7 @@ export default function InvoicingPage() {
 
 
 
-          hiddenTypes={['job-estimate']}
+          hiddenTypes={['job-estimate', 'quotation']}
 
 
 
