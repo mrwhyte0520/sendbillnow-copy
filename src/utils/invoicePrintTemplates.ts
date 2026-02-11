@@ -2283,6 +2283,19 @@ function parseAddress(raw?: string): { street: string; city: string; state: stri
 
   const street = lines[0] || '';
 
+  if (lines.length === 1 && street.includes(',')) {
+    const parts = street
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    return {
+      street: parts[0] || '',
+      city: parts[1] || '',
+      state: parts[2] || '',
+      zip: parts[3] || '',
+    };
+  }
+
   const secondLine = lines.slice(1).join(' ').trim();
 
   const segs = secondLine.split(',').map(x => x.trim()).filter(Boolean);
