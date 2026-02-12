@@ -524,17 +524,24 @@ export default function InvoiceTypeModal({
 
           {/* Content */}
           <div className="p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {visibleTemplates.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setSelectedType(template.id)}
-                  className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-lg ${
-                    selectedType === template.id
-                      ? 'border-blue-600 bg-blue-50 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
+            <div className={visibleTemplates.length === 1 ? 'flex justify-center' : ''}>
+              <div
+                className={
+                  visibleTemplates.length === 1
+                    ? 'grid grid-cols-1 gap-4 w-full max-w-sm'
+                    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'
+                }
+              >
+                {visibleTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelectedType(template.id)}
+                    className={`relative p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-lg ${
+                      selectedType === template.id
+                        ? 'border-blue-600 bg-blue-50 shadow-md'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
                   {selectedType === template.id && (
                     <div 
                       className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
@@ -565,8 +572,9 @@ export default function InvoiceTypeModal({
                   <div className="transform scale-100 origin-top-left">
                     {template.preview}
                   </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Actions */}

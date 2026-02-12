@@ -6694,6 +6694,34 @@ export default function InvoicingPage() {
 
 
 
+                            onClick={() => handlePrintInvoice(invoice.id)}
+
+
+
+                            className="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-2 text-lg rounded"
+
+
+
+                            title="Print invoice"
+
+
+
+                          >
+
+
+
+                            <i className="ri-printer-line"></i>
+
+
+
+                          </button>
+
+
+
+                          <button
+
+
+
                             onClick={() => handleViewInvoice(invoice.id)}
 
 
@@ -6787,34 +6815,6 @@ export default function InvoicingPage() {
 
 
                           )}
-
-
-
-                          <button
-
-
-
-                            onClick={() => handlePrintInvoice(invoice.id)}
-
-
-
-                            className="text-gray-600 hover:text-gray-900 p-1"
-
-
-
-                            title="Print invoice"
-
-
-
-                          >
-
-
-
-                            <i className="ri-printer-line"></i>
-
-
-
-                          </button>
 
 
 
@@ -10018,7 +10018,7 @@ export default function InvoicingPage() {
 
 
 
-          hiddenTypes={['job-estimate', 'quotation']}
+          hiddenTypes={['job-estimate', 'quotation', 'simple', 'detailed', 'corporate']}
 
 
 

@@ -536,19 +536,15 @@ function generateCashReceiptTemplate(
 
 
 
-  const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+  const depositAmount = Number(
+    (invoice as any).deposit ?? (invoice as any).depositAmount ?? (invoice as any).deposit_amount ?? 0
+  ) || 0;
 
-  const subtotalLessDiscount = Number(invoice.subtotal) - discountAmount;
 
-  const taxRate = ((): number => {
 
-    const base = subtotalLessDiscount;
-
-    if (!base) return 0;
-
-    return (Number(invoice.tax) / base) * 100;
-
-  })();
+  const balanceDueAmount = Number(
+    (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
+  ) || 0;
 
 
 
@@ -559,6 +555,32 @@ function generateCashReceiptTemplate(
     if (Number.isNaN(d.getTime())) return escapeHtml(String(invoice.date || ''));
 
     return escapeHtml(d.toLocaleDateString());
+
+  })();
+
+
+
+  const invoiceDateStr = invoice.date ? escapeHtml(formatDate(invoice.date)) : receiptDateStr;
+
+
+
+  const invoiceTimeStr = (() => {
+
+    const d = new Date(invoice.date);
+
+    if (Number.isNaN(d.getTime())) return '';
+
+    return escapeHtml(
+
+      d.toLocaleTimeString([], {
+
+        hour: '2-digit',
+
+        minute: '2-digit',
+
+      })
+
+    );
 
   })();
 
@@ -604,7 +626,7 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
 
 
 
-.fromTo{margin-top:-24px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;max-width:520px;margin-left:18px;margin-right:auto;}
+.fromTo{margin-top:-118px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;max-width:520px;margin-left:18px;margin-right:auto;}
 
 .fromTo .head{font-weight:900;margin-bottom:8px;text-transform:uppercase;color:#6b7280;font-size:10px;}
 
@@ -690,9 +712,15 @@ td{font-size:11px;}
 
           <div class="meta">
 
-            <div class="metaRow"><div class="label">Date</div><div>${receiptDateStr}</div></div>
+            <div class="metaRow"><div class="label">Invoice #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
 
-            <div class="metaRow"><div class="label">Receipt #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
+            <div class="metaRow"><div class="label">Invoice Date:</div><div>${invoiceDateStr}</div></div>
+
+            <div class="metaRow"><div class="label">Time:</div><div>${invoiceTimeStr || '-'}</div></div>
+
+            ${invoice.createdBy ? `<div class="metaRow"><div class="label">Created By:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
+
+            <div class="metaRow"><div class="label">Invoice Total:</div><div>${formatAmount(invoice.amount)}</div></div>
 
           </div>
 
@@ -726,9 +754,11 @@ td{font-size:11px;}
             return `${line1 ? `<div class="line">${escapeHtml(line1)}</div>` : ''}${line2 ? `<div class="line">${escapeHtml(line2)}</div>` : ''}`;
           })()}
 
-          ${company.phone ? `<div class="line">${escapeHtml(company.phone)}</div>` : ''}
-
           ${company.email ? `<div class="line">${escapeHtml(company.email)}</div>` : ''}
+
+          ${company.website ? `<div class="line">${escapeHtml(company.website)}</div>` : ''}
+
+          ${company.phone ? `<div class="line">${escapeHtml(company.phone)}</div>` : ''}
 
         </div>
 
@@ -846,23 +876,17 @@ td{font-size:11px;}
 
         <div class="totals">
 
-          <div class="totalsRow"><div class="label">Subtotal</div><div class="value">${formatAmount(invoice.subtotal)}</div></div>
-
-          <div class="totalsRow"><div class="label">Discount</div><div class="value">${formatAmount(discountAmount)}</div></div>
-
-          <div class="totalsRow"><div class="label">Subtotal Less Discount</div><div class="value">${formatAmount(subtotalLessDiscount)}</div></div>
-
-          <div class="totalsRow"><div class="label">Tax Rate</div><div class="value">${taxRate.toFixed(2)}%</div></div>
-
-          <div class="totalsRow"><div class="label">Total Tax</div><div class="value">${formatAmount(invoice.tax)}</div></div>
-
           <div class="totalsRow"><div class="label">Total</div><div class="value">${formatAmount(invoice.amount)}</div></div>
+
+          <div class="totalsRow"><div class="label">Deposit</div><div class="value">${formatAmount(depositAmount)}</div></div>
+
+          <div class="totalsRow"><div class="label">Balance Due</div><div class="value">${formatAmount(balanceDueAmount)}</div></div>
 
           <div class="balance">
 
             <div>Balance Due</div>
 
-            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(invoice.amount)}</div></div>
+            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
 
           </div>
 
@@ -946,10 +970,56 @@ function generateRentReceiptTemplate(
 
 
 
+  const invoiceDateStr = invoice.date ? formatDate(invoice.date) : printDate;
+
+
+
+  const invoiceTimeStr = (() => {
+
+    const d = new Date(invoice.date);
+
+    if (Number.isNaN(d.getTime())) return '';
+
+    return d.toLocaleTimeString([], {
+
+      hour: '2-digit',
+
+      minute: '2-digit',
+
+    });
+
+  })();
+
+
+
   const discountType = (invoice as any).discount_type as 'percentage' | 'fixed' | undefined;
   const discountValue = Number((invoice as any).discount_value ?? 0) || 0;
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
   const discountLabel = discountType === 'percentage' ? `${discountValue}%` : String((invoice as any).discountLabel ?? '').trim();
+
+
+
+  const lateFeeAmount = Number(
+    (invoice as any).lateFee ?? (invoice as any).late_fee ?? (invoice as any).late_fee_amount ?? 0
+  ) || 0;
+
+
+
+  const bouncedCheckFeeAmount = Number(
+    (invoice as any).bouncedCheckFee ?? (invoice as any).bounced_check_fee ?? (invoice as any).bounced_check_fee_amount ?? 0
+  ) || 0;
+
+
+
+  const depositAmount = Number(
+    (invoice as any).deposit ?? (invoice as any).depositAmount ?? (invoice as any).deposit_amount ?? 0
+  ) || 0;
+
+
+
+  const balanceDueAmount = Number(
+    (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
+  ) || 0;
 
   const billedAddr = (() => {
     const raw = customer.address ? String(customer.address) : '';
@@ -971,16 +1041,6 @@ function generateRentReceiptTemplate(
     }
 
     return parsed;
-  })();
-
-  const taxRate = ((): number => {
-
-    const base = Number(invoice.subtotal) - Number(discountAmount);
-
-    if (!base) return 0;
-
-    return (Number(invoice.tax) / base) * 100;
-
   })();
 
 
@@ -1137,7 +1197,11 @@ td{font-size:11px;}
             return `${line1 ? `<div>${escapeHtml(line1)}</div>` : ''}${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}`;
           })()}
 
-          ${(company.phone || company.email) ? `<div>${[company.phone, company.email].filter(Boolean).map((v) => escapeHtml(String(v))).join(' | ')}</div>` : ''}
+          ${company.email ? `<div>${escapeHtml(String(company.email))}</div>` : ''}
+
+          ${company.website ? `<div>${escapeHtml(String(company.website))}</div>` : ''}
+
+          ${company.phone ? `<div>${escapeHtml(String(company.phone))}</div>` : ''}
 
         </div>
 
@@ -1151,9 +1215,15 @@ td{font-size:11px;}
 
         <div class="rightMeta">
 
-          <div class="rightMetaRow"><div class="label">DATE</div><div>${escapeHtml(printDate)}</div></div>
+          <div class="rightMetaRow"><div class="label">INVOICE #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
 
-          <div class="rightMetaRow"><div class="label">RECEIPT #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
+          <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div>${escapeHtml(invoiceDateStr)}</div></div>
+
+          <div class="rightMetaRow"><div class="label">TIME:</div><div>${escapeHtml(invoiceTimeStr || '-')}</div></div>
+
+          ${invoice.createdBy ? `<div class="rightMetaRow"><div class="label">CREATED BY:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
+
+          <div class="rightMetaRow"><div class="label">INVOICE TOTAL:</div><div>${formatAmount(invoice.amount)}</div></div>
 
         </div>
 
@@ -1239,11 +1309,17 @@ td{font-size:11px;}
 
           <div class="totalsRow"><div class="label">SUBTOTAL LESS DISCOUNT</div><div class="value">${formatAmount(Number(invoice.subtotal) - discountAmount)}</div></div>
 
-          <div class="totalsRow"><div class="label">TAX RATE</div><div class="value">${taxRate.toFixed(2)}%</div></div>
+          <div class="totalsRow"><div class="label">SALES TAX</div><div class="value">${formatAmount(invoice.tax)}</div></div>
 
-          <div class="totalsRow"><div class="label">TOTAL TAX</div><div class="value">${formatAmount(invoice.tax)}</div></div>
+          <div class="totalsRow"><div class="label">LATE FEE</div><div class="value">${formatAmount(lateFeeAmount)}</div></div>
+
+          <div class="totalsRow"><div class="label">BOUNCED CHECK FEE</div><div class="value">${formatAmount(bouncedCheckFeeAmount)}</div></div>
 
           <div class="totalsRow"><div class="label">TOTAL</div><div class="value">${formatAmount(invoice.amount)}</div></div>
+
+          <div class="totalsRow"><div class="label">DEPOSIT</div><div class="value">${formatAmount(depositAmount)}</div></div>
+
+          <div class="totalsRow"><div class="label">BALANCE DUE</div><div class="value">${formatAmount(balanceDueAmount)}</div></div>
 
 
 
@@ -1251,7 +1327,7 @@ td{font-size:11px;}
 
             <div>Balance Due</div>
 
-            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(invoice.amount)}</div></div>
+            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
 
           </div>
 
@@ -2167,6 +2243,10 @@ interface CustomerData {
 
 
 
+  website?: string;
+
+
+
   address?: string;
 
 
@@ -2208,6 +2288,10 @@ interface CompanyData {
 
 
   email?: string;
+
+
+
+  website?: string;
 
 
 

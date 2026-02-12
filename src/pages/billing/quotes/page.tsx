@@ -4126,7 +4126,7 @@ export default function QuotesPage() {
 
           documentType="quote"
 
-          hiddenTypes={['job-estimate', 'classic']}
+          hiddenTypes={['simple', 'detailed', 'corporate', 'job-estimate', 'classic']}
 
           title="Select Quote Format"
 

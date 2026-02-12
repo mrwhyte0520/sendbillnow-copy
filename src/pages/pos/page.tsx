@@ -8104,7 +8104,7 @@ export default function POSPage() {
 
           documentType="invoice"
 
-          hiddenTypes={['job-estimate', 'classic', 'rent-receipt', 'blue-invoice', 'cash-receipt']}
+          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate']}
 
           title="Print Receipt"
 
