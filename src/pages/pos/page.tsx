@@ -3152,6 +3152,12 @@ export default function POSPage() {
 
       address: companyInfo?.address || '',
 
+      city: companyInfo?.city || '',
+
+      state: companyInfo?.state || '',
+
+      zip: companyInfo?.zip || '',
+
       logo: companyInfo?.logo,
 
       facebook: companyInfo?.facebook,
@@ -8227,6 +8233,12 @@ export default function POSPage() {
               email: companyInfo?.email || '',
 
               address: companyInfo?.address || '',
+
+              city: companyInfo?.city || '',
+
+              state: companyInfo?.state || '',
+
+              zip: companyInfo?.zip || '',
 
               logo: companyInfo?.logo,
 

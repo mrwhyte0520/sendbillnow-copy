@@ -154,7 +154,11 @@ function generateClassicInvoiceTemplate(
 
   const classicDiscountLabel = classicDiscountType === 'percentage' ? `${classicDiscountValue}%` : '';
 
-
+  const classicTimeStr = (() => {
+    const d = new Date(invoice.date);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  })();
 
   const customerAddr = (() => {
     const raw = customer.address ? String(customer.address) : '';
@@ -179,23 +183,16 @@ function generateClassicInvoiceTemplate(
   })();
 
   const customerAddressHtml = customer.address
-
-    ? [
-
-        customerAddr.street ? `<div>${escapeHtml(customerAddr.street)}</div>` : '',
-
-        customerAddr.city ? `<div>${escapeHtml(customerAddr.city)}</div>` : '',
-
-        customerAddr.state ? `<div>${escapeHtml(customerAddr.state)}</div>` : '',
-
-        customerAddr.zip ? `<div>${escapeHtml(customerAddr.zip)}</div>` : '',
-
-      ]
-
-        .filter(Boolean)
-
-        .join('')
-
+    ? (() => {
+        const line1 = customerAddr.street ? `<div>${escapeHtml(customerAddr.street)}</div>` : '';
+        const city = String(customerAddr.city || '').trim();
+        const state = String(customerAddr.state || '').trim();
+        const zip = String(customerAddr.zip || '').trim();
+        const tail = [state, zip].filter(Boolean).join(' ');
+        const line2Text = [city, tail].filter(Boolean).join(city && tail ? ', ' : '');
+        const line2 = line2Text ? `<div>${escapeHtml(line2Text)}</div>` : '';
+        return `${line1}${line2}`;
+      })()
     : '';
 
 
@@ -347,19 +344,8 @@ tbody tr:nth-child(even){background:#f9fafb;}
         <div class="companyName">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
         ${(() => {
-          const hasStructuredParts = Boolean(company.city || company.state || company.zip);
-          const parsed = !hasStructuredParts
-            ? parseAddress(company.address)
-            : { street: '', city: '', state: '', zip: '' };
-          const street = String(company.address || parsed.street || '').trim();
-          const city = String(company.city || parsed.city || '').trim();
-          const state = String(company.state || parsed.state || '').trim();
-          const zip = String(company.zip || parsed.zip || '').trim();
-
-          const line1 = [street, city].filter(Boolean).join(city && street ? ', ' : '');
-          const line2 = [state, zip].filter(Boolean).join(' ');
-
-          return `${line1 ? `<div>${escapeHtml(line1)}</div>` : ''}${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}`;
+          const lines = companyAddressLines(company);
+          return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
         })()}
 
         ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
@@ -386,15 +372,25 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         ${customerAddressHtml}
 
+        ${customer.phone ? `<div>${escapeHtml(customer.phone)}</div>` : ''}
+
+        ${customer.email ? `<div>${escapeHtml(customer.email)}</div>` : ''}
+
       </div>
 
       <div class="box invoiceInfo">
 
         <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
-        <div class="row"><span class="label">Due Date:</span> ${escapeHtml(formatDate(invoice.dueDate))}</div>
+        <div class="row"><span class="label">Invoice Date:</span> ${escapeHtml(formatDate(invoice.date))}</div>
 
-        ${invoice.createdBy ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>` : ''}
+        <div class="row"><span class="label">Time:</span> ${escapeHtml(classicTimeStr || '-')}</div>
+
+        ${invoice.createdBy
+          ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>`
+          : ''}
+
+        <div class="row"><span class="label">Invoice Total:</span> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></div>
 
       </div>
 
@@ -618,9 +614,12 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
 
 .meta{min-width:170px;text-align:center;}
 
-.metaRow{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-bottom:1px solid #d1d5db;font-size:11px;width:100%;}
 
-.metaRow .label{font-weight:900;text-transform:uppercase;color:#6b7280;font-size:10px;letter-spacing:0.3px;}
+.metaRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #d1d5db;font-size:11px;width:100%;}
+
+.metaRow .label{font-weight:900;color:#111;font-size:11px;letter-spacing:0;}
+
+.metaRow .value{font-weight:700;color:#111;text-align:right;}
 
 .metaRow:last-child{border-bottom:1px solid #d1d5db;}
 
@@ -662,9 +661,9 @@ td{font-size:11px;}
 
 .totalsRow .value{text-align:right;min-width:110px;}
 
-.balance{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#111;}
+.balance{margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#111;}
 
-.balanceBox{flex:1;border-bottom:2px solid ${BLUE};padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+.balanceBox{flex:1;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
 
 .balanceBox .curr{font-weight:900;}
 
@@ -692,6 +691,10 @@ td{font-size:11px;}
 
 .footer a{color:#fff !important;text-decoration:underline;}
 
+.metaRow.emphasis .label{color:${BLUE};}
+
+.metaRow.emphasis .value{color:${BLUE};}
+
 </style>
 
 </head><body>
@@ -712,15 +715,15 @@ td{font-size:11px;}
 
           <div class="meta">
 
-            <div class="metaRow"><div class="label">Invoice #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
+            <div class="metaRow"><span class="label">Invoice #:</span><span class="value">${escapeHtml(invoice.invoiceNumber)}</span></div>
 
-            <div class="metaRow"><div class="label">Invoice Date:</div><div>${invoiceDateStr}</div></div>
+            <div class="metaRow"><span class="label">Invoice Date:</span><span class="value">${invoiceDateStr}</span></div>
 
-            <div class="metaRow"><div class="label">Time:</div><div>${invoiceTimeStr || '-'}</div></div>
+            <div class="metaRow"><span class="label">Time:</span><span class="value">${invoiceTimeStr || '-'}</span></div>
 
-            ${invoice.createdBy ? `<div class="metaRow"><div class="label">Created By:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
+            ${invoice.createdBy ? `<div class="metaRow"><span class="label">Created By:</span><span class="value">${escapeHtml(String(invoice.createdBy))}</span></div>` : ''}
 
-            <div class="metaRow"><div class="label">Invoice Total:</div><div>${formatAmount(invoice.amount)}</div></div>
+            <div class="metaRow emphasis"><span class="label">Invoice Total:</span><span class="value">${formatAmount(invoice.amount)}</span></div>
 
           </div>
 
@@ -739,19 +742,8 @@ td{font-size:11px;}
           <div class="line">${escapeHtml(company.name || 'Your Company Name')}</div>
 
           ${(() => {
-            const hasStructuredParts = Boolean(company.city || company.state || company.zip);
-            const parsed = !hasStructuredParts
-              ? parseAddress(company.address)
-              : { street: '', city: '', state: '', zip: '' };
-            const street = String(company.address || parsed.street || '').trim();
-            const city = String(company.city || parsed.city || '').trim();
-            const state = String(company.state || parsed.state || '').trim();
-            const zip = String(company.zip || parsed.zip || '').trim();
-
-            const line1 = [street, city].filter(Boolean).join(city && street ? ', ' : '');
-            const line2 = [state, zip].filter(Boolean).join(' ');
-
-            return `${line1 ? `<div class="line">${escapeHtml(line1)}</div>` : ''}${line2 ? `<div class="line">${escapeHtml(line2)}</div>` : ''}`;
+            const lines = companyAddressLines(company);
+            return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
           })()}
 
           ${company.email ? `<div class="line">${escapeHtml(company.email)}</div>` : ''}
@@ -769,29 +761,8 @@ td{font-size:11px;}
           <div class="line">${escapeHtml(customer.name || 'Client Name')}</div>
 
           ${(() => {
-            const raw = customer.address ? String(customer.address) : '';
-            if (!raw) return '';
-            const parsed = parseAddress(raw);
-            const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
-            const addr = onlyStreet && raw.includes(',')
-              ? (() => {
-                const parts = raw
-                  .split(',')
-                  .map((p) => p.trim())
-                  .filter(Boolean);
-                return {
-                  street: parts[0] || parsed.street || '',
-                  city: parts[1] || '',
-                  state: parts[2] || '',
-                  zip: parts[3] || '',
-                };
-              })()
-              : parsed;
-
-            const line1 = [addr.street, addr.city].filter(Boolean).join(addr.city && addr.street ? ', ' : '');
-            const line2 = [addr.state, addr.zip].filter(Boolean).join(' ');
-
-            return `${line1 ? `<div class="line">${escapeHtml(line1)}</div>` : ''}${line2 ? `<div class="line">${escapeHtml(line2)}</div>` : ''}`;
+            const lines = customerAddressLines(customer);
+            return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
           })()}
 
           ${customer.email ? `<div class="line">${escapeHtml(customer.email)}</div>` : ''}
@@ -879,8 +850,6 @@ td{font-size:11px;}
           <div class="totalsRow"><div class="label">Total</div><div class="value">${formatAmount(invoice.amount)}</div></div>
 
           <div class="totalsRow"><div class="label">Deposit</div><div class="value">${formatAmount(depositAmount)}</div></div>
-
-          <div class="totalsRow"><div class="label">Balance Due</div><div class="value">${formatAmount(balanceDueAmount)}</div></div>
 
           <div class="balance">
 
@@ -1021,28 +990,6 @@ function generateRentReceiptTemplate(
     (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
   ) || 0;
 
-  const billedAddr = (() => {
-    const raw = customer.address ? String(customer.address) : '';
-    if (!raw) return { street: '', city: '', state: '', zip: '' };
-
-    const parsed = parseAddress(raw);
-    const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
-    if (onlyStreet && raw.includes(',')) {
-      const parts = raw
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean);
-      return {
-        street: parts[0] || parsed.street || '',
-        city: parts[1] || '',
-        state: parts[2] || '',
-        zip: parts[3] || '',
-      };
-    }
-
-    return parsed;
-  })();
-
 
 
   const footerLinksParts: string[] = [];
@@ -1161,6 +1108,8 @@ td{font-size:11px;}
 
 .footer a{color:#fff !important;text-decoration:underline;}
 
+.rightMetaRow.emphasis{color:${BLUE};font-weight:900;}
+
 </style>
 
 </head><body>
@@ -1182,19 +1131,8 @@ td{font-size:11px;}
           <div class="name">${escapeHtml(company.name || 'Your Company Name')}</div>
 
           ${(() => {
-            const hasStructuredParts = Boolean(company.city || company.state || company.zip);
-            const parsed = !hasStructuredParts
-              ? parseAddress(company.address)
-              : { street: '', city: '', state: '', zip: '' };
-            const street = String(company.address || parsed.street || '').trim();
-            const city = String(company.city || parsed.city || '').trim();
-            const state = String(company.state || parsed.state || '').trim();
-            const zip = String(company.zip || parsed.zip || '').trim();
-
-            const line1 = [street, city].filter(Boolean).join(city && street ? ', ' : '');
-            const line2 = [state, zip].filter(Boolean).join(' ');
-
-            return `${line1 ? `<div>${escapeHtml(line1)}</div>` : ''}${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}`;
+            const lines = companyAddressLines(company);
+            return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
           })()}
 
           ${company.email ? `<div>${escapeHtml(String(company.email))}</div>` : ''}
@@ -1223,7 +1161,7 @@ td{font-size:11px;}
 
           ${invoice.createdBy ? `<div class="rightMetaRow"><div class="label">CREATED BY:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
 
-          <div class="rightMetaRow"><div class="label">INVOICE TOTAL:</div><div>${formatAmount(invoice.amount)}</div></div>
+          <div class="rightMetaRow emphasis"><div class="label">INVOICE TOTAL:</div><div>${formatAmount(invoice.amount)}</div></div>
 
         </div>
 
@@ -1241,11 +1179,10 @@ td{font-size:11px;}
 
         <div class="line"><strong>${escapeHtml(customer.name || 'Tenant Name')}</strong></div>
 
-        ${billedAddr.street ? `<div class="line">${escapeHtml(billedAddr.street)}</div>` : ''}
-
-        ${billedAddr.city ? `<div class="line">${escapeHtml(billedAddr.city)}</div>` : ''}
-
-        ${(billedAddr.state || billedAddr.zip) ? `<div class="line">${escapeHtml([billedAddr.state, billedAddr.zip].filter(Boolean).join(' '))}</div>` : ''}
+        ${(() => {
+          const lines = customerAddressLines(customer);
+          return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
+        })()}
 
         ${customer.email ? `<div class="line">${escapeHtml(customer.email)}</div>` : ''}
 
@@ -1445,30 +1382,6 @@ function generateBlueInvoiceTemplate(
 
 
 
-  const addr = (() => {
-    const raw = customer.address ? String(customer.address) : '';
-    if (!raw) return { street: '', city: '', state: '', zip: '' };
-
-    const parsed = parseAddress(raw);
-    const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
-    if (onlyStreet && raw.includes(',')) {
-      const parts = raw
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean);
-      return {
-        street: parts[0] || parsed.street || '',
-        city: parts[1] || '',
-        state: parts[2] || '',
-        zip: parts[3] || '',
-      };
-    }
-
-    return parsed;
-  })();
-
-
-
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
 
 <style>
@@ -1501,11 +1414,13 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;}
 
 
 
-.mid{display:grid;grid-template-columns:1fr 1fr 320px;gap:34px;margin-top:28px;font-size:12px;align-items:start;}
+.mid{display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;margin-top:28px;font-size:12px;align-items:start;}
 
 .blockTitle{font-weight:900;margin-bottom:6px;}
 
 .line{margin:4px 0;}
+
+.addrLine2{white-space:nowrap;}
 
 .details{justify-self:end;text-align:right;}
 
@@ -1580,19 +1495,8 @@ tbody tr{border-bottom:1px solid ${BLUE};}
           <div class="name">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
           ${(() => {
-            const hasStructuredParts = Boolean(company.city || company.state || company.zip);
-            const parsed = !hasStructuredParts
-              ? parseAddress(company.address)
-              : { street: '', city: '', state: '', zip: '' };
-            const street = String(company.address || parsed.street || '').trim();
-            const city = String(company.city || parsed.city || '').trim();
-            const state = String(company.state || parsed.state || '').trim();
-            const zip = String(company.zip || parsed.zip || '').trim();
-
-            const line1 = [street, city].filter(Boolean).join(city && street ? ', ' : '');
-            const line2 = [state, zip].filter(Boolean).join(' ');
-
-            return `${line1 ? `<div>${escapeHtml(line1)}</div>` : ''}${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}`;
+            const lines = companyAddressLines(company);
+            return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
           })()}
 
           ${(() => {
@@ -1623,11 +1527,10 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           <div class="line" style="font-weight:800;">${escapeHtml(customer.name || 'Customer')}</div>
 
-          ${addr.street ? `<div class="line">${escapeHtml(addr.street)}</div>` : ''}
-
-          ${addr.city ? `<div class="line">${escapeHtml(addr.city)}</div>` : ''}
-
-          ${(addr.state || addr.zip) ? `<div class="line">${escapeHtml([addr.state, addr.zip].filter(Boolean).join(' '))}</div>` : ''}
+          ${(() => {
+            const lines = customerAddressLines(customer);
+            return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
+          })()}
 
           ${customer.phone ? `<div class="line"><strong>Phone:</strong> ${escapeHtml(customer.phone)}</div>` : ''}
 
@@ -1641,11 +1544,10 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           <div class="line" style="font-weight:800;">${escapeHtml(customer.name || 'Customer')}</div>
 
-          ${addr.street ? `<div class="line">${escapeHtml(addr.street)}</div>` : ''}
-
-          ${addr.city ? `<div class="line">${escapeHtml(addr.city)}</div>` : ''}
-
-          ${(addr.state || addr.zip) ? `<div class="line">${escapeHtml([addr.state, addr.zip].filter(Boolean).join(' '))}</div>` : ''}
+          ${(() => {
+            const lines = customerAddressLines(customer);
+            return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
+          })()}
 
           ${customer.phone ? `<div class="line"><strong>Phone:</strong> ${escapeHtml(customer.phone)}</div>` : ''}
 
@@ -1662,6 +1564,8 @@ tbody tr{border-bottom:1px solid ${BLUE};}
           <div class="line"><strong>Due Date:</strong> ${escapeHtml(formatDate(invoice.dueDate))}</div>
 
           ${invoice.createdBy ? `<div class="line"><strong>Created By:</strong> ${escapeHtml(invoice.createdBy)}</div>` : ''}
+
+          <div class="line"><strong>Invoice Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></div>
 
         </div>
 
@@ -2359,6 +2263,59 @@ const BLUE_LIGHT = '#e6e9f7';
 
 
 
+function companyAddressLines(company: CompanyData): { line1: string; line2: string } {
+
+  const hasStructuredParts = Boolean(company.city || company.state || company.zip);
+  const parsed = !hasStructuredParts ? parseAddress(company.address) : { street: '', city: '', state: '', zip: '' };
+
+  const street = String(company.address || parsed.street || '').trim();
+  const city = String(company.city || (!hasStructuredParts ? parsed.city : '') || '').trim();
+  const state = String(company.state || (!hasStructuredParts ? parsed.state : '') || '').trim();
+  const zip = String(company.zip || (!hasStructuredParts ? parsed.zip : '') || '').trim();
+
+  const tail = [state, zip].filter(Boolean).join(' ');
+  const line2 = [city, tail].filter(Boolean).join(city && tail ? ', ' : '').trim();
+
+  return { line1: street, line2 };
+}
+
+
+
+function customerAddressLines(customer: CustomerData): { line1: string; line2: string } {
+
+  const raw = customer.address ? String(customer.address) : '';
+  if (!raw) return { line1: '', line2: '' };
+
+  const parsed = parseAddress(raw);
+  const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
+  const addr = onlyStreet && raw.includes(',')
+    ? (() => {
+        const parts = raw
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
+        return {
+          street: parts[0] || parsed.street || '',
+          city: parts[1] || '',
+          state: parts[2] || '',
+          zip: parts[3] || '',
+        };
+      })()
+    : parsed;
+
+  const street = String(addr.street || '').trim();
+  const city = String(addr.city || '').trim();
+  const state = String(addr.state || '').trim();
+  const zip = String(addr.zip || '').trim();
+
+  const tail = [state, zip].filter(Boolean).join(' ');
+  const line2 = [city, tail].filter(Boolean).join(city && tail ? ', ' : '').trim();
+
+  return { line1: street, line2 };
+}
+
+
+
 function parseAddress(raw?: string): { street: string; city: string; state: string; zip: string } {
 
   const s = String(raw || '').replace(/\r\n/g, '\n');
@@ -2402,17 +2359,7 @@ function parseAddress(raw?: string): { street: string; city: string; state: stri
 
 function customerBlockHtml(customer: CustomerData): string {
 
-  const addr = (() => {
-    const hasStructuredParts = Boolean((customer as any).city || (customer as any).state || (customer as any).zip);
-    const parsed = parseAddress(customer.address);
-
-    const street = String(parsed.street || customer.address || '').trim();
-    const city = String((customer as any).city || (!hasStructuredParts ? parsed.city : '') || '').trim();
-    const state = String((customer as any).state || (!hasStructuredParts ? parsed.state : '') || '').trim();
-    const zip = String((customer as any).zip || (!hasStructuredParts ? parsed.zip : '') || '').trim();
-
-    return { street, city, state, zip };
-  })();
+  const addr = customerAddressLines(customer);
 
   return `
 
@@ -2438,13 +2385,8 @@ function customerBlockHtml(customer: CustomerData): string {
 
         <div>
 
-          <p><strong>Address:</strong> ${addr.street || '-'}</p>
-
-          <p><strong>City:</strong> ${addr.city || '-'}</p>
-
-          <p><strong>State:</strong> ${addr.state || '-'}</p>
-
-          <p><strong>Zip:</strong> ${addr.zip || '-'}</p>
+          <p><strong>Address:</strong> ${addr.line1 || '-'}</p>
+          <p><strong>City/State/Zip:</strong> ${addr.line2 || '-'}</p>
 
         </div>
 
@@ -2844,7 +2786,10 @@ th:nth-child(4){text-align:center;}
 
 
 
-      ${company.address ? `<p>${company.address}</p>` : ''}
+      ${(() => {
+        const lines = companyAddressLines(company);
+        return `${lines.line1 ? `<p>${escapeHtml(lines.line1)}</p>` : ''}${lines.line2 ? `<p>${escapeHtml(lines.line2)}</p>` : ''}`;
+      })()}
 
 
 
@@ -2884,7 +2829,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-      <p style="margin-top:8px;font-size:14px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:14px;font-weight:700;"><strong>Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></p>
 
 
 
@@ -3352,7 +3297,10 @@ th:nth-child(4){text-align:center;}
 
 
 
-        ${company.address ? `<p>${company.address}</p>` : ''}
+        ${(() => {
+          const lines = companyAddressLines(company);
+          return `${lines.line1 ? `<p>${escapeHtml(lines.line1)}</p>` : ''}${lines.line2 ? `<p>${escapeHtml(lines.line2)}</p>` : ''}`;
+        })()}
 
 
 
@@ -3396,7 +3344,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></p>
 
 
 
@@ -4234,7 +4182,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
+      <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></p>
 
 
 
