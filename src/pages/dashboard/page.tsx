@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { invoicesService, apInvoicesService, purchaseOrdersService } from '../../services/database';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 interface InvoiceDueItem {
   id: string;
@@ -25,6 +26,7 @@ const STORAGE_PREFIX = 'contabi_rbac_';
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { currentPlanId, canAccessRoute } = usePlanPermissions();
   const [currentDate] = useState(new Date());
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [invoicesByDay, setInvoicesByDay] = useState<Record<string, DayInvoices>>({});
@@ -208,15 +210,23 @@ export default function DashboardPage() {
   // Filtrar botones según permisos del usuario
   // Si no hay permisos configurados (allowedModules vacío o null), mostrar todos
   const quickAccessButtons = useMemo(() => {
+    const filterByPlan = (buttons: typeof allQuickAccessButtons) => {
+      if (currentPlanId !== 'student') return buttons;
+      return buttons.filter((b) => {
+        const path = String(b.href || '').split('?')[0];
+        return canAccessRoute(path);
+      });
+    };
+
+    const byPlan = filterByPlan(allQuickAccessButtons);
+
     if (allowedModules === null || allowedModules.size === 0) {
-      return allQuickAccessButtons;
+      return byPlan;
     }
     const normalizedAllowed = new Set(Array.from(allowedModules).map(normalizeModuleKey));
-    const filtered = allQuickAccessButtons.filter((button) =>
-      normalizedAllowed.has(normalizeModuleKey(button.module))
-    );
-    return filtered.length > 0 ? filtered : allQuickAccessButtons;
-  }, [allowedModules]);
+    const filtered = byPlan.filter((button) => normalizedAllowed.has(normalizeModuleKey(button.module)));
+    return filtered.length > 0 ? filtered : byPlan;
+  }, [allowedModules, currentPlanId, canAccessRoute]);
 
   // Generar días del calendario
   const getDaysInMonth = (date: Date) => {

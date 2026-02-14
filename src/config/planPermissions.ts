@@ -1,7 +1,7 @@
 // Configuración de permisos por plan
 // Define qué módulos y rutas están disponibles para cada plan
 
-export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-basic' | 'pos-premium' | 'pos-super-plus' | 'pyme' | 'pro' | 'plus' | 'trial' | 'none';
+export type PlanId = 'facturacion-simple' | 'facturacion-premium' | 'pos-basic' | 'pos-premium' | 'pos-super-plus' | 'pyme' | 'pro' | 'plus' | 'student' | 'trial' | 'none';
 
 export interface PlanLimits {
   users: number;
@@ -25,6 +25,7 @@ export const MODULES = {
   INVOICING: 'invoicing',
   QUOTES: 'quotes',
   CREDIT_NOTES: 'credit-notes',
+  SERVICE_DOCUMENTS: 'service-documents',
   REPORTS: 'reports',
   INVENTORY: 'inventory',
   PRODUCTS: 'products',
@@ -86,6 +87,37 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       invoicesPerMonth: 100,
       warehouses: 0,
       products: 0,
+    }
+  },
+
+  'student': {
+    id: 'student',
+    name: 'Student Plan',
+    modules: [
+      MODULES.DASHBOARD,
+      MODULES.INVOICING,
+      MODULES.INVENTORY,
+      MODULES.PRODUCTS,
+      MODULES.ACCOUNTS_RECEIVABLE,
+      MODULES.ACCOUNTS_PAYABLE,
+      MODULES.SETTINGS,
+    ],
+    routes: [
+      '/dashboard',
+      '/billing/invoicing',
+      '/accounts-receivable/customers',
+      '/accounts-payable/suppliers',
+      '/inventory',
+      '/inventory/reports',
+      '/settings',
+      '/profile',
+      '/plans',
+    ],
+    limits: {
+      users: 1,
+      invoicesPerMonth: 2000,
+      warehouses: 1,
+      products: 1000,
     }
   },
   'facturacion-premium': {
@@ -524,6 +556,7 @@ export const ROUTE_TO_MODULE: Record<string, string> = {
   '/billing/credit-notes': MODULES.CREDIT_NOTES,
   '/billing/debit-notes': MODULES.CREDIT_NOTES,
   '/billing/recurring': MODULES.BILLING,
+  '/service-documents': MODULES.SERVICE_DOCUMENTS,
   '/reports': MODULES.REPORTS,
   '/inventory': MODULES.INVENTORY,
   '/inventory/products': MODULES.PRODUCTS,
@@ -571,6 +604,7 @@ export const MODULE_NAMES: Record<string, string> = {
   [MODULES.INVOICING]: 'Facturas',
   [MODULES.QUOTES]: 'Cotizaciones',
   [MODULES.CREDIT_NOTES]: 'Notas de Crédito/Débito',
+  [MODULES.SERVICE_DOCUMENTS]: 'Documentos de Servicio',
   [MODULES.REPORTS]: 'Reportes',
   [MODULES.INVENTORY]: 'Inventario',
   [MODULES.PRODUCTS]: 'Productos',

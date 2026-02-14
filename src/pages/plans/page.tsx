@@ -37,6 +37,26 @@ export default function PlansPage() {
 
   const plans: Plan[] = [
     {
+      id: 'student',
+      name: 'Student Plan',
+      priceMonthly: 0,
+      priceAnnual: 85.0,
+      description: 'Annual plan for students with limited module access',
+      features: [
+        'Dashboard access',
+        'Create invoices',
+        'Customers (AR) module',
+        'Suppliers (AP) module',
+        'Products & Inventory',
+        'Inventory reports',
+        'Settings access',
+      ],
+      popular: false,
+      color: 'from-sky-500 to-sky-600',
+      icon: 'ri-graduation-cap-line',
+      category: 'contabilidad'
+    },
+    {
       id: 'pos-basic',
       name: 'Basic Plan',
       priceMonthly: 99.99,
@@ -82,6 +102,10 @@ export default function PlansPage() {
 
   const handleSelectPlan = (planId: string) => {
     if (!canSelectPlan()) {
+      return;
+    }
+
+    if (planId === 'student' && billingPeriod !== 'annual') {
       return;
     }
     setSelectedPlan(planId);
@@ -209,6 +233,7 @@ export default function PlansPage() {
   };
 
   const getSavingsPercent = (plan: Plan) => {
+    if (!plan.priceMonthly || plan.priceMonthly <= 0) return 0;
     const annualIfMonthly = plan.priceMonthly * 12;
     const savings = ((annualIfMonthly - plan.priceAnnual) / annualIfMonthly) * 100;
     return Math.round(savings);
@@ -262,6 +287,7 @@ export default function PlansPage() {
   const trialStatus = getTrialStatus();
   const selectedPlanData = plans.find(plan => plan.id === selectedPlan);
   const posPlans = plans.filter(p => p.category === 'pos');
+  const accountingPlans = plans.filter(p => p.category === 'contabilidad');
 
   const formatTimeLeft = () => {
     if (trialInfo.daysLeft > 0) {
@@ -282,13 +308,13 @@ export default function PlansPage() {
   const renderPlanCard = (plan: Plan) => (
     <div
       key={plan.id}
-      className={`relative bg-[#FDFBF3] rounded-2xl shadow-lg overflow-hidden border-2 transition-all duration-300 hover:shadow-xl ${
-        plan.popular ? 'border-[#9376C8] scale-105 z-10' : 'border-[#E0D8C2] hover:border-[#C6B383]'
-      } ${!canSelectPlan() ? 'opacity-75' : ''}`}
+      className={`bg-white rounded-2xl shadow-lg overflow-hidden border border-[#E0E7C8] hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
+        plan.popular ? 'ring-2 ring-purple-500 ring-opacity-50' : ''
+      }`}
     >
       {plan.popular && (
-        <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white text-center py-2 text-sm font-semibold">
-          <i className="ri-star-fill mr-1"></i> Most Popular
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-center py-2 text-sm font-semibold">
+          Most Popular
         </div>
       )}
 
@@ -318,7 +344,7 @@ export default function PlansPage() {
 
       <div className="p-6">
         <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
-        
+
         <div className="max-h-64 overflow-y-auto mb-4">
           <ul className="space-y-2">
             {plan.features.map((feature, index) => (
@@ -332,16 +358,22 @@ export default function PlansPage() {
 
         <button
           onClick={() => handleSelectPlan(plan.id)}
-          disabled={!canSelectPlan()}
+          disabled={!canSelectPlan() || (plan.id === 'student' && billingPeriod !== 'annual')}
           className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-            !canSelectPlan()
+            !canSelectPlan() || (plan.id === 'student' && billingPeriod !== 'annual')
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
               ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
               : 'bg-gradient-to-r from-[#566738] to-[#3E4D2C] text-white hover:from-[#455532] hover:to-[#2F3C21]'
           }`}
         >
-          {!canSelectPlan() ? 'Payment Required' : currentPlan?.active ? 'Change Plan' : 'Select Plan'}
+          {!canSelectPlan()
+            ? 'Payment Required'
+            : plan.id === 'student' && billingPeriod !== 'annual'
+            ? 'Annual Only'
+            : currentPlan?.active
+            ? 'Change Plan'
+            : 'Select Plan'}
         </button>
       </div>
     </div>
@@ -468,6 +500,20 @@ export default function PlansPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {posPlans.map(renderPlanCard)}
+          </div>
+        </div>
+
+        {/* Accounting Plans Section */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E0E7C8] shadow-sm">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <i className="ri-book-2-line mr-2 text-blue-600"></i>
+              Accounting Plans
+            </h2>
+            <p className="text-gray-600">Choose a plan with accounting and billing modules.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {accountingPlans.map(renderPlanCard)}
           </div>
         </div>
 

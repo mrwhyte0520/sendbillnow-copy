@@ -50,6 +50,7 @@ export function usePlanPermissions(): PlanPermissions {
       if (planId.includes('pos-basic') || planId === 'pos-basic') return 'pos-basic';
       if (planId.includes('pos-premium') || planId === 'pos-premium') return 'pos-premium';
       if (planId.includes('pos-super-plus') || planId === 'pos-super-plus') return 'pos-super-plus';
+      if (planId.includes('student') || planId === 'student') return 'student';
       // Si tiene un plan activo pero no coincide, dar acceso completo
       return 'pos-super-plus';
     }

@@ -51,6 +51,7 @@ const PLAN_PRICES_ANNUAL = {
   'facturacion-premium': 23988,
   'pos-basic': 83992,
   'pos-premium': 335992,
+  student: 8500,
 };
 
 const PLAN_NAMES = {
@@ -61,6 +62,7 @@ const PLAN_NAMES = {
   'facturacion-premium': 'Facturación Premium',
   'pos-basic': 'POS Basic',
   'pos-premium': 'POS Premium',
+  student: 'Student Plan',
 };
 
 function normalizePlanIdForEnv(planId) {
@@ -107,6 +109,10 @@ export default async function handler(req, res) {
 
   if (!planId) {
     return res.status(400).json({ ok: false, error: 'Missing planId' });
+  }
+
+  if (planId === 'student' && billingPeriod !== 'annual') {
+    return res.status(400).json({ ok: false, error: 'Student plan is annual-only' });
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;

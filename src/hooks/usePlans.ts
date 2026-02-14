@@ -53,6 +53,7 @@ function getPlanPrice(planId: string): number {
     'facturacion-premium': 29.99,
     'pos-basic': 99.99,
     'pos-premium': 399.99,
+    'student': 85.0,
   };
   return prices[planId] || 0;
 }
@@ -105,6 +106,15 @@ function getPlanFeatures(planId: string): string[] {
       '2,000 electronic invoices',
       'Backup every 48 hours',
     ],
+    'student': [
+      'Dashboard access',
+      'Create invoices',
+      'Customers (AR) module',
+      'Suppliers (AP) module',
+      'Products & Inventory',
+      'Inventory reports',
+      'Settings access',
+    ],
   };
   return features[planId] || [];
 }
@@ -145,6 +155,11 @@ function buildPlan(planId: string): Plan {
       name: 'POS Premium',
       color: 'from-amber-500 to-amber-600',
       icon: 'ri-shopping-cart-2-line',
+    },
+    'student': {
+      name: 'Student Plan',
+      color: 'from-sky-500 to-sky-600',
+      icon: 'ri-graduation-cap-line',
     },
   };
 
