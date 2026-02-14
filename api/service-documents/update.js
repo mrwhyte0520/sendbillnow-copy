@@ -101,6 +101,14 @@ export default async function handler(req, res) {
     patch.terms_snapshot = v || '';
   }
 
+  if (body.validForDays !== undefined || body.valid_for_days !== undefined) {
+    const n = Number(body.validForDays ?? body.valid_for_days);
+    if (!Number.isFinite(n) || n <= 0) {
+      return res.status(400).json({ ok: false, error: 'Invalid validForDays' });
+    }
+    patch.valid_for_days = Math.floor(n);
+  }
+
   if (!Object.keys(patch).length) {
     return res.status(200).json({ ok: true, document: null });
   }
@@ -110,7 +118,7 @@ export default async function handler(req, res) {
     .update(patch)
     .eq('id', id)
     .eq('user_id', tenantId)
-    .select('id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, sent_at, viewed_at, client_signed_at, created_at, updated_at')
+    .select('id, doc_type, status, doc_number, currency, account_number, valid_for_days, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, sent_at, viewed_at, client_signed_at, created_at, updated_at')
     .maybeSingle();
 
   if (error) {

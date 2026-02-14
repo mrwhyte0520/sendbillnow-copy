@@ -229,7 +229,7 @@ export default async function handler(req, res) {
     const { data: doc, error: docError } = await supabase
       .from('service_documents')
       .select(
-        'id, user_id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
+        'id, user_id, doc_type, status, doc_number, currency, account_number, valid_for_days, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
       )
       .eq('id', documentId)
       .eq('user_id', tenantId)
@@ -510,10 +510,15 @@ export default async function handler(req, res) {
   // Right column: move validity tag to the old address position + add start/end date
   let rightY = customerY;
   if (doc.doc_type === 'JOB_ESTIMATE') {
+    const validDays = (() => {
+      const n = Number(doc.valid_for_days ?? 30);
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
+    })();
+
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(22, 163, 74);
-    pdf.text('(Valid for 30 days)', rightX, rightY);
+    pdf.text(`(Valid for ${validDays} days)`, rightX, rightY);
     rightY += 22;
 
     const startRaw = doc?.created_at || null;
@@ -521,8 +526,8 @@ export default async function handler(req, res) {
     const endDate = (() => {
       const d = parseTimestampUtc(startRaw);
       if (!d) return '';
-      const plus30 = new Date(d.getTime() + 30 * 24 * 60 * 60 * 1000);
-      return formatDateOnlyUtcMinus4(plus30.toISOString());
+      const plus = new Date(d.getTime() + validDays * 24 * 60 * 60 * 1000);
+      return formatDateOnlyUtcMinus4(plus.toISOString());
     })();
 
     pdf.setFontSize(9);

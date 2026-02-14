@@ -67,6 +67,7 @@ type ServiceDocument = {
   status: string;
   doc_number: string;
   currency: string;
+  valid_for_days?: number | null;
   client_name: string;
   client_email: string | null;
   client_phone: string | null;
@@ -151,6 +152,11 @@ function parseClientAddress(raw?: string): { street: string; city: string; state
     .map((l) => l.trim())
     .filter(Boolean);
 
+  const zipLike = (value: string) => {
+    const v = String(value || '').trim();
+    return /^\d{5}(-\d{4})?$/.test(v);
+  };
+
   if (lines.length === 0) return { street: '', city: '', state: '', zip: '' };
 
   if (lines.length === 1) {
@@ -168,8 +174,18 @@ function parseClientAddress(raw?: string): { street: string; city: string; state
     const city = parts[1] || '';
     const rest = parts.slice(2).join(' ').trim();
     const tokens = rest.split(/\s+/).filter(Boolean);
-    const state = tokens[0] || '';
-    const zip = tokens.slice(1).join(' ').trim();
+    let state = '';
+    let zip = '';
+    if (tokens.length > 0) {
+      const last = tokens[tokens.length - 1] || '';
+      if (zipLike(last)) {
+        zip = last;
+        state = tokens.slice(0, -1).join(' ').trim();
+      } else {
+        state = tokens[0] || '';
+        zip = tokens.slice(1).join(' ').trim();
+      }
+    }
     return { street, city, state, zip };
   }
 
@@ -183,8 +199,18 @@ function parseClientAddress(raw?: string): { street: string; city: string; state
   const city = segs[0] || '';
   const rest = segs.slice(1).join(' ').trim();
   const tokens = rest.split(/\s+/).filter(Boolean);
-  const state = tokens[0] || '';
-  const zip = tokens.slice(1).join(' ').trim();
+  let state = '';
+  let zip = '';
+  if (tokens.length > 0) {
+    const last = tokens[tokens.length - 1] || '';
+    if (zipLike(last)) {
+      zip = last;
+      state = tokens.slice(0, -1).join(' ').trim();
+    } else {
+      state = tokens[0] || '';
+      zip = tokens.slice(1).join(' ').trim();
+    }
+  }
   return { street, city, state, zip };
 }
 
@@ -233,6 +259,7 @@ export default function ServiceDocumentsEditPage() {
   const [clientCity, setClientCity] = useState('');
   const [clientState, setClientState] = useState('');
   const [clientZip, setClientZip] = useState('');
+  const [validForDays, setValidForDays] = useState('30');
   const [terms, setTerms] = useState('');
   const [taxRate, setTaxRate] = useState('');
   const [materialCost, setMaterialCost] = useState('');
@@ -292,6 +319,7 @@ export default function ServiceDocumentsEditPage() {
       setClientCity('');
       setClientState('');
       setClientZip('');
+      setValidForDays('30');
       setTerms('');
       setTaxRate('');
       setMaterialCost('');
@@ -362,6 +390,12 @@ export default function ServiceDocumentsEditPage() {
         setClientCity(parsed.city);
         setClientState(parsed.state);
         setClientZip(parsed.zip);
+      }
+
+      {
+        const n = Number((d as any).valid_for_days ?? 30);
+        const safe = Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
+        setValidForDays(String(safe));
       }
       setTerms(String((d as any).terms_snapshot || ''));
       setTaxRate(String((d as any).tax_rate ?? ''));
@@ -542,12 +576,10 @@ export default function ServiceDocumentsEditPage() {
           : l,
       ),
     );
-    setActiveSearchIdx(null);
-    setSearchQuery('');
   }, []);
 
   const headerDirty = useMemo(() => {
-    if (!doc) return false;
+    if (!doc) return true;
     const composedAddress = buildClientAddress({
       street: clientAddress,
       city: clientCity,
@@ -559,9 +591,10 @@ export default function ServiceDocumentsEditPage() {
       clientEmail !== String(doc.client_email || '') ||
       clientPhone !== String(doc.client_phone || '') ||
       composedAddress !== String(doc.client_address || '') ||
+      Number(validForDays || 30) !== Number((doc as any)?.valid_for_days ?? 30) ||
       terms !== String(doc.terms_snapshot || '')
     );
-  }, [clientAddress, clientCity, clientEmail, clientName, clientPhone, clientState, clientZip, doc, terms]);
+  }, [clientAddress, clientCity, clientEmail, clientName, clientPhone, clientState, clientZip, doc, terms, validForDays]);
 
   const numericTaxRate = useMemo(() => {
     const raw = String(taxRate ?? '').trim();
@@ -877,6 +910,9 @@ export default function ServiceDocumentsEditPage() {
       return false;
     }
 
+    const rawValidDays = Number(String(validForDays ?? '').trim() === '' ? 30 : Number(validForDays));
+    const effectiveValidDays = Number.isFinite(rawValidDays) && rawValidDays > 0 ? Math.floor(rawValidDays) : 30;
+
     const fallbackTaxRate = defaultTaxRate == null ? 0.18 : Number(defaultTaxRate);
     const rawEffectiveTaxRate =
       String(taxRate ?? '').trim() === '' ? (doc ? Number(doc?.tax_rate ?? 0) : fallbackTaxRate) : Number(taxRate);
@@ -918,6 +954,7 @@ export default function ServiceDocumentsEditPage() {
               clientEmail: clientEmail.trim(),
               clientPhone: clientPhone.trim(),
               clientAddress: addr,
+              validForDays: effectiveValidDays,
               termsSnapshot: terms,
               taxRate: effectiveTaxRate,
             }),
@@ -934,6 +971,7 @@ export default function ServiceDocumentsEditPage() {
               clientEmail: clientEmail.trim(),
               clientPhone: clientPhone.trim(),
               clientAddress: addr,
+              validForDays: effectiveValidDays,
               termsSnapshot: terms,
               taxRate: effectiveTaxRate,
             }),
@@ -1558,7 +1596,18 @@ export default function ServiceDocumentsEditPage() {
                   </table>
                 </div>
 
-                <div className="mt-4 flex justify-end text-sm text-[#2F3D2E]">
+                <div className="mt-4 flex items-start justify-between gap-6 text-sm text-[#2F3D2E]">
+                  <div className="w-full max-w-md">
+                    <label className="block text-sm font-medium text-[#5F6652] mb-1">Valid for (days)</label>
+                    <input
+                      value={validForDays}
+                      onChange={(e) => setValidForDays(e.target.value)}
+                      className={`${INPUT_CLASSES} w-40`}
+                      inputMode="numeric"
+                      disabled={!canEdit || savingHeader}
+                    />
+                  </div>
+
                   <div className="bg-white border border-[#EADDC4] rounded-2xl px-4 py-3 min-w-[280px]">
                     <div className="flex justify-between gap-6">
                       <div className="text-[#7A705A]">Subtotal</div>

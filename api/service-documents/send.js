@@ -65,7 +65,7 @@ export default async function handler(req, res) {
 
   const { data: doc, error: docError } = await supabase
     .from('service_documents')
-    .select('id, user_id, doc_type, status, doc_number, account_number, client_name, client_email, company_name, terms_snapshot, sent_at, sealed_at, voided_at, expired_at')
+    .select('id, user_id, doc_type, status, doc_number, account_number, valid_for_days, client_name, client_email, company_name, terms_snapshot, sent_at, sealed_at, voided_at, expired_at')
     .eq('id', documentId)
     .eq('user_id', tenantId)
     .maybeSingle();
@@ -117,7 +117,11 @@ export default async function handler(req, res) {
 
   const tokenRaw = randomTokenRaw();
   const tokenHash = sha256Hex(tokenRaw);
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const validDays = (() => {
+    const n = Number(doc?.valid_for_days ?? 30);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
+  })();
+  const expiresAt = new Date(Date.now() + validDays * 24 * 60 * 60 * 1000).toISOString();
 
   const { error: tokError } = await supabase
     .from('service_document_tokens')

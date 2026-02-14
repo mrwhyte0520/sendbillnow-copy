@@ -113,6 +113,9 @@ export default async function handler(req, res) {
   const taxRate = Number(body.taxRate ?? body.tax_rate ?? defaultTaxRate);
   const safeRate = normalizeTaxRate(taxRate);
 
+  const rawValidDays = Number(body.validForDays ?? body.valid_for_days ?? 30);
+  const validForDays = Number.isFinite(rawValidDays) && rawValidDays > 0 ? Math.floor(rawValidDays) : 30;
+
   const termsSnapshot = String(body.termsSnapshot || body.terms_snapshot || company?.terms_and_conditions || '').trim();
 
   const payload = {
@@ -122,6 +125,7 @@ export default async function handler(req, res) {
     doc_number: String(docNumber || '').trim(),
     currency,
     account_number: effectiveAccountNumber || null,
+    valid_for_days: validForDays,
     company_name: company?.name ?? null,
     company_rnc: company?.ruc ?? null,
     company_phone: company?.phone ?? null,
@@ -142,7 +146,7 @@ export default async function handler(req, res) {
   const { data, error } = await supabase
     .from('service_documents')
     .insert(payload)
-    .select('id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, created_at, updated_at')
+    .select('id, doc_type, status, doc_number, currency, account_number, valid_for_days, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, created_at, updated_at')
     .single();
 
   if (error) {
