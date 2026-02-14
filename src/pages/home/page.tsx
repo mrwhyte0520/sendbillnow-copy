@@ -108,7 +108,7 @@ export default function HomePage() {
     }
   ];
 
-  const [billingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
@@ -151,6 +151,24 @@ export default function HomePage() {
       popular: false,
       category: 'pos'
     },
+    {
+      id: 'student',
+      name: 'Contractor Plan',
+      priceMonthly: 85.0,
+      priceAnnual: 85.0,
+      description: 'Designed for contractors and service providers that need invoicing, AR/AP, and inventory tools.',
+      features: [
+        'Dashboard access',
+        'Create invoices',
+        'Customers (AR) module',
+        'Suppliers (AP) module',
+        'Products & Inventory',
+        'Inventory reports',
+        'Settings access',
+      ],
+      popular: false,
+      category: 'pos'
+    },
   ];
 
   const formatMoney = (amount: number) => {
@@ -188,7 +206,18 @@ export default function HomePage() {
       <nav className="bg-white/80 border-b border-gray-200 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center gap-1 ml-6">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md transition-transform duration-200 hover:scale-[1.18] hover:-translate-y-[1px] active:scale-[0.98] active:translate-y-0 focus:outline-none"
+                aria-label="Send Bill Now"
+              >
+                <img
+                  src="/F4.png"
+                  alt="Send Bill Now"
+                  className="h-12 w-12 object-contain transition-[filter] duration-200 hover:drop-shadow-[0_10px_25px_rgba(0,128,0,0.35)] focus-visible:drop-shadow-[0_10px_25px_rgba(0,128,0,0.35)]"
+                />
+              </button>
               <h1 className="text-2xl font-bold text-[#008000]" style={{ fontFamily: '"Pacifico", serif' }}>
                 Send Bill Now
               </h1>
@@ -437,8 +466,42 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {plans.filter(p => p.category === 'pos').map((plan, index) => (
+          <div
+            className={`flex items-center justify-center mb-8 transition-all duration-700 ease-out ${
+              pricingInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+            }`}
+          >
+            <div className="inline-flex items-center rounded-full border border-gray-200 bg-white p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setBillingPeriod('monthly')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                  billingPeriod === 'monthly'
+                    ? 'bg-[#008000] text-white'
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingPeriod('annual')}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+                  billingPeriod === 'annual'
+                    ? 'bg-[#008000] text-white'
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {plans
+              .filter((p) => p.category === 'pos')
+              .filter((p) => (p.id === 'student' ? billingPeriod === 'annual' : true))
+              .map((plan, index) => (
               <div
                 key={index}
                 className={`bg-white rounded-2xl shadow-lg shadow-black/10 overflow-hidden border border-gray-200 transition-all duration-700 ease-out hover:shadow-2xl hover:shadow-black/15 hover:border-[#008000]/30 hover:[transform:perspective(1000px)_rotateX(3deg)_rotateY(-3deg)_translateY(-4px)] ${
@@ -446,9 +509,11 @@ export default function HomePage() {
                 }`}
                 style={{ transitionDelay: `${index * 120}ms` }}
               >
-                <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-6 text-white text-center relative">
+                <div
+                  className={`bg-gradient-to-r ${plan.id === 'student' ? 'from-[#001B9E] to-[#001B9E]' : 'from-emerald-500 to-emerald-600'} p-6 text-white text-center relative`}
+                >
                   <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/10 via-transparent to-black/10" />
-                  <i className="ri-store-2-line text-4xl mb-3"></i>
+                  <i className={`${plan.id === 'student' ? 'ri-graduation-cap-line' : 'ri-store-2-line'} text-4xl mb-3`}></i>
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   {billingPeriod === 'monthly' ? (
                     <div className="flex items-baseline justify-center">
@@ -485,7 +550,11 @@ export default function HomePage() {
                   <button
                     onClick={() => startStripeCheckout(plan.id)}
                     disabled={isRedirectingToStripe}
-                    className="w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer bg-[#556B2F] text-white shadow-md shadow-[#556B2F]/25 border border-black/10 transition-all duration-300 hover:scale-[1.02] hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer text-white shadow-md border border-black/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                      plan.id === 'student'
+                        ? 'bg-[#001B9E] shadow-[#001B9E]/25 hover:bg-[#001785] hover:shadow-lg hover:shadow-[#001B9E]/30'
+                        : 'bg-[#556B2F] shadow-[#556B2F]/25 hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30'
+                    }`}
                   >
                     {isRedirectingToStripe && selectedPlanId === plan.id ? (
                       <>
