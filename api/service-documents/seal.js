@@ -263,7 +263,7 @@ export default async function handler(req, res) {
   // Load current company info (so city/state/zip can be used even for older documents)
   const { data: companyInfoRow } = await supabase
     .from('company_info')
-    .select('address, city, state, zip')
+    .select('address, city, state, zip, website')
     .eq('user_id', tenantId)
     .limit(1)
     .maybeSingle();
@@ -272,6 +272,7 @@ export default async function handler(req, res) {
   const liveCity = String(companyInfoRow?.city || '').trim();
   const liveState = String(companyInfoRow?.state || '').trim();
   const liveZip = String(companyInfoRow?.zip || '').trim();
+  const liveWebsite = String(companyInfoRow?.website || '').trim();
   const hasLiveParts = Boolean(liveStreet || liveCity || liveState || liveZip);
   const liveSecondLine = [
     liveCity,
@@ -573,12 +574,15 @@ export default async function handler(req, res) {
   const companyTail = [companyState, companyZip].filter(Boolean).join(' ');
   const companyAddrLine2 = [companyCity, companyTail].filter(Boolean).join(companyCity && companyTail ? ', ' : '');
 
+  const companyWebsiteForPdf = String(doc.company_website || '').trim() || liveWebsite;
+
   const companyLines = [
     safeText(doc.company_name || 'COMPANY'),
     companyAddrLine1 ? safeText(companyAddrLine1) : '',
     companyAddrLine2 ? safeText(companyAddrLine2) : '',
     doc.company_phone ? safeText(doc.company_phone) : '',
     doc.company_email ? safeText(doc.company_email) : '',
+    companyWebsiteForPdf ? safeText(companyWebsiteForPdf) : '',
   ].filter(Boolean);
   const companyBoxH = (hasLogo ? logoSquare + 10 : 0) + companyLines.length * 12 + 16;
 

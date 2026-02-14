@@ -2009,6 +2009,8 @@ th:nth-child(4){width:140px;text-align:right;}
 
           ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
 
+          ${company.website ? `<div>${escapeHtml(company.website)}</div>` : ''}
+
         </div>
 
       </div>
