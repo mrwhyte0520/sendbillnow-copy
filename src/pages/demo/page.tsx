@@ -19,7 +19,6 @@ const INDUSTRIES = [
   'Hardware Store',
   'Beauty / Salon',
   'Pharmacy',
-  'Services',
   'Other',
 ];
 
@@ -398,7 +397,7 @@ export default function DemoPage() {
 
                   <div>
                     <label htmlFor="industry" className="block text-sm font-semibold text-[#1F2616]">
-                      Industry*
+                      General contractor services*
                     </label>
                     <select
                       id="industry"
