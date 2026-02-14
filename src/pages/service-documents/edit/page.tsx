@@ -576,6 +576,11 @@ export default function ServiceDocumentsEditPage() {
           : l,
       ),
     );
+
+    setActiveSearchIdx(null);
+    setActiveSearchEl(null);
+    setSearchQuery('');
+    setSearchDropdownPos(null);
   }, []);
 
   const headerDirty = useMemo(() => {
