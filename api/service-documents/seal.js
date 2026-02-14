@@ -442,16 +442,6 @@ export default async function handler(req, res) {
   pdf.setFontSize(30);
   pdf.text(docLabel, marginX, 56);
 
-  if (doc.doc_type === 'JOB_ESTIMATE') {
-    const tag = '(Valid for 30 days)';
-    const tagX = marginX + pdf.getTextWidth(docLabel) + 10;
-    pdf.setFontSize(14);
-    pdf.setTextColor(22, 163, 74);
-    pdf.text(tag, tagX, 56);
-    pdf.setTextColor(0, 27, 158);
-    pdf.setFontSize(30);
-  }
-
   // Company box width (defined early so customer text can respect it)
   const companyBoxW = 170;
 
@@ -502,23 +492,55 @@ export default async function handler(req, res) {
     customerInfoY += 12;
   }
 
-  // Right column: Address (2 lines)
-  let rightY = customerY;
+  // Address (2 lines) moved under phone in left column
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('ADDRESS:', rightX, rightY);
+  pdf.text('ADDRESS:', leftX, customerInfoY);
   pdf.setFont('helvetica', 'normal');
-  const addrValueX = rightX + 52;
-  const addrValueMaxW = maxCustTextW - (addrValueX - rightX) - 6;
-  pdf.text(truncateToWidth(pdf, addrStreet || '-', addrValueMaxW), addrValueX, rightY);
-  rightY += 12;
+  const addrValueXLeft = leftX + 54;
+  const addrLeftMaxW = leftColW - (addrValueXLeft - leftX) - 6;
+  pdf.text(truncateToWidth(pdf, addrStreet || '-', addrLeftMaxW), addrValueXLeft, customerInfoY);
+  customerInfoY += 12;
 
   const addrTail = [addrState, addrZip].filter(Boolean).join(' ').trim();
   const addrLine2 = [addrCity, addrTail].filter(Boolean).join(addrCity && addrTail ? ', ' : '');
-  const addrLine2MaxW = maxCustTextW - 6;
-  pdf.text(truncateToWidth(pdf, addrLine2 || '-', addrLine2MaxW), rightX, rightY);
-  rightY += 12;
+  pdf.text(truncateToWidth(pdf, addrLine2 || '-', leftColW - 6), leftX, customerInfoY);
+  customerInfoY += 12;
 
+  // Right column: move validity tag to the old address position + add start/end date
+  let rightY = customerY;
+  if (doc.doc_type === 'JOB_ESTIMATE') {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(22, 163, 74);
+    pdf.text('(Valid for 30 days)', rightX, rightY);
+    rightY += 22;
+
+    const startRaw = doc?.created_at || null;
+    const startDate = startRaw ? formatDateOnlyUtcMinus4(startRaw) : '';
+    const endDate = (() => {
+      const d = parseTimestampUtc(startRaw);
+      if (!d) return '';
+      const plus30 = new Date(d.getTime() + 30 * 24 * 60 * 60 * 1000);
+      return formatDateOnlyUtcMinus4(plus30.toISOString());
+    })();
+
+    pdf.setFontSize(9);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('START DATE:', rightX, rightY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(startDate || '-', rightX + 72, rightY);
+    rightY += 12;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('END DATE:', rightX, rightY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(endDate || '-', rightX + 60, rightY);
+    rightY += 12;
+  }
+
+  pdf.setTextColor(0, 0, 0);
   customerInfoY = Math.max(customerInfoY, rightY);
 
   // Company box (right) — centered logo + centered text

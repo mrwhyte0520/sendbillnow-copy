@@ -33,7 +33,7 @@ export default function ServiceDocumentsListPage() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ServiceDocumentRow[]>([]);
 
-  const [filterType, setFilterType] = useState<'ALL' | 'JOB_ESTIMATE' | 'CLASSIC_INVOICE'>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,22 +52,29 @@ export default function ServiceDocumentsListPage() {
       if (error) throw error;
 
       const all = (data as any[] | null) ?? [];
-      const filtered = filterType === 'ALL'
-        ? all
-        : all.filter((d) => String(d?.doc_type) === filterType);
-      setRows(filtered as any);
+      setRows(all as any);
     } catch (e: any) {
       console.error('ServiceDocumentsListPage load error', e);
       toast.error(e?.message || 'Could not load service documents');
     } finally {
       setLoading(false);
     }
-  }, [filterType]);
+  }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
+
+
+  const normalizedSearch = String(searchTerm || '').trim().toLowerCase();
+  const displayedRows = normalizedSearch
+    ? rows.filter((r) => {
+        const name = String(r.client_name || '').toLowerCase();
+        const num = String(r.doc_number || '').toLowerCase();
+        return name.includes(normalizedSearch) || num.includes(normalizedSearch);
+      })
+    : rows;
 
   return (
     <DashboardLayout>
@@ -94,12 +101,13 @@ export default function ServiceDocumentsListPage() {
         </div>
 
         <div className={`${BASE_CARD_CLASSES} p-6 flex flex-wrap items-center gap-3`}>
-          <label className="text-sm font-semibold text-[#7A705A]">Type</label>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className={INPUT_CLASSES}>
-            <option value="ALL">All</option>
-            <option value="JOB_ESTIMATE">Job Estimate</option>
-            <option value="CLASSIC_INVOICE">Classic Invoice</option>
-          </select>
+          <label className="text-sm font-semibold text-[#7A705A]">Search</label>
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Client name or Invoice #"
+            className={INPUT_CLASSES}
+          />
 
           <button onClick={load} className={`${TERTIARY_BUTTON_CLASSES} ml-auto`}>
             <i className="ri-refresh-line" />
@@ -112,7 +120,7 @@ export default function ServiceDocumentsListPage() {
             <table className="w-full text-sm">
               <thead className="bg-[#F8F1E3]">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-semibold tracking-[0.08em] uppercase text-[#7A705A]">Number</th>
+                  <th className="text-left px-6 py-3 text-xs font-semibold tracking-[0.08em] uppercase text-[#7A705A]">Invoice #</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold tracking-[0.08em] uppercase text-[#7A705A]">Type</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold tracking-[0.08em] uppercase text-[#7A705A]">Status</th>
                   <th className="text-left px-6 py-3 text-xs font-semibold tracking-[0.08em] uppercase text-[#7A705A]">Client</th>
@@ -130,7 +138,7 @@ export default function ServiceDocumentsListPage() {
                     <td className="px-6 py-6 text-[#7A705A]" colSpan={6}>No documents yet.</td>
                   </tr>
                 ) : (
-                  rows.map((r) => (
+                  displayedRows.map((r) => (
                     <tr
                       key={r.id}
                       className="hover:bg-[#FFF7E8] cursor-pointer transition"
