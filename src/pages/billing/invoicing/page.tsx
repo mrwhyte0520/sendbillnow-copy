@@ -1982,6 +1982,14 @@ export default function InvoicingPage() {
 
 
 
+          late_fee_amount: Number((inv as any).late_fee_amount) || 0,
+
+
+
+          bounced_check_fee_amount: Number((inv as any).bounced_check_fee_amount) || 0,
+
+
+
           status,
 
 
