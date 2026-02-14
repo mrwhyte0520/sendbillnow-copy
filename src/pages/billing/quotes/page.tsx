@@ -74,13 +74,9 @@ const formatInvoiceNumberDisplay = (raw: string): string => {
 
   if (!Number.isFinite(counter) || counter < 0) return s;
 
-  const block = Math.floor(counter / 1000);
+  const padded = String(counter).padStart(4, '0');
 
-  const remainder = counter % 1000;
-
-  const padded = String(remainder).padStart(3, '0');
-
-  return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+  return `${prefix}${padded}`;
 
 };
 

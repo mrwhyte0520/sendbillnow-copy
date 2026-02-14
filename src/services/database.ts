@@ -8794,10 +8794,8 @@ export const invoicesService = {
         const counter = Number.parseInt(suffixRaw, 10);
         if (!Number.isFinite(counter) || counter < 0) return s;
 
-        const block = Math.floor(counter / 1000);
-        const remainder = counter % 1000;
-        const padded = String(remainder).padStart(3, '0');
-        return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+        const padded = String(counter).padStart(4, '0');
+        return `${prefix}${padded}`;
       };
 
       // Determinar si omitir validación de período (planes básicos no la requieren)
@@ -8829,6 +8827,26 @@ export const invoicesService = {
       }
 
       const invoiceToInsert = { ...(invoice || {}) } as any;
+
+      const rawAccountNumber = invoiceToInsert.account_number;
+      const normalizedAccountNumber =
+        rawAccountNumber === null || rawAccountNumber === undefined ? '' : String(rawAccountNumber).trim();
+      const hasValidAccountNumber = Boolean(normalizedAccountNumber) && /^[0-9]+$/.test(normalizedAccountNumber);
+
+      if (!hasValidAccountNumber) {
+        try {
+          const { data: acctNum, error: acctErr } = await supabase.rpc('next_invoice_account_number', {
+            p_tenant_id: tenantId,
+          });
+          if (!acctErr) {
+            const s = String(acctNum || '').trim();
+            if (s) invoiceToInsert.account_number = s;
+          }
+        } catch {
+          // best-effort only
+        }
+      }
+
       if (!invoiceToInsert.invoice_number) {
         const { data: nextNumber, error: nextErr } = await supabase.rpc('next_invoice_number', {
           p_tenant_id: tenantId,
@@ -10299,10 +10317,8 @@ export const quotesService = {
         if (!/^[0-9]+$/.test(suffixRaw)) return s;
         const counter = Number.parseInt(suffixRaw, 10);
         if (!Number.isFinite(counter) || counter < 0) return s;
-        const block = Math.floor(counter / 1000);
-        const remainder = counter % 1000;
-        const padded = String(remainder).padStart(3, '0');
-        return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+        const padded = String(counter).padStart(4, '0');
+        return `${prefix}${padded}`;
       };
 
       const baseQuote = {

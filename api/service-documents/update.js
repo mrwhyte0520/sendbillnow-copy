@@ -78,6 +78,11 @@ export default async function handler(req, res) {
     patch.client_address = v || null;
   }
 
+  if (body.accountNumber !== undefined || body.account_number !== undefined) {
+    const v = String(body.accountNumber ?? body.account_number ?? '').trim();
+    patch.account_number = v || null;
+  }
+
   if (body.currency !== undefined) {
     const v = String(body.currency ?? '').trim();
     if (v) patch.currency = v;
@@ -105,7 +110,7 @@ export default async function handler(req, res) {
     .update(patch)
     .eq('id', id)
     .eq('user_id', tenantId)
-    .select('id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, sent_at, viewed_at, client_signed_at, created_at, updated_at')
+    .select('id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, sent_at, viewed_at, client_signed_at, created_at, updated_at')
     .maybeSingle();
 
   if (error) {

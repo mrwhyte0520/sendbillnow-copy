@@ -210,6 +210,10 @@ interface UiInvoice {
 
 
 
+  account_number?: string;
+
+
+
   customerId?: string;
 
 
@@ -378,19 +382,9 @@ const formatInvoiceNumberDisplay = (raw: string): string => {
 
 
 
-  const block = Math.floor(counter / 1000);
+  const padded = String(counter).padStart(4, '0');
 
-
-
-  const remainder = counter % 1000;
-
-
-
-  const padded = String(remainder).padStart(3, '0');
-
-
-
-  return `${prefix}${block > 0 ? String(block) : ''}${padded}`;
+  return `${prefix}${padded}`;
 
 
 
@@ -1908,6 +1902,22 @@ export default function InvoicingPage() {
 
 
 
+          account_number:
+
+
+
+            (inv as any).account_number === null || (inv as any).account_number === undefined
+
+
+
+              ? undefined
+
+
+
+              : String((inv as any).account_number),
+
+
+
           customerId: String((inv as any).customer_id || customerData.id || ''),
 
 
@@ -3181,6 +3191,8 @@ export default function InvoicingPage() {
 
 
       invoiceNumber: formatInvoiceNumberDisplay(invoiceToPrint.id),
+
+      accountNumber: (invoiceToPrint as any).account_number ?? (invoiceToPrint as any).accountNumber ?? undefined,
 
 
 

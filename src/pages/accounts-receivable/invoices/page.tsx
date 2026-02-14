@@ -2223,6 +2223,7 @@ export default function InvoicesPage() {
             }
             const invoiceData = {
               invoiceNumber: invoiceToPrint.invoiceNumber,
+              accountNumber: (invoiceToPrint as any).account_number ?? (invoiceToPrint as any).accountNumber ?? undefined,
               date: invoiceToPrint.date,
               dueDate: invoiceToPrint.dueDate,
               amount: invoiceToPrint.amount,

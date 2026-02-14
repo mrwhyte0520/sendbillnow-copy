@@ -229,11 +229,10 @@ export default async function handler(req, res) {
     const { data: doc, error: docError } = await supabase
       .from('service_documents')
       .select(
-        'id, user_id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
+        'id, user_id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, material_cost, client_signed_at, contractor_signed_at, sealed_at, sealed_pdf_path, sealed_email_sent_at, voided_at, expired_at, created_at'
       )
       .eq('id', documentId)
       .eq('user_id', tenantId)
-      .limit(1)
       .maybeSingle();
 
   if (docError) return res.status(500).json({ ok: false, error: docError.message || 'Could not read document' });
@@ -443,6 +442,16 @@ export default async function handler(req, res) {
   pdf.setFontSize(30);
   pdf.text(docLabel, marginX, 56);
 
+  if (doc.doc_type === 'JOB_ESTIMATE') {
+    const tag = '(Valid for 30 days)';
+    const tagX = marginX + pdf.getTextWidth(docLabel) + 10;
+    pdf.setFontSize(14);
+    pdf.setTextColor(22, 163, 74);
+    pdf.text(tag, tagX, 56);
+    pdf.setTextColor(0, 27, 158);
+    pdf.setFontSize(30);
+  }
+
   // Company box width (defined early so customer text can respect it)
   const companyBoxW = 170;
 
@@ -459,19 +468,22 @@ export default async function handler(req, res) {
   const addrState = (zipStartIdx === -1 ? addrTokens : addrTokens.slice(0, zipStartIdx)).join(' ').trim();
   const addrZip = (zipStartIdx === -1 ? '' : addrTokens.slice(zipStartIdx).join(' ')).trim();
 
-  // Customer block (left column: Name/Email/Phone, right column: Address/City/State/Zip)
-  const maxCustTextW = (pageWidth - marginX - companyBoxW - marginX - 20) / 2; // half for each column
+  // Customer block (left column: Name/Email/Phone, right column: Address)
+  const customerColsW = pageWidth - marginX - companyBoxW - marginX - 20;
+  const customerColGap = 18;
+  const leftColW = customerColsW * 0.43;
+  const maxCustTextW = customerColsW - leftColW - customerColGap; // right column width
   const customerY = 78;
   const leftX = marginX;
-  const rightX = marginX + maxCustTextW + 22;
+  const rightX = marginX + leftColW + customerColGap;
 
   // Left column: Name, Email, Phone
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(0, 0, 0);
   pdf.text('CUSTOMER:', leftX, customerY);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 64, customerY);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 70, customerY);
 
   pdf.setFontSize(9);
   let customerInfoY = customerY + 14;
@@ -490,32 +502,21 @@ export default async function handler(req, res) {
     customerInfoY += 12;
   }
 
-  // Right column: Address, City, State, Zip
+  // Right column: Address (2 lines)
   let rightY = customerY;
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   pdf.text('ADDRESS:', rightX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrStreet || '-').substring(0, 35), rightX + 52, rightY);
-  rightY += 14;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('CITY:', rightX, rightY);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(safeText(addrCity || '-').substring(0, 35), rightX + 28, rightY);
+  const addrValueX = rightX + 52;
+  const addrValueMaxW = maxCustTextW - (addrValueX - rightX) - 6;
+  pdf.text(truncateToWidth(pdf, addrStreet || '-', addrValueMaxW), addrValueX, rightY);
   rightY += 12;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('STATE:', rightX, rightY);
-  pdf.setFont('helvetica', 'normal');
-  const stateX = rightX + 36;
-  const stateMaxW = maxCustTextW - (stateX - rightX) - 6;
-  pdf.text(truncateToWidth(pdf, addrState || '-', stateMaxW), stateX, rightY);
-  rightY += 12;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('ZIP:', rightX, rightY);
-  pdf.setFont('helvetica', 'normal');
-  const zipX = rightX + 20;
-  const zipMaxW = maxCustTextW - (zipX - rightX) - 6;
-  pdf.text(truncateToWidth(pdf, addrZip || '-', zipMaxW), zipX, rightY);
+
+  const addrTail = [addrState, addrZip].filter(Boolean).join(' ').trim();
+  const addrLine2 = [addrCity, addrTail].filter(Boolean).join(addrCity && addrTail ? ', ' : '');
+  const addrLine2MaxW = maxCustTextW - 6;
+  pdf.text(truncateToWidth(pdf, addrLine2 || '-', addrLine2MaxW), rightX, rightY);
   rightY += 12;
 
   customerInfoY = Math.max(customerInfoY, rightY);
@@ -529,7 +530,7 @@ export default async function handler(req, res) {
   const hasLogo = Boolean(logo);
   const logoSquare = 36; // small square for logo
 
-  // Company address formatting (address + city on one line, state + zip on the next)
+  // Company address formatting (street on one line, city/state/zip on the next)
   const rawCompanyAddr = String(companyAddressForPdf || '').replace(/\r\n/g, '\n');
   const companyAddrLines = rawCompanyAddr.split('\n').map((l) => l.trim()).filter(Boolean);
   const companyStreet = companyAddrLines[0] || '';
@@ -541,8 +542,9 @@ export default async function handler(req, res) {
   const companyState = companyTokens[0] || '';
   const companyZip = companyTokens.slice(1).join(' ').trim();
 
-  const companyAddrLine1 = [companyStreet, companyCity].filter(Boolean).join(companyStreet && companyCity ? ', ' : '');
-  const companyAddrLine2 = [companyState, companyZip].filter(Boolean).join(' ');
+  const companyAddrLine1 = companyStreet;
+  const companyTail = [companyState, companyZip].filter(Boolean).join(' ');
+  const companyAddrLine2 = [companyCity, companyTail].filter(Boolean).join(companyCity && companyTail ? ', ' : '');
 
   const companyLines = [
     safeText(doc.company_name || 'COMPANY'),
@@ -616,7 +618,7 @@ export default async function handler(req, res) {
 
   const infoY2 = infoY + 16;
   pdf.setFont('helvetica', 'bold');
-  const l2a = 'PO #:';
+  const l2a = 'Account #:';
   const l2b = 'MATERIAL COST:';
   const l2c = 'ESTIMATED COST:';
   pdf.text(l2a, marginX, infoY2);
@@ -625,7 +627,8 @@ export default async function handler(req, res) {
   pdf.text(l2c, marginX + colW * 2, infoY2);
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('N/A', marginX + pdf.getTextWidth(l2a) + pad, infoY2);
+  const acctText = safeText(doc.account_number || '').trim();
+  pdf.text(acctText || 'N/A', marginX + pdf.getTextWidth(l2a) + pad, infoY2);
   const materialCostVal = Number(doc.material_cost ?? 0);
   pdf.text(materialCostVal > 0 ? moneyWithCurrency(materialCostVal, doc.currency) : '', marginX + colW + pdf.getTextWidth(l2b) + pad, infoY2);
   const estimatedCostVal = Number(doc.total ?? 0);
@@ -669,7 +672,7 @@ export default async function handler(req, res) {
   // ── Manual table drawing (matches Job Estimate HTML template) ──
   const tblX = marginX;
   const tblW = contentW;
-  const colWidths = [tblW - 220, 60, 80, 80]; // Description, Qty, Price, Amount
+  const colWidths = [tblW - 190, 50, 70, 70]; // Description, Qty, Price, Amount
   const headerH = 26;
   const rowH = 22;
   const headers = ['Description', 'Qty', 'Price', 'Amount'];
@@ -710,7 +713,9 @@ export default async function handler(req, res) {
       const align = headerAligns[ci];
       const tx = align === 'right' ? dColX + cw - 8 : align === 'center' ? dColX + cw / 2 : dColX + 8;
       const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
-      pdf.text(String(r[ci]), tx, dataY + 15, opts);
+      const rawText = String(r[ci]);
+      const cellText = ci === 0 ? truncateToWidth(pdf, rawText, cw - 16) : rawText;
+      pdf.text(cellText, tx, dataY + 15, opts);
       if (ci < r.length - 1) pdf.line(dColX + cw, dataY, dColX + cw, dataY + rowH);
       dColX += cw;
     }

@@ -45,6 +45,7 @@ export default async function handler(req, res) {
   const clientEmail = typeof body.clientEmail === 'string' ? body.clientEmail.trim() : (typeof body.client_email === 'string' ? body.client_email.trim() : '');
   const clientPhone = typeof body.clientPhone === 'string' ? body.clientPhone.trim() : (typeof body.client_phone === 'string' ? body.client_phone.trim() : '');
   const clientAddress = typeof body.clientAddress === 'string' ? body.clientAddress.trim() : (typeof body.client_address === 'string' ? body.client_address.trim() : '');
+  const accountNumber = typeof body.accountNumber === 'string' ? body.accountNumber.trim() : (typeof body.account_number === 'string' ? body.account_number.trim() : '');
 
   const { data: company } = await supabase
     .from('company_info')
@@ -63,6 +64,8 @@ export default async function handler(req, res) {
 
   let docNumber;
 
+  let effectiveAccountNumber = accountNumber;
+
   if (docType === 'JOB_ESTIMATE') {
     // Use the same numbering system as invoices (4873xxx format)
     const { data: rawNum, error: seqError } = await supabase.rpc('next_invoice_number', {
@@ -71,17 +74,26 @@ export default async function handler(req, res) {
     if (seqError) {
       return res.status(500).json({ ok: false, error: seqError.message || 'Could not generate document number' });
     }
-    // Format: 4873000031 → 4873031 (same display as invoices)
+    // Format: always 8 digits.
+    // Rule: 4873 + 4-digit counter (padStart), e.g. 48730100, 48730101
     const s = String(rawNum || '').trim();
     const pfx = '4873';
     if (s.startsWith(pfx) && /^[0-9]+$/.test(s.slice(pfx.length))) {
       const counter = parseInt(s.slice(pfx.length), 10);
-      const block = Math.floor(counter / 1000);
-      const remainder = counter % 1000;
-      const padded = String(remainder).padStart(3, '0');
-      docNumber = `${pfx}${block > 0 ? String(block) : ''}${padded}`;
+      const padded = String(counter).padStart(4, '0');
+      docNumber = `${pfx}${padded}`;
     } else {
       docNumber = s;
+    }
+
+    if (!effectiveAccountNumber) {
+      const { data: acctNum, error: acctErr } = await supabase.rpc('next_service_document_account_number', {
+        p_tenant_id: tenantId,
+      });
+      if (acctErr) {
+        return res.status(500).json({ ok: false, error: acctErr.message || 'Could not generate account number' });
+      }
+      effectiveAccountNumber = String(acctNum || '').trim();
     }
   } else {
     const { data: rawNum, error: seqError } = await supabase.rpc('next_document_number', {
@@ -109,6 +121,7 @@ export default async function handler(req, res) {
     status: 'Draft',
     doc_number: String(docNumber || '').trim(),
     currency,
+    account_number: effectiveAccountNumber || null,
     company_name: company?.name ?? null,
     company_rnc: company?.ruc ?? null,
     company_phone: company?.phone ?? null,
@@ -129,7 +142,7 @@ export default async function handler(req, res) {
   const { data, error } = await supabase
     .from('service_documents')
     .insert(payload)
-    .select('id, doc_type, status, doc_number, currency, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, created_at, updated_at')
+    .select('id, doc_type, status, doc_number, currency, account_number, company_name, company_rnc, company_phone, company_email, company_address, company_logo, client_name, client_email, client_phone, client_address, terms_snapshot, tax_rate, subtotal, tax, total, created_at, updated_at')
     .single();
 
   if (error) {

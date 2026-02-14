@@ -68,6 +68,8 @@ interface InvoiceData {
 
   invoiceNumber: string;
 
+  accountNumber?: string;
+
 
 
   date: string;
@@ -158,6 +160,14 @@ function generateClassicInvoiceTemplate(
     const d = new Date(invoice.date);
     if (Number.isNaN(d.getTime())) return '';
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  })();
+
+  const classicAccountNumber = (() => {
+    const raw = (invoice as any)?.accountNumber ?? (invoice as any)?.account_number;
+    const s = raw === null || raw === undefined ? '' : String(raw).trim();
+    if (!s) return 'N/A';
+    if (!/^[0-9]+$/.test(s)) return 'N/A';
+    return s;
   })();
 
   const customerAddr = (() => {
@@ -253,6 +263,15 @@ body{font-family:Arial, sans-serif;background:#fff;color:#000;}
 
 .invoice{max-width:900px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:200px;}
 
+.invoice::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:
+  radial-gradient(520px 220px at 20% 18%, rgba(0,27,158,0.10), transparent 60%),
+  radial-gradient(420px 200px at 85% 28%, rgba(22,163,74,0.08), transparent 60%);
+}
+
+.invoice::after{content:'';position:absolute;left:-40px;top:120px;width:260px;height:260px;border-radius:999px;pointer-events:none;z-index:0;background:linear-gradient(135deg, rgba(0,27,158,0.10), rgba(0,27,158,0));filter:blur(0px);}
+
+.invoice > *{position:relative;z-index:1;}
+
 .top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 10px 0 10px;}
 
 .logo{width:170px;height:95px;border:none;display:flex;align-items:center;justify-content:center;font-weight:700;}
@@ -286,6 +305,12 @@ body{font-family:Arial, sans-serif;background:#fff;color:#000;}
 .meta .row .label{margin-bottom:0;text-transform:none;font-size:11px;letter-spacing:0;}
 
 .meta .row .label{display:inline-block;min-width:88px;}
+
+.meta .billTo .customerName{font-weight:900;font-size:14px;color:#111;}
+
+.meta .invoiceInfo .row.invoiceTotalRow{margin-top:6px;font-size:13px;}
+.meta .invoiceInfo .row.invoiceTotalRow .label{font-weight:900;color:${BLUE};}
+.meta .invoiceInfo .row.invoiceTotalRow .value{font-size:14px;font-weight:900;color:#16a34a;}
 
 .metaDivider{height:2px;background:${BLUE} !important;margin:10px 10px 6px 10px;}
 
@@ -368,7 +393,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         <div class="label">Bill To:</div>
 
-        <div>${escapeHtml(customer.name || 'Customer')}</div>
+        <div class="customerName">${escapeHtml(customer.name || 'Customer')}</div>
 
         ${customerAddressHtml}
 
@@ -380,6 +405,8 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
       <div class="box invoiceInfo">
 
+        <div class="row"><span class="label">Account #:</span> ${escapeHtml(classicAccountNumber)}</div>
+
         <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
         <div class="row"><span class="label">Invoice Date:</span> ${escapeHtml(formatDate(invoice.date))}</div>
@@ -390,7 +417,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
           ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>`
           : ''}
 
-        <div class="row"><span class="label">Invoice Total:</span> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></div>
+        <div class="row invoiceTotalRow"><span class="label">Invoice Total:</span> <span class="value">${formatAmount(invoice.amount)}</span></div>
 
       </div>
 
@@ -450,9 +477,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         <div class="row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
 
-        <div class="row" style="font-weight:800;"><span>Total:</span><span>${formatAmount(invoice.amount)}</span></div>
-
-        <div class="row"><span>Balance Due:</span><span>${formatAmount(invoice.amount)}</span></div>
+        <div class="row" style="font-weight:800;"><span>Grand Total:</span><span style="color:#16a34a;font-weight:900;">${formatAmount(invoice.amount)}</span></div>
 
       </div>
 
@@ -592,13 +617,18 @@ function generateCashReceiptTemplate(
 
 html,body{height:100%;}
 
-body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
+body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;margin:0;}
 
 .doc{width:100%;min-height:100vh;display:flex;flex-direction:column;}
 
 .bar{height:10px;background:${BLUE};}
 
-.content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;}
+.content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+
+.shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+.shape.s1{width:220px;height:220px;left:-70px;top:70px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.28),rgba(37,99,235,0));}
+.shape.s2{width:180px;height:180px;right:-60px;top:170px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.22),rgba(16,185,129,0));}
+.shape.s3{width:240px;height:240px;right:-80px;bottom:180px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.18),rgba(37,99,235,0));}
 
 
 
@@ -614,6 +644,8 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
 
 .meta{min-width:170px;text-align:center;}
 
+.metaBox{background:rgba(255,255,255,0.38);border:1px solid rgba(209,213,219,0.18);border-radius:12px;padding:10px 12px;box-shadow:0 2px 7px rgba(17,24,39,0.025);}
+
 
 .metaRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #d1d5db;font-size:11px;width:100%;}
 
@@ -625,13 +657,19 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
 
 
 
-.fromTo{margin-top:-118px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;max-width:520px;margin-left:18px;margin-right:auto;}
+.fromTo{margin-top:-138px;display:grid;grid-template-columns:1fr 1fr;gap:26px;font-size:11px;max-width:560px;margin-left:18px;margin-right:auto;position:relative;z-index:1;}
 
 .fromTo .head{font-weight:900;margin-bottom:8px;text-transform:uppercase;color:#6b7280;font-size:10px;}
 
 .toCol{margin-left:0;}
 
-.line{margin:3px 0;}
+.line{margin:4px 0;line-height:1.25;}
+
+.addrBox{background:rgba(255,255,255,0.34);border:1px solid rgba(209,213,219,0.16);border-radius:12px;padding:12px 14px;box-shadow:0 2px 7px rgba(17,24,39,0.02);}
+
+.companyName{font-weight:900;font-size:13px;color:#111;letter-spacing:0.2px;}
+
+.customerName{font-weight:900;color:#111;}
 
 
 
@@ -667,7 +705,7 @@ td{font-size:11px;}
 
 .balanceBox .curr{font-weight:900;}
 
-.balanceBox .amt{font-weight:900;}
+.balanceBox .amt{font-weight:900;color:#16a34a;}
 
 
 
@@ -693,7 +731,9 @@ td{font-size:11px;}
 
 .metaRow.emphasis .label{color:${BLUE};}
 
-.metaRow.emphasis .value{color:${BLUE};}
+.metaRow.emphasis .value{color:#16a34a;font-weight:900;}
+
+.metaRow.emphasis{border-bottom:2px solid rgba(22,163,74,0.25);}
 
 </style>
 
@@ -705,6 +745,12 @@ td{font-size:11px;}
 
     <div class="content">
 
+      <div class="shape s1"></div>
+
+      <div class="shape s2"></div>
+
+      <div class="shape s3"></div>
+
       <div class="top">
 
         <div class="title">CASH RECEIPT</div>
@@ -713,7 +759,13 @@ td{font-size:11px;}
 
           <div class="logoCircle">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
 
-          <div class="meta">
+          <div class="meta metaBox">
+
+            ${(() => {
+              const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+              const s = raw === null || raw === undefined ? '' : String(raw).trim();
+              return s ? `<div class="metaRow"><span class="label">Account #:</span><span class="value">${escapeHtml(s)}</span></div>` : '';
+            })()}
 
             <div class="metaRow"><span class="label">Invoice #:</span><span class="value">${escapeHtml(invoice.invoiceNumber)}</span></div>
 
@@ -735,11 +787,11 @@ td{font-size:11px;}
 
       <div class="fromTo">
 
-        <div>
+        <div class="addrBox">
 
           <div class="head">From</div>
 
-          <div class="line">${escapeHtml(company.name || 'Your Company Name')}</div>
+          <div class="line companyName">${escapeHtml(company.name || 'Your Company Name')}</div>
 
           ${(() => {
             const lines = companyAddressLines(company);
@@ -754,11 +806,11 @@ td{font-size:11px;}
 
         </div>
 
-        <div class="toCol">
+        <div class="toCol addrBox">
 
           <div class="head">To</div>
 
-          <div class="line">${escapeHtml(customer.name || 'Client Name')}</div>
+          <div class="line customerName">${escapeHtml(customer.name || 'Client Name')}</div>
 
           ${(() => {
             const lines = customerAddressLines(customer);
@@ -1022,15 +1074,20 @@ function generateRentReceiptTemplate(
 
 html,body{height:100%;}
 
-body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
+body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;margin:0;}
 
-.receipt{width:100%;max-width:100%;min-height:100vh;display:flex;flex-direction:column;background:#fff;}
+.receipt{width:100%;max-width:100%;min-height:100vh;display:flex;flex-direction:column;background:transparent;position:relative;overflow:hidden;}
 
 .bar{height:10px;background:${BLUE};}
 
 .bar.bottom{}
 
 .header{padding:18px 18px 10px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;background:#f7f7f7;}
+
+.shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+.shape.s1{width:240px;height:240px;left:-90px;top:90px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.22),rgba(37,99,235,0));}
+.shape.s2{width:200px;height:200px;right:-80px;top:160px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.18),rgba(16,185,129,0));}
+.shape.s3{width:280px;height:280px;right:-110px;bottom:140px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.16),rgba(37,99,235,0));}
 
 .companyLeft{display:flex;gap:14px;align-items:flex-start;}
 
@@ -1056,7 +1113,7 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;margin:0;}
 
 
 
-.content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;}
+.content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;position:relative;z-index:1;}
 
 .billedTo{width:420px;}
 
@@ -1100,7 +1157,7 @@ td{font-size:11px;}
 
 .balanceBox .curr{font-weight:900;}
 
-.balanceBox .amt{font-weight:900;}
+.balanceBox .amt{font-weight:900;color:#16a34a;}
 
 
 
@@ -1108,13 +1165,20 @@ td{font-size:11px;}
 
 .footer a{color:#fff !important;text-decoration:underline;}
 
-.rightMetaRow.emphasis{color:${BLUE};font-weight:900;}
+.rightMetaRow.emphasis .label{color:${BLUE};font-weight:900;}
+.rightMetaRow.emphasis div:last-child{color:#16a34a;font-weight:900;}
 
 </style>
 
 </head><body>
 
   <div class="receipt">
+
+    <div class="shape s1"></div>
+
+    <div class="shape s2"></div>
+
+    <div class="shape s3"></div>
 
     <div class="bar"></div>
 
@@ -1152,6 +1216,12 @@ td{font-size:11px;}
         <div class="title">RENT RECEIPT</div>
 
         <div class="rightMeta">
+
+          ${(() => {
+            const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+            const s = raw === null || raw === undefined ? '' : String(raw).trim();
+            return s ? `<div class="rightMetaRow"><div class="label">ACCOUNT #:</div><div>${escapeHtml(s)}</div></div>` : '';
+          })()}
 
           <div class="rightMetaRow"><div class="label">INVOICE #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
 
@@ -1255,8 +1325,6 @@ td{font-size:11px;}
           <div class="totalsRow"><div class="label">TOTAL</div><div class="value">${formatAmount(invoice.amount)}</div></div>
 
           <div class="totalsRow"><div class="label">DEPOSIT</div><div class="value">${formatAmount(depositAmount)}</div></div>
-
-          <div class="totalsRow"><div class="label">BALANCE DUE</div><div class="value">${formatAmount(balanceDueAmount)}</div></div>
 
 
 
@@ -1392,11 +1460,16 @@ function generateBlueInvoiceTemplate(
 
 html,body{height:100%;}
 
-body{font-family:Arial, sans-serif;background:#fff;color:#111;}
+body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;}
 
 
 
-.doc{max-width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+.doc{max-width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+
+.shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+.shape.s1{width:260px;height:260px;left:-95px;top:120px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.22),rgba(37,99,235,0));}
+.shape.s2{width:210px;height:210px;right:-85px;top:190px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.18),rgba(16,185,129,0));}
+.shape.s3{width:320px;height:320px;right:-120px;bottom:160px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.16),rgba(37,99,235,0));}
 
 .main{flex:1;display:flex;flex-direction:column;}
 
@@ -1404,9 +1477,9 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;}
 
 .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 0 0 0;}
 
-.companyBox{width:300px;background:${BLUE} !important;color:#fff !important;padding:16px 16px;font-size:11px;line-height:1.35;text-align:center;border:2px solid ${BLUE};}
+.companyBox{width:300px;background:transparent !important;color:#111 !important;padding:16px 16px;font-size:11px;line-height:1.35;text-align:center;border:2px solid ${BLUE};}
 
-.companyBox .name{font-weight:900;font-size:13px;letter-spacing:0.4px;margin-bottom:6px;}
+.companyBox .name{font-weight:900;font-size:14px;letter-spacing:0.4px;margin-bottom:6px;color:${BLUE};}
 
 .logoBox{width:230px;height:120px;border:none;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;}
 
@@ -1414,7 +1487,7 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;}
 
 
 
-.mid{display:grid;grid-template-columns:1fr 1fr 300px;gap:40px;margin-top:28px;font-size:12px;align-items:start;}
+.mid{display:grid;grid-template-columns:1fr 1fr 280px;gap:26px;margin-top:28px;font-size:12px;align-items:start;}
 
 .blockTitle{font-weight:900;margin-bottom:6px;}
 
@@ -1422,11 +1495,17 @@ body{font-family:Arial, sans-serif;background:#fff;color:#111;}
 
 .addrLine2{white-space:nowrap;}
 
-.details{justify-self:end;text-align:right;}
+.details{justify-self:end;text-align:right;padding-right:12px;}
 
 .invoiceTitle{font-size:40px;font-weight:900;letter-spacing:0.6px;text-align:right;margin-bottom:10px;color:${BLUE};}
 
-.details .line strong{display:inline-block;min-width:110px;}
+.details .line strong{display:inline-block;min-width:95px;}
+
+.shipTo{padding-left:36px;}
+
+.details .line.invoiceTotalLine strong{color:${BLUE};}
+
+.details .line.invoiceTotalLine .invoiceTotalAmt{color:#16a34a;font-weight:900;}
 
 
 
@@ -1436,11 +1515,11 @@ table{width:100%;border-collapse:collapse;}
 
 th{background:${BLUE} !important;color:#fff !important;text-align:left;font-size:12px;padding:12px 14px;border:2px solid ${BLUE};text-transform:uppercase;letter-spacing:0.4px;}
 
-th:nth-child(2){text-align:center;width:90px;}
+th:nth-child(2){text-align:center;width:60px;}
 
-th:nth-child(3){text-align:right;width:140px;}
+th:nth-child(3){text-align:right;width:110px;}
 
-th:nth-child(4){text-align:right;width:160px;}
+th:nth-child(4){text-align:right;width:105px;}
 
 td{font-size:12px;padding:12px 14px;border-left:1px solid ${BLUE};border-right:1px solid ${BLUE};}
 
@@ -1485,6 +1564,12 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 </head><body>
 
   <div class="doc">
+
+    <div class="shape s1"></div>
+
+    <div class="shape s2"></div>
+
+    <div class="shape s3"></div>
 
     <div class="main">
 
@@ -1538,7 +1623,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
         </div>
 
-        <div>
+        <div class="shipTo">
 
           <div class="blockTitle">Ship To:</div>
 
@@ -1557,6 +1642,12 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           <div class="invoiceTitle">INVOICE</div>
 
+          ${(() => {
+            const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+            const s = raw === null || raw === undefined ? '' : String(raw).trim();
+            return s ? `<div class="line"><strong>Account #:</strong> ${escapeHtml(s)}</div>` : '';
+          })()}
+
           <div class="line"><strong>Invoice #:</strong> ${escapeHtml(invoice.invoiceNumber)}</div>
 
           <div class="line"><strong>Time:</strong> ${escapeHtml(timeStr)}</div>
@@ -1565,7 +1656,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           ${invoice.createdBy ? `<div class="line"><strong>Created By:</strong> ${escapeHtml(invoice.createdBy)}</div>` : ''}
 
-          <div class="line"><strong>Invoice Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></div>
+          <div class="line invoiceTotalLine"><strong>Invoice Total:</strong> <span class="invoiceTotalAmt">${formatAmount(invoice.amount)}</span></div>
 
         </div>
 
@@ -1789,9 +1880,13 @@ body{font-family:Arial, sans-serif;background:#fff;color:#000;}
 
 .title{font-size:34px;font-weight:900;letter-spacing:1px;color:${BLUE};}
 
+.valid{font-size:16px;font-weight:900;letter-spacing:0.2px;color:${BLUE};margin-left:10px;}
+
 .companyBox{border:2px solid ${BLUE};padding:10px;width:240px;font-size:11px;line-height:1.35;background-color:${BLUE} !important;color:#fff !important;}
 
 .companyBox img{background:#fff;padding:4px;border-radius:4px;}
+
+.addrLine2{white-space:nowrap;}
 
 .line{border-top:2px solid ${BLUE};margin:14px 0;}
 
@@ -1853,7 +1948,7 @@ th:nth-child(4){width:140px;text-align:right;}
 
       <div>
 
-        <div class="title">JOB ESTIMATE</div>
+        <div class="title">JOB ESTIMATE <span class="valid">(Valid for 30 days)</span></div>
 
         <div style="margin-top:10px;font-size:11px;line-height:1.5;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
 
@@ -1896,17 +1991,8 @@ th:nth-child(4){width:140px;text-align:right;}
           <div style="font-weight:800;">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
           ${(() => {
-            const hasStructuredParts = Boolean(company.city || company.state || company.zip);
-            const parsed = !hasStructuredParts ? parseAddress(company.address) : { street: '', city: '', state: '', zip: '' };
-            const street = String(company.address || parsed.street || '').trim();
-            const city = String(company.city || parsed.city || '').trim();
-            const state = String(company.state || parsed.state || '').trim();
-            const zip = String(company.zip || parsed.zip || '').trim();
-
-            const line1 = [street, city].filter(Boolean).join(city && street ? ', ' : '');
-            const line2 = [state, zip].filter(Boolean).join(' ');
-
-            return `${line1 ? `<div>${escapeHtml(line1)}</div>` : ''}${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}`;
+            const lines = companyAddressLines(company);
+            return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
           })()}
 
           ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}

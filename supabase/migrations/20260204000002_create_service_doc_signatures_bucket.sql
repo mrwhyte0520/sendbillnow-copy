@@ -6,7 +6,8 @@
 
 do $$
 begin
-  -- Create bucket (id is the bucket name)
+  -- Create bucket (id is the bucket name).0
+.
   insert into storage.buckets (id, name, public)
   values ('service-doc-signatures', 'service-doc-signatures', false)
   on conflict (id) do update
