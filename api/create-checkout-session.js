@@ -62,7 +62,7 @@ const PLAN_NAMES = {
   'facturacion-premium': 'Facturación Premium',
   'pos-basic': 'POS Basic',
   'pos-premium': 'POS Premium',
-  student: 'Student Plan',
+  student: 'Contractor Plan',
 };
 
 function normalizePlanIdForEnv(planId) {

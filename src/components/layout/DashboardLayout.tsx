@@ -709,22 +709,26 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
             sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
           } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
         >
-          <div className="flex h-full flex-col">
-            <div className={`flex shrink-0 items-center justify-between bg-gradient-to-br from-[#008000] to-[#006600] shadow-[0_4px_20px_rgb(0,128,0,0.4)] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'h-16 px-3' : 'h-16 px-4'}`}>
-              {!sidebarCollapsed && (
-                <div className="flex flex-col">
-                  <span className="brand-serif text-white text-xl font-bold italic drop-shadow-sm">Send Bill Now</span>
-                  <span className="brand-serif text-white/80 text-xs font-bold italic">Complete POS & Invoicing System</span>
-                </div>
-              )}
-              {sidebarCollapsed && (
-                <span className="brand-serif text-white text-xl font-bold mx-auto italic drop-shadow-sm">SBN</span>
-              )}
-              
+          <div className="flex flex-col h-full">
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} px-4 py-4 bg-gradient-to-r from-[#008000] to-[#006600] border-b border-black/10`}>
+              <Link
+                to="/dashboard"
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}
+              >
+                {sidebarCollapsed ? (
+                  <span className="brand-display text-white text-xl font-bold italic drop-shadow-sm">SB</span>
+                ) : (
+                  <div className="flex flex-col">
+                    <span className="brand-display text-white text-xl font-bold italic drop-shadow-sm">Send Bill Now</span>
+                    <span className="brand-display text-white/80 text-xs font-bold italic">A Smart Invoice & POS System</span>
+                  </div>
+                )}
+              </Link>
+
               <button
-                type="button"
                 onClick={toggleSidebarCollapsed}
-                className="p-1.5 text-white/80 hover:text-white transition-all duration-300 hidden lg:flex"
+                className={`${sidebarCollapsed ? 'ml-0' : 'ml-3'} p-2 rounded-lg bg-white/10 text-white hover:bg-white/15 transition-colors`}
                 title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
                 <i className={`${sidebarCollapsed ? 'ri-menu-unfold-line' : 'ri-menu-fold-line'} text-lg`}></i>

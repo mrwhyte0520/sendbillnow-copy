@@ -38,7 +38,7 @@ export default function PlansPage() {
   const plans: Plan[] = [
     {
       id: 'student',
-      name: 'Student Plan',
+      name: 'Contractor Plan',
       priceMonthly: 0,
       priceAnnual: 85.0,
       description: 'Annual plan for students with limited module access',
@@ -52,7 +52,7 @@ export default function PlansPage() {
         'Settings access',
       ],
       popular: false,
-      color: 'from-sky-500 to-sky-600',
+      color: 'from-[#001B9E] to-[#001B9E]',
       icon: 'ri-graduation-cap-line',
       category: 'contabilidad'
     },
@@ -65,7 +65,7 @@ export default function PlansPage() {
       features: [
         'Full dashboard',
         'POS system',
-        '1 user',
+        '3 users',
         'Unlimited products',
         '1 inventory warehouse',
         'Customer management',
@@ -86,11 +86,11 @@ export default function PlansPage() {
       features: [
         'Full dashboard',
         'POS system',
-        '30 users',
+        'Unlimited users',
         'Unlimited products',
         'Unlimited inventory warehouses',
         'Customer management',
-        '2,000 electronic invoices',
+        'Unlimited electronic invoices',
         'Backup every 48 hours'
       ],
       popular: false,
@@ -329,13 +329,13 @@ export default function PlansPage() {
           ) : (
             <div className="mb-2">
               <div className="text-sm line-through opacity-60 mb-1">
-                ${formatMoney(plan.priceMonthly * 12)}/yearly
+                ${formatMoney(plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12))}/yearly
               </div>
               <div className="flex items-baseline justify-center">
                 <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
               </div>
               <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
+                30% OFF - Save ${formatMoney((plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12)) - plan.priceAnnual)}
               </div>
             </div>
           )}
@@ -364,6 +364,8 @@ export default function PlansPage() {
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
               ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
+              : plan.id === 'student'
+              ? 'bg-gradient-to-r from-[#001B9E] to-[#001B9E] text-white hover:from-[#00157A] hover:to-[#00157A]'
               : 'bg-gradient-to-r from-[#566738] to-[#3E4D2C] text-white hover:from-[#455532] hover:to-[#2F3C21]'
           }`}
         >
@@ -508,7 +510,7 @@ export default function PlansPage() {
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               <i className="ri-book-2-line mr-2 text-blue-600"></i>
-              Accounting Plans
+              All types of contractor
             </h2>
             <p className="text-gray-600">Choose a plan with accounting and billing modules.</p>
           </div>

@@ -1652,7 +1652,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           <div class="line"><strong>Time:</strong> ${escapeHtml(timeStr)}</div>
 
-          <div class="line"><strong>Due Date:</strong> ${escapeHtml(formatDate(invoice.dueDate))}</div>
+          <div class="line"><strong>Invoice Date:</strong> ${escapeHtml(formatDate(invoice.date))}</div>
 
           ${invoice.createdBy ? `<div class="line"><strong>Created By:</strong> ${escapeHtml(invoice.createdBy)}</div>` : ''}
 

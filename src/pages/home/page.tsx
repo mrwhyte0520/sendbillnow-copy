@@ -122,7 +122,7 @@ export default function HomePage() {
       features: [
         'Full dashboard',
         'POS system',
-        '1 user',
+        '3 users',
         'Unlimited products',
         '1 inventory warehouse',
         'Customer management',
@@ -141,11 +141,11 @@ export default function HomePage() {
       features: [
         'Full dashboard',
         'POS system',
-        '30 users',
+        'Unlimited users',
         'Unlimited products',
         'Unlimited inventory warehouses',
         'Customer management',
-        '2,000 electronic invoices',
+        'Unlimited electronic invoices',
         'Backup every 48 hours'
       ],
       popular: false,
@@ -234,11 +234,11 @@ export default function HomePage() {
                 heroInView && isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
               }`}
             >
-              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight text-gray-900 mb-4 sm:mb-6">
-                A Smart <span className="text-[#008000]">POS</span> System
+              <h1 className="brand-display text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight text-gray-900 mb-4 sm:mb-6">
+                A Smart Invoice & <span className="text-[#008000]">POS</span> System
               </h1>
               <p className="text-base sm:text-xl leading-relaxed text-gray-600 mb-8 max-w-3xl mx-auto">
-                A Smart POS System for all your POS needs, in one stop!
+                A Smart Invoice & POS System for all your business needs, in one stop!
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link 
@@ -457,13 +457,13 @@ export default function HomePage() {
                   ) : (
                     <div>
                       <div className="text-sm line-through opacity-60 mb-1">
-                        ${formatMoney(plan.priceMonthly * 12)}/yearly
+                        ${formatMoney(plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12))}/yearly
                       </div>
                       <div className="flex items-baseline justify-center">
                         <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
                       </div>
                       <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                        30% OFF - Save ${formatMoney(plan.priceMonthly * 12 - plan.priceAnnual)}
+                        30% OFF - Save ${formatMoney((plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12)) - plan.priceAnnual)}
                       </div>
                     </div>
                   )}
@@ -517,8 +517,8 @@ export default function HomePage() {
             ctaInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <h2 className="text-4xl font-bold text-white mb-6">
-            Ready to modernize your POS?
+          <h2 className="brand-display text-4xl font-bold text-white mb-6">
+            Ready to modernize your Invoice & POS?
           </h2>
           <p className="text-xl text-stone-200 mb-8 max-w-2xl mx-auto">
             Join hundreds of businesses that already trust Send Bill Now

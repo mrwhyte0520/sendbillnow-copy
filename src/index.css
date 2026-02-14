@@ -12,6 +12,11 @@
   font-family: 'Bodoni Moda', Georgia, 'Times New Roman', Times, serif;
 }
 
+/* Brand display serif for formal artistic headings */
+.brand-display {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', Times, serif;
+}
+
 .pos-customer-select option:hover,
 .pos-customer-select option:checked,
 .pos-customer-select option:focus {

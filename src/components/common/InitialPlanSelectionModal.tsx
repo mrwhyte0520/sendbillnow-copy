@@ -41,7 +41,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
       icon: 'ri-store-2-line',
       color: 'from-lime-500 to-lime-600',
       features: [
-        '1 User',
+        '3 Users',
         'Full POS system',
         '1 inventory warehouse',
         'Unlimited products'
@@ -54,7 +54,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
       icon: 'ri-store-2-line',
       color: 'from-purple-500 to-purple-600',
       features: [
-        '30 Users',
+        'Unlimited Users',
         'Full POS system',
         'Unlimited inventory warehouses',
         'Unlimited products'

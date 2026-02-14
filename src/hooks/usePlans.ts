@@ -89,7 +89,7 @@ function getPlanFeatures(planId: string): string[] {
     'pos-basic': [
       'Full dashboard',
       'POS system',
-      '1 user',
+      '3 users',
       'Unlimited products',
       '1 inventory warehouse',
       'Customer management',
@@ -99,11 +99,11 @@ function getPlanFeatures(planId: string): string[] {
     'pos-premium': [
       'Full dashboard',
       'POS system',
-      '30 users',
+      'Unlimited users',
       'Unlimited products',
       'Unlimited inventory warehouses',
       'Customer management',
-      '2,000 electronic invoices',
+      'Unlimited electronic invoices',
       'Backup every 48 hours',
     ],
     'student': [
@@ -157,8 +157,8 @@ function buildPlan(planId: string): Plan {
       icon: 'ri-shopping-cart-2-line',
     },
     'student': {
-      name: 'Student Plan',
-      color: 'from-sky-500 to-sky-600',
+      name: 'Contractor Plan',
+      color: 'from-[#001B9E] to-[#001B9E]',
       icon: 'ri-graduation-cap-line',
     },
   };
