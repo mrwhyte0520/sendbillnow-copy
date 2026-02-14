@@ -2243,6 +2243,7 @@ export default function InvoicesPage() {
               rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
               phone: companyInfo?.phone || '',
               email: companyInfo?.email || '',
+              website: companyInfo?.website || '',
               address: companyInfo?.address || '',
               logo: companyInfo?.logo,
             };

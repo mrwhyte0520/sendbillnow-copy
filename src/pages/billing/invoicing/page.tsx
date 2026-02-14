@@ -3410,6 +3410,10 @@ export default function InvoicingPage() {
 
 
 
+      website: (companyInfo as any)?.website,
+
+
+
       address: (companyInfo as any)?.address,
 
 
@@ -10647,6 +10651,10 @@ export default function InvoicingPage() {
 
 
               email: (freshCompanyInfo as any)?.email,
+
+
+
+              website: (freshCompanyInfo as any)?.website,
 
 
 

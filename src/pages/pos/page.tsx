@@ -3151,6 +3151,8 @@ export default function POSPage() {
 
       email: companyInfo?.email || '',
 
+      website: companyInfo?.website || '',
+
       address: companyInfo?.address || '',
 
       city: companyInfo?.city || '',
@@ -8234,6 +8236,8 @@ export default function POSPage() {
               phone: companyInfo?.phone || '',
 
               email: companyInfo?.email || '',
+
+              website: companyInfo?.website || '',
 
               address: companyInfo?.address || '',
 

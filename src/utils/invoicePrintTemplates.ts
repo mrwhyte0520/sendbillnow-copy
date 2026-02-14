@@ -1598,7 +1598,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           ${(() => {
 
-            const parts = [company.phone, company.email].filter(Boolean).map((v) => escapeHtml(String(v)));
+            const parts = [company.phone, company.email, company.website].filter(Boolean).map((v) => escapeHtml(String(v)));
 
             return parts.length ? `<div>${parts.join('<br/>')}</div>` : '';
 
