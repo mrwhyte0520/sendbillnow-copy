@@ -729,7 +729,12 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
                       alt="Send Bill Now"
                       className="h-16 w-auto object-contain mb-1"
                     />
-                    <span className="brand-display text-white/80 text-xs font-bold italic">A Smart Invoice & POS System</span>
+                    <span
+                      className="brand-display text-white/80 text-xs font-bold italic"
+                      style={{ fontFamily: '"Pacifico", serif' }}
+                    >
+                      A Smart Invoice & POS System
+                    </span>
                   </div>
                 )}
               </Link>
