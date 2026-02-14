@@ -82,6 +82,10 @@ interface InvoiceData {
 
   createdBy?: string;
 
+  paymentMethod?: string;
+
+  paymentReference?: string;
+
 
 
   amount: number;
@@ -551,11 +555,17 @@ function generateCashReceiptTemplate(
 
     .join('');
 
-
-
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
 
+  const paymentMethodStr = String(
+    (invoice as any).paymentMethod ?? (invoice as any).payment_method ?? ''
+  )
+    .trim()
+    .toLowerCase();
 
+  const paymentRefStr = String(
+    (invoice as any).paymentReference ?? (invoice as any).payment_reference ?? ''
+  ).trim();
 
   const depositAmount = Number(
     (invoice as any).deposit ?? (invoice as any).depositAmount ?? (invoice as any).deposit_amount ?? 0
@@ -717,7 +727,7 @@ td{font-size:11px;}
 
 .checks label{display:flex;align-items:center;gap:6px;}
 
-.signLine{flex:1;border-bottom:1px solid ${BLUE};height:16px;min-width:160px;}
+.signLine{flex:1;border-bottom:1px solid ${BLUE};height:16px;min-width:160px;display:flex;align-items:flex-end;padding-left:6px;font-weight:700;}
 
 
 
@@ -875,9 +885,9 @@ td{font-size:11px;}
 
               <div class="checks">
 
-                <label><input type="checkbox"/> Cash</label>
+                <label><input type="checkbox" ${paymentMethodStr === 'cash' ? 'checked' : ''}/> Cash</label>
 
-                <label><input type="checkbox"/> Cheque</label>
+                <label><input type="checkbox" ${(paymentMethodStr === 'check' || paymentMethodStr === 'cheque') ? 'checked' : ''}/> Cheque</label>
 
               </div>
 
@@ -887,7 +897,7 @@ td{font-size:11px;}
 
               <div style="min-width:14px;">#</div>
 
-              <div class="signLine"></div>
+              <div class="signLine">${paymentRefStr ? escapeHtml(paymentRefStr) : ''}</div>
 
             </div>
 

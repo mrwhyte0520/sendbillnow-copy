@@ -258,6 +258,14 @@ interface UiInvoice {
 
 
 
+  payment_method?: string | null;
+
+
+
+  payment_reference?: string | null;
+
+
+
   status: 'paid' | 'pending' | 'overdue' | 'draft' | 'cancelled';
 
 
@@ -1990,6 +1998,14 @@ export default function InvoicingPage() {
 
 
 
+          payment_method: (inv as any).payment_method ?? null,
+
+
+
+          payment_reference: (inv as any).payment_reference ?? null,
+
+
+
           status,
 
 
@@ -3286,6 +3302,18 @@ export default function InvoicingPage() {
         (invoiceToPrint as any).late_fee ??
         (invoiceToPrint as any).late_fee_amount ??
         0,
+
+
+
+      paymentMethod:
+
+        (invoiceToPrint as any).payment_method ?? (invoiceToPrint as any).paymentMethod ?? undefined,
+
+
+
+      paymentReference:
+
+        (invoiceToPrint as any).payment_reference ?? (invoiceToPrint as any).paymentReference ?? undefined,
 
 
 
@@ -5730,6 +5758,20 @@ export default function InvoicingPage() {
 
         bounced_check_fee_amount: newInvoiceSaleType === 'cash' ? Number(newInvoiceBouncedCheckFee) || 0 : 0,
 
+
+
+        payment_method: newInvoiceSaleType === 'cash' ? (newInvoicePaymentMethod || null) : null,
+
+
+
+        payment_reference:
+
+          newInvoiceSaleType === 'cash' && newInvoicePaymentMethod === 'check'
+
+            ? (String(newInvoicePaymentReference || '').trim() || null)
+
+            : null,
+
         paid_amount: 0,
 
         status: mode === 'draft' ? 'draft' : 'pending',
@@ -5861,6 +5903,14 @@ export default function InvoicingPage() {
 
 
             bounced_check_fee_amount: Number(createdInvoice.bounced_check_fee_amount ?? invoicePayload.bounced_check_fee_amount ?? 0) || 0,
+
+
+
+            payment_method: (createdInvoice.payment_method ?? invoicePayload.payment_method ?? null) as any,
+
+
+
+            payment_reference: (createdInvoice.payment_reference ?? invoicePayload.payment_reference ?? null) as any,
 
             status: mode === 'draft' ? 'draft' : 'pending',
 
@@ -9222,7 +9272,19 @@ export default function InvoicingPage() {
 
 
 
-                        onChange={(e) => setNewInvoicePaymentMethod(e.target.value)}
+                        onChange={(e) => {
+
+                          const next = e.target.value;
+
+                          setNewInvoicePaymentMethod(next);
+
+                          if (next !== 'check') {
+
+                            setNewInvoicePaymentReference('');
+
+                          }
+
+                        }}
 
 
 
@@ -9255,6 +9317,32 @@ export default function InvoicingPage() {
 
 
                       </select>
+
+
+
+                      {newInvoicePaymentMethod === 'check' && (
+
+                        <div className="mt-3">
+
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Cheque #</label>
+
+                          <input
+
+                            type="text"
+
+                            value={newInvoicePaymentReference}
+
+                            onChange={(e) => setNewInvoicePaymentReference(e.target.value)}
+
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+                            placeholder="Cheque number"
+
+                          />
+
+                        </div>
+
+                      )}
 
 
 
@@ -10458,6 +10546,18 @@ export default function InvoicingPage() {
                 (invoiceToPrint as any).late_fee ??
                 (invoiceToPrint as any).late_fee_amount ??
                 0,
+
+
+
+              paymentMethod:
+
+                (invoiceToPrint as any).payment_method ?? (invoiceToPrint as any).paymentMethod ?? undefined,
+
+
+
+              paymentReference:
+
+                (invoiceToPrint as any).payment_reference ?? (invoiceToPrint as any).paymentReference ?? undefined,
 
 
 
