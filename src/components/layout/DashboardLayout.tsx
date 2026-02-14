@@ -738,10 +738,16 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
                 ) : (
                   <div className="flex flex-col items-center text-center">
                     <img
-                      src="/F2.png"
+                      src="/F4.png"
                       alt="Send Bill Now"
-                      className="h-16 w-auto object-contain mb-1"
+                      className="h-14 w-14 object-contain mb-1"
                     />
+                    <span
+                      className="text-white text-lg font-semibold leading-tight"
+                      style={{ fontFamily: 'Georgia, "Times New Roman", serif', fontWeight: 800 }}
+                    >
+                      Send Bill Now
+                    </span>
                     <span
                       className="brand-display text-white/80 text-xs font-bold italic"
                       style={{ fontFamily: '"Pacifico", serif' }}

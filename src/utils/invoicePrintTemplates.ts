@@ -381,6 +381,8 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
 
+        ${company.website ? `<div>${escapeHtml(company.website)}</div>` : ''}
+
       </div>
 
     </div>
@@ -2897,6 +2899,8 @@ th:nth-child(4){text-align:center;}
 
       ${company.email ? `<p>${company.email}</p>` : ''}
 
+      ${company.website ? `<p>${company.website}</p>` : ''}
+
 
 
     </div>
@@ -3408,6 +3412,8 @@ th:nth-child(4){text-align:center;}
 
         ${company.email ? `<p>${company.email}</p>` : ''}
 
+        ${company.website ? `<p>${company.website}</p>` : ''}
+
 
 
       </div>
@@ -3783,6 +3789,10 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
       ${company.email ? `<p>${company.email}</p>` : ''}
+
+
+
+      ${company.website ? `<p>${company.website}</p>` : ''}
 
 
 
@@ -4189,6 +4199,10 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
         ${company.email ? `<p>${company.email}</p>` : ''}
+
+
+
+        ${company.website ? `<p>${company.website}</p>` : ''}
 
 
 

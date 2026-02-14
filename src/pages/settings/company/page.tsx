@@ -218,6 +218,12 @@ export default function CompanySettingsPage() {
 
   const [registerAssignments, setRegisterAssignments] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    if (activeTab === 'printers') {
+      setActiveTab('company');
+    }
+  }, [activeTab]);
+
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const [editingRegister, setEditingRegister] = useState<CashRegister | null>(null);
@@ -1102,8 +1108,6 @@ export default function CompanySettingsPage() {
 
     { id: 'social', label: 'Social Links', icon: 'ri-links-line' },
 
-    { id: 'printers', label: 'Printers', icon: 'ri-printer-line' },
-
     { id: 'register', label: 'Register', icon: 'ri-funds-box-line' },
 
   ];
@@ -1128,7 +1132,7 @@ export default function CompanySettingsPage() {
 
               <p className="text-[#CFE6AB] mt-1">
 
-                Configure your company details, social links, printers, and registers
+                Configure your company details, social links, and registers
 
               </p>
 
