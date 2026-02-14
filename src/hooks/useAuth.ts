@@ -20,7 +20,9 @@ async function postWebnotiEvent(accessToken: string, event: 'login' | 'register'
   try {
     const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
 
-    await fetch(`${apiBase}/api/webnoti/event`, {
+    if (!apiBase) return;
+
+    const resp = await fetch(`${apiBase}/api/webnoti/event`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -29,6 +31,8 @@ async function postWebnotiEvent(accessToken: string, event: 'login' | 'register'
         target: 'user',
       }),
     });
+
+    if (!resp.ok) return;
   } catch {
     // ignore
   }

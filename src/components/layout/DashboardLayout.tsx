@@ -40,7 +40,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { currentPlan, getTrialStatus, trialInfo, hasUsedTrial, startTrialWithPlan, hasAccess } = usePlans();
-  const { canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
+  const { currentPlanId, canAccessRoute, getRequiredPlanForRoute } = usePlanPermissions();
   const [kpiCounts, setKpiCounts] = useState({ invoices: 0, customers: 0, products: 0 });
   const trialStatus = getTrialStatus();
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -235,6 +235,15 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
       }
     };
     fetchAllowed();
+
+    const onFocus = () => {
+      fetchAllowed();
+    };
+
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -473,6 +482,8 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
     const minimalAllowed = new Set(['dashboard', 'profile', 'plans']);
     const currentModule = moduleOf(item.href);
 
+    const enforcePlanInSidebar = currentPlanId === 'student' && !isAdminAllowed;
+
     // Owners should always see all modules EXCEPT Admin, which is always RBAC-gated.
     // Admins (isAdminAllowed) have access to ALL modules.
     const allowByRbac = isOwner
@@ -483,24 +494,26 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
             ? allowedModules.has(currentModule)
             : minimalAllowed.has(currentModule));
 
-    const itemAllowed = allowByRbac;
+    const itemAllowed = allowByRbac && (!enforcePlanInSidebar || canAccessRoute(item.href));
     if (!itemAllowed) return null;
 
     const submenu = hasSubmenu
       ? item.submenu.filter((s: any) => {
           const sm = moduleOf(s.href);
-          return isOwner || isAdminAllowed
+          const allowSubByRbac = isOwner || isAdminAllowed
             ? true
             : (allowedModules && allowedModules.size > 0
                 ? allowedModules.has(sm)
                 : minimalAllowed.has(sm));
+
+          return allowSubByRbac && (!enforcePlanInSidebar || canAccessRoute(s.href));
         })
       : null;
     const hasFilteredSubmenu = submenu && submenu.length > 0;
 
     // Verificar si el módulo está restringido por plan
     // Los admins tienen acceso a todo, no se les aplica restricción de plan
-    const isPlanRestricted = !isOwner && !isAdminAllowed && !canAccessRoute(item.href);
+    const isPlanRestricted = !isAdminAllowed && !canAccessRoute(item.href) && (enforcePlanInSidebar || !isOwner);
     const requiredPlan = isPlanRestricted ? getRequiredPlanForRoute(item.href) : '';
 
     // Handler para items restringidos
@@ -561,7 +574,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
           <div className="ml-6 mt-2 space-y-1 border-l-2 border-[#c5d4a8] pl-4">
             {submenu!.map((subItem: any) => {
               // Admins y owners no tienen restricción de plan en submenús
-              const isSubItemRestricted = !isOwner && !isAdminAllowed && !canAccessRoute(subItem.href);
+              const isSubItemRestricted = !isAdminAllowed && !canAccessRoute(subItem.href) && (enforcePlanInSidebar || !isOwner);
               const subRequiredPlan = isSubItemRestricted ? getRequiredPlanForRoute(subItem.href) : '';
 
               if (isSubItemRestricted) {
@@ -779,7 +792,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
                   <div className="ml-3 flex-1 min-w-0">
                     <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
                     <p className="text-xs text-stone-500 truncate">
-                      {isPrivilegedUser ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
+                      {isAdminAllowed ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
                       {!isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
                         trialInfo.daysLeft > 0
                           ? ` (${trialInfo.daysLeft}d left)`

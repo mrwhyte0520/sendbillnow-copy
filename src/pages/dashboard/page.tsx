@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [invoicesByDay, setInvoicesByDay] = useState<Record<string, DayInvoices>>({});
   const [selectedDayInvoices, setSelectedDayInvoices] = useState<{ day: number; data: DayInvoices } | null>(null);
 
+  const isAdminAllowed = Boolean(allowedModules?.has('admin'));
+
   const normalizeModuleKey = (value: unknown) => {
     return String(value || '')
       .trim()
@@ -210,15 +212,14 @@ export default function DashboardPage() {
   // Filtrar botones según permisos del usuario
   // Si no hay permisos configurados (allowedModules vacío o null), mostrar todos
   const quickAccessButtons = useMemo(() => {
-    const filterByPlan = (buttons: typeof allQuickAccessButtons) => {
-      if (currentPlanId !== 'student') return buttons;
-      return buttons.filter((b) => {
+    if (!isAdminAllowed && currentPlanId === 'student') {
+      return allQuickAccessButtons.filter((b) => {
         const path = String(b.href || '').split('?')[0];
         return canAccessRoute(path);
       });
-    };
+    }
 
-    const byPlan = filterByPlan(allQuickAccessButtons);
+    const byPlan = allQuickAccessButtons;
 
     if (allowedModules === null || allowedModules.size === 0) {
       return byPlan;
@@ -226,7 +227,7 @@ export default function DashboardPage() {
     const normalizedAllowed = new Set(Array.from(allowedModules).map(normalizeModuleKey));
     const filtered = byPlan.filter((button) => normalizedAllowed.has(normalizeModuleKey(button.module)));
     return filtered.length > 0 ? filtered : byPlan;
-  }, [allowedModules, currentPlanId, canAccessRoute]);
+  }, [allowedModules, currentPlanId, canAccessRoute, isAdminAllowed]);
 
   // Generar días del calendario
   const getDaysInMonth = (date: Date) => {

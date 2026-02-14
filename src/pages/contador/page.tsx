@@ -11,10 +11,13 @@ import { vendorsService } from '../../services/contador/vendors.service';
 import { productsService } from '../../services/contador/products.service';
 import { balancesService } from '../../services/contador/inventory.service';
 import { returnsService } from '../../services/contador/returns.service';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 export default function ContadorPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const { canAccessRoute } = usePlanPermissions();
 
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [pendingInvoicesAmount, setPendingInvoicesAmount] = useState(0);
@@ -148,7 +151,7 @@ export default function ContadorPage() {
         }).length;
         setLowStockCount(low);
 
-        setPendingReturnsCount((pendingReturns || []).length);
+        setPendingReturnsCount(Number((pendingReturns as any)?.total) || 0);
       } catch (error) {
         console.error('Error loading contador quick access badges:', error);
         setActiveVendors(0);
@@ -162,7 +165,8 @@ export default function ContadorPage() {
   }, [user?.id]);
 
   const submodules = useMemo(
-    () => [
+    () => {
+      const all = [
       {
         name: 'Staff Report',
         description: 'Employee management, attendance & performance tracking',
@@ -219,8 +223,14 @@ export default function ContadorPage() {
         href: '/contador/reportes',
         stats: 'IRS Ready',
       },
-    ],
-    [activeEmployees, activeVendors, cashToday, lowStockCount, nextPayrollLabel, pendingReturnsCount, productsCount]
+      ];
+
+      return all.filter((m) => {
+        const path = String(m.href || '').split('?')[0];
+        return canAccessRoute(path);
+      });
+    },
+    [activeEmployees, activeVendors, cashToday, lowStockCount, nextPayrollLabel, pendingReturnsCount, productsCount, canAccessRoute]
   );
 
   return (

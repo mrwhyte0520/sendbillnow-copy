@@ -15553,6 +15553,28 @@ export const settingsService = {
     try {
       if (!userId) throw new Error('userId required');
 
+      const {
+        data: { user: sessionUser },
+      } = await supabase.auth.getUser();
+
+      if (!sessionUser?.id) throw new Error('Not authenticated');
+
+      const ownerId = await resolveTenantId(sessionUser.id);
+      if (!ownerId) throw new Error('Could not resolve tenant/owner');
+
+      const targetUserId = String(userId);
+      let targetEmail: string | null = null;
+      try {
+        const { data: targetRow } = await supabase
+          .from('users')
+          .select('email')
+          .eq('id', targetUserId)
+          .maybeSingle();
+        targetEmail = (targetRow as any)?.email ? String((targetRow as any).email) : null;
+      } catch {
+        targetEmail = null;
+      }
+
       // 1) Check if admin permission exists
       let { data: perm } = await supabase
         .from('permissions')
@@ -15575,14 +15597,14 @@ export const settingsService = {
       let { data: role } = await supabase
         .from('roles')
         .select('id')
-        .eq('owner_user_id', userId)
+        .eq('owner_user_id', ownerId)
         .eq('name', 'admin')
         .maybeSingle();
 
       if (!role) {
         const { data: newRole } = await supabase
           .from('roles')
-          .insert({ owner_user_id: userId, name: 'admin', description: 'Administrador del sistema' })
+          .insert({ owner_user_id: ownerId, name: 'admin', description: 'Administrador del sistema' })
           .select()
           .single();
         role = newRole;
@@ -15594,7 +15616,7 @@ export const settingsService = {
         await supabase
           .from('role_permissions')
           .upsert(
-            { owner_user_id: userId, role_id: role.id, permission_id: perm.id },
+            { owner_user_id: ownerId, role_id: role.id, permission_id: perm.id },
             { onConflict: 'owner_user_id,role_id,permission_id', ignoreDuplicates: true }
           );
       } catch (rpErr: any) {
@@ -15605,25 +15627,28 @@ export const settingsService = {
       }
 
       // 4) Check if user_roles entry exists
-      const { data: ur } = await supabase
+      const candidates = [targetUserId, targetEmail].filter(Boolean) as string[];
+      const { data: existing } = await supabase
         .from('user_roles')
-        .select('id')
-        .eq('owner_user_id', userId)
-        .eq('user_id', userId)
+        .select('id,user_id')
+        .eq('owner_user_id', ownerId)
         .eq('role_id', role.id)
-        .maybeSingle();
+        .in('user_id', candidates);
 
-      if (ur) {
-        // Already has admin, remove it
-        await supabase.from('user_roles').delete().eq('id', ur.id);
-        return { hasAdmin: false };
-      } else {
-        // Add admin role
+      if (existing && existing.length > 0) {
         await supabase
           .from('user_roles')
-          .insert({ owner_user_id: userId, user_id: userId, role_id: role.id });
-        return { hasAdmin: true };
+          .delete()
+          .eq('owner_user_id', ownerId)
+          .eq('role_id', role.id)
+          .in('user_id', candidates);
+        return { hasAdmin: false };
       }
+
+      await supabase
+        .from('user_roles')
+        .insert({ owner_user_id: ownerId, user_id: targetUserId, role_id: role.id });
+      return { hasAdmin: true };
     } catch (error) {
       console.error('Error toggling admin role:', error);
       throw error;
@@ -15634,10 +15659,25 @@ export const settingsService = {
     try {
       if (!userId) return false;
 
+      const targetUserId = String(userId);
+      let targetEmail: string | null = null;
+      try {
+        const { data: targetRow } = await supabase
+          .from('users')
+          .select('email')
+          .eq('id', targetUserId)
+          .maybeSingle();
+        targetEmail = (targetRow as any)?.email ? String((targetRow as any).email) : null;
+      } catch {
+        targetEmail = null;
+      }
+
+      const candidates = [targetUserId, targetEmail].filter(Boolean) as string[];
+
       const { data: roles } = await supabase
         .from('user_roles')
         .select('role_id, roles!inner(name)')
-        .eq('user_id', userId);
+        .in('user_id', candidates);
 
       if (!roles || roles.length === 0) return false;
       return roles.some((r: any) => r.roles?.name === 'admin');

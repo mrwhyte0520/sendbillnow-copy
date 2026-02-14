@@ -18,6 +18,7 @@ interface UserRow {
 const AVAILABLE_PLANS = [
   { id: 'pos-basic', name: 'Basic Plan', price: '$99.99/monthly' },
   { id: 'pos-premium', name: 'Premium Plan', price: '$399.99/monthly' },
+  { id: 'student', name: 'Contractor Plan', price: '$85.00/yearly' },
 ];
 
 export default function AdminDashboardPage() {
@@ -54,6 +55,13 @@ export default function AdminDashboardPage() {
     loadUsers();
   }, []);
 
+  const getPlanDisplayName = (planIdRaw: string) => {
+    const pid = String(planIdRaw || '').trim();
+    if (!pid) return '';
+    const match = AVAILABLE_PLANS.find((p) => p.id === pid);
+    return match?.name || pid;
+  };
+
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term) return users;
@@ -69,14 +77,16 @@ export default function AdminDashboardPage() {
     let noPlan = 0;
     let basic = 0;
     let premium = 0;
+    let contractor = 0;
     for (const u of users) {
       const planId = String((u as any)?.plan_id || '').toLowerCase();
       if (!planId) noPlan += 1;
       else if (planId === 'pos-basic') basic += 1;
       else if (planId === 'pos-premium') premium += 1;
+      else if (planId === 'student') contractor += 1;
       else noPlan += 1;
     }
-    return { noPlan, basic, premium, total: users.length };
+    return { noPlan, basic, premium, contractor, total: users.length };
   }, [users]);
 
   const handleToggleBan = async (u: UserRow) => {
@@ -178,6 +188,7 @@ export default function AdminDashboardPage() {
               <span className="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-medium">Sin plan: {counts.noPlan}</span>
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">Basic: {counts.basic}</span>
               <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">Premium: {counts.premium}</span>
+              <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">Contractor: {counts.contractor}</span>
               <button
                 onClick={loadUsers}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -209,8 +220,8 @@ export default function AdminDashboardPage() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Estado</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Rol</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Estado</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Rol</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Trial</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Plan</th>
                   <th className="px-4 py-2 pr-6 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-80">Acciones</th>
@@ -225,7 +236,9 @@ export default function AdminDashboardPage() {
                   const trialEndRaw = (u as any).trial_end ? new Date((u as any).trial_end) : null;
                   const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
                   const trialText = trialEnd ? trialEnd.toLocaleDateString() : '—';
-                  const planText = planId ? `${planId}${planStatus ? ` (${planStatus})` : ''}` : '—';
+                  const planText = planId
+                    ? `${getPlanDisplayName(planId)}${planStatus ? ` (${planStatus})` : ''}`
+                    : '—';
                   const hasAdmin = u.hasAdminRole === true;
                   return (
                     <tr key={u.id} className={isBanned ? 'bg-red-50' : ''}>
@@ -240,12 +253,18 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded border ${
-                            'bg-gray-100 text-gray-700 border-gray-200'
+                          className={`inline-flex items-center px-3 py-1.5 text-sm font-bold rounded border ${
+                            status === 'active'
+                              ? 'bg-green-700 text-black border-green-800'
+                              : 'bg-yellow-300 text-black border-yellow-400'
                           }`}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-gray-500"></span>
-                          {status === 'active' ? 'Activo' : 'Baneado'}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              'bg-black'
+                            }`}
+                          ></span>
+                          {status === 'active' ? 'Activo' : 'Suspendido'}
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -261,7 +280,7 @@ export default function AdminDashboardPage() {
                               isBanned ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
                             }`}
                           >
-                            {isBanned ? 'Desbanear' : 'Banear'}
+                            {isBanned ? 'Activar' : 'Suspender'}
                           </button>
                           <button
                             onClick={() => handleToggleAdmin(u)}

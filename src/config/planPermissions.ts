@@ -92,10 +92,11 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
 
   'student': {
     id: 'student',
-    name: 'Student Plan',
+    name: 'Contractor Plan',
     modules: [
       MODULES.DASHBOARD,
       MODULES.INVOICING,
+      MODULES.SERVICE_DOCUMENTS,
       MODULES.INVENTORY,
       MODULES.PRODUCTS,
       MODULES.ACCOUNTS_RECEIVABLE,
@@ -107,6 +108,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/billing/invoicing',
       '/accounts-receivable/customers',
       '/accounts-payable/suppliers',
+      '/service-documents',
       '/inventory',
       '/inventory/reports',
       '/settings',
