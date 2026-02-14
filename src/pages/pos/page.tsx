@@ -372,6 +372,8 @@ interface Sale {
 
   id: string;
 
+  accountNumber?: string;
+
   invoiceNumber?: string;
 
   date: string;
@@ -2763,6 +2765,7 @@ export default function POSPage() {
             const created = await invoicesService.create(user.id, invoicePayload, linesPayload, { skipPeriodValidation: true });
 
             const createdInvoiceNumber = String((created as any)?.invoice?.invoice_number || '').trim();
+            const createdAccountNumber = String((created as any)?.invoice?.account_number || (created as any)?.invoice?.accountNumber || '').trim();
 
             const createdInvoiceId = (created as any)?.invoice?.id ? String((created as any).invoice.id) : '';
 
@@ -2940,7 +2943,7 @@ export default function POSPage() {
 
             // Open print modal with the real invoice number
 
-            setCompletedSale({ ...newSale, invoiceNumber: createdInvoiceNumber || newSale.id });
+            setCompletedSale({ ...newSale, invoiceNumber: createdInvoiceNumber || newSale.id, accountNumber: createdAccountNumber || undefined });
 
             setShowPrintTypeModal(true);
 
@@ -3073,6 +3076,8 @@ export default function POSPage() {
     const saleData = {
 
       invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
+
+      accountNumber: completedSale.accountNumber,
 
       createdBy: createdByName,
 
@@ -8171,6 +8176,8 @@ export default function POSPage() {
             const saleData = {
 
               invoiceNumber: formatInvoiceNumberDisplay(completedSale.invoiceNumber || completedSale.id),
+
+              accountNumber: completedSale.accountNumber,
 
               createdBy: createdByName,
 

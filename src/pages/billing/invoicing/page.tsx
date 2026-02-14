@@ -250,6 +250,14 @@ interface UiInvoice {
 
 
 
+  late_fee_amount?: number;
+
+
+
+  bounced_check_fee_amount?: number;
+
+
+
   status: 'paid' | 'pending' | 'overdue' | 'draft' | 'cancelled';
 
 
@@ -1216,6 +1224,14 @@ export default function InvoicingPage() {
 
 
 
+  const [newInvoiceLateFee, setNewInvoiceLateFee] = useState(0);
+
+
+
+  const [newInvoiceBouncedCheckFee, setNewInvoiceBouncedCheckFee] = useState(0);
+
+
+
   const [isClientPickerOpen, setIsClientPickerOpen] = useState(false);
 
 
@@ -1356,6 +1372,18 @@ export default function InvoicingPage() {
 
 
 
+    const lateFee = newInvoiceSaleType === 'cash' ? Number(newInvoiceLateFee) || 0 : 0;
+
+
+
+    const bouncedFee = newInvoiceSaleType === 'cash' ? Number(newInvoiceBouncedCheckFee) || 0 : 0;
+
+
+
+    const feesTotal = Math.max(0, lateFee) + Math.max(0, bouncedFee);
+
+
+
     setNewInvoiceSubtotal(subtotalAfterDiscount);
 
 
@@ -1364,7 +1392,7 @@ export default function InvoicingPage() {
 
 
 
-    setNewInvoiceTotal(subtotalAfterDiscount + taxAmount);
+    setNewInvoiceTotal(subtotalAfterDiscount + taxAmount + feesTotal);
 
 
 
@@ -2698,6 +2726,14 @@ export default function InvoicingPage() {
 
 
 
+    setNewInvoiceLateFee(0);
+
+
+
+    setNewInvoiceBouncedCheckFee(0);
+
+
+
     setNewInvoiceCustomerEmail('');
 
 
@@ -3233,6 +3269,24 @@ export default function InvoicingPage() {
 
 
       discount_value: (invoiceToPrint as any).discountValue ?? (invoiceToPrint as any).discount_value ?? undefined,
+
+
+
+      late_fee_amount:
+        (invoiceToPrint as any).late_fee_amount ??
+        (invoiceToPrint as any).lateFee ??
+        (invoiceToPrint as any).late_fee ??
+        (invoiceToPrint as any).late_fee_amount ??
+        0,
+
+
+
+      bounced_check_fee_amount:
+        (invoiceToPrint as any).bounced_check_fee_amount ??
+        (invoiceToPrint as any).bouncedCheckFee ??
+        (invoiceToPrint as any).bounced_check_fee ??
+        (invoiceToPrint as any).bounced_check_fee_amount ??
+        0,
 
 
 
@@ -5664,6 +5718,10 @@ export default function InvoicingPage() {
 
         total_amount: total,
 
+        late_fee_amount: newInvoiceSaleType === 'cash' ? Number(newInvoiceLateFee) || 0 : 0,
+
+        bounced_check_fee_amount: newInvoiceSaleType === 'cash' ? Number(newInvoiceBouncedCheckFee) || 0 : 0,
+
         paid_amount: 0,
 
         status: mode === 'draft' ? 'draft' : 'pending',
@@ -5787,6 +5845,14 @@ export default function InvoicingPage() {
             tax: taxNow,
 
             total: totalNow,
+
+
+
+            late_fee_amount: Number(createdInvoice.late_fee_amount ?? invoicePayload.late_fee_amount ?? 0) || 0,
+
+
+
+            bounced_check_fee_amount: Number(createdInvoice.bounced_check_fee_amount ?? invoicePayload.bounced_check_fee_amount ?? 0) || 0,
 
             status: mode === 'draft' ? 'draft' : 'pending',
 
@@ -9050,6 +9116,146 @@ export default function InvoicingPage() {
 
 
 
+                  <div>
+
+
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sale Type</label>
+
+
+
+                    <select
+
+
+
+                      value={newInvoiceSaleType}
+
+
+
+                      onChange={(e) => {
+
+
+
+                        const next = e.target.value === 'cash' ? 'cash' : 'credit';
+
+
+
+                        setNewInvoiceSaleType(next);
+
+
+
+                        if (next !== 'cash') {
+
+
+
+                          setNewInvoicePaymentMethod('');
+
+
+
+                          setNewInvoiceLateFee(0);
+
+
+
+                          setNewInvoiceBouncedCheckFee(0);
+
+
+
+                        }
+
+
+
+                        recalcNewInvoiceTotals([...newInvoiceItems], newInvoiceDiscountType, newInvoiceDiscountPercent, newInvoiceNoTax);
+
+
+
+                      }}
+
+
+
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+
+
+                    >
+
+
+
+                      <option value="credit">Credit</option>
+
+
+
+                      <option value="cash">Cash</option>
+
+
+
+                    </select>
+
+
+
+                  </div>
+
+
+
+                  {newInvoiceSaleType === 'cash' && (
+
+                    <div>
+
+
+
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+
+
+
+                      <select
+
+
+
+                        value={newInvoicePaymentMethod}
+
+
+
+                        onChange={(e) => setNewInvoicePaymentMethod(e.target.value)}
+
+
+
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+
+
+                      >
+
+
+
+                        <option value="">Select...</option>
+
+
+
+                        <option value="cash">Cash</option>
+
+
+
+                        <option value="card">Card</option>
+
+
+
+                        <option value="check">Check</option>
+
+
+
+                        <option value="ach">ACH</option>
+
+
+
+                      </select>
+
+
+
+                    </div>
+
+                  )}
+
+
+
                 </div>
 
 
@@ -9846,6 +10052,74 @@ export default function InvoicingPage() {
 
 
 
+                      {newInvoiceSaleType === 'cash' && (
+
+                        <>
+
+                          <div className="flex justify-between items-center space-x-2">
+
+                            <span className="text-sm text-gray-600">Late Fee:</span>
+
+                            <input
+
+                              type="number"
+
+                              min={0}
+
+                              value={newInvoiceLateFee}
+
+                              onChange={(e) => {
+
+                                const val = Number(e.target.value) || 0;
+
+                                setNewInvoiceLateFee(val);
+
+                                recalcNewInvoiceTotals([...newInvoiceItems], newInvoiceDiscountType, newInvoiceDiscountPercent, newInvoiceNoTax);
+
+                              }}
+
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+
+                            />
+
+                          </div>
+
+
+
+                          <div className="flex justify-between items-center space-x-2">
+
+                            <span className="text-sm text-gray-600">Bounced Check Fee:</span>
+
+                            <input
+
+                              type="number"
+
+                              min={0}
+
+                              value={newInvoiceBouncedCheckFee}
+
+                              onChange={(e) => {
+
+                                const val = Number(e.target.value) || 0;
+
+                                setNewInvoiceBouncedCheckFee(val);
+
+                                recalcNewInvoiceTotals([...newInvoiceItems], newInvoiceDiscountType, newInvoiceDiscountPercent, newInvoiceNoTax);
+
+                              }}
+
+                              className="w-24 px-2 py-1 border border-gray-300 rounded text-sm text-right"
+
+                            />
+
+                          </div>
+
+                        </>
+
+                      )}
+
+
+
                       <div className="border-t border-gray-200 pt-2">
 
 
@@ -10167,6 +10441,24 @@ export default function InvoicingPage() {
 
 
               discount_value: (invoiceToPrint as any).discountValue ?? (invoiceToPrint as any).discount_value ?? undefined,
+
+
+
+              late_fee_amount:
+                (invoiceToPrint as any).late_fee_amount ??
+                (invoiceToPrint as any).lateFee ??
+                (invoiceToPrint as any).late_fee ??
+                (invoiceToPrint as any).late_fee_amount ??
+                0,
+
+
+
+              bounced_check_fee_amount:
+                (invoiceToPrint as any).bounced_check_fee_amount ??
+                (invoiceToPrint as any).bouncedCheckFee ??
+                (invoiceToPrint as any).bounced_check_fee ??
+                (invoiceToPrint as any).bounced_check_fee_amount ??
+                0,
 
 
 
