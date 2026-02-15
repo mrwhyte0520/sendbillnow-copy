@@ -797,9 +797,7 @@ export default async function handler(req, res) {
   pdf.setFontSize(9);
   const defaultJobEstimateTerms =
     '-20% Due Upon Contract Signing\n-40% Due at Product Midpoint (Date)\n-20% Due to Close to Completion (Date)\n-10% Upon Final Inspection and Approval';
-  const paymentTermsText = doc?.doc_type === 'JOB_ESTIMATE'
-    ? defaultJobEstimateTerms
-    : safeText(doc.terms_snapshot) || defaultJobEstimateTerms;
+  const paymentTermsText = safeText(doc.terms_snapshot) || defaultJobEstimateTerms;
   const paymentLines = splitText(pdf, paymentTermsText.replace(/\\n/g, '\n'), leftBoxW - 16);
   let payY = belowY + 34;
   for (const line of paymentLines) {
