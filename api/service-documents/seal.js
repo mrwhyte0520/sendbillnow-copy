@@ -474,7 +474,7 @@ export default async function handler(req, res) {
   pdf.setTextColor(0, 0, 0);
   pdf.text('CUSTOMER:', leftX, customerY);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 70, customerY);
+  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 66, customerY);
 
   pdf.setFontSize(9);
   let customerInfoY = customerY + 14;
@@ -482,14 +482,14 @@ export default async function handler(req, res) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('EMAIL:', leftX, customerInfoY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 36, customerInfoY);
+    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 32, customerInfoY);
     customerInfoY += 12;
   }
   if (doc.client_phone) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('PHONE:', leftX, customerInfoY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 40, customerInfoY);
+    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 36, customerInfoY);
     customerInfoY += 12;
   }
 
@@ -498,7 +498,7 @@ export default async function handler(req, res) {
   pdf.setFont('helvetica', 'bold');
   pdf.text('ADDRESS:', leftX, customerInfoY);
   pdf.setFont('helvetica', 'normal');
-  const addrValueXLeft = leftX + 54;
+  const addrValueXLeft = leftX + 50;
   const addrLeftMaxW = leftColW - (addrValueXLeft - leftX) - 6;
   pdf.text(truncateToWidth(pdf, addrStreet || '-', addrLeftMaxW), addrValueXLeft, customerInfoY);
   customerInfoY += 12;
@@ -534,15 +534,18 @@ export default async function handler(req, res) {
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('START DATE:', rightX, rightY);
+    const dateColonX = rightX + 60;
+    pdf.text('START DATE', dateColonX, rightY, { align: 'right' });
+    pdf.text(':', dateColonX + 2, rightY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(startDate || '-', rightX + 72, rightY);
+    pdf.text(startDate || '-', rightX + 66, rightY);
     rightY += 12;
 
     pdf.setFont('helvetica', 'bold');
-    pdf.text('END DATE:', rightX, rightY);
+    pdf.text('END DATE', dateColonX, rightY, { align: 'right' });
+    pdf.text(':', dateColonX + 2, rightY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(endDate || '-', rightX + 60, rightY);
+    pdf.text(endDate || '-', rightX + 66, rightY);
     rightY += 12;
   }
 
