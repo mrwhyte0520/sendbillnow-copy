@@ -15,6 +15,7 @@ type FormValues = {
 type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 const INDUSTRIES = [
+  'General contractor services',
   'Retail / Store',
   'Hardware Store',
   'Beauty / Salon',
@@ -397,7 +398,7 @@ export default function DemoPage() {
 
                   <div>
                     <label htmlFor="industry" className="block text-sm font-semibold text-[#1F2616]">
-                      General contractor services*
+                      Services*
                     </label>
                     <select
                       id="industry"

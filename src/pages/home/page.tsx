@@ -500,7 +500,6 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {plans
               .filter((p) => p.category === 'pos')
-              .filter((p) => (p.id === 'student' ? billingPeriod === 'annual' : true))
               .map((plan, index) => (
               <div
                 key={index}
@@ -513,11 +512,71 @@ export default function HomePage() {
                   className={`bg-gradient-to-r ${plan.id === 'student' ? 'from-[#001B9E] to-[#001B9E]' : 'from-emerald-500 to-emerald-600'} p-6 text-white text-center relative`}
                 >
                   <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/10 via-transparent to-black/10" />
-                  <i className={`${plan.id === 'student' ? 'ri-graduation-cap-line' : 'ri-store-2-line'} text-4xl mb-3`}></i>
+                  {plan.id === 'student' ? (
+                    <svg
+                      viewBox="0 0 64 64"
+                      className="w-10 h-10 mx-auto mb-3 text-white"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M16 28c0-9 7-16 16-16s16 7 16 16"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path d="M18 28h28" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                      <path
+                        d="M26 12v7"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M38 12v7"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M24 29c0 6 3.6 10 8 10s8-4 8-10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M14 54c2.5-9 9.5-14 18-14s15.5 5 18 14"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M20 54V48l12 6 12-6v6"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M32 43v11"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  ) : (
+                    <i className="ri-store-2-line text-4xl mb-3"></i>
+                  )}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   {billingPeriod === 'monthly' ? (
                     <div className="flex items-baseline justify-center">
-                      <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
+                      {plan.id === 'student' ? (
+                        <span className="text-3xl font-bold">Annual Only</span>
+                      ) : (
+                        <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
+                      )}
                     </div>
                   ) : (
                     <div>
@@ -549,14 +608,16 @@ export default function HomePage() {
 
                   <button
                     onClick={() => startStripeCheckout(plan.id)}
-                    disabled={isRedirectingToStripe}
+                    disabled={isRedirectingToStripe || (plan.id === 'student' && billingPeriod === 'monthly')}
                     className={`w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer text-white shadow-md border border-black/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
                       plan.id === 'student'
                         ? 'bg-[#001B9E] shadow-[#001B9E]/25 hover:bg-[#001785] hover:shadow-lg hover:shadow-[#001B9E]/30'
                         : 'bg-[#556B2F] shadow-[#556B2F]/25 hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30'
                     }`}
                   >
-                    {isRedirectingToStripe && selectedPlanId === plan.id ? (
+                    {plan.id === 'student' && billingPeriod === 'monthly' ? (
+                      'Annual Only'
+                    ) : isRedirectingToStripe && selectedPlanId === plan.id ? (
                       <>
                         <i className="ri-loader-4-line animate-spin mr-2"></i>
                         Redirecting to payment...

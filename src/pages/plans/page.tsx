@@ -320,11 +320,57 @@ export default function PlansPage() {
 
       <div className={`bg-gradient-to-r ${plan.color} p-6 text-white ${plan.popular ? 'pt-12' : ''}`}>
         <div className="text-center">
-          <i className={`${plan.icon} text-4xl mb-3`}></i>
+          {plan.id === 'student' ? (
+            <svg
+              viewBox="0 0 64 64"
+              className="w-10 h-10 mx-auto mb-3 text-white"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M16 28c0-9 7-16 16-16s16 7 16 16"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M18 28h28"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path d="M26 12v7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              <path d="M38 12v7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              <path
+                d="M24 29c0 6 3.6 10 8 10s8-4 8-10"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M14 54c2.5-9 9.5-14 18-14s15.5 5 18 14"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M20 54V48l12 6 12-6v6"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              <path d="M32 43v11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <i className={`${plan.icon} text-4xl mb-3`}></i>
+          )}
           <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
           {billingPeriod === 'monthly' ? (
             <div className="flex items-baseline justify-center mb-2">
-              <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
+              <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}{getPeriodLabel()}</span>
             </div>
           ) : (
             <div className="mb-2">
@@ -537,7 +583,63 @@ export default function PlansPage() {
 
               <div className={`bg-gradient-to-r ${selectedPlanData.color} rounded-lg p-4 text-white mb-4`}>
                 <div className="text-center">
-                  <i className={`${selectedPlanData.icon} text-3xl mb-2`}></i>
+                  {selectedPlanData.id === 'student' ? (
+                    <svg
+                      viewBox="0 0 64 64"
+                      className="w-9 h-9 mx-auto mb-2 text-white"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M16 28c0-9 7-16 16-16s16 7 16 16"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M18 28h28"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M26 12v7"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M38 12v7"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M24 29c0 6 3.6 10 8 10s8-4 8-10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M14 54c2.5-9 9.5-14 18-14s15.5 5 18 14"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M20 54V48l12 6 12-6v6"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M32 43v11" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <i className={`${selectedPlanData.icon} text-3xl mb-2`}></i>
+                  )}
                   <h4 className="text-lg font-bold">{selectedPlanData.name}</h4>
                   <div className="text-2xl font-bold">
                     ${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
