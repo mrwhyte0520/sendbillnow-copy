@@ -28,7 +28,9 @@ export type InvoiceTemplateType =
 
   | 'blue-invoice'
 
-  | 'cash-receipt';
+  | 'cash-receipt'
+
+  | 'service-hours';
 
 
 
@@ -45,6 +47,396 @@ export interface JobEstimateSignatureFields {
   contractorSignature?: string;
 
   contractorDate?: string;
+
+}
+
+
+
+function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: CustomerData, company: CompanyData): string {
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const rows = items
+    .map((item) => {
+      const qty = Number((item as any).quantity ?? 0) || 0;
+      const rate = Number((item as any).price ?? 0) || 0;
+      const amount = Number((item as any).total ?? qty * rate) || 0;
+
+      const timeStr = (() => {
+        const sRaw = (item as any).startTime ?? (item as any).start_time ?? '';
+        const eRaw = (item as any).endTime ?? (item as any).end_time ?? '';
+        const s = sRaw === null || sRaw === undefined ? '' : String(sRaw).trim();
+        const e = eRaw === null || eRaw === undefined ? '' : String(eRaw).trim();
+        if (!s && !e) return '';
+        if (s && e) return `${s} - ${e}`;
+        return s || e;
+      })();
+      return `
+
+        <tr>
+
+          <td class="cell"><span class="sb_print_date_cell"></span></td>
+
+          <td class="cell">${escapeHtml(String((item as any).description || ''))}</td>
+
+          <td class="cell">${escapeHtml(timeStr || '')}</td>
+
+          <td class="cell num">${escapeHtml(qty ? String(qty) : '')}</td>
+
+          <td class="cell num">${escapeHtml(rate ? formatAmount(rate) : '')}</td>
+
+          <td class="cell num">${escapeHtml(formatAmount(amount))}</td>
+
+        </tr>
+
+      `.trim();
+    })
+    .join('\n');
+
+
+
+  const accountNumberStr = (() => {
+    const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? '';
+    const s = raw === null || raw === undefined ? '' : String(raw).trim();
+    return s ? escapeHtml(s) : '';
+  })();
+
+
+
+  const createdByStr = (() => {
+    const raw = (invoice as any).createdBy ?? (invoice as any).created_by ?? '';
+    const s = raw === null || raw === undefined ? '' : String(raw).trim();
+    return s ? escapeHtml(s) : '';
+  })();
+
+
+
+  const footerLinks = (() => {
+    const items: string[] = [];
+    const has = (value: any) => {
+      const v = value === null || value === undefined ? '' : String(value).trim();
+      return Boolean(v);
+    };
+
+    if (has((company as any).facebook)) items.push('Facebook');
+    if (has((company as any).instagram)) items.push('Instagram');
+    if (has((company as any).twitter)) items.push('X');
+    if (has((company as any).linkedin)) items.push('LinkedIn');
+    if (has((company as any).youtube)) items.push('YouTube');
+    if (has((company as any).tiktok)) items.push('TikTok');
+
+    const waRaw = (company as any).whatsapp;
+    const wa = waRaw === null || waRaw === undefined ? '' : String(waRaw).trim();
+    if (wa) items.push(`WhatsApp: ${escapeHtml(wa)}`);
+
+    return items;
+  })();
+
+
+
+  const poweredBy = (() => {
+    const w = (company as any).website;
+    const s = w === null || w === undefined ? '' : String(w).trim();
+    return s ? escapeHtml(s) : 'sendbillnow.com';
+  })();
+
+
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
+
+<style>
+
+  html,body{margin:0;padding:0;min-height:100%;background:#fff;color:#000;font-family:Georgia, 'Times New Roman', serif;}
+  .page{padding:56px 64px 130px;position:relative;overflow:hidden;}
+  .bg{position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;}
+  .bg:before{content:'';position:absolute;left:-160px;top:-180px;width:420px;height:420px;border-radius:999px;background:radial-gradient(circle at 30% 30%, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.00) 62%);}
+  .bg:after{content:'';position:absolute;right:-220px;bottom:-220px;width:560px;height:560px;border-radius:999px;background:radial-gradient(circle at 60% 60%, rgba(0,27,158,0.07) 0%, rgba(0,27,158,0.00) 66%);}
+  .bgBlobA{position:absolute;right:-140px;top:110px;width:320px;height:220px;border-radius:180px;filter:blur(0.2px);background:radial-gradient(circle at 30% 30%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 70%);transform:rotate(-10deg);}
+  .bgBlobB{position:absolute;left:120px;bottom:-120px;width:360px;height:240px;border-radius:220px;background:radial-gradient(circle at 60% 40%, rgba(0,27,158,0.08) 0%, rgba(0,27,158,0.00) 72%);transform:rotate(12deg);}
+  .bgStroke{position:absolute;left:52px;top:36px;width:240px;height:180px;border-radius:28px;transform:rotate(-8deg);border:2px solid rgba(0,27,158,0.10);border-left-color:rgba(0,27,158,0.00);border-bottom-color:rgba(0,27,158,0.00);}
+  .bgStripe{position:absolute;left:0;right:0;top:44px;height:2px;background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.22) 20%, rgba(0,27,158,0.00) 72%);}
+  .bgFadeBottom{position:absolute;left:0;right:0;bottom:0;height:360px;background:linear-gradient(180deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 60%, rgba(0,27,158,0.10) 100%);}
+  .bgMesh{position:absolute;inset:-40px;opacity:0.65;filter:saturate(1.05);background:
+    radial-gradient(520px 420px at 16% 18%, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.00) 62%),
+    radial-gradient(540px 460px at 84% 22%, rgba(0,27,158,0.13) 0%, rgba(0,27,158,0.00) 60%),
+    radial-gradient(700px 560px at 58% 72%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 64%),
+    linear-gradient(140deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 42%, rgba(0,27,158,0.00) 78%);
+    mix-blend-mode:multiply;}
+  .bgTopGlow{position:absolute;left:-40px;right:-40px;top:-40px;height:320px;background:linear-gradient(180deg, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.06) 30%, rgba(0,27,158,0.00) 92%);filter:blur(10px);opacity:0.95;}
+  .bgDots{position:absolute;inset:0;opacity:0.22;background-image:radial-gradient(rgba(0,27,158,0.18) 0.7px, rgba(0,0,0,0) 0.8px);background-size:22px 22px;background-position:10px 14px;}
+  .bgDiag{position:absolute;left:-120px;top:260px;width:520px;height:220px;transform:rotate(-18deg);background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 35%, rgba(0,27,158,0.00) 75%);border-radius:28px;}
+  .bgFrame{position:absolute;inset:18px;border:1px solid rgba(0,27,158,0.10);border-radius:22px;}
+  .bgWave{position:absolute;left:-120px;right:-120px;top:-170px;height:340px;border-radius:0 0 620px 620px;background:radial-gradient(circle at 50% 120%, rgba(0,27,158,0.14) 0%, rgba(0,27,158,0.08) 38%, rgba(0,27,158,0.00) 82%);transform:rotate(-2deg);filter:blur(6px);opacity:0.85;}
+  .content{position:relative;z-index:1;}
+  .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .companyName{font-size:22px;font-weight:700;margin-bottom:4px;color:${BLUE};}
+  .companyMeta{font-size:13px;line-height:1.35;}
+  .invoiceTitle{font-size:32px;font-weight:800;letter-spacing:1px;color:${BLUE};text-align:right;}
+  .metaRight{margin-top:10px;font-size:13px;line-height:1.5;text-align:right;}
+  .metaLabel{font-weight:700;}
+  .totalLabel{font-weight:800;color:${BLUE};}
+  .totalAmount{font-weight:900;color:#16a34a;}
+  .customerNameLine{font-weight:900;font-size:14px;}
+  .billRow{display:flex;justify-content:space-between;gap:32px;margin-top:48px;font-size:13px;}
+  .billBox{min-width:280px;}
+  .card{border:1px solid rgba(0,27,158,0.12);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.90) 100%);box-shadow:0 1px 0 rgba(0,27,158,0.06);}
+  .card .billHead{margin-bottom:8px;}
+  .billHead{font-weight:900;margin-bottom:6px;display:inline-block;padding:4px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(0,27,158,0.95) 0%, rgba(37,99,235,0.85) 100%);color:#fff;letter-spacing:0.3px;font-size:11px;}
+  table{width:100%;border-collapse:collapse;margin-top:42px;font-size:12px;}
+  th,td{border:1px solid ${BLUE};padding:6px 8px;vertical-align:top;}
+  th{font-weight:800;text-align:center;color:#fff;background:${BLUE};}
+  td.num{text-align:right;}
+  .grand{display:flex;justify-content:flex-end;margin-top:18px;}
+  .grandRow{display:flex;gap:10px;align-items:baseline;}
+  .grandText{font-weight:900;color:${BLUE};font-size:13px;}
+  .grandValue{font-weight:900;font-size:18px;color:#16a34a;}
+  .thanks{margin-top:36px;text-align:center;font-weight:800;color:${BLUE};font-size:13px;}
+
+  .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:18px 64px;border-radius:0;}
+  .footerTitle{text-align:center;font-weight:800;font-size:12px;}
+  .footerLinks{margin-top:8px;text-align:center;font-size:10px;opacity:0.95;}
+  .footerDivider{height:1px;background:rgba(255,255,255,0.25);margin:12px 0;}
+  .footerPowered{text-align:center;font-size:10px;opacity:0.9;}
+
+  @media print{
+    @page{margin:12mm;}
+    html,body{min-height:0;height:auto;}
+    .page{padding-bottom:130px;}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    th{background:${BLUE}!important;color:#fff!important;}
+    .bg:before{background:radial-gradient(circle at 30% 30%, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.00) 62%)!important;}
+    .bg:after{background:radial-gradient(circle at 60% 60%, rgba(0,27,158,0.07) 0%, rgba(0,27,158,0.00) 66%)!important;}
+    .bgBlobA{background:radial-gradient(circle at 30% 30%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 70%)!important;}
+    .bgBlobB{background:radial-gradient(circle at 60% 40%, rgba(0,27,158,0.08) 0%, rgba(0,27,158,0.00) 72%)!important;}
+    .bgStroke{border-color:rgba(0,27,158,0.10)!important;border-left-color:rgba(0,27,158,0.00)!important;border-bottom-color:rgba(0,27,158,0.00)!important;}
+    .bgStripe{background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.22) 20%, rgba(0,27,158,0.00) 72%)!important;}
+    .bgMesh{background:
+      radial-gradient(520px 420px at 16% 18%, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.00) 62%),
+      radial-gradient(540px 460px at 84% 22%, rgba(0,27,158,0.13) 0%, rgba(0,27,158,0.00) 60%),
+      radial-gradient(700px 560px at 58% 72%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 64%),
+      linear-gradient(140deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 42%, rgba(0,27,158,0.00) 78%)!important;}
+    .bgTopGlow{background:linear-gradient(180deg, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.06) 30%, rgba(0,27,158,0.00) 92%)!important;}
+    .bgDots{background-image:radial-gradient(rgba(0,27,158,0.18) 0.7px, rgba(0,0,0,0) 0.8px)!important;}
+    .bgDiag{background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 35%, rgba(0,27,158,0.00) 75%)!important;}
+    .bgFrame{border-color:rgba(0,27,158,0.10)!important;}
+    .bgWave{background:radial-gradient(circle at 50% 120%, rgba(0,27,158,0.14) 0%, rgba(0,27,158,0.08) 38%, rgba(0,27,158,0.00) 82%)!important;}
+    .footerBar{position:fixed;left:0;right:0;bottom:0;background:${BLUE}!important;color:#fff!important;border-radius:0!important;}
+  }
+
+</style>
+
+</head><body>
+
+  <div class="page">
+
+    <div class="bg" aria-hidden="true">
+      <div class="bgWave"></div>
+      <div class="bgMesh"></div>
+      <div class="bgTopGlow"></div>
+      <div class="bgFrame"></div>
+      <div class="bgDots"></div>
+      <div class="bgStripe"></div>
+      <div class="bgDiag"></div>
+      <div class="bgBlobA"></div>
+      <div class="bgBlobB"></div>
+      <div class="bgStroke"></div>
+      <div class="bgFadeBottom"></div>
+    </div>
+
+    <div class="content">
+
+    <div class="top">
+
+      <div>
+
+        <div class="companyName">${escapeHtml(company.name || 'Company Name')}</div>
+
+        <div class="companyMeta">
+
+          ${(() => {
+            const lines = companyAddressLines(company);
+            const line1 = lines.line1 ? String(lines.line1) : '';
+            const line2 = lines.line2 ? String(lines.line2) : '';
+            const addr1 = line1.trim() ? `<div>Address: ${escapeHtml(line1.trim())}</div>` : '';
+            const addr2 = line2.trim() ? `<div>${escapeHtml(line2.trim())}</div>` : '';
+            return `${addr1}${addr2}`;
+          })()}
+
+          ${company.phone ? `<div>Phone: ${escapeHtml(company.phone)}</div>` : ''}
+
+          ${company.email ? `<div>Email: ${escapeHtml(company.email)}</div>` : ''}
+
+          ${(company as any).website ? `<div>Website: ${escapeHtml(String((company as any).website))}</div>` : ''}
+
+        </div>
+
+      </div>
+
+      <div>
+
+        <div class="invoiceTitle">INVOICE</div>
+
+        <div class="metaRight">
+
+          ${accountNumberStr ? `<div><span class="metaLabel">Account #:</span> ${accountNumberStr}</div>` : ''}
+
+          <div><span class="metaLabel">INVOICE:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
+
+          <div><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date"></span></div>
+
+          <div><span class="metaLabel">Time:</span> <span id="sb_print_time"></span></div>
+
+          ${createdByStr ? `<div><span class="metaLabel">Created By:</span> ${createdByStr}</div>` : ''}
+
+          <div><span class="totalLabel">Total:</span> <span class="totalAmount">${escapeHtml(
+            formatAmount(
+              (() => {
+                const raw = (invoice as any).total ?? (invoice as any).grandTotal ?? (invoice as any).grand_total;
+                const direct = Number(raw);
+                if (Number.isFinite(direct)) return direct;
+
+                const sum = items.reduce((acc, it: any) => {
+                  const qty = Number(it?.quantity ?? 0) || 0;
+                  const rate = Number(it?.price ?? 0) || 0;
+                  const amount = Number(it?.total ?? qty * rate) || 0;
+                  return acc + amount;
+                }, 0);
+
+                return Number.isFinite(sum) ? sum : 0;
+              })(),
+            ),
+          )}</span></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="billRow">
+
+      <div class="billBox">
+
+        <div class="card">
+
+        <div class="billHead">TO:</div>
+
+        <div class="customerNameLine">${escapeHtml(customer.name || '')}</div>
+
+        ${customer.document ? `<div>${escapeHtml(String(customer.document))}</div>` : ''}
+
+        ${(() => {
+          const lines = customerAddressLines(customer);
+          const line1 = lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : '';
+          const line2 = lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : '';
+          return `${line1}${line2}`;
+        })()}
+
+        ${customer.email ? `<div>${escapeHtml(String(customer.email))}</div>` : ''}
+
+        ${customer.phone ? `<div>${escapeHtml(String(customer.phone))}</div>` : ''}
+
+        </div>
+
+      </div>
+
+      <div class="billBox">
+
+        <div class="card">
+
+        <div class="billHead">FOR:</div>
+
+        <div>${escapeHtml(String((invoice as any).serviceDescription || (invoice as any).job || (invoice as any).project || 'Consulting Services'))}</div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th style="width:12%">Date</th>
+
+          <th>Description of Services</th>
+
+          <th style="width:20%">Start Time and End Time</th>
+
+          <th style="width:12%">Total Hours</th>
+
+          <th style="width:12%">Hourly Rate</th>
+
+          <th style="width:12%">Total Amount</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        ${rows || `<tr><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td></tr>`}
+
+      </tbody>
+
+    </table>
+
+    <div class="grand">
+      <div class="grandRow">
+        <div class="grandText">Grand Total:</div>
+        <div class="grandValue">${escapeHtml(
+        formatAmount(
+          (() => {
+            const raw = (invoice as any).total ?? (invoice as any).grandTotal ?? (invoice as any).grand_total;
+            const direct = Number(raw);
+            if (Number.isFinite(direct)) return direct;
+
+            const sum = items.reduce((acc, it: any) => {
+              const qty = Number(it?.quantity ?? 0) || 0;
+              const rate = Number(it?.price ?? 0) || 0;
+              const amount = Number(it?.total ?? qty * rate) || 0;
+              return acc + amount;
+            }, 0);
+
+            return Number.isFinite(sum) ? sum : 0;
+          })(),
+        ),
+      )}</div>
+      </div>
+    </div>
+
+    </div>
+
+    <div class="footerBar">
+      <div class="footerTitle">Thank you for your business.</div>
+      ${footerLinks.length ? `<div class="footerLinks">${footerLinks.join(' | ')}</div>` : ''}
+      <div class="footerDivider"></div>
+      <div class="footerPowered">Powered by: ${poweredBy}</div>
+    </div>
+
+  </div>
+
+
+
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
+
+</body></html>`;
+
+
 
 }
 
@@ -159,12 +551,6 @@ function generateClassicInvoiceTemplate(
   const classicDiscountAmount = Number((invoice as any).total_discount ?? 0) || 0;
 
   const classicDiscountLabel = classicDiscountType === 'percentage' ? `${classicDiscountValue}%` : '';
-
-  const classicTimeStr = (() => {
-    const d = new Date(invoice.date);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  })();
 
   const classicAccountNumber = (() => {
     const raw = (invoice as any)?.accountNumber ?? (invoice as any)?.account_number;
@@ -415,9 +801,9 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
-        <div class="row"><span class="label">Invoice Date:</span> ${escapeHtml(formatDate(invoice.date))}</div>
+        <div class="row"><span class="label">Invoice Date:</span> <span id="sb_print_date"></span></div>
 
-        <div class="row"><span class="label">Time:</span> ${escapeHtml(classicTimeStr || '-')}</div>
+        <div class="row"><span class="label">Time:</span> <span id="sb_print_time"></span></div>
 
         ${invoice.createdBy
           ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>`
@@ -507,7 +893,19 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -578,44 +976,6 @@ function generateCashReceiptTemplate(
   const balanceDueAmount = Number(
     (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
   ) || 0;
-
-
-
-  const receiptDateStr = (() => {
-
-    const d = new Date(invoice.date);
-
-    if (Number.isNaN(d.getTime())) return escapeHtml(String(invoice.date || ''));
-
-    return escapeHtml(d.toLocaleDateString());
-
-  })();
-
-
-
-  const invoiceDateStr = invoice.date ? escapeHtml(formatDate(invoice.date)) : receiptDateStr;
-
-
-
-  const invoiceTimeStr = (() => {
-
-    const d = new Date(invoice.date);
-
-    if (Number.isNaN(d.getTime())) return '';
-
-    return escapeHtml(
-
-      d.toLocaleTimeString([], {
-
-        hour: '2-digit',
-
-        minute: '2-digit',
-
-      })
-
-    );
-
-  })();
 
 
 
@@ -781,9 +1141,9 @@ td{font-size:11px;}
 
             <div class="metaRow"><span class="label">Invoice #:</span><span class="value">${escapeHtml(invoice.invoiceNumber)}</span></div>
 
-            <div class="metaRow"><span class="label">Invoice Date:</span><span class="value">${invoiceDateStr}</span></div>
+            <div class="metaRow"><span class="label">Invoice Date:</span><span class="value"><span id="sb_print_date"></span></span></div>
 
-            <div class="metaRow"><span class="label">Time:</span><span class="value">${invoiceTimeStr || '-'}</span></div>
+            <div class="metaRow"><span class="label">Time:</span><span class="value"><span id="sb_print_time"></span></span></div>
 
             ${invoice.createdBy ? `<div class="metaRow"><span class="label">Created By:</span><span class="value">${escapeHtml(String(invoice.createdBy))}</span></div>` : ''}
 
@@ -943,7 +1303,20 @@ td{font-size:11px;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -996,35 +1369,6 @@ function generateRentReceiptTemplate(
 
 
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
-
-
-
-  const printDate = new Date().toLocaleDateString();
-
-
-
-  const invoiceDateStr = invoice.date ? formatDate(invoice.date) : printDate;
-
-
-
-  const invoiceTimeStr = (() => {
-
-    const d = new Date(invoice.date);
-
-    if (Number.isNaN(d.getTime())) return '';
-
-    return d.toLocaleTimeString([], {
-
-      hour: '2-digit',
-
-      minute: '2-digit',
-
-    });
-
-  })();
-
-
-
   const discountType = (invoice as any).discount_type as 'percentage' | 'fixed' | undefined;
   const discountValue = Number((invoice as any).discount_value ?? 0) || 0;
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
@@ -1237,9 +1581,9 @@ td{font-size:11px;}
 
           <div class="rightMetaRow"><div class="label">INVOICE #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
 
-          <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div>${escapeHtml(invoiceDateStr)}</div></div>
+          <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div><span id="sb_print_date"></span></div></div>
 
-          <div class="rightMetaRow"><div class="label">TIME:</div><div>${escapeHtml(invoiceTimeStr || '-')}</div></div>
+          <div class="rightMetaRow"><div class="label">TIME:</div><div><span id="sb_print_time"></span></div></div>
 
           ${invoice.createdBy ? `<div class="rightMetaRow"><div class="label">CREATED BY:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
 
@@ -1372,7 +1716,20 @@ td{font-size:11px;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -1421,18 +1778,6 @@ function generateBlueInvoiceTemplate(
   })();
 
   const shippingHandling = Number((invoice as any).shipping ?? (invoice as any).shippingHandling ?? 0) || 0;
-
-
-
-  const timeStr = (() => {
-
-    const d = new Date(invoice.date);
-
-    if (Number.isNaN(d.getTime())) return '-';
-
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  })();
 
 
 
@@ -1662,9 +2007,9 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
           <div class="line"><strong>Invoice #:</strong> ${escapeHtml(invoice.invoiceNumber)}</div>
 
-          <div class="line"><strong>Time:</strong> ${escapeHtml(timeStr)}</div>
+          <div class="line"><strong>Time:</strong> <span id="sb_print_time"></span></div>
 
-          <div class="line"><strong>Invoice Date:</strong> ${escapeHtml(formatDate(invoice.date))}</div>
+          <div class="line"><strong>Invoice Date:</strong> <span id="sb_print_date"></span></div>
 
           ${invoice.createdBy ? `<div class="line"><strong>Created By:</strong> ${escapeHtml(invoice.createdBy)}</div>` : ''}
 
@@ -1770,7 +2115,20 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -2037,7 +2395,7 @@ th:nth-child(4){width:140px;text-align:right;}
 
       <div>
 
-        <div><span class="label">ESTIMATE DATE:</span> ${escapeHtml(formatDate(invoice.date))}</div>
+        <div><span class="label">ESTIMATE DATE:</span> <span id="sb_print_date"></span></div>
 
         <div><span class="label">MATERIAL COST:</span> </div>
 
@@ -2181,7 +2539,20 @@ th:nth-child(4){width:140px;text-align:right;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -2599,6 +2970,14 @@ export function generateInvoiceHtml(
 
 
     return generateCashReceiptTemplate(invoice, customer, company);
+
+
+
+  } else if (templateType === 'service-hours') {
+
+
+
+    return generateServiceHoursInvoiceTemplate(invoice, customer, company);
 
 
 
@@ -3023,7 +3402,20 @@ th:nth-child(4){text-align:center;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -3540,7 +3932,20 @@ th:nth-child(4){text-align:center;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -3812,7 +4217,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-      <p><strong>Estimate Date:</strong> ${formatDate(invoice.date)}</p>
+      <p><strong>Estimate Date:</strong> <span id="sb_print_date"></span></p>
 
 
 
@@ -3940,7 +4345,20 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 
@@ -4406,7 +4824,20 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-<script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000);};</script>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+    document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
 
 
 

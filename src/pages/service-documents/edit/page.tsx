@@ -1740,7 +1740,7 @@ export default function ServiceDocumentsEditPage() {
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
                 className={INPUT_CLASSES}
-                disabled={sending || flowStatus !== 'Draft'}
+                disabled={sending}
               />
             </div>
 

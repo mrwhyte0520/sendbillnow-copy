@@ -8733,7 +8733,9 @@ export const invoicesService = {
             description,
             quantity,
             unit_price,
-            line_total
+            line_total,
+            start_time,
+            end_time
           `,
         )
         .eq('invoice_id', invoiceId);

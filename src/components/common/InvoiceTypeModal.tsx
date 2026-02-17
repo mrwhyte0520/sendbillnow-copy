@@ -435,6 +435,45 @@ export default function InvoiceTypeModal({
               </div>
             ),
           },
+
+
+
+          {
+            id: 'service-hours' as InvoiceTemplateType,
+            name: 'Service Hours Invoice',
+            description: 'Timesheet-style layout (hours & rate) like the classic service invoice',
+            icon: 'ri-time-line',
+            preview: (
+              <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
+                <div className="flex justify-between">
+                  <div>
+                    <div className="font-bold text-[7px]">Company Name</div>
+                    <div className="text-[5px]">Address</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-extrabold text-[9px]" style={{ color: '#0f6e73' }}>INVOICE</div>
+                    <div className="text-[5px] font-semibold">INVOICE: ____</div>
+                    <div className="text-[5px] font-semibold">DATE: __/__/__</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-3 text-[5px]">
+                  <div><span className="font-semibold">TO:</span> Customer</div>
+                  <div><span className="font-semibold">FOR:</span> Services</div>
+                </div>
+                <div className="mt-3 border border-black">
+                  <div className="grid grid-cols-6 text-[5px] font-semibold border-b border-black text-center">
+                    <div className="p-1 border-r border-black">Date</div>
+                    <div className="p-1 border-r border-black col-span-2">Description</div>
+                    <div className="p-1 border-r border-black">Time</div>
+                    <div className="p-1 border-r border-black">Hours</div>
+                    <div className="p-1">Amount</div>
+                  </div>
+                  <div className="h-6"></div>
+                </div>
+                <div className="mt-2 flex justify-end text-[5px]"><span className="font-semibold">Grand Total:</span><span className="inline-block ml-2 w-12 border-b border-black"></span></div>
+              </div>
+            ),
+          },
         ]
       : []),
   ],

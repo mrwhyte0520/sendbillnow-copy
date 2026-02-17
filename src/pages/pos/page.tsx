@@ -3939,24 +3939,6 @@ export default function POSPage() {
 
               </select>
 
-              <button
-
-                type="button"
-
-                onClick={() => navigate('/billing/quotes')}
-
-                className="inline-flex items-center px-4 py-2.5 bg-gradient-to-br from-white to-[#f8f6f0] border-2 border-[#e0d8c8] rounded-xl hover:border-[#008000]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 text-sm font-semibold text-gray-700 shadow-sm"
-
-                title="Go to Estimates"
-
-              >
-
-                <i className="ri-file-list-line mr-2 text-[#7a8c45]"></i>
-
-                Estimate
-
-              </button>
-
               {/* Modelo Button - Configure extras for Custom mode */}
 
               <button
@@ -8113,7 +8095,7 @@ export default function POSPage() {
 
           documentType="invoice"
 
-          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate']}
+          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours']}
 
           title="Print Receipt"
 

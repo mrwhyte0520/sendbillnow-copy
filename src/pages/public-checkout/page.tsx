@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 
@@ -32,6 +32,21 @@ export default function PublicCheckoutPage() {
     return n.length > 1 && emailPattern.test(e);
   }, [fullName, email]);
 
+  const refreshCheckout = useCallback(async (): Promise<CheckoutData | null> => {
+    if (!token) return null;
+    const { data, error: rpcError } = await supabase.rpc('get_public_pos_checkout_by_token', {
+      p_checkout_token: String(token),
+    });
+    if (rpcError) throw rpcError;
+    if (!data) {
+      setCheckout(null);
+      return null;
+    }
+    const next = data as any;
+    setCheckout(next);
+    return next as any;
+  }, [token]);
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -46,23 +61,19 @@ export default function PublicCheckoutPage() {
       }
 
       try {
-        const { data, error: rpcError } = await supabase.rpc('get_public_pos_checkout_by_token', {
-          p_checkout_token: String(token),
-        });
-        if (rpcError) throw rpcError;
-        if (!data) {
+        const next = await refreshCheckout();
+        if (!next) {
           setError('Checkout not found or expired.');
           setLoading(false);
           return;
         }
-        setCheckout(data as any);
       } catch (e: any) {
         setError(e?.message || 'Could not load checkout');
       } finally {
         setLoading(false);
       }
     })();
-  }, [token]);
+  }, [refreshCheckout, token]);
 
   const handleSubmit = async () => {
     if (!token) return;
@@ -88,7 +99,8 @@ export default function PublicCheckoutPage() {
         throw new Error('Could not save details');
       }
 
-      setSavedInfoMessage('Information saved');
+      await refreshCheckout();
+      setSavedInfoMessage('Information saved. You can return to the cashier.');
     } catch (e: any) {
       setError(e?.message || 'Could not save');
     } finally {
@@ -126,6 +138,10 @@ export default function PublicCheckoutPage() {
               <div className="mb-4 text-sm text-slate-700">{savedInfoMessage}</div>
             ) : null}
 
+            {checkout?.customer_submitted_at ? (
+              <div className="mb-4 text-sm text-slate-700">Details received.</div>
+            ) : null}
+
             {!loading && !error ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
@@ -133,6 +149,7 @@ export default function PublicCheckoutPage() {
                   <input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
+                    disabled={Boolean(checkout?.customer_submitted_at)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="Enter your name"
                   />
@@ -143,6 +160,7 @@ export default function PublicCheckoutPage() {
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={Boolean(checkout?.customer_submitted_at)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="name@email.com"
                   />
@@ -153,6 +171,7 @@ export default function PublicCheckoutPage() {
                   <input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    disabled={Boolean(checkout?.customer_submitted_at)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="Optional"
                   />
@@ -163,6 +182,7 @@ export default function PublicCheckoutPage() {
                   <input
                     value={secondEmail}
                     onChange={(e) => setSecondEmail(e.target.value)}
+                    disabled={Boolean(checkout?.customer_submitted_at)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600"
                     placeholder="Optional"
                   />
@@ -179,6 +199,7 @@ export default function PublicCheckoutPage() {
                       setError('');
                       setSavedInfoMessage('');
                     }}
+                    disabled={Boolean(checkout?.customer_submitted_at)}
                     className="px-5 py-3 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50"
                   >
                     Skip
@@ -186,7 +207,7 @@ export default function PublicCheckoutPage() {
 
                   <button
                     type="button"
-                    disabled={submitting || !canSubmit}
+                    disabled={submitting || !canSubmit || Boolean(checkout?.customer_submitted_at)}
                     onClick={() => void handleSubmit()}
                     className="px-6 py-3 rounded-2xl text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: 'linear-gradient(135deg, #2563eb, #06b6d4)' }}

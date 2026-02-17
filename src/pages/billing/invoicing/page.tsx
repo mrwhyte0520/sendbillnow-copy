@@ -188,6 +188,12 @@ interface UiInvoiceItem {
 
   total: number;
 
+  startTime?: string;
+
+  endTime?: string;
+
+  lineType?: 'product' | 'service';
+
 
 
 }
@@ -1138,6 +1144,12 @@ export default function InvoicingPage() {
 
     taxable?: boolean;
 
+    startTime?: string;
+
+    endTime?: string;
+
+    lineType?: 'product' | 'service';
+
 
 
   };
@@ -1260,7 +1272,7 @@ export default function InvoicingPage() {
 
 
 
-    { itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true },
+    { itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true, startTime: '', endTime: '', lineType: 'product' },
 
 
 
@@ -1764,6 +1776,20 @@ export default function InvoicingPage() {
 
             total: lineTotal,
 
+            startTime: typeof line.start_time === 'string' ? line.start_time : '',
+
+            endTime: typeof line.end_time === 'string' ? line.end_time : '',
+
+            lineType:
+
+              (typeof line.start_time === 'string' && line.start_time.trim()) ||
+
+              (typeof line.end_time === 'string' && line.end_time.trim())
+
+                ? 'service'
+
+                : 'product',
+
 
 
           };
@@ -1799,6 +1825,12 @@ export default function InvoicingPage() {
 
 
             total,
+
+            startTime: '',
+
+            endTime: '',
+
+            lineType: 'product',
 
 
 
@@ -2680,7 +2712,7 @@ export default function InvoicingPage() {
 
 
 
-    setNewInvoiceItems([{ itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true }]);
+    setNewInvoiceItems([{ itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true, startTime: '', endTime: '', lineType: 'product' }]);
 
 
 
@@ -3339,6 +3371,10 @@ export default function InvoicingPage() {
 
 
         price: item.price,
+
+        startTime: (item as any).startTime ?? '',
+
+        endTime: (item as any).endTime ?? '',
 
 
 
@@ -4800,6 +4836,10 @@ export default function InvoicingPage() {
 
         item_id: item.itemId ?? null,
 
+        start_time: (item as any).startTime ?? null,
+
+        end_time: (item as any).endTime ?? null,
+
 
 
       }));
@@ -5824,6 +5864,10 @@ export default function InvoicingPage() {
 
         item_id: item.itemId ?? null,
 
+        start_time: (item as any).startTime ?? null,
+
+        end_time: (item as any).endTime ?? null,
+
       }));
 
 
@@ -5871,6 +5915,10 @@ export default function InvoicingPage() {
             price: it.price,
 
             total: it.total,
+
+            startTime: (it as any).startTime ?? '',
+
+            endTime: (it as any).endTime ?? '',
 
           }));
 
@@ -7246,7 +7294,7 @@ export default function InvoicingPage() {
 
 
 
-                    field: 'description' | 'quantity' | 'price',
+                    field: 'description' | 'quantity' | 'price' | 'startTime' | 'endTime',
 
 
 
@@ -7302,6 +7350,22 @@ export default function InvoicingPage() {
 
 
 
+                          } else if (field === 'startTime') {
+
+
+
+                            updated.startTime = value;
+
+
+
+                          } else if (field === 'endTime') {
+
+
+
+                            updated.endTime = value;
+
+
+
                           } else {
 
 
@@ -7338,7 +7402,15 @@ export default function InvoicingPage() {
 
 
 
-                          updated.total = (updated.quantity || 0) * (updated.price || 0);
+                          if (field === 'quantity' || field === 'price') {
+
+
+
+                            updated.total = (updated.quantity || 0) * (updated.price || 0);
+
+
+
+                          }
 
 
 
@@ -7688,6 +7760,8 @@ export default function InvoicingPage() {
 
                               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
 
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Start/End</th>
+
 
 
                               <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantity</th>
@@ -7765,6 +7839,70 @@ export default function InvoicingPage() {
                                   )}
 
 
+
+                                </td>
+
+                                <td className="px-4 py-2 text-sm text-gray-900">
+
+                                  {isEditingInvoice ? (
+
+                                    (item as any).lineType === 'service' ? (
+
+                                      <div className="flex gap-2">
+
+                                        <input
+
+                                          type="time"
+
+                                          value={(item as any).startTime ?? ''}
+
+                                          onChange={(e) => handleItemChange(index, 'startTime', e.target.value)}
+
+                                          className="w-28 px-2 py-1 border border-gray-300 rounded text-sm"
+
+                                        />
+
+                                        <input
+
+                                          type="time"
+
+                                          value={(item as any).endTime ?? ''}
+
+                                          onChange={(e) => handleItemChange(index, 'endTime', e.target.value)}
+
+                                          className="w-28 px-2 py-1 border border-gray-300 rounded text-sm"
+
+                                        />
+
+                                      </div>
+
+                                    ) : (
+
+                                      null
+
+                                    )
+
+                                  ) : (
+
+                                    <div className="text-sm text-gray-900">
+
+                                      {(() => {
+
+                                        const s = ((item as any).startTime ?? '').toString().trim();
+
+                                        const e = ((item as any).endTime ?? '').toString().trim();
+
+                                        if (!s && !e) return '';
+
+                                        if (s && e) return `${s} - ${e}`;
+
+                                        return s || e;
+
+                                      })()}
+
+                                    </div>
+
+                                  )}
 
                                 </td>
 
@@ -9390,6 +9528,8 @@ export default function InvoicingPage() {
 
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
 
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Start/End</th>
+
 
 
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
@@ -9437,6 +9577,48 @@ export default function InvoicingPage() {
 
 
                               <div className="space-y-2">
+
+                                <select
+
+                                  value={(item as any).lineType === 'service' ? 'service' : 'product'}
+
+                                  onChange={(e) => {
+
+                                    const nextType = e.target.value === 'service' ? 'service' : 'product';
+
+                                    setNewInvoiceItems((prev) => {
+
+                                      const next = [...prev];
+
+                                      const curr = next[index] as any;
+
+                                      const patch: any = { lineType: nextType };
+
+                                      if (nextType !== 'service') {
+
+                                        patch.startTime = '';
+
+                                        patch.endTime = '';
+
+                                      }
+
+                                      next[index] = { ...curr, ...patch };
+
+                                      return next;
+
+                                    });
+
+                                  }}
+
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+
+                                >
+
+                                  <option value="product">Product</option>
+
+                                  <option value="service">Service</option>
+
+                                </select>
 
 
 
@@ -9502,7 +9684,17 @@ export default function InvoicingPage() {
 
                                         const qty = next[index].quantity || 1;
 
+                                        const detectedType = (invItem as any)?.item_type === 'service' ? 'service' : 'product';
 
+
+
+                                        const timePatch: any =
+
+                                          detectedType === 'service'
+
+                                            ? {}
+
+                                            : { startTime: '', endTime: '' };
 
                                         next[index] = {
 
@@ -9525,6 +9717,10 @@ export default function InvoicingPage() {
 
 
                                           total: qty * price,
+
+                                          lineType: detectedType,
+
+                                          ...timePatch,
 
 
 
@@ -9653,6 +9849,130 @@ export default function InvoicingPage() {
 
 
                               </div>
+
+
+
+                            </td>
+
+
+
+                            <td className="px-4 py-3">
+
+
+
+                              {(item as any).lineType === 'service' ? (
+
+                                <div className="flex gap-2">
+
+
+
+                                  <input
+
+
+
+                                    type="time"
+
+
+
+                                    value={(item as any).startTime ?? ''}
+
+
+
+                                    onChange={(e) => {
+
+
+
+                                      const v = e.target.value;
+
+
+
+                                      setNewInvoiceItems((prev) => {
+
+
+
+                                        const next = [...prev];
+
+
+
+                                        next[index] = { ...next[index], startTime: v };
+
+
+
+                                        return next;
+
+
+
+                                      });
+
+
+
+                                    }}
+
+
+
+                                    className="w-28 px-2 py-1 border border-gray-300 rounded text-sm"
+
+
+
+                                  />
+
+
+
+                                  <input
+
+
+
+                                    type="time"
+
+
+
+                                    value={(item as any).endTime ?? ''}
+
+
+
+                                    onChange={(e) => {
+
+
+
+                                      const v = e.target.value;
+
+
+
+                                      setNewInvoiceItems((prev) => {
+
+
+
+                                        const next = [...prev];
+
+
+
+                                        next[index] = { ...next[index], endTime: v };
+
+
+
+                                        return next;
+
+
+
+                                      });
+
+
+
+                                    }}
+
+
+
+                                    className="w-28 px-2 py-1 border border-gray-300 rounded text-sm"
+
+
+
+                                  />
+
+
+
+                                </div>
+
+                              ) : null}
 
 
 
@@ -9832,7 +10152,7 @@ export default function InvoicingPage() {
 
 
 
-                                      next.push({ itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true });
+                                      next.push({ itemId: undefined, description: '', quantity: 1, price: 0, total: 0, taxable: true, startTime: '', endTime: '', lineType: 'product' });
 
 
 
@@ -10587,6 +10907,10 @@ export default function InvoicingPage() {
 
 
                 price: item.price,
+
+                startTime: (item as any).startTime ?? '',
+
+                endTime: (item as any).endTime ?? '',
 
 
 

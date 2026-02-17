@@ -75,7 +75,8 @@ export default async function handler(req, res) {
 
   const status = String(doc.status || '');
   const normalizedStatus = status === 'Viewed' ? 'Sent' : status;
-  const shouldEmail = normalizedStatus === 'Draft';
+  const explicitTo = typeof body.toEmail === 'string' ? body.toEmail.trim() : (typeof body.to === 'string' ? body.to.trim() : '');
+  const shouldEmail = normalizedStatus === 'Draft' || Boolean(explicitTo);
   if (doc.sealed_at || status === 'Sealed') {
     return res.status(400).json({ ok: false, error: 'Document is sealed' });
   }
@@ -89,7 +90,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'Document cannot be sent in current status' });
   }
 
-  const explicitTo = typeof body.toEmail === 'string' ? body.toEmail.trim() : (typeof body.to === 'string' ? body.to.trim() : '');
   const toEmail = explicitTo || String(doc.client_email || '').trim();
   if (shouldEmail && !toEmail) return res.status(400).json({ ok: false, error: 'Missing client email' });
 
@@ -141,17 +141,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, token: tokenRaw, expires_at: expiresAt, link, emailed: false });
   }
 
-  const sentAt = doc.sent_at ? doc.sent_at : new Date().toISOString();
+  if (normalizedStatus === 'Draft') {
+    const sentAt = doc.sent_at ? doc.sent_at : new Date().toISOString();
 
-  const { error: updError } = await supabase
-    .from('service_documents')
-    .update({ status: 'Sent', sent_at: sentAt })
-    .eq('id', documentId)
-    .eq('user_id', tenantId);
+    const { error: updError } = await supabase
+      .from('service_documents')
+      .update({ status: 'Sent', sent_at: sentAt })
+      .eq('id', documentId)
+      .eq('user_id', tenantId);
 
-  if (updError) return res.status(500).json({ ok: false, error: updError.message || 'Could not update document status' });
+    if (updError) return res.status(500).json({ ok: false, error: updError.message || 'Could not update document status' });
 
-  await insertEvent({ supabase, tenantId, documentId, eventType: 'SENT', meta: { to: toEmail } });
+    await insertEvent({ supabase, tenantId, documentId, eventType: 'SENT', meta: { to: toEmail } });
+  } else {
+    await insertEvent({ supabase, tenantId, documentId, eventType: 'RESENT', meta: { to: toEmail } });
+  }
 
   const html = buildEmailHtml({
     companyName: doc.company_name,
