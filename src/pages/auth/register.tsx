@@ -12,6 +12,10 @@ export default function Register() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
     password: '',
     confirmPassword: '',
   });
@@ -119,7 +123,16 @@ export default function Register() {
     setLoading(true);
 
     // Validaciones
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.address ||
+      !formData.city ||
+      !formData.state ||
+      !formData.zip ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
       setError('Please fill in all fields');
       setLoading(false);
       return;
@@ -153,7 +166,13 @@ export default function Register() {
       const { data, error: signUpError } = await signUp(
         formData.email,
         formData.password,
-        formData.fullName
+        formData.fullName,
+        {
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zip: formData.zip,
+        }
       );
 
       if (signUpError) {
@@ -257,6 +276,71 @@ export default function Register() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                Address
+              </label>
+              <input
+                id="address"
+                name="address"
+                type="text"
+                value={formData.address}
+                onChange={handleChange}
+                className="block w-full px-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
+                placeholder="Street address"
+                disabled={loading}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
+                  City
+                </label>
+                <input
+                  id="city"
+                  name="city"
+                  type="text"
+                  value={formData.city}
+                  onChange={handleChange}
+                  className="block w-full px-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
+                  placeholder="City"
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-2">
+                  State
+                </label>
+                <input
+                  id="state"
+                  name="state"
+                  type="text"
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="block w-full px-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
+                  placeholder="State"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="zip" className="block text-sm font-medium text-gray-700 mb-2">
+                Zip
+              </label>
+              <input
+                id="zip"
+                name="zip"
+                type="text"
+                value={formData.zip}
+                onChange={handleChange}
+                className="block w-full px-3 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-[#008000] focus:border-transparent transition-all"
+                placeholder="Zip"
+                disabled={loading}
+              />
             </div>
 
             <div>

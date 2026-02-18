@@ -108,7 +108,12 @@ export const useAuth = () => {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    extra?: { address?: string; city?: string; state?: string; zip?: string }
+  ) => {
     try {
       const redirectTo = getSignupRedirectUrl();
       const { data, error } = await supabase.auth.signUp({
@@ -117,6 +122,10 @@ export const useAuth = () => {
         options: {
           data: {
             full_name: fullName,
+            address: extra?.address || undefined,
+            city: extra?.city || undefined,
+            state: extra?.state || undefined,
+            zip: extra?.zip || undefined,
           },
           ...(redirectTo ? { emailRedirectTo: redirectTo } : {}),
         },

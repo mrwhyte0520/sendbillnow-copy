@@ -7,6 +7,8 @@ interface UserRow {
   id: string;
   email: string;
   full_name: string;
+  city?: string | null;
+  state?: string | null;
   role?: string | null;
   status?: 'active' | 'inactive' | string | null;
   plan_id?: string | null;
@@ -29,6 +31,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
 
   const [modalType, setModalType] = useState<'plan' | 'trial' | null>(null);
   const [modalUser, setModalUser] = useState<UserRow | null>(null);
@@ -68,14 +72,25 @@ export default function AdminDashboardPage() {
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return users;
+    const city = cityFilter.trim().toLowerCase();
+    const state = stateFilter.trim().toLowerCase();
+
+    if (!term && !city && !state) return users;
+
     return users.filter((u) => {
       const email = String(u.email || '').toLowerCase();
       const name = String(u.full_name || '').toLowerCase();
       const id = String(u.id || '').toLowerCase();
-      return email.includes(term) || name.includes(term) || id.includes(term);
+      const uCity = String((u as any)?.city || '').toLowerCase();
+      const uState = String((u as any)?.state || '').toLowerCase();
+
+      const matchesTerm = !term || email.includes(term) || name.includes(term) || id.includes(term);
+      const matchesCity = !city || uCity.includes(city);
+      const matchesState = !state || uState.includes(state);
+
+      return matchesTerm && matchesCity && matchesState;
     });
-  }, [users, searchTerm]);
+  }, [users, searchTerm, cityFilter, stateFilter]);
 
   const counts = useMemo(() => {
     let noPlan = 0;
@@ -244,16 +259,36 @@ export default function AdminDashboardPage() {
                 placeholder="email, nombre o id"
               />
             </div>
+            <div className="w-full sm:w-56">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por City</label>
+              <input
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="city"
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Filtrar por State</label>
+              <input
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="state"
+              />
+            </div>
             <div className="text-sm text-gray-600">Total: {filtered.length}</div>
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-[1000px] w-full table-fixed divide-y divide-gray-200">
+            <table className="min-w-[1200px] w-full table-fixed divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Estado</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Rol</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">City</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">State</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Trial</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Plan</th>
                   <th className="px-4 py-2 pr-6 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-80">Acciones</th>
@@ -304,6 +339,12 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="text-sm text-gray-700">{String((u as any).role || 'user')}</span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 truncate">
+                        {String((u as any)?.city || '—')}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 truncate">
+                        {String((u as any)?.state || '—')}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{trialText}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{planText}</td>
