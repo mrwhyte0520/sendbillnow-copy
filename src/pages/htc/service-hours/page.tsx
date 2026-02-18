@@ -107,7 +107,7 @@ export default function HtcServiceHoursPage() {
 
   const contractorStorageKey = useMemo(() => {
     const uid = user?.id ? String(user.id) : '';
-    return uid ? `htc_contractor_info_${uid}` : 'htc_contractor_info';
+    return uid ? `htc_contractor_info_${uid}` : '';
   }, [user?.id]);
 
   const isContractorInfoComplete = useMemo(() => {
@@ -121,6 +121,28 @@ export default function HtcServiceHoursPage() {
   }, [contractorInfo]);
 
   useEffect(() => {
+    // Reset contractor info when switching users, and only load per-user storage.
+    if (!contractorStorageKey) {
+      setContractorInfo({
+        name: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+      });
+      return;
+    }
+
+    setContractorInfo({
+      name: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      zip: '',
+    });
+
     try {
       const raw = localStorage.getItem(contractorStorageKey);
       if (!raw) return;
@@ -241,9 +263,14 @@ export default function HtcServiceHoursPage() {
   const canSubmit = useMemo(() => {
     if (locked || submitting) return false;
     if (!isContractorInfoComplete) return false;
-    const hasAny = computed.lineComputed.some((ln) => ln.description.trim() && ln.workDate);
+    const hasAny = computed.lineComputed.some((ln) =>
+      ln.description.trim() &&
+      ln.workDate &&
+      String((ln as any).startTime || '').trim() &&
+      String((ln as any).endTime || '').trim()
+    );
     return hasAny;
-  }, [locked, submitting, computed.lineComputed, isContractorInfoComplete]);
+  }, [locked, submitting, isContractorInfoComplete, computed.lineComputed]);
 
   const handleChangeLine = (id: string, patch: Partial<UiLine>) => {
     setLines((prev) => prev.map((ln) => (ln.id === id ? { ...ln, ...patch } : ln)));
@@ -684,14 +711,16 @@ export default function HtcServiceHoursPage() {
         </div>
 
         <div className="mt-6 rounded-xl bg-white border border-slate-200 p-4">
-          <div className="text-xs font-semibold text-slate-500 mb-1">Notes</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={locked}
-            className="w-full min-h-[90px] px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-          <div className="mt-4 flex items-center justify-end gap-2">
+          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            {!canSubmit ? (
+              <div className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                {!isContractorInfoComplete
+                  ? 'Complete Contractor Info to unlock the Submit button.'
+                  : 'Complete Description, Start time, and End time on at least one line to unlock the Submit button.'}
+              </div>
+            ) : (
+              <div />
+            )}
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}

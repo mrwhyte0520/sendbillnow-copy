@@ -60,12 +60,15 @@ export default function AdminHtcAccessPage() {
   const [hourlyRate, setHourlyRate] = useState('');
   const [sending, setSending] = useState(false);
 
+  const [searchText, setSearchText] = useState('');
+
   const [defaultHourlyRate, setDefaultHourlyRate] = useState('');
   const [savingDefaultRate, setSavingDefaultRate] = useState(false);
   const [tenantId, setTenantId] = useState<string | null>(null);
 
   const [loadingSubs, setLoadingSubs] = useState(true);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
+  const [submissionUsers, setSubmissionUsers] = useState<Record<string, any>>({});
 
   const [loadingInvoiceId, setLoadingInvoiceId] = useState<string | null>(null);
 
@@ -157,14 +160,48 @@ export default function AdminHtcAccessPage() {
         .limit(25);
 
       if (error) throw error;
-      setSubmissions((data as any) || []);
+
+      const rows: SubmissionRow[] = ((data as any) || []) as any;
+      setSubmissions(rows);
+
+      try {
+        const ids = Array.from(new Set(rows.map((r) => String((r as any).submitted_by || '')).filter(Boolean)));
+        if (!ids.length) {
+          setSubmissionUsers({});
+        } else {
+          const { data: urows, error: uerr } = await supabase
+            .from('users')
+            .select('id, email, full_name, city, state')
+            .in('id', ids);
+          if (uerr) throw uerr;
+          const map: Record<string, any> = {};
+          (urows || []).forEach((u: any) => {
+            if (u?.id) map[String(u.id)] = u;
+          });
+          setSubmissionUsers(map);
+        }
+      } catch (e) {
+        console.warn('AdminHtcAccessPage loadSubmissions user lookup error', e);
+        setSubmissionUsers({});
+      }
     } catch (e) {
       console.error('AdminHtcAccessPage loadSubmissions error', e);
       setSubmissions([]);
+      setSubmissionUsers({});
     } finally {
       setLoadingSubs(false);
     }
   };
+
+  const filteredSubmissions = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return submissions;
+    return submissions.filter((s) => {
+      const u = submissionUsers[String((s as any).submitted_by || '')];
+      const byName = String(s.contractor_name || s.submitted_by_name || u?.full_name || '').toLowerCase();
+      return byName.includes(q);
+    });
+  }, [searchText, submissions, submissionUsers]);
 
   useEffect(() => {
     loadSubmissions();
@@ -436,19 +473,27 @@ export default function AdminHtcAccessPage() {
           )}
 
           <div className="overflow-x-auto">
+            <div className="mb-3">
+              <input
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Buscar por usuario"
+              />
+            </div>
             <table className="min-w-[900px] w-full table-fixed divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-52">Fecha</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-44">City/State</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Rate</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Status</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notas</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Invoice</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {submissions.map((s) => {
+                {filteredSubmissions.map((s) => {
                   const at = s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '—';
                   const who =
                     (s.contractor_name && String(s.contractor_name).trim()) ||
@@ -462,6 +507,10 @@ export default function AdminHtcAccessPage() {
                       (s.contractor_phone && String(s.contractor_phone).trim()) ||
                       (s.contractor_address && String(s.contractor_address).trim())
                   );
+                  const u = submissionUsers[String((s as any).submitted_by || '')];
+                  const city = String((s.contractor_city || u?.city || '') as any).trim();
+                  const state = String((s.contractor_state || u?.state || '') as any).trim();
+                  const location = [city, state].filter(Boolean).join(', ') || '—';
                   return (
                     <tr key={s.id}>
                       <td className="px-4 py-3 text-sm text-gray-700">{at}</td>
@@ -471,9 +520,9 @@ export default function AdminHtcAccessPage() {
                           <div className="text-xs text-amber-700 truncate">Missing contractor info</div>
                         ) : null}
                       </td>
+                      <td className="px-4 py-3 text-sm text-gray-700 truncate">{location}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{rate ? `$${rate.toFixed(2)}` : '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{String(s.status || 'submitted')}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600 truncate">{s.notes || '—'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         <button
                           onClick={() => handleOpenInvoice(s)}

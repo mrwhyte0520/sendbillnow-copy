@@ -145,6 +145,9 @@ export default function Login() {
         } catch {
         }
 
+        // Not an HTC portal-only user: clear any stale cache from previous sessions.
+        try { localStorage.removeItem('htc_portal_only'); } catch {}
+
         // Check if there's a selected plan from landing page
         const selectedPlan = localStorage.getItem('selected_plan');
         if (selectedPlan) {

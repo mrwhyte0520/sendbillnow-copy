@@ -160,10 +160,18 @@ export const useAuth = () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
+      try {
+        localStorage.removeItem('htc_portal_only');
+      } catch {
+      }
       return { error: null };
     } catch (error: any) {
       // Even if Supabase returns an error, clear local user state to avoid stuck sessions
       setUser(null);
+      try {
+        localStorage.removeItem('htc_portal_only');
+      } catch {
+      }
       return { error: error.message };
     }
   };
