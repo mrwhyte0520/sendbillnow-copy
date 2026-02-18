@@ -63,6 +63,13 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<Set<string> | null>(null);
   const [userStatus, setUserStatus] = useState<string | null>(null);
+  const [isHtcPortalOnly, setIsHtcPortalOnly] = useState(() => {
+    try {
+      return localStorage.getItem('htc_portal_only') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [isOwner, setIsOwner] = useState(true); // Default true (fail-open for owner)
   const [isLoading, setIsLoading] = useState(true);
   
@@ -88,14 +95,51 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
 
       // Verificar status del usuario
       try {
+        let metaFlag = Boolean((user as any)?.user_metadata?.htc_portal_only);
+        if (!metaFlag) {
+          try {
+            metaFlag = localStorage.getItem('htc_portal_only') === '1';
+          } catch {
+            // ignore
+          }
+        }
+        if (!metaFlag) {
+          try {
+            const { data: authData, error: authErr } = await supabase.auth.getUser();
+            metaFlag = !authErr && Boolean((authData as any)?.user?.user_metadata?.htc_portal_only);
+          } catch {
+            // ignore
+          }
+        }
+
+        if (!metaFlag) {
+          try {
+            const { data: roleRows, error: roleErr } = await supabase
+              .from('user_roles')
+              .select('id, roles!inner(name)')
+              .eq('user_id', user.id);
+
+            metaFlag = !roleErr && Array.isArray(roleRows) && roleRows.some((r: any) => String(r?.roles?.name || '').toLowerCase() === 'htc_portal');
+          } catch {
+            // ignore
+          }
+        }
         const { data: userData } = await supabase
           .from('users')
-          .select('status')
+          .select('status, htc_portal_only')
           .eq('id', user.id)
           .maybeSingle();
 
         const status = userData?.status || 'active';
         setUserStatus(status);
+        const resolvedHtc = Boolean((userData as any)?.htc_portal_only) || metaFlag;
+        setIsHtcPortalOnly(resolvedHtc);
+        try {
+          if (resolvedHtc) localStorage.setItem('htc_portal_only', '1');
+          else localStorage.removeItem('htc_portal_only');
+        } catch {
+          // ignore
+        }
 
         // Si el usuario está inactivo, bloquear acceso
         if (status === 'inactive') {
@@ -107,6 +151,26 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         console.error('Error verificando status del usuario:', error);
         // Fail-open: do not block navigation for transient read errors
         setUserStatus('active');
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.getUser();
+          const resolvedHtc = !authErr && Boolean((authData as any)?.user?.user_metadata?.htc_portal_only);
+          setIsHtcPortalOnly(resolvedHtc);
+          try {
+            if (resolvedHtc) localStorage.setItem('htc_portal_only', '1');
+            else localStorage.removeItem('htc_portal_only');
+          } catch {
+            // ignore
+          }
+        } catch {
+          const resolvedHtc = Boolean((user as any)?.user_metadata?.htc_portal_only);
+          setIsHtcPortalOnly(resolvedHtc);
+          try {
+            if (resolvedHtc) localStorage.setItem('htc_portal_only', '1');
+            else localStorage.removeItem('htc_portal_only');
+          } catch {
+            // ignore
+          }
+        }
       }
 
       // Si está activo, verificar si es owner
@@ -160,6 +224,18 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   const moduleName = mapPathToModule(window.location.pathname);
   const currentPath = location.pathname;
   const isAdminRoute = currentPath.startsWith('/admin');
+  const isHtcRoute = currentPath.startsWith('/htc');
+
+  if (isHtcPortalOnly && !isHtcRoute) {
+    return <Navigate to="/htc/service-hours" replace />;
+  }
+  if (!isHtcPortalOnly && isHtcRoute) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (isHtcPortalOnly && isHtcRoute) {
+    return children;
+  }
 
   // Owner has full access (skip plan + RBAC checks)
   if (isOwner && !isAdminRoute) return children;

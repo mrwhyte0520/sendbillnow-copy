@@ -11,6 +11,8 @@ import getCheckoutSessionHandler from './api/get-checkout-session.js';
 import claimCheckoutSessionHandler from './api/claim-checkout-session.js';
 import stripeWebhookHandler from './api/stripe-webhook.js';
 import sendReceiptEmailHandler from './api/send-receipt-email.js';
+import htcInviteHandler from './api/htc-invite.js';
+import htcSubmitHandler from './api/htc-submit.js';
 
 import serviceDocumentsCreateHandler from './api/service-documents/create.js';
 import serviceDocumentsUpdateHandler from './api/service-documents/update.js';
@@ -68,6 +70,8 @@ app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandl
 app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
 app.all('/api/claim-checkout-session', (req, res) => claimCheckoutSessionHandler(req, res));
 app.all('/api/send-receipt-email', (req, res) => sendReceiptEmailHandler(req, res));
+app.all('/api/htc/invite', (req, res) => htcInviteHandler(req, res));
+app.all('/api/htc/submit', (req, res) => htcSubmitHandler(req, res));
 
 // Service Documents (MVP)
 app.all('/api/service-documents/create', (req, res) => serviceDocumentsCreateHandler(req, res));

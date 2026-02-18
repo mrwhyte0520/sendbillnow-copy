@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { settingsService } from '../../../services/database';
 
@@ -13,6 +14,8 @@ interface UserRow {
   trial_end?: string | null;
   created_at?: string;
   hasAdminRole?: boolean;
+  htc_portal_only?: boolean | null;
+  htc_hourly_rate?: number | null;
 }
 
 const AVAILABLE_PLANS = [
@@ -22,6 +25,7 @@ const AVAILABLE_PLANS = [
 ];
 
 export default function AdminDashboardPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -175,6 +179,23 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleSetHtcHourlyRate = async (u: UserRow) => {
+    const current = Number((u as any)?.htc_hourly_rate ?? 0) || 0;
+    const raw = prompt(`Hourly rate for ${u.email || u.id}`, String(current));
+    if (raw === null) return;
+    const rate = Number(raw);
+    if (!Number.isFinite(rate) || rate < 0) {
+      alert('Invalid hourly rate');
+      return;
+    }
+    try {
+      await settingsService.updateUserHtcHourlyRate(String(u.id), rate);
+      await loadUsers();
+    } catch (e: any) {
+      alert(e?.message || 'Error updating hourly rate');
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -189,6 +210,13 @@ export default function AdminDashboardPage() {
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">Basic: {counts.basic}</span>
               <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">Premium: {counts.premium}</span>
               <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">Contractor: {counts.contractor}</span>
+              <button
+                onClick={() => navigate('/admin/htc-access')}
+                className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800"
+                disabled={loading}
+              >
+                HTC Access
+              </button>
               <button
                 onClick={loadUsers}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -307,6 +335,12 @@ export default function AdminDashboardPage() {
                             className="shrink-0 px-2 py-1.5 rounded-lg text-white text-xs font-medium bg-orange-600 hover:bg-orange-700"
                           >
                             Cancelar
+                          </button>
+                          <button
+                            onClick={() => handleSetHtcHourlyRate(u)}
+                            className="shrink-0 px-2 py-1.5 rounded-lg text-white text-xs font-medium bg-teal-600 hover:bg-teal-700"
+                          >
+                            Rate
                           </button>
                         </div>
                       </td>

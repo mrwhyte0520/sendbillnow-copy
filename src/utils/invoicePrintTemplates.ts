@@ -54,11 +54,28 @@ export interface JobEstimateSignatureFields {
 
 function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: CustomerData, company: CompanyData): string {
   const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const totalHours = items.reduce((acc, it: any) => acc + (Number(it?.quantity ?? 0) || 0), 0);
+  const grandTotalAmount = items.reduce((acc, it: any) => {
+    const qty = Number(it?.quantity ?? 0) || 0;
+    const rate = Number(it?.price ?? 0) || 0;
+    const amount = Number(it?.total ?? qty * rate) || 0;
+    return acc + amount;
+  }, 0);
   const rows = items
     .map((item) => {
       const qty = Number((item as any).quantity ?? 0) || 0;
       const rate = Number((item as any).price ?? 0) || 0;
       const amount = Number((item as any).total ?? qty * rate) || 0;
+
+      const workDateStr = (() => {
+        const raw = (item as any).workDate ?? (item as any).work_date ?? (item as any).date;
+        const s = raw === null || raw === undefined ? '' : String(raw).trim();
+        return s;
+      })();
+
+      const dateCell = workDateStr
+        ? escapeHtml(formatDate(workDateStr))
+        : '<span class="sb_print_date_cell"></span>';
 
       const timeStr = (() => {
         const sRaw = (item as any).startTime ?? (item as any).start_time ?? '';
@@ -71,9 +88,10 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
       })();
       return `
 
+
         <tr>
 
-          <td class="cell"><span class="sb_print_date_cell"></span></td>
+          <td class="cell">${dateCell}</td>
 
           <td class="cell">${escapeHtml(String((item as any).description || ''))}</td>
 
@@ -81,7 +99,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
           <td class="cell num">${escapeHtml(qty ? String(qty) : '')}</td>
 
-          <td class="cell num">${escapeHtml(rate ? formatAmount(rate) : '')}</td>
+          <td class="cell num">${escapeHtml(formatAmount(rate))}</td>
 
           <td class="cell num">${escapeHtml(formatAmount(amount))}</td>
 
@@ -180,10 +198,11 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
   .card{border:1px solid rgba(0,27,158,0.12);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.90) 100%);box-shadow:0 1px 0 rgba(0,27,158,0.06);}
   .card .billHead{margin-bottom:8px;}
   .billHead{font-weight:900;margin-bottom:6px;display:inline-block;padding:4px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(0,27,158,0.95) 0%, rgba(37,99,235,0.85) 100%);color:#fff;letter-spacing:0.3px;font-size:11px;}
-  table{width:100%;border-collapse:collapse;margin-top:42px;font-size:12px;}
+  table{width:100%;border-collapse:collapse;margin-top:42px;font-size:12px;table-layout:fixed;}
   th,td{border:1px solid ${BLUE};padding:6px 8px;vertical-align:top;}
   th{font-weight:800;text-align:center;color:#fff;background:${BLUE};}
   td.num{text-align:right;}
+  td:nth-child(2){white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
   .grand{display:flex;justify-content:flex-end;margin-top:18px;}
   .grandRow{display:flex;gap:10px;align-items:baseline;}
   .grandText{font-weight:900;color:${BLUE};font-size:13px;}
@@ -278,7 +297,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
           ${accountNumberStr ? `<div><span class="metaLabel">Account #:</span> ${accountNumberStr}</div>` : ''}
 
-          <div><span class="metaLabel">INVOICE:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
+          <div><span class="metaLabel">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
           <div><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date"></span></div>
 
@@ -286,23 +305,8 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
           ${createdByStr ? `<div><span class="metaLabel">Created By:</span> ${createdByStr}</div>` : ''}
 
-          <div><span class="totalLabel">Total:</span> <span class="totalAmount">${escapeHtml(
-            formatAmount(
-              (() => {
-                const raw = (invoice as any).total ?? (invoice as any).grandTotal ?? (invoice as any).grand_total;
-                const direct = Number(raw);
-                if (Number.isFinite(direct)) return direct;
-
-                const sum = items.reduce((acc, it: any) => {
-                  const qty = Number(it?.quantity ?? 0) || 0;
-                  const rate = Number(it?.price ?? 0) || 0;
-                  const amount = Number(it?.total ?? qty * rate) || 0;
-                  return acc + amount;
-                }, 0);
-
-                return Number.isFinite(sum) ? sum : 0;
-              })(),
-            ),
+          <div><span class="totalLabel">Total Hor:</span> <span class="totalAmount">${escapeHtml(
+            String(Math.round(totalHours * 100) / 100).replace(/\.00$/, ''),
           )}</span></div>
 
         </div>
@@ -358,17 +362,17 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
         <tr>
 
-          <th style="width:12%">Date</th>
+          <th style="width:9%">Date</th>
 
           <th>Description of Services</th>
 
-          <th style="width:20%">Start Time and End Time</th>
+          <th style="width:16%">Start Time and End Time</th>
 
-          <th style="width:12%">Total Hours</th>
+          <th style="width:7%">Hour</th>
 
-          <th style="width:12%">Hourly Rate</th>
+          <th style="width:7%">Hourly Rate</th>
 
-          <th style="width:12%">Total Amount</th>
+          <th style="width:8%">Total Amount</th>
 
         </tr>
 
@@ -385,24 +389,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
     <div class="grand">
       <div class="grandRow">
         <div class="grandText">Grand Total:</div>
-        <div class="grandValue">${escapeHtml(
-        formatAmount(
-          (() => {
-            const raw = (invoice as any).total ?? (invoice as any).grandTotal ?? (invoice as any).grand_total;
-            const direct = Number(raw);
-            if (Number.isFinite(direct)) return direct;
-
-            const sum = items.reduce((acc, it: any) => {
-              const qty = Number(it?.quantity ?? 0) || 0;
-              const rate = Number(it?.price ?? 0) || 0;
-              const amount = Number(it?.total ?? qty * rate) || 0;
-              return acc + amount;
-            }, 0);
-
-            return Number.isFinite(sum) ? sum : 0;
-          })(),
-        ),
-      )}</div>
+        <div class="grandValue">${escapeHtml(formatAmount(grandTotalAmount))}</div>
       </div>
     </div>
 

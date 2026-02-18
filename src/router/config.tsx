@@ -46,6 +46,8 @@ const PublicJobsPage = lazy(() => import('../pages/public-jobs/page'));
 const PublicIdCardPage = lazy(() => import('../pages/public-id-card/page'));
 const PublicCheckoutPage = lazy(() => import('../pages/public-checkout/page'));
 
+const HtcServiceHoursPage = lazy(() => import('../pages/htc/service-hours/page'));
+
 const HomePage = lazy(() => import('../pages/home/page'));
 const DemoPage = lazy(() => import('../pages/demo/page'));
 const DashboardPage = lazy(() => import('../pages/dashboard/page'));
@@ -115,6 +117,7 @@ const CompanySettingsPage = lazy(() => import('../pages/settings/company/page'))
 // Admin Pages
 const AdminDemoRequestsPage = lazy(() => import('../pages/admin/demo-requests/page'));
 const AdminDashboardPage = lazy(() => import('../pages/admin/dashboard/page'));
+const AdminHtcAccessPage = lazy(() => import('../pages/admin/htc-access/page'));
 const UsersSettingsPage = lazy(() => import('../pages/settings/users/page'));
 const AccountingSettingsPage = lazy(() => import('../pages/settings/accounting/page'));
 const TaxSettingsPage = lazy(() => import('../pages/settings/taxes/page'));
@@ -227,11 +230,11 @@ const routes: RouteObject[] = [
   },
   {
     path: '/dashboard',
-    element: <DashboardPage />
+    element: <ProtectedRoute><DashboardPage /></ProtectedRoute>
   },
   {
     path: '/statistics',
-    element: <StatisticsPage />
+    element: <ProtectedRoute><StatisticsPage /></ProtectedRoute>
   },
   // CONTADOR Module Routes
   {
@@ -272,7 +275,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/profile',
-    element: <ProfilePage />
+    element: <ProtectedRoute><ProfilePage /></ProtectedRoute>
   },
   {
     path: '/accounting',
@@ -770,6 +773,10 @@ const routes: RouteObject[] = [
     element: <ProtectedRoute><ItbisProportionalityPage /></ProtectedRoute>
   },
   {
+    path: '/htc/service-hours',
+    element: <ProtectedRoute><HtcServiceHoursPage /></ProtectedRoute>
+  },
+  {
     path: '/plans',
     element: <ProtectedRoute><PlansPage /></ProtectedRoute>
   },
@@ -830,6 +837,10 @@ const routes: RouteObject[] = [
   {
     path: '/admin/dashboard',
     element: <ProtectedRoute><AdminDashboardPage /></ProtectedRoute>
+  },
+  {
+    path: '/admin/htc-access',
+    element: <ProtectedRoute><AdminHtcAccessPage /></ProtectedRoute>
   },
   // Auth Routes
   {

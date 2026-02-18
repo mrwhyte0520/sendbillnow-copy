@@ -20,6 +20,13 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
   const [notifications] = useState<Array<{ title: string; time: string; type: 'info'|'warning'|'success' }>>([]);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [isHtcPortalOnly, setIsHtcPortalOnly] = useState(() => {
+    try {
+      return localStorage.getItem('htc_portal_only') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [userProfile, setUserProfile] = useState({
     fullName: '',
     email: '',
@@ -55,6 +62,72 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
   });
   const [showInitialPlanModal, setShowInitialPlanModal] = useState(false);
   const [showTrialExpiredModal, setShowTrialExpiredModal] = useState(false);
+
+  useEffect(() => {
+    const loadHtcFlag = async () => {
+      try {
+        if (!user?.id) {
+          setIsHtcPortalOnly(false);
+          try { localStorage.removeItem('htc_portal_only'); } catch {}
+          return;
+        }
+
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.getUser();
+          const metaFlag = !authErr && Boolean((authData as any)?.user?.user_metadata?.htc_portal_only);
+          if (metaFlag) {
+            setIsHtcPortalOnly(true);
+            try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+            return;
+          }
+        } catch {
+          // ignore and fallback to public.users
+        }
+
+        try {
+          const { data: roleRows, error: roleErr } = await supabase
+            .from('user_roles')
+            .select('id, roles!inner(name)')
+            .eq('user_id', user.id);
+
+          const isHtcRole = !roleErr && Array.isArray(roleRows) && roleRows.some((r: any) => String(r?.roles?.name || '').toLowerCase() === 'htc_portal');
+          if (isHtcRole) {
+            setIsHtcPortalOnly(true);
+            try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+            return;
+          }
+        } catch {
+          // ignore and fallback to public.users
+        }
+
+        const { data } = await supabase
+          .from('users')
+          .select('htc_portal_only')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const rowFlag = Boolean((data as any)?.htc_portal_only);
+        setIsHtcPortalOnly(rowFlag);
+        try {
+          if (rowFlag) localStorage.setItem('htc_portal_only', '1');
+          else localStorage.removeItem('htc_portal_only');
+        } catch {}
+      } catch {
+        setIsHtcPortalOnly(false);
+        try { localStorage.removeItem('htc_portal_only'); } catch {}
+      }
+    };
+
+    loadHtcFlag();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (Boolean((user as any)?.user_metadata?.htc_portal_only)) {
+      setIsHtcPortalOnly(true);
+      try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+    }
+  }, [user]);
 
   useEffect(() => {
     setUserProfile(prev => ({
@@ -169,7 +242,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
   useEffect(() => {
     if (!user?.id) return;
 
-    if (isPrivilegedUser) {
+    if (isPrivilegedUser || isHtcPortalOnly) {
       setShowInitialPlanModal(false);
       setShowTrialExpiredModal(false);
       return;
@@ -191,7 +264,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
     if (trialInfo.hasExpired && !currentPlan?.active && !isAllowedPath) {
       setShowTrialExpiredModal(true);
     }
-  }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active, location.pathname, isPrivilegedUser]);
+  }, [user?.id, hasUsedTrial, trialInfo.hasExpired, currentPlan?.active, location.pathname, isPrivilegedUser, isHtcPortalOnly]);
 
   useEffect(() => {
     const STORAGE_PREFIX = 'contabi_rbac_';
@@ -271,7 +344,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
     fetchCounts();
   }, [user]);
 
-  const navigation = [
+  const defaultNavigation = [
     {
       name: 'Dashboard',
       href: '/dashboard',
@@ -453,6 +526,17 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
       ]
     }] : [])
   ];
+
+  const navigation = isHtcPortalOnly
+    ? [
+        {
+          name: 'HTC Service Hours',
+          href: '/htc/service-hours',
+          icon: 'ri-time-line',
+          current: location.pathname.startsWith('/htc'),
+        },
+      ]
+    : defaultNavigation;
 
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
@@ -725,7 +809,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
           <div className="flex flex-col h-full">
             <div className="relative flex items-center px-4 py-4 min-h-[112px] bg-gradient-to-r from-[#008000] to-[#006600] border-b border-black/10">
               <Link
-                to="/dashboard"
+                to={isHtcPortalOnly ? '/htc/service-hours' : '/dashboard'}
                 onClick={() => setSidebarOpen(false)}
                 className={sidebarCollapsed ? 'flex w-full items-center justify-center' : 'absolute inset-0 flex items-center justify-center'}
               >
@@ -774,16 +858,18 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
               <div className="space-y-1">
                 {navigation.map(renderNavItem)}
 
-                <div className="mb-1">
-                  <button
-                    onClick={handleProfileClick}
-                    className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl w-full transition-all duration-300 text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)] ${sidebarCollapsed ? 'justify-center' : ''}`}
-                    title={sidebarCollapsed ? 'My Profile' : undefined}
-                  >
-                    <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
-                    {!sidebarCollapsed && <span className="truncate">My Profile</span>}
-                  </button>
-                </div>
+                {!isHtcPortalOnly && (
+                  <div className="mb-1">
+                    <button
+                      onClick={handleProfileClick}
+                      className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl w-full transition-all duration-300 text-[#4a5a3a] hover:bg-gradient-to-r hover:from-[#e8e2d5] hover:to-[#f0ebe0] hover:text-[#2f3e1e] hover:shadow-[0_2px_8px_rgb(0,0,0,0.06)] ${sidebarCollapsed ? 'justify-center' : ''}`}
+                      title={sidebarCollapsed ? 'My Profile' : undefined}
+                    >
+                      <i className={`ri-user-line ${sidebarCollapsed ? '' : 'mr-3'} text-lg flex-shrink-0`}></i>
+                      {!sidebarCollapsed && <span className="truncate">My Profile</span>}
+                    </button>
+                  </div>
+                )}
               </div>
             </nav>
 
@@ -798,8 +884,10 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
                   <div className="ml-3 flex-1 min-w-0">
                     <p className="text-sm font-medium text-stone-800 truncate">{user?.email || 'User'}</p>
                     <p className="text-xs text-stone-500 truncate">
-                      {isAdminAllowed ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan'))}
-                      {!isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
+                      {isHtcPortalOnly
+                        ? 'HTC Portal'
+                        : (isAdminAllowed ? 'Admin' : (currentPlan?.name || (trialStatus === 'expired' ? 'No active plan' : 'Trial Plan')))}
+                      {!isHtcPortalOnly && !isPrivilegedUser && !currentPlan && trialStatus !== 'expired' && (
                         trialInfo.daysLeft > 0
                           ? ` (${trialInfo.daysLeft}d left)`
                           : trialInfo.hoursLeft > 0
@@ -1275,9 +1363,9 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
                     setRestrictedModal({ show: false, moduleName: '', requiredPlan: '' });
                     navigate('/plans');
                   }}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
                 >
-                  <i className="ri-arrow-up-circle-line mr-2"></i>
+                  <i className="ri-arrow-up-circle-line mr-2 text-2xl"></i>
                   View Plans
                 </button>
               </div>
@@ -1286,69 +1374,13 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
         </div>
       )}
 
-      {/* Modal de configuración contable requerida */}
-      {false && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-[#2f3e1e] to-[#4b5f36] p-5 text-center">
-              <div className="w-16 h-16 mx-auto bg-white/15 rounded-full flex items-center justify-center mb-3 backdrop-blur-sm border border-white/30">
-                <i className="ri-settings-3-line text-3xl text-white"></i>
-              </div>
-              <h3 className="text-xl font-bold text-white">Setup Required</h3>
-              <p className="text-green-100 text-sm mt-1">Your plan includes advanced accounting features</p>
-            </div>
-            <div className="p-5">
-              <div className="text-center mb-5">
-                <p className="text-[#504737] text-sm mb-4">
-                  To take advantage of all your plan features, you need to set up:
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center bg-[#f7f3e8] rounded-lg p-3 border border-[#d9ceb5]">
-                    <i className="ri-calendar-check-line text-[#4b5f36] text-xl mr-3"></i>
-                    <div className="text-left text-[#3c3526]">
-                      <p className="font-medium text-sm text-[#2f3e1e]">Accounting Periods</p>
-                      <p className="text-xs text-[#6b5c3b]">Define your fiscal year and monthly periods</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center bg-[#eef2ea] rounded-lg p-3 border border-[#c7d1c0]">
-                    <i className="ri-file-list-3-line text-[#4b5f36] text-xl mr-3"></i>
-                    <div className="text-left text-[#3c3526]">
-                      <p className="font-medium text-sm text-[#2f3e1e]">NCF Sequences</p>
-                      <p className="text-xs text-[#6b5c3b]">Configure your fiscal vouchers</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {}}
-                  className="flex-1 px-4 py-2.5 border border-[#d9ceb5] text-[#2f3e1e] rounded-lg font-medium text-sm hover:bg-[#f3e7cf] transition-colors"
-                >
-                  Later
-                </button>
-                <button
-                  onClick={() => {
-                    navigate('/settings/accounting');
-                  }}
-                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-[#4b5f36] to-[#2f3e1e] text-white rounded-lg font-medium text-sm hover:from-[#3f4f2d] hover:to-[#1f2a15] transition-all flex items-center justify-center shadow-md"
-                >
-                  <i className="ri-settings-3-line mr-2"></i>
-                  Set Up Now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de selección de plan inicial para usuarios nuevos */}
-      {showInitialPlanModal && !isPrivilegedUser && (
+      {showInitialPlanModal && !isPrivilegedUser && !isHtcPortalOnly && (
         <InitialPlanSelectionModal onPlanSelected={handlePlanSelection} />
       )}
 
       {/* Modal de trial expirado - bloqueo total */}
-      {showTrialExpiredModal && !effectiveHasAccess() && !isPrivilegedUser && !['/plans', '/statistics', '/profile', '/dashboard', '/referrals'].some(p => location.pathname.startsWith(p)) && (
+      {showTrialExpiredModal && !effectiveHasAccess() && !isPrivilegedUser && !isHtcPortalOnly && !['/plans', '/statistics', '/profile', '/dashboard', '/referrals'].some(p => location.pathname.startsWith(p)) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
             <div className="bg-gradient-to-r from-red-600 to-orange-600 p-8 text-center">

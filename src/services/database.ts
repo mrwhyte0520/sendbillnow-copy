@@ -37,6 +37,102 @@ const handleJwtExpiration = async (error: any): Promise<boolean> => {
   return false;
 };
 
+export const htcServiceHoursService = {
+  async getMyLatestSubmission(userId: string) {
+    try {
+      if (!userId) return null;
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) return null;
+
+      const { data: sub, error: subErr } = await supabase
+        .from('htc_service_hours_submissions')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('submitted_by', userId)
+        .order('submitted_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (subErr) throw subErr;
+      if (!sub) return null;
+
+      const { data: lines, error: linesErr } = await supabase
+        .from('htc_service_hours_lines')
+        .select('*')
+        .eq('submission_id', (sub as any).id)
+        .order('work_date', { ascending: true });
+      if (linesErr) throw linesErr;
+
+      return { submission: sub, lines: lines ?? [] };
+    } catch (error) {
+      console.error('htcServiceHoursService.getMyLatestSubmission error', describeSupabaseError(error));
+      return null;
+    }
+  },
+
+  async createSubmissionWithLines(
+    userId: string,
+    payload: {
+      notes?: string | null;
+      submitted_by_email?: string | null;
+      submitted_by_name?: string | null;
+      hourly_rate?: number;
+    },
+    lines: Array<{
+      work_date: string;
+      description?: string | null;
+      start_time?: string | null;
+      end_time?: string | null;
+      hours?: number;
+      line_total?: number;
+    }>,
+  ) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const tenantId = await resolveTenantId(userId);
+      if (!tenantId) throw new Error('Could not resolve tenant');
+
+      const rate = Number(payload?.hourly_rate ?? 0);
+      const hourlyRate = Number.isFinite(rate) && rate >= 0 ? rate : 0;
+
+      const { data: sub, error: subErr } = await supabase
+        .from('htc_service_hours_submissions')
+        .insert({
+          tenant_id: tenantId,
+          submitted_by: userId,
+          submitted_by_email: payload?.submitted_by_email ?? null,
+          submitted_by_name: payload?.submitted_by_name ?? null,
+          hourly_rate: hourlyRate,
+          status: 'submitted',
+          notes: payload?.notes ?? null,
+        })
+        .select()
+        .single();
+      if (subErr) throw subErr;
+
+      const normalizedLines = (lines || []).map((ln) => ({
+        submission_id: (sub as any).id,
+        work_date: ln.work_date,
+        description: ln.description ?? null,
+        start_time: ln.start_time ?? null,
+        end_time: ln.end_time ?? null,
+        hours: Number(ln.hours ?? 0) || 0,
+        line_total: Number(ln.line_total ?? 0) || 0,
+      }));
+
+      const { data: savedLines, error: linesErr } = await supabase
+        .from('htc_service_hours_lines')
+        .insert(normalizedLines)
+        .select();
+      if (linesErr) throw linesErr;
+
+      return { submission: sub, lines: savedLines ?? [] };
+    } catch (error) {
+      console.error('htcServiceHoursService.createSubmissionWithLines error', describeSupabaseError(error));
+      throw error;
+    }
+  },
+};
+
 // Error handling wrapper
 const handleDatabaseError = async (error: any, fallbackData: any = []) => {
   // Check for JWT expiration first
@@ -15408,6 +15504,45 @@ export const settingsService = {
       return data;
     } catch (error) {
       console.error('Error updating user status:', error);
+      throw error;
+    }
+  },
+
+  async updateUserHtcPortalOnly(userId: string, htcPortalOnly: boolean) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const { data, error } = await supabase
+        .from('users')
+        .update({ htc_portal_only: Boolean(htcPortalOnly) })
+        .eq('id', userId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      return data ?? null;
+    } catch (error) {
+      console.error('Error updating HTC portal-only flag:', error);
+      throw error;
+    }
+  },
+
+  async updateUserHtcHourlyRate(userId: string, hourlyRate: number) {
+    try {
+      if (!userId) throw new Error('userId required');
+      const rate = Number(hourlyRate);
+      if (!Number.isFinite(rate) || rate < 0) throw new Error('Invalid hourly rate');
+
+      const { data, error } = await supabase
+        .from('users')
+        .update({ htc_hourly_rate: rate })
+        .eq('id', userId)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      return data ?? null;
+    } catch (error) {
+      console.error('Error updating HTC hourly rate:', error);
       throw error;
     }
   },

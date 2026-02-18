@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '../../lib/supabase';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -85,6 +86,27 @@ export default function Login() {
       }
 
       if (data?.user) {
+        if (Boolean((data.user as any)?.user_metadata?.htc_portal_only)) {
+          try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+          navigate('/htc/service-hours');
+          return;
+        }
+
+        try {
+          const { data: roleRows, error: roleErr } = await supabase
+            .from('user_roles')
+            .select('id, roles!inner(name)')
+            .eq('user_id', data.user.id);
+
+          const isHtcRole = !roleErr && Array.isArray(roleRows) && roleRows.some((r: any) => String((r as any)?.roles?.name || '').toLowerCase() === 'htc_portal');
+          if (isHtcRole) {
+            try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+            navigate('/htc/service-hours');
+            return;
+          }
+        } catch {
+        }
+
         const pendingSessionId = localStorage.getItem('pending_checkout_session_id');
         if (pendingSessionId) {
           try {
@@ -107,6 +129,20 @@ export default function Login() {
             console.error('Error claiming checkout session:', claimErr);
             alert(claimErr?.message || 'Could not apply the purchased plan. Please contact support.');
           }
+        }
+
+        try {
+          const { data: urow } = await supabase
+            .from('users')
+            .select('htc_portal_only')
+            .eq('id', data.user.id)
+            .maybeSingle();
+          if (Boolean((urow as any)?.htc_portal_only)) {
+            try { localStorage.setItem('htc_portal_only', '1'); } catch {}
+            navigate('/htc/service-hours');
+            return;
+          }
+        } catch {
         }
 
         // Check if there's a selected plan from landing page
