@@ -82,6 +82,7 @@ export default function AdminDashboardPage() {
     let basic = 0;
     let premium = 0;
     let contractor = 0;
+    let htcAccess = 0;
     for (const u of users) {
       const planId = String((u as any)?.plan_id || '').toLowerCase();
       if (!planId) noPlan += 1;
@@ -89,8 +90,10 @@ export default function AdminDashboardPage() {
       else if (planId === 'pos-premium') premium += 1;
       else if (planId === 'student') contractor += 1;
       else noPlan += 1;
+
+      if (Boolean((u as any)?.htc_portal_only)) htcAccess += 1;
     }
-    return { noPlan, basic, premium, contractor, total: users.length };
+    return { noPlan, basic, premium, contractor, htcAccess, total: users.length };
   }, [users]);
 
   const handleToggleBan = async (u: UserRow) => {
@@ -210,6 +213,7 @@ export default function AdminDashboardPage() {
               <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">Basic: {counts.basic}</span>
               <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">Premium: {counts.premium}</span>
               <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">Contractor: {counts.contractor}</span>
+              <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium">HTC Access: {counts.htcAccess}</span>
               <button
                 onClick={() => navigate('/admin/htc-access')}
                 className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800"
@@ -261,12 +265,15 @@ export default function AdminDashboardPage() {
                   const isBanned = status === 'inactive';
                   const planId = String((u as any).plan_id || '').trim();
                   const planStatus = String((u as any).plan_status || '').trim();
+                  const isHtcAccess = Boolean((u as any)?.htc_portal_only);
                   const trialEndRaw = (u as any).trial_end ? new Date((u as any).trial_end) : null;
                   const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
                   const trialText = trialEnd ? trialEnd.toLocaleDateString() : '—';
                   const planText = planId
                     ? `${getPlanDisplayName(planId)}${planStatus ? ` (${planStatus})` : ''}`
-                    : '—';
+                    : isHtcAccess
+                      ? 'HTC Access'
+                      : '—';
                   const hasAdmin = u.hasAdminRole === true;
                   return (
                     <tr key={u.id} className={isBanned ? 'bg-red-50' : ''}>

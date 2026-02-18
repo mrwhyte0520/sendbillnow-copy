@@ -117,16 +117,6 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
     return s ? escapeHtml(s) : '';
   })();
 
-
-
-  const createdByStr = (() => {
-    const raw = (invoice as any).createdBy ?? (invoice as any).created_by ?? '';
-    const s = raw === null || raw === undefined ? '' : String(raw).trim();
-    return s ? escapeHtml(s) : '';
-  })();
-
-
-
   const footerLinks = (() => {
     const items: string[] = [];
     const has = (value: any) => {
@@ -195,6 +185,8 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
   .customerNameLine{font-weight:900;font-size:14px;}
   .billRow{display:flex;justify-content:space-between;gap:32px;margin-top:48px;font-size:13px;}
   .billBox{min-width:280px;}
+  .billBoxTo{flex:1.2;min-width:360px;}
+  .billBoxFor{flex:0.8;min-width:220px;}
   .card{border:1px solid rgba(0,27,158,0.12);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.90) 100%);box-shadow:0 1px 0 rgba(0,27,158,0.06);}
   .card .billHead{margin-bottom:8px;}
   .billHead{font-weight:900;margin-bottom:6px;display:inline-block;padding:4px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(0,27,158,0.95) 0%, rgba(37,99,235,0.85) 100%);color:#fff;letter-spacing:0.3px;font-size:11px;}
@@ -209,10 +201,11 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
   .grandValue{font-weight:900;font-size:18px;color:#16a34a;}
   .thanks{margin-top:36px;text-align:center;font-weight:800;color:${BLUE};font-size:13px;}
 
-  .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:18px 64px;border-radius:0;}
-  .footerTitle{text-align:center;font-weight:800;font-size:12px;}
-  .footerLinks{margin-top:8px;text-align:center;font-size:10px;opacity:0.95;}
-  .footerDivider{height:1px;background:rgba(255,255,255,0.25);margin:12px 0;}
+  .footerAbove{position:absolute;left:0;right:0;bottom:54px;text-align:center;}
+  .footerTitle{text-align:center;font-weight:900;font-size:12px;color:#000;}
+  .footerLinks{margin-top:8px;text-align:center;font-size:10px;color:#000;opacity:0.95;}
+
+  .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:10px 64px;border-radius:0;}
   .footerPowered{text-align:center;font-size:10px;opacity:0.9;}
 
   @media print{
@@ -237,6 +230,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
     .bgDiag{background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 35%, rgba(0,27,158,0.00) 75%)!important;}
     .bgFrame{border-color:rgba(0,27,158,0.10)!important;}
     .bgWave{background:radial-gradient(circle at 50% 120%, rgba(0,27,158,0.14) 0%, rgba(0,27,158,0.08) 38%, rgba(0,27,158,0.00) 82%)!important;}
+    .footerAbove{position:fixed;left:0;right:0;bottom:54px;}
     .footerBar{position:fixed;left:0;right:0;bottom:0;background:${BLUE}!important;color:#fff!important;border-radius:0!important;}
   }
 
@@ -266,12 +260,12 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
       <div>
 
-        <div class="companyName">${escapeHtml(company.name || 'Company Name')}</div>
+        <div class="companyName">${escapeHtml(customer.name || '')}</div>
 
         <div class="companyMeta">
 
           ${(() => {
-            const lines = companyAddressLines(company);
+            const lines = customerAddressLines(customer);
             const line1 = lines.line1 ? String(lines.line1) : '';
             const line2 = lines.line2 ? String(lines.line2) : '';
             const addr1 = line1.trim() ? `<div>Address: ${escapeHtml(line1.trim())}</div>` : '';
@@ -279,11 +273,9 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
             return `${addr1}${addr2}`;
           })()}
 
-          ${company.phone ? `<div>Phone: ${escapeHtml(company.phone)}</div>` : ''}
+          ${customer.phone ? `<div>Phone: ${escapeHtml(String(customer.phone))}</div>` : ''}
 
-          ${company.email ? `<div>Email: ${escapeHtml(company.email)}</div>` : ''}
-
-          ${(company as any).website ? `<div>Website: ${escapeHtml(String((company as any).website))}</div>` : ''}
+          ${customer.email ? `<div>Email: ${escapeHtml(String(customer.email))}</div>` : ''}
 
         </div>
 
@@ -303,11 +295,11 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
           <div><span class="metaLabel">Time:</span> <span id="sb_print_time"></span></div>
 
-          ${createdByStr ? `<div><span class="metaLabel">Created By:</span> ${createdByStr}</div>` : ''}
-
           <div><span class="totalLabel">Total Hor:</span> <span class="totalAmount">${escapeHtml(
             String(Math.round(totalHours * 100) / 100).replace(/\.00$/, ''),
           )}</span></div>
+
+          <div><span class="totalLabel">Total:</span> <span class="totalAmount">${escapeHtml(formatAmount(grandTotalAmount))}</span></div>
 
         </div>
 
@@ -317,32 +309,27 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
     <div class="billRow">
 
-      <div class="billBox">
+      <div class="billBox billBoxTo">
 
         <div class="card">
 
         <div class="billHead">TO:</div>
 
-        <div class="customerNameLine">${escapeHtml(customer.name || '')}</div>
+        <div class="customerNameLine"><strong>HUDSON TRAINING CENTER</strong></div>
 
-        ${customer.document ? `<div>${escapeHtml(String(customer.document))}</div>` : ''}
+        <div>Address: 2321 John F. Kennedy Blvd., Suite 301,</div>
 
-        ${(() => {
-          const lines = customerAddressLines(customer);
-          const line1 = lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : '';
-          const line2 = lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : '';
-          return `${line1}${line2}`;
-        })()}
+        <div>North Bergen, NJ 07047</div>
 
-        ${customer.email ? `<div>${escapeHtml(String(customer.email))}</div>` : ''}
+        <div>Phone: 1 (888) 883-9192</div>
 
-        ${customer.phone ? `<div>${escapeHtml(String(customer.phone))}</div>` : ''}
+        <div>E-mail: info@hudsontrainingcenter.com</div>
 
         </div>
 
       </div>
 
-      <div class="billBox">
+      <div class="billBox billBoxFor">
 
         <div class="card">
 
@@ -395,10 +382,12 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
     </div>
 
-    <div class="footerBar">
+    <div class="footerAbove">
       <div class="footerTitle">Thank you for your business.</div>
       ${footerLinks.length ? `<div class="footerLinks">${footerLinks.join(' | ')}</div>` : ''}
-      <div class="footerDivider"></div>
+    </div>
+
+    <div class="footerBar">
       <div class="footerPowered">Powered by: ${poweredBy}</div>
     </div>
 
