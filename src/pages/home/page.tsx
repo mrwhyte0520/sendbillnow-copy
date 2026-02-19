@@ -626,6 +626,11 @@ export default function HomePage() {
                       'Select Plan'
                     )}
                   </button>
+                  {plan.id === 'student' && (
+                    <p className="mt-3 text-center text-sm font-semibold text-[#001B9E]">
+                      TRY IT FREE FOR 7 DAYS!
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

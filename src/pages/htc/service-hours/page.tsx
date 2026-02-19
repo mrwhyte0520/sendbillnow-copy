@@ -105,6 +105,12 @@ export default function HtcServiceHoursPage() {
   const [lines, setLines] = useState<UiLine[]>(() => [newLine(new Date())]);
   const [notes, setNotes] = useState('');
 
+  const setSyncedName = (value: string) => {
+    const next = String(value || '');
+    setFullName(next);
+    setContractorInfo((p) => ({ ...p, name: next }));
+  };
+
   const contractorStorageKey = useMemo(() => {
     const uid = user?.id ? String(user.id) : '';
     return uid ? `htc_contractor_info_${uid}` : '';
@@ -168,6 +174,11 @@ export default function HtcServiceHoursPage() {
     } catch {
     }
   }, [contractorStorageKey, contractorInfo]);
+
+  useEffect(() => {
+    const n = String(contractorInfo.name || '');
+    if (n !== fullName) setFullName(n);
+  }, [contractorInfo.name]);
 
   useEffect(() => {
     let mounted = true;
@@ -499,7 +510,7 @@ export default function HtcServiceHoursPage() {
                   <div className="text-xs font-semibold text-slate-500 mb-1">Name *</div>
                   <input
                     value={contractorInfo.name}
-                    onChange={(e) => setContractorInfo((p) => ({ ...p, name: e.target.value }))}
+                    onChange={(e) => setSyncedName(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
                   />
                 </div>
@@ -608,7 +619,7 @@ export default function HtcServiceHoursPage() {
             <div className="text-xs font-semibold text-slate-500 mb-1">Name</div>
             <input
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => setSyncedName(e.target.value)}
               disabled={locked}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
             />
