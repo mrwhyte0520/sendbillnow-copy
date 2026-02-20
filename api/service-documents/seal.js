@@ -956,34 +956,44 @@ export default async function handler(req, res) {
   if (companyInfoAll?.whatsapp) footerParts.push(`WhatsApp: ${safeText(companyInfoAll.whatsapp)}`);
   const footerLinksText = footerParts.filter(Boolean).join(' | ');
 
-  const footerH = footerLinksText ? 60 : 46;
+  const poweredText = 'Powered by: sendbillnow.com';
+  const poweredUrl = 'https://sendbillnow.com';
+  const poweredH = 18;
+  const thanksH = footerLinksText ? 42 : 30;
+  const footerH = thanksH + poweredH;
   const footerY = pageHeight - 26 - footerH;
-  pdf.setFillColor(0, 27, 158);
-  pdf.rect(marginX, footerY, contentW, footerH, 'F');
-  pdf.setTextColor(255, 255, 255);
+
+  // Thanks / social links panel (white background, black text)
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(marginX, footerY, contentW, thanksH, 'F');
+  pdf.setDrawColor(226, 232, 240);
+  pdf.setLineWidth(1);
+  pdf.rect(marginX, footerY, contentW, thanksH, 'S');
+
+  pdf.setTextColor(15, 23, 42);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.text('Thank you for your purchase.', marginX + contentW / 2, footerY + 18, { align: 'center' });
 
+  if (footerLinksText) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text(footerLinksText, marginX + contentW / 2, footerY + 34, { align: 'center' });
+  }
+
+  // Powered-by bar (blue background, white text)
+  const poweredY = footerY + thanksH;
+  pdf.setFillColor(0, 27, 158);
+  pdf.rect(marginX, poweredY, contentW, poweredH, 'F');
+
+  pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
-  const poweredText = 'Powered by: sendbillnow.com';
-  const poweredUrl = 'https://sendbillnow.com';
-  if (footerLinksText) {
-    pdf.text(footerLinksText, marginX + contentW / 2, footerY + 34, { align: 'center' });
-    pdf.text(poweredText, marginX + contentW / 2, footerY + 52, { align: 'center' });
-    {
-      const w = pdf.getTextWidth(poweredText);
-      const x = marginX + contentW / 2 - w / 2;
-      pdf.link(x, footerY + 52 - 8, w, 10, { url: poweredUrl });
-    }
-  } else {
-    pdf.text(poweredText, marginX + contentW / 2, footerY + 36, { align: 'center' });
-    {
-      const w = pdf.getTextWidth(poweredText);
-      const x = marginX + contentW / 2 - w / 2;
-      pdf.link(x, footerY + 36 - 8, w, 10, { url: poweredUrl });
-    }
+  pdf.text(poweredText, marginX + contentW / 2, poweredY + 12, { align: 'center' });
+  {
+    const w = pdf.getTextWidth(poweredText);
+    const x = marginX + contentW / 2 - w / 2;
+    pdf.link(x, poweredY + 12 - 8, w, 10, { url: poweredUrl });
   }
 
   const pdfAb = pdf.output('arraybuffer');

@@ -2313,15 +2313,12 @@ th:nth-child(4){width:140px;text-align:right;}
 
 .sign .line{border-top:1px solid ${BLUE};margin:18px 0 6px 0;}
 
-.footerBlue{margin-top:26px;background-color:${BLUE} !important;color:#fff !important;padding:16px 14px;text-align:center;}
-
-.footerBlue .thanks{font-weight:700;font-size:12px;margin-bottom:8px;}
-
-.footerBlue .links{font-size:10px;opacity:0.95;}
-
-.footerBlue .divider{height:1px;background:rgba(255,255,255,0.35);margin:10px 0;}
-
-.footerBlue .powered{font-size:10px;opacity:0.9;}
+.footer{margin-top:26px;text-align:center;font-size:10px;}
+.footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+.footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
 </style>
 
@@ -2538,15 +2535,17 @@ th:nth-child(4){width:140px;text-align:right;}
 
 
 
-    <div class="footerBlue">
+    <div class="footer">
 
-      <div class="thanks">Thank you for your purchase.</div>
+      <div class="footerMessage">
 
-      ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+        <div class="thanks">Thank you for your purchase.</div>
 
-      <div class="divider"></div>
+        ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
 
-      <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+      </div>
+
+      <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
     </div>
 
