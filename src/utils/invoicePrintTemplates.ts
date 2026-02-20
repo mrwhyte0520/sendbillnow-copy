@@ -710,15 +710,17 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 .footer{margin-top:26px;text-align:center;font-size:12px;padding-bottom:16px;}
 
-.footerBlue{background-color:${BLUE} !important;color:#fff !important;padding:16px 14px;text-align:center;position:absolute;left:10px;right:10px;bottom:0;}
+.footerBottom{position:absolute;left:10px;right:10px;bottom:0;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.08);border-radius:12px;overflow:hidden;}
 
-.footerBlue .thanks{font-weight:700;font-size:12px;margin-bottom:8px;}
+.footerThanks{background:#fff;color:#0f172a;text-align:center;padding:16px 14px;border:1px solid #e2e8f0;border-bottom:none;}
 
-.footerBlue .links{font-size:10px;opacity:0.95;}
+.footerThanks .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
 
-.footerBlue .divider{height:1px;background:rgba(255,255,255,0.35);margin:10px 0;}
+.footerThanks .links{font-size:10px;color:#0f172a;opacity:0.9;}
 
-.footerBlue .powered{font-size:10px;opacity:0.9;}
+.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:12px 14px;text-align:center;font-size:10px;letter-spacing:0.2px;}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
 </style>
 
@@ -853,15 +855,17 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-    <div class="footerBlue">
+    <div class="footerBottom">
 
-      <div class="thanks">Thank you for your purchase.</div>
+      <div class="footerThanks">
 
-      ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+        <div class="thanks">Thank you for your purchase.</div>
 
-      <div class="divider"></div>
+        ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
 
-      <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+      </div>
+
+      <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
     </div>
 
@@ -954,6 +958,16 @@ function generateCashReceiptTemplate(
   ) || 0;
 
 
+
+  const footerLinksParts: string[] = [];
+  if (company.facebook) footerLinksParts.push('Facebook');
+  if (company.instagram) footerLinksParts.push('Instagram');
+  if (company.twitter) footerLinksParts.push('X');
+  if (company.linkedin) footerLinksParts.push('LinkedIn');
+  if (company.youtube) footerLinksParts.push('YouTube');
+  if (company.tiktok) footerLinksParts.push('TikTok');
+  if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+  const footerLinksText = footerLinksParts.join(' | ');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Cash Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
 
@@ -1069,13 +1083,12 @@ td{font-size:11px;}
 
 
 
-.footer{margin-top:auto;text-align:center;padding:14px 18px;background:${BLUE};color:#fff;}
-
-.footerThanks{font-weight:700;font-size:12px;margin-bottom:6px;}
-
-.footerPowered{font-size:10px;opacity:0.95;}
-
-.footer a{color:#fff !important;text-decoration:underline;}
+.footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
+.footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+.footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
 .metaRow.emphasis .label{color:${BLUE};}
 
@@ -1267,9 +1280,15 @@ td{font-size:11px;}
 
       <div class="footer">
 
-        <div class="footerThanks">Thank you for your Business!</div>
+        <div class="footerMessage">
 
-        <div class="footerPowered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+          <div class="thanks">Thank you for your Business!</div>
+
+          ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+        </div>
+
+        <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
       </div>
 
@@ -1491,13 +1510,18 @@ td{font-size:11px;}
 
 .balanceBox .amt{font-weight:900;color:#16a34a;}
 
+.footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
 
+.footerLinksPanel{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:12px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
 
-.footer{padding:12px 18px 12px 18px;margin-top:auto;text-align:center;background:${BLUE};color:#fff;font-size:10px;}
+.footerLinksPanel .links{color:#0f172a;opacity:0.9;}
 
-.footer a{color:#fff !important;text-decoration:underline;}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:10px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
 .rightMetaRow.emphasis .label{color:${BLUE};font-weight:900;}
+
 .rightMetaRow.emphasis div:last-child{color:#16a34a;font-weight:900;}
 
 </style>
@@ -1676,9 +1700,9 @@ td{font-size:11px;}
 
       <div class="footer">
 
-        ${footerLinksText ? `<div style="margin-bottom:6px;">${footerLinksText}</div>` : ''}
+        ${footerLinksText ? `<div class="footerLinksPanel"><div class="links">${footerLinksText}</div></div>` : ''}
 
-        Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a>
+        <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
       </div>
 
@@ -1754,6 +1778,16 @@ function generateBlueInvoiceTemplate(
   })();
 
   const shippingHandling = Number((invoice as any).shipping ?? (invoice as any).shippingHandling ?? 0) || 0;
+
+  const footerLinksParts: string[] = [];
+  if (company.facebook) footerLinksParts.push('Facebook');
+  if (company.instagram) footerLinksParts.push('Instagram');
+  if (company.twitter) footerLinksParts.push('X');
+  if (company.linkedin) footerLinksParts.push('LinkedIn');
+  if (company.youtube) footerLinksParts.push('YouTube');
+  if (company.tiktok) footerLinksParts.push('TikTok');
+  if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+  const footerLinksText = footerLinksParts.join(' | ');
 
 
 
@@ -1884,13 +1918,12 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 .thanks{margin:46px 0 0 0;text-align:center;font-weight:700;font-size:13px;}
 
-.footer{margin-top:auto;text-align:center;background:${BLUE} !important;color:#fff !important;padding:14px 14px;}
-
-.footer .thanksFooter{font-weight:700;font-size:12px;margin-bottom:6px;}
-
-.footer .poweredFooter{font-size:10px;opacity:0.95;}
-
-.footer a{color:#fff !important;text-decoration:underline;}
+.footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
+.footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+.footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
 </style>
 
@@ -2081,9 +2114,15 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
     <div class="footer">
 
-      <div class="thanksFooter">Thank you for your Business!</div>
+      <div class="footerMessage">
 
-      <div class="poweredFooter">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+        <div class="thanks">Thank you for your Business!</div>
+
+        ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+      </div>
+
+      <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
     </div>
 

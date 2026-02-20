@@ -10724,7 +10724,7 @@ export default function InvoicingPage() {
 
 
 
-          hiddenTypes={['job-estimate', 'quotation', 'simple', 'detailed', 'corporate']}
+          hiddenTypes={["job-estimate", "quotation", "simple", "detailed", "corporate", "service-hours"]}
 
 
 
