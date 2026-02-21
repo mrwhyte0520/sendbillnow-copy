@@ -9,6 +9,8 @@ export default function Register() {
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [isPaid, setIsPaid] = useState(false);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const planId = String(selectedPlanId || '').trim();
+  const isContractorTrial = planId === 'student';
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -156,7 +158,7 @@ export default function Register() {
       return;
     }
 
-    if (!isPaid) {
+    if (!isPaid && !isContractorTrial) {
       setLoading(false);
       await startCheckout();
       return;
@@ -188,6 +190,50 @@ export default function Register() {
       }
 
       if (data?.user) {
+        if (isContractorTrial) {
+          try {
+            const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+            if (apiBase) {
+              const deviceKey = 'sb_device_id_v1';
+              let deviceId = '';
+              try {
+                deviceId = String(localStorage.getItem(deviceKey) || '').trim();
+              } catch {}
+
+              if (!deviceId) {
+                deviceId = `${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+                try {
+                  localStorage.setItem(deviceKey, deviceId);
+                } catch {}
+              }
+
+              const resp = await fetch(`${apiBase}/api/claim-contractor-trial`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  userId: data.user.id,
+                  userEmail: formData.email,
+                  deviceId,
+                }),
+              });
+              const out = await resp.json().catch(() => null);
+              if (!resp.ok || !out?.ok) {
+                const code = String(out?.code || '');
+                if (code === 'DEVICE_ALREADY_CLAIMED') {
+                  setError('This device has already used the 7-day free trial. Please subscribe to continue.');
+                } else {
+                  setError(out?.error || 'Could not activate free trial. Please try again or subscribe.');
+                }
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (err: any) {
+            setError(err?.message || 'Could not activate free trial. Please try again or subscribe.');
+            setLoading(false);
+            return;
+          }
+        }
         setSuccess(true);
         // Esperar 3 segundos antes de redirigir
         setTimeout(() => {
@@ -455,12 +501,12 @@ export default function Register() {
               ) : loading ? (
                 <>
                   <i className="ri-loader-4-line animate-spin mr-2"></i>
-                  {isPaid ? 'Creating account...' : 'Redirecting to payment...'}
+                  {isPaid || isContractorTrial ? 'Creating account...' : 'Redirecting to payment...'}
                 </>
               ) : (
                 <>
                   <i className="ri-user-add-line mr-2"></i>
-                  {isPaid ? 'Create Account' : 'Continue to Payment'}
+                  {isPaid || isContractorTrial ? 'Create Account' : 'Continue to Payment'}
                 </>
               )}
             </button>

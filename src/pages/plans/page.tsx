@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { usePlans } from '../../hooks/usePlans';
 import { useAuth } from '../../hooks/useAuth';
@@ -18,6 +19,7 @@ interface Plan {
 }
 
 export default function PlansPage() {
+  const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -106,6 +108,24 @@ export default function PlansPage() {
     }
 
     if (planId === 'student' && billingPeriod !== 'annual') {
+      return;
+    }
+
+    if (!user?.id) {
+      try {
+        localStorage.setItem('selected_plan', planId);
+        localStorage.setItem('selected_billing', planId === 'student' ? 'annual' : billingPeriod);
+      } catch {}
+      navigate(`/auth/register?plan=${encodeURIComponent(planId)}`);
+      return;
+    }
+
+    if (planId === 'student') {
+      try {
+        localStorage.setItem('selected_plan', 'student');
+        localStorage.setItem('selected_billing', 'annual');
+      } catch {}
+      navigate('/auth/register?plan=student');
       return;
     }
     setSelectedPlan(planId);
@@ -404,9 +424,9 @@ export default function PlansPage() {
 
         <button
           onClick={() => handleSelectPlan(plan.id)}
-          disabled={!canSelectPlan() || (plan.id === 'student' && billingPeriod !== 'annual')}
+          disabled={!canSelectPlan() || plan.id === 'student'}
           className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-            !canSelectPlan() || (plan.id === 'student' && billingPeriod !== 'annual')
+            !canSelectPlan() || plan.id === 'student'
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
               ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
@@ -417,12 +437,29 @@ export default function PlansPage() {
         >
           {!canSelectPlan()
             ? 'Payment Required'
-            : plan.id === 'student' && billingPeriod !== 'annual'
+            : plan.id === 'student'
             ? 'Annual Only'
             : currentPlan?.active
             ? 'Change Plan'
             : 'Select Plan'}
         </button>
+
+        {plan.id === 'student' && trialStatus !== 'expired' && (
+          <div className="mt-3 text-center">
+            <Link
+              to="/auth/register?plan=student"
+              onClick={() => {
+                try {
+                  localStorage.setItem('selected_plan', 'student');
+                  localStorage.setItem('selected_billing', 'annual');
+                } catch {}
+              }}
+              className="inline-block pointer-events-auto text-[#001B9E] font-semibold text-sm underline underline-offset-4 hover:text-[#00157A] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#001B9E]/40 focus-visible:ring-offset-2 rounded"
+            >
+              TRY IT FREE FOR 7 DAYS!
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

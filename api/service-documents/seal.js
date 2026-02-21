@@ -468,7 +468,7 @@ export default async function handler(req, res) {
   const leftX = marginX;
   const rightX = marginX + leftColW + customerColGap;
 
-  // Left column: Name, Email, Phone
+  // Left column: Name, Address, Phone, Email
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(0, 0, 0);
@@ -478,23 +478,8 @@ export default async function handler(req, res) {
 
   pdf.setFontSize(9);
   let customerInfoY = customerY + 14;
-  if (doc.client_email) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('EMAIL:', leftX, customerInfoY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 32, customerInfoY);
-    customerInfoY += 12;
-  }
-  if (doc.client_phone) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('PHONE:', leftX, customerInfoY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 36, customerInfoY);
-    customerInfoY += 12;
-  }
 
-  // Address (2 lines) moved under phone in left column
-  pdf.setFontSize(9);
+  // Address (2 lines)
   pdf.setFont('helvetica', 'bold');
   pdf.text('ADDRESS:', leftX, customerInfoY);
   pdf.setFont('helvetica', 'normal');
@@ -508,7 +493,23 @@ export default async function handler(req, res) {
   pdf.text(truncateToWidth(pdf, addrLine2 || '-', leftColW - 6), leftX, customerInfoY);
   customerInfoY += 12;
 
-  // Right column: move validity tag to the old address position + add start/end date
+  if (doc.client_phone) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('PHONE:', leftX, customerInfoY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 36, customerInfoY);
+    customerInfoY += 12;
+  }
+
+  if (doc.client_email) {
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('EMAIL:', leftX, customerInfoY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 32, customerInfoY);
+    customerInfoY += 12;
+  }
+
+  // Right column: move validity tag to the old address position + add expiration date
   let rightY = customerY;
   if (doc.doc_type === 'JOB_ESTIMATE') {
     const validDays = (() => {
@@ -523,7 +524,6 @@ export default async function handler(req, res) {
     rightY += 22;
 
     const startRaw = doc?.created_at || null;
-    const startDate = startRaw ? formatDateOnlyUtcMinus4(startRaw) : '';
     const endDate = (() => {
       const d = parseTimestampUtc(startRaw);
       if (!d) return '';
@@ -535,14 +535,7 @@ export default async function handler(req, res) {
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
     const dateColonX = rightX + 60;
-    pdf.text('START DATE', dateColonX, rightY, { align: 'right' });
-    pdf.text(':', dateColonX + 2, rightY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(startDate || '-', rightX + 66, rightY);
-    rightY += 12;
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('END DATE', dateColonX, rightY, { align: 'right' });
+    pdf.text('EXPIRES ON', dateColonX, rightY, { align: 'right' });
     pdf.text(':', dateColonX + 2, rightY);
     pdf.setFont('helvetica', 'normal');
     pdf.text(endDate || '-', rightX + 66, rightY);
@@ -813,7 +806,7 @@ export default async function handler(req, res) {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(11);
   const t1 = `Subtotal:`;
-  const t2 = `Taxes:`;
+  const t2 = `Sales Tax:`;
   const t2b = `Material Cost:`;
   const t3 = `Grand Total:`;
   const valX = rightBoxX + rightBoxW;

@@ -9,6 +9,7 @@ import webnotiEventHandler from './api/webnoti/event.js';
 import createCheckoutSessionHandler from './api/create-checkout-session.js';
 import getCheckoutSessionHandler from './api/get-checkout-session.js';
 import claimCheckoutSessionHandler from './api/claim-checkout-session.js';
+import claimContractorTrialHandler from './api/claim-contractor-trial.js';
 import stripeWebhookHandler from './api/stripe-webhook.js';
 import sendReceiptEmailHandler from './api/send-receipt-email.js';
 import htcInviteHandler from './api/htc-invite.js';
@@ -62,6 +63,29 @@ app.post('/api/stripe-webhook', express.raw({ type: 'application/json' }), (req,
 // JSON body parsing for our API handlers
 app.use(express.json({ limit: '25mb' }));
 
+app.use('/api', (req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = new Set([
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]);
+
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+});
+
 // API routes (same signatures as Vercel handlers)
 app.all('/api/demo-request', (req, res) => demoRequestHandler(req, res));
 app.all('/api/approve-demo', (req, res) => approveDemoHandler(req, res));
@@ -69,6 +93,7 @@ app.all('/api/webnoti/event', (req, res) => webnotiEventHandler(req, res));
 app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandler(req, res));
 app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
 app.all('/api/claim-checkout-session', (req, res) => claimCheckoutSessionHandler(req, res));
+app.all('/api/claim-contractor-trial', (req, res) => claimContractorTrialHandler(req, res));
 app.all('/api/send-receipt-email', (req, res) => sendReceiptEmailHandler(req, res));
 app.all('/api/htc/invite', (req, res) => htcInviteHandler(req, res));
 app.all('/api/htc/submit', (req, res) => htcSubmitHandler(req, res));

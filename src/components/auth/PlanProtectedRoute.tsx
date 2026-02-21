@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 interface PlanProtectedRouteProps {
@@ -29,6 +29,10 @@ export default function PlanProtectedRoute({ children }: PlanProtectedRouteProps
 
   if (isAlwaysAllowed) {
     return children;
+  }
+
+  if (isTrialExpired && !hasActivePlan) {
+    return <Navigate to="/plans" replace />;
   }
 
   // Verificar acceso

@@ -845,7 +845,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
         <div class="row"><span>Discount${classicDiscountLabel ? ` (${escapeHtml(classicDiscountLabel)})` : ''}:</span><span>(-) ${formatAmount(classicDiscountAmount)}</span></div>
 
-        <div class="row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+        <div class="row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
 
         <div class="row" style="font-weight:800;"><span>Grand Total:</span><span style="color:#16a34a;font-weight:900;">${formatAmount(invoice.amount)}</span></div>
 
@@ -2332,31 +2332,26 @@ th:nth-child(4){width:140px;text-align:right;}
 
         <div class="title">JOB ESTIMATE <span class="valid">(Valid for 30 days)</span></div>
 
-        <div style="margin-top:10px;font-size:11px;line-height:1.5;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="margin-top:10px;font-size:11px;line-height:1.5;display:grid;grid-template-columns:1fr;gap:10px;">
 
           <div>
 
             <div><span class="label">CUSTOMER:</span> ${escapeHtml(customer.name || '')}</div>
 
-            ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
+            ${(() => {
+              const a = parseAddress(customer.address);
+              const parts = [a.street, [a.city, [a.state, a.zip].filter(Boolean).join(' ')].filter(Boolean).join(a.city ? ', ' : '')].filter(Boolean);
+              const line1 = parts[0] || '-';
+              const line2 = parts[1] || '';
+              return `
+                <div><span class="label">ADDRESS:</span> ${escapeHtml(line1)}</div>
+                ${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}
+              `;
+            })()}
 
             ${customer.phone ? `<div><span class="label">PHONE:</span> ${escapeHtml(customer.phone)}</div>` : ''}
 
-          </div>
-
-          <div>
-
-            ${(() => { const a = parseAddress(customer.address); return `
-
-            <div><span class="label">ADDRESS:</span> ${escapeHtml(a.street || '-')}</div>
-
-            <div><span class="label">CITY:</span> ${escapeHtml(a.city || '-')}</div>
-
-            <div><span class="label">STATE:</span> ${escapeHtml(a.state || '-')}</div>
-
-            <div><span class="label">ZIP:</span> ${escapeHtml(a.zip || '-')}</div>
-
-            `; })()}
+            ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
 
           </div>
 
@@ -2473,7 +2468,7 @@ th:nth-child(4){width:140px;text-align:right;}
 
         <div class="row"><span>Discount:</span><span>${formatAmount(discountAmount)}</span></div>
 
-        <div class="row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+        <div class="row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
 
         <div class="row grand"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
 

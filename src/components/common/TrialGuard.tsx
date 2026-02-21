@@ -36,7 +36,7 @@ export default function TrialGuard({ children, feature }: TrialGuardProps) {
             </h2>
             <p className="text-gray-600">
               {trialStatus === 'expired' 
-                ? 'Your 15-day trial period has expired. To continue using Sendbillnow, select a subscription plan.'
+                ? 'Your 7-day trial period has expired. To continue using Sendbillnow, select a subscription plan.'
                 : 'You do not have access to this feature. Check your subscription.'
               }
             </p>

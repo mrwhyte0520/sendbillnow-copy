@@ -30,7 +30,7 @@ export interface PlanPermissions {
 }
 
 export function usePlanPermissions(): PlanPermissions {
-  const { currentPlan, getTrialStatus } = usePlans();
+  const { currentPlan, getTrialStatus, trialPlanId } = usePlans();
   
   const trialStatus = getTrialStatus();
   const isTrialActive = trialStatus === 'active' || trialStatus === 'warning';
@@ -54,9 +54,13 @@ export function usePlanPermissions(): PlanPermissions {
       // Si tiene un plan activo pero no coincide, dar acceso completo
       return 'pos-super-plus';
     }
-    if (isTrialActive) return 'trial';
+    if (isTrialActive) {
+      const tpid = String(trialPlanId || '').toLowerCase().trim();
+      if (tpid === 'student') return 'student';
+      return 'none';
+    }
     return 'none';
-  }, [hasActivePlan, currentPlan, isTrialActive]);
+  }, [hasActivePlan, currentPlan, isTrialActive, trialPlanId]);
 
   const planConfig = PLAN_CONFIGS[currentPlanId];
   const currentPlanName = planConfig?.name || 'Sin Plan';
@@ -79,11 +83,6 @@ export function usePlanPermissions(): PlanPermissions {
       if (route.startsWith('/settings') && isTrialExpired && currentPlanId === 'none') {
         return true; // Permitir settings incluso sin plan
       }
-      return true;
-    }
-
-    // Durante trial activo, permitir todo
-    if (isTrialActive && currentPlanId === 'trial') {
       return true;
     }
 

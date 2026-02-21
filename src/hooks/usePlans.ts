@@ -182,14 +182,15 @@ function buildPlan(planId: string): Plan {
 
 export function usePlans() {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+  const [trialPlanId, setTrialPlanId] = useState<string | null>(null);
   const [trialInfo, setTrialInfo] = useState<TrialInfo>({
-    isActive: true,
-    daysLeft: 7,
+    isActive: false,
+    daysLeft: 0,
     hoursLeft: 0,
     minutesLeft: 0,
     startDate: new Date(),
-    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    hasExpired: false
+    endDate: new Date(),
+    hasExpired: true
   });
 
   // Función para calcular el tiempo restante
@@ -234,7 +235,7 @@ export function usePlans() {
         if (user?.id) {
           const { data: row, error } = await supabase
             .from('users')
-            .select('plan_id, plan_status, trial_end')
+            .select('plan_id, plan_status, trial_end, trial_plan_id')
             .eq('id', user.id)
             .maybeSingle();
 
@@ -243,10 +244,12 @@ export function usePlans() {
             const planStatus = (row as any).plan_status ? String((row as any).plan_status) : '';
             const trialEndRaw = (row as any).trial_end ? new Date((row as any).trial_end) : null;
             const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
+            const trialPlan = (row as any).trial_plan_id ? String((row as any).trial_plan_id) : '';
 
             if (planId && planStatus === 'active') {
               const plan = buildPlan(planId);
               setCurrentPlan(plan);
+              setTrialPlanId(null);
               localStorage.setItem('contard_current_plan', JSON.stringify(plan));
               // If plan active, trial considered inactive
               setTrialInfo((prev) => ({
@@ -260,6 +263,7 @@ export function usePlans() {
             if (trialEnd) {
               const timeLeft = calculateTimeLeft(trialEnd);
               setCurrentPlan(null);
+              setTrialPlanId(trialPlan || null);
               localStorage.removeItem('contard_current_plan');
               setTrialInfo({
                 startDate: now,
@@ -270,6 +274,9 @@ export function usePlans() {
                 startDate: now.toISOString(),
                 endDate: trialEnd.toISOString(),
               }));
+              if (trialPlan) {
+                localStorage.setItem('contard_trial_plan', trialPlan);
+              }
               if (timeLeft.hasExpired) {
                 localStorage.setItem('contard_trial_expired', 'true');
               } else {
@@ -286,6 +293,7 @@ export function usePlans() {
       // 2) Fallback to localStorage
       const savedTrialInfo = localStorage.getItem('contard_trial_info');
       const savedPlan = localStorage.getItem('contard_current_plan');
+      const savedTrialPlan = localStorage.getItem('contard_trial_plan');
 
       if (savedPlan) {
         try {
@@ -306,6 +314,7 @@ export function usePlans() {
             throw new Error('Invalid dates');
           }
           const timeLeft = calculateTimeLeft(endDate);
+          setTrialPlanId(savedTrialPlan ? String(savedTrialPlan) : null);
           setTrialInfo({
             startDate,
             endDate,
@@ -317,15 +326,18 @@ export function usePlans() {
         }
       }
 
-      // 3) Final fallback: set an in-memory 7-day trial
-      const startDate = now;
-      const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      const timeLeft = calculateTimeLeft(endDate);
-      setTrialInfo({
-        startDate,
-        endDate,
-        ...timeLeft,
-      });
+      // 3) Final fallback: no trial unless explicitly granted
+      setTrialPlanId(null);
+      setTrialInfo((prev) => ({
+        ...prev,
+        isActive: false,
+        hasExpired: true,
+        daysLeft: 0,
+        hoursLeft: 0,
+        minutesLeft: 0,
+        startDate: now,
+        endDate: now,
+      }));
     };
 
     initializeFromDbOrLocal();
@@ -510,6 +522,7 @@ export function usePlans() {
     localStorage.setItem('contard_trial_used', 'true');
     
     localStorage.setItem('contard_trial_plan', planId);
+    setTrialPlanId(planId);
     
     setTrialInfo(newTrialInfo);
 
@@ -523,6 +536,7 @@ export function usePlans() {
           .from('users')
           .update({
             trial_end: endDate.toISOString(),
+            trial_plan_id: planId,
             plan_id: null,
             plan_status: 'inactive',
             updated_at: new Date().toISOString(),
@@ -538,6 +552,7 @@ export function usePlans() {
 
   return {
     currentPlan,
+    trialPlanId,
     trialInfo,
     subscribeToPlan,
     cancelSubscription,
