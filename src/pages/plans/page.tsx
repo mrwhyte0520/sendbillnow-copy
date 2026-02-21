@@ -119,15 +119,6 @@ export default function PlansPage() {
       navigate(`/auth/register?plan=${encodeURIComponent(planId)}`);
       return;
     }
-
-    if (planId === 'student') {
-      try {
-        localStorage.setItem('selected_plan', 'student');
-        localStorage.setItem('selected_billing', 'annual');
-      } catch {}
-      navigate('/auth/register?plan=student');
-      return;
-    }
     setSelectedPlan(planId);
     setShowPaymentModal(true);
   };
@@ -424,9 +415,9 @@ export default function PlansPage() {
 
         <button
           onClick={() => handleSelectPlan(plan.id)}
-          disabled={!canSelectPlan() || plan.id === 'student'}
+          disabled={!canSelectPlan() || (plan.id === 'student' && billingPeriod === 'monthly')}
           className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-            !canSelectPlan() || plan.id === 'student'
+            !canSelectPlan() || (plan.id === 'student' && billingPeriod === 'monthly')
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
               ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
@@ -437,7 +428,7 @@ export default function PlansPage() {
         >
           {!canSelectPlan()
             ? 'Payment Required'
-            : plan.id === 'student'
+            : plan.id === 'student' && billingPeriod === 'monthly'
             ? 'Annual Only'
             : currentPlan?.active
             ? 'Change Plan'
@@ -447,11 +438,12 @@ export default function PlansPage() {
         {plan.id === 'student' && trialStatus !== 'expired' && (
           <div className="mt-3 text-center">
             <Link
-              to="/auth/register?plan=student"
+              to="/auth/register?plan=student&trial=1"
               onClick={() => {
                 try {
                   localStorage.setItem('selected_plan', 'student');
                   localStorage.setItem('selected_billing', 'annual');
+                  localStorage.setItem('contard_trial_intent', '1');
                 } catch {}
               }}
               className="inline-block pointer-events-auto text-[#001B9E] font-semibold text-sm underline underline-offset-4 hover:text-[#00157A] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#001B9E]/40 focus-visible:ring-offset-2 rounded"

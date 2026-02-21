@@ -10,7 +10,8 @@ export default function Register() {
   const [isPaid, setIsPaid] = useState(false);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const planId = String(selectedPlanId || '').trim();
-  const isContractorTrial = planId === 'student';
+  const isContractorPlan = planId === 'student';
+  const [isContractorTrial, setIsContractorTrial] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -30,12 +31,16 @@ export default function Register() {
   useEffect(() => {
     const params = new URLSearchParams(location.search || '');
     const plan = String(params.get('plan') || localStorage.getItem('selected_plan') || '').trim();
+    const trialParam = String(params.get('trial') || '').trim();
     if (plan) {
       setSelectedPlanId(plan);
       try {
         localStorage.setItem('selected_plan', plan);
       } catch {}
     }
+
+    const hasTrialIntent = trialParam === '1' || localStorage.getItem('contard_trial_intent') === '1';
+    setIsContractorTrial(plan === 'student' && hasTrialIntent);
   }, [location.search]);
 
   useEffect(() => {
@@ -158,7 +163,7 @@ export default function Register() {
       return;
     }
 
-    if (!isPaid && !isContractorTrial) {
+    if (!isPaid && !(isContractorPlan && isContractorTrial)) {
       setLoading(false);
       await startCheckout();
       return;
@@ -190,7 +195,7 @@ export default function Register() {
       }
 
       if (data?.user) {
-        if (isContractorTrial) {
+        if (isContractorPlan && isContractorTrial) {
           try {
             const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
             if (apiBase) {
@@ -233,6 +238,10 @@ export default function Register() {
             setLoading(false);
             return;
           }
+
+          try {
+            localStorage.removeItem('contard_trial_intent');
+          } catch {}
         }
         setSuccess(true);
         // Esperar 3 segundos antes de redirigir

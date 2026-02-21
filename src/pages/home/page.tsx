@@ -630,11 +630,12 @@ export default function HomePage() {
                   {plan.id === 'student' && billingPeriod !== 'monthly' && (
                     <div className="mt-3 text-center">
                       <Link
-                        to="/auth/register?plan=student"
+                        to="/auth/register?plan=student&trial=1"
                         onClick={() => {
                           try {
                             localStorage.setItem('selected_plan', 'student');
                             localStorage.setItem('selected_billing', 'annual');
+                            localStorage.setItem('contard_trial_intent', '1');
                           } catch {}
                         }}
                         className="inline-block pointer-events-auto text-[#001B9E] font-semibold text-sm underline underline-offset-4 hover:text-[#00157A] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#001B9E]/40 focus-visible:ring-offset-2 rounded"
