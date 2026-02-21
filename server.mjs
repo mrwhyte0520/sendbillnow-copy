@@ -15,6 +15,10 @@ import sendReceiptEmailHandler from './api/send-receipt-email.js';
 import htcInviteHandler from './api/htc-invite.js';
 import htcSubmitHandler from './api/htc-submit.js';
 
+import sendCustomerSmsHandler from './api/send-customer-sms.js';
+import validateCustomerTokenHandler from './api/validate-customer-token.js';
+import completeCustomerProfileHandler from './api/complete-customer-profile.js';
+
 import serviceDocumentsCreateHandler from './api/service-documents/create.js';
 import serviceDocumentsUpdateHandler from './api/service-documents/update.js';
 import serviceDocumentsLinesUpsertHandler from './api/service-documents/lines-upsert.js';
@@ -97,6 +101,10 @@ app.all('/api/claim-contractor-trial', (req, res) => claimContractorTrialHandler
 app.all('/api/send-receipt-email', (req, res) => sendReceiptEmailHandler(req, res));
 app.all('/api/htc/invite', (req, res) => htcInviteHandler(req, res));
 app.all('/api/htc/submit', (req, res) => htcSubmitHandler(req, res));
+
+app.all('/api/send-customer-sms', (req, res) => sendCustomerSmsHandler(req, res));
+app.all('/api/validate-customer-token', (req, res) => validateCustomerTokenHandler(req, res));
+app.all('/api/complete-customer-profile', (req, res) => completeCustomerProfileHandler(req, res));
 
 // Service Documents (MVP)
 app.all('/api/service-documents/create', (req, res) => serviceDocumentsCreateHandler(req, res));

@@ -40,6 +40,9 @@ export default function CustomersPage() {
   const [customerTypes, setCustomerTypes] = useState<any[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<Array<{ id: string; name: string; days?: number }>>([]);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+  const [quickAddPhone, setQuickAddPhone] = useState('');
+  const [quickAddSending, setQuickAddSending] = useState(false);
 
   // Estados para máscaras de formato
   const [documentValue, setDocumentValue] = useState('');
@@ -300,6 +303,42 @@ export default function CustomersPage() {
     }
   };
 
+  const quickAddCustomer = async () => {
+    if (!quickAddPhone) { alert('Phone number is required'); return; }
+    if (!user?.id) { alert('You must sign in to create customers.'); return; }
+    const phoneOk = /^\d{3}-\d{3}-\d{4}$/.test(quickAddPhone);
+    if (!phoneOk) { alert('Invalid phone. Expected format: 000-000-0000'); return; }
+    setQuickAddSending(true);
+    try {
+      const { supabase } = await import('../../../lib/supabase');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token || '';
+      const resp = await fetch('/api/send-customer-sms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ phone: quickAddPhone }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) { alert(data.error || 'Error creating customer.'); return; }
+      await loadCustomers();
+      setQuickAddPhone('');
+      setShowQuickAddModal(false);
+      if (data.smsSent) {
+        alert('Customer created and SMS sent successfully!');
+      } else {
+        alert('Customer created. SMS could not be sent: ' + (data.smsError || 'unknown reason'));
+      }
+    } catch (error) {
+      console.error('Error in quickAddCustomer:', error);
+      alert('Error creating customer. Please try again.');
+    } finally {
+      setQuickAddSending(false);
+    }
+  };
+
   const handleSaveCustomer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user?.id) {
@@ -365,13 +404,22 @@ export default function CustomersPage() {
             <h1 className="text-3xl font-bold text-[#1e2814] drop-shadow-sm">Customer Management</h1>
             <p className="text-sm text-[#4c5535]">Control balances, credit limits, and receivables from a unified workspace.</p>
           </div>
-          <button 
-            onClick={handleNewCustomer}
-            className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
-          >
-            <i className="ri-user-add-line mr-2"></i>
-            New Customer
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setQuickAddPhone(''); setShowQuickAddModal(true); }}
+              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-br from-[#2f3e1e] to-[#4a5e35] text-white shadow-[0_4px_15px_rgba(47,62,30,0.3)] hover:from-[#243015] hover:to-[#3a4d28] hover:shadow-[0_6px_20px_rgba(47,62,30,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
+            >
+              <i className="ri-phone-line mr-2"></i>
+              Quick Add (Phone)
+            </button>
+            <button 
+              onClick={handleNewCustomer}
+              className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
+            >
+              <i className="ri-user-add-line mr-2"></i>
+              New Customer
+            </button>
+          </div>
         </div>
 
         {/* Filters and Export */}
@@ -710,7 +758,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row md:space-x-3 space-y-3 md:space-y-0 pt-4">
+                <div className="flex flex-col md:flex-row gap-3 mt-8">
                   <button
                     type="button"
                     onClick={() => {
@@ -729,6 +777,53 @@ export default function CustomersPage() {
                   </button>
                 </div>
 
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Add (Phone Only) Modal */}
+        {showQuickAddModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-[#1e2814]">Quick Add Customer</h3>
+                <button onClick={() => setShowQuickAddModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <i className="ri-close-line"></i>
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Enter only the phone number. An SMS will be sent to the customer with a link to complete their profile.
+              </p>
+              <form onSubmit={(e) => { e.preventDefault(); quickAddCustomer(); }} autoComplete="off" className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input
+                    type="tel"
+                    value={quickAddPhone}
+                    onChange={(e) => setQuickAddPhone(formatPhone(e.target.value))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2f3e1e] focus:border-[#2f3e1e]"
+                    placeholder="809-123-4567"
+                    required
+                    autoFocus
+                  />
+                </div>
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAddModal(false)}
+                    className="flex-1 px-4 py-2 border border-[#d6cfbf] text-[#2f3e1e] rounded-lg hover:bg-[#f7f0df] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={quickAddSending}
+                    className="flex-1 px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#243015] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {quickAddSending ? 'Sending...' : 'Send SMS'}
+                  </button>
+                </div>
               </form>
             </div>
           </div>

@@ -45,6 +45,7 @@ const PublicDocumentPage = lazy(() => import('../pages/public-document/page'));
 const PublicJobsPage = lazy(() => import('../pages/public-jobs/page'));
 const PublicIdCardPage = lazy(() => import('../pages/public-id-card/page'));
 const PublicCheckoutPage = lazy(() => import('../pages/public-checkout/page'));
+const CompleteProfilePage = lazy(() => import('../pages/complete-profile/page'));
 
 const HtcServiceHoursPage = lazy(() => import('../pages/htc/service-hours/page'));
 
@@ -219,6 +220,10 @@ const routes: RouteObject[] = [
   {
     path: '/service-documents/review/:token',
     element: <ServiceDocumentsReviewPage />,
+  },
+  {
+    path: '/complete-profile',
+    element: <CompleteProfilePage />,
   },
   {
     path: '/document/:type/:id',
