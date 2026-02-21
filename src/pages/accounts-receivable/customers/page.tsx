@@ -728,6 +728,7 @@ export default function CustomersPage() {
                     {selectedCustomer ? 'Update' : 'Create'} Customer
                   </button>
                 </div>
+
               </form>
             </div>
           </div>
@@ -744,6 +745,7 @@ export default function CustomersPage() {
                     setSelectedCustomer(null);
                   }}
                   className="text-gray-400 hover:text-gray-600"
+                  type="button"
                 >
                   <i className="ri-close-line"></i>
                 </button>
@@ -754,11 +756,6 @@ export default function CustomersPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Name / Business Name</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedCustomer.name}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Document (RNC / ID)</label>
-                    <p className="text-gray-900">{selectedCustomer.document}</p>
                   </div>
 
                   <div>
@@ -776,20 +773,6 @@ export default function CustomersPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-500">Address</label>
                     <p className="text-gray-900">{selectedCustomer.address}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Credit limit</label>
-                    <p className="text-lg font-semibold text-[#2f3e1e]">
-                      {selectedCustomer.creditLimit.toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Current balance</label>
-                    <p className="text-lg font-semibold text-[#6b4a2b]">
-                      {selectedCustomer.currentBalance.toLocaleString()}
-                    </p>
                   </div>
 
                   <div>
@@ -812,16 +795,10 @@ export default function CustomersPage() {
                     setShowCustomerModal(true);
                   }}
                   className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#2f3e1e] text-white hover:bg-[#243015] transition-colors"
+                  type="button"
                 >
                   <i className="ri-edit-line mr-2"></i>
                   Edit Customer
-                </button>
-                <button
-                  onClick={() => handleCustomerStatement(selectedCustomer)}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-lg border border-[#d6cfbf] bg-[#f7f0df] text-[#2f3e1e] hover:bg-[#ede3cb] transition-colors"
-                >
-                  <i className="ri-file-list-line mr-2"></i>
-                  Account Statement
                 </button>
               </div>
             </div>
