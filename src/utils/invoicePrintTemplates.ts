@@ -2088,11 +2088,11 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
             <div class="totalsRow"><span>Subtotal (less Disc)</span><span class="value">${formatAmount(subtotalLessDiscount)}</span></div>
 
-            <div class="totalsRow"><span>Tax Rate</span><span class="value">${taxRate.toFixed(2)}%</span></div>
+            <div class="totalsRow"><span>Sales Tax Rate</span><span class="value">${taxRate.toFixed(2)}%</span></div>
 
-            <div class="totalsRow"><span>Tax:</span><span class="value">${formatAmount(invoice.tax)}</span></div>
+            <div class="totalsRow"><span>Sales Tax:</span><span class="value">${formatAmount(invoice.tax)}</span></div>
 
-            <div class="totalsRow"><span>Total &amp; Tax</span><span class="value">${formatAmount(Number(invoice.amount))}</span></div>
+            <div class="totalsRow"><span>Total &amp; Sales Tax</span><span class="value">${formatAmount(Number(invoice.amount))}</span></div>
 
             <div class="totalsRow"><span>Shipping Handling</span><span class="value">${formatAmount(shippingHandling)}</span></div>
 
@@ -3371,7 +3371,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-      <div class="summary-row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+      <div class="summary-row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
 
 
 
@@ -3901,7 +3901,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-      <div class="summary-row"><span>Taxes:</span><span>${formatAmount(invoice.tax)}</span></div>
+      <div class="summary-row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
 
 
 
@@ -4785,11 +4785,11 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-      <div class="summary-row"><span>Tax Rate:</span><span>${subtotalLessDiscount > 0 ? ((invoice.tax / subtotalLessDiscount) * 100).toFixed(0) + '%' : '0%'}</span></div>
+      <div class="summary-row"><span>Sales Tax Rate:</span><span>${subtotalLessDiscount > 0 ? ((invoice.tax / subtotalLessDiscount) * 100).toFixed(0) + '%' : '0%'}</span></div>
 
 
 
-      <div class="summary-row"><span>Total & Tax:</span><span>${formatAmount(invoice.amount)}</span></div>
+      <div class="summary-row"><span>Total & Sales Tax:</span><span>${formatAmount(invoice.amount)}</span></div>
 
 
 
