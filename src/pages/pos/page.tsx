@@ -222,7 +222,13 @@ const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
 
 
 
-const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
+const generatePdfBase64FromHtml = async (
+  html: string,
+  options?: {
+    printDate?: string;
+    printTime?: string;
+  }
+): Promise<string> => {
 
   const iframe = document.createElement('iframe');
 
@@ -267,6 +273,28 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
     document.body.removeChild(iframe);
 
     throw new Error('Failed to render invoice for PDF');
+
+  }
+
+
+
+  const printDateValue = String(options?.printDate || '').trim();
+
+  const printTimeValue = String(options?.printTime || '').trim();
+
+  if (printDateValue) {
+
+    const dateEl = doc?.getElementById('sb_print_date');
+
+    if (dateEl) dateEl.textContent = printDateValue;
+
+  }
+
+  if (printTimeValue) {
+
+    const timeEl = doc?.getElementById('sb_print_time');
+
+    if (timeEl) timeEl.textContent = printTimeValue;
 
   }
 
@@ -8251,9 +8279,39 @@ export default function POSPage() {
 
             try {
 
+              const sentAt = new Date();
+
+              const printDate = sentAt.toLocaleDateString();
+
+              const printTime = sentAt.toLocaleTimeString();
+
               const invoiceHtml = generateInvoiceHtml(saleData, customerData, companyData, templateType, options);
 
-              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
+              const invoiceHtmlWithSendTime = invoiceHtml
+
+                .replace(
+
+                  /<span id=("|')sb_print_date\1>.*?<\/span>/i,
+
+                  `<span id="sb_print_date">${printDate}</span>`
+
+                )
+
+                .replace(
+
+                  /<span id=("|')sb_print_time\1>.*?<\/span>/i,
+
+                  `<span id="sb_print_time">${printTime}</span>`
+
+                );
+
+              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtmlWithSendTime, {
+
+                printDate,
+
+                printTime,
+
+              });
 
 
 
@@ -8293,15 +8351,15 @@ export default function POSPage() {
 
                   templateType,
 
-                  invoiceHtml,
+                  invoiceHtml: invoiceHtmlWithSendTime,
 
                   sale: {
 
                     id: completedSale.id,
 
-                    date: completedSale.date,
+                    date: printDate,
 
-                    time: completedSale.time,
+                    time: printTime,
 
                     items: completedSale.items,
 
@@ -8409,15 +8467,15 @@ export default function POSPage() {
 
                       templateType,
 
-                      invoiceHtml,
+                      invoiceHtml: invoiceHtmlWithSendTime,
 
                       sale: {
 
                         id: completedSale.id,
 
-                        date: completedSale.date,
+                        date: printDate,
 
-                        time: completedSale.time,
+                        time: printTime,
 
                         items: completedSale.items,
 

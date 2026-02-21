@@ -758,7 +758,10 @@ const parseCustomerAddressFields = (raw: string): { street: string; city: string
 
 
 
-const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
+const generatePdfBase64FromHtml = async (
+  html: string,
+  options?: { printDate?: string; printTime?: string }
+): Promise<string> => {
 
 
 
@@ -814,6 +817,23 @@ const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
 
 
 
+  }
+
+
+
+  if (doc) {
+    const printDate = typeof options?.printDate === 'string' ? options.printDate : '';
+    const printTime = typeof options?.printTime === 'string' ? options.printTime : '';
+
+    if (printDate) {
+      const el = doc.getElementById('sb_print_date');
+      if (el) el.textContent = printDate;
+    }
+
+    if (printTime) {
+      const el = doc.getElementById('sb_print_time');
+      if (el) el.textContent = printTime;
+    }
   }
 
 
@@ -11038,11 +11058,30 @@ export default function InvoicingPage() {
 
 
 
+              const sentAt = new Date();
+
+
+
               const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType, options);
 
 
 
-              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
+              const invoiceHtmlWithSendTime = invoiceHtml
+                .replace(
+                  /<span\s+id=("|')sb_print_date\1[^>]*>[\s\S]*?<\/span>/gi,
+                  `<span id="sb_print_date">${sentAt.toLocaleDateString()}</span>`
+                )
+                .replace(
+                  /<span\s+id=("|')sb_print_time\1[^>]*>[\s\S]*?<\/span>/gi,
+                  `<span id="sb_print_time">${sentAt.toLocaleTimeString()}</span>`
+                );
+
+
+
+              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtmlWithSendTime, {
+                printDate: sentAt.toLocaleDateString(),
+                printTime: sentAt.toLocaleTimeString(),
+              });
 
 
 
@@ -11079,6 +11118,13 @@ export default function InvoicingPage() {
 
 
                   total: invoiceToPrint.total,
+
+
+
+                  sale: {
+                    date: sentAt.toLocaleDateString(),
+                    time: sentAt.toLocaleTimeString(),
+                  },
 
 
 
