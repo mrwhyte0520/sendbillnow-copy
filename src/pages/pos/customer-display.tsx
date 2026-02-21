@@ -9,6 +9,7 @@ interface CartItem {
   quantity: number;
   total: number;
   extras?: { name: string; price: number; quantity: number }[];
+  imageUrl?: string;
 }
 
 interface CustomerDisplayData {
@@ -266,11 +267,17 @@ export default function CustomerDisplayPage() {
                     }`}
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0H4m16 0l1 7H3l1-7" />
-                        </svg>
-                      </div>
+                      <div className="w-12 h-12 rounded-xl border border-gray-200 flex items-center justify-center overflow-hidden bg-white">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0H4m16 0l1 7H3l1-7" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
                       <div className="min-w-0">
                         <div className="font-semibold text-gray-900 truncate">{item.name}</div>
                         <div className="text-sm text-gray-500">{formatMoney(item.price)} each</div>

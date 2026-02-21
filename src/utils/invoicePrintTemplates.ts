@@ -2,7 +2,19 @@ import { formatAmount } from './numberFormat';
 
 
 
+
+
+
+
 import { formatDate } from './dateFormat';
+
+
+
+
+
+
+
+
 
 
 
@@ -12,417 +24,837 @@ import { formatDate } from './dateFormat';
 
 export type InvoiceTemplateType =
 
+
+
   | 'simple'
+
+
 
   | 'detailed'
 
+
+
   | 'quotation'
+
+
 
   | 'corporate'
 
+
+
   | 'job-estimate'
+
+
 
   | 'classic'
 
+
+
   | 'rent-receipt'
+
+
 
   | 'blue-invoice'
 
+
+
   | 'cash-receipt'
+
+
 
   | 'service-hours';
 
 
 
+
+
+
+
 export interface JobEstimateSignatureFields {
+
+
 
   clientName?: string;
 
+
+
   clientSignature?: string;
+
+
 
   clientDate?: string;
 
+
+
   contractorName?: string;
+
+
 
   contractorSignature?: string;
 
+
+
   contractorDate?: string;
+
+
 
 }
 
 
 
+
+
+
+
 function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: CustomerData, company: CompanyData): string {
+
   const items = Array.isArray(invoice.items) ? invoice.items : [];
+
   const totalHours = items.reduce((acc, it: any) => acc + (Number(it?.quantity ?? 0) || 0), 0);
+
   const grandTotalAmount = items.reduce((acc, it: any) => {
+
     const qty = Number(it?.quantity ?? 0) || 0;
+
     const rate = Number(it?.price ?? 0) || 0;
+
     const amount = Number(it?.total ?? qty * rate) || 0;
+
     return acc + amount;
+
   }, 0);
+
   const rows = items
+
     .map((item) => {
+
       const qty = Number((item as any).quantity ?? 0) || 0;
+
       const rate = Number((item as any).price ?? 0) || 0;
+
       const amount = Number((item as any).total ?? qty * rate) || 0;
 
+
+
       const workDateStr = (() => {
+
         const raw = (item as any).workDate ?? (item as any).work_date ?? (item as any).date;
+
         const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
         return s;
+
       })();
+
+
 
       const dateCell = workDateStr
+
         ? escapeHtml(formatDate(workDateStr))
+
         : '<span class="sb_print_date_cell"></span>';
 
+
+
       const timeStr = (() => {
+
         const sRaw = (item as any).startTime ?? (item as any).start_time ?? '';
+
         const eRaw = (item as any).endTime ?? (item as any).end_time ?? '';
+
         const s = sRaw === null || sRaw === undefined ? '' : String(sRaw).trim();
+
         const e = eRaw === null || eRaw === undefined ? '' : String(eRaw).trim();
+
         if (!s && !e) return '';
+
         if (s && e) return `${s} - ${e}`;
+
         return s || e;
+
       })();
+
       return `
+
+
+
 
 
         <tr>
 
+
+
           <td class="cell">${dateCell}</td>
+
+
 
           <td class="cell">${escapeHtml(String((item as any).description || ''))}</td>
 
+
+
           <td class="cell">${escapeHtml(timeStr || '')}</td>
+
+
 
           <td class="cell num">${escapeHtml(qty ? String(qty) : '')}</td>
 
+
+
           <td class="cell num">${escapeHtml(formatAmount(rate))}</td>
+
+
 
           <td class="cell num">${escapeHtml(formatAmount(amount))}</td>
 
+
+
         </tr>
 
+
+
       `.trim();
+
     })
+
     .join('\n');
 
 
 
+
+
+
+
   const accountNumberStr = (() => {
+
     const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? '';
+
     const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
     return s ? escapeHtml(s) : '';
+
   })();
+
+
 
   const footerLinks = (() => {
+
     const items: string[] = [];
+
     const has = (value: any) => {
+
       const v = value === null || value === undefined ? '' : String(value).trim();
+
       return Boolean(v);
+
     };
 
+
+
     if (has((company as any).facebook)) items.push('Facebook');
+
     if (has((company as any).instagram)) items.push('Instagram');
+
     if (has((company as any).twitter)) items.push('X');
+
     if (has((company as any).linkedin)) items.push('LinkedIn');
+
     if (has((company as any).youtube)) items.push('YouTube');
+
     if (has((company as any).tiktok)) items.push('TikTok');
 
+
+
     const waRaw = (company as any).whatsapp;
+
     const wa = waRaw === null || waRaw === undefined ? '' : String(waRaw).trim();
+
     if (wa) items.push(`WhatsApp: ${escapeHtml(wa)}`);
 
+
+
     return items;
+
   })();
+
+
+
+
 
 
 
   const poweredBy = (() => {
+
     const w = (company as any).website;
+
     const s = w === null || w === undefined ? '' : String(w).trim();
+
     return s ? escapeHtml(s) : 'sendbillnow.com';
+
   })();
+
+
+
+
 
 
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
 
+
+
 <style>
 
+
+
   html,body{margin:0;padding:0;min-height:100%;background:#fff;color:#000;font-family:Georgia, 'Times New Roman', serif;}
+
   .page{padding:56px 64px 130px;position:relative;overflow:hidden;}
+
   .bg{position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;pointer-events:none;}
+
   .bg:before{content:'';position:absolute;left:-160px;top:-180px;width:420px;height:420px;border-radius:999px;background:radial-gradient(circle at 30% 30%, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.00) 62%);}
+
   .bg:after{content:'';position:absolute;right:-220px;bottom:-220px;width:560px;height:560px;border-radius:999px;background:radial-gradient(circle at 60% 60%, rgba(0,27,158,0.07) 0%, rgba(0,27,158,0.00) 66%);}
+
   .bgBlobA{position:absolute;right:-140px;top:110px;width:320px;height:220px;border-radius:180px;filter:blur(0.2px);background:radial-gradient(circle at 30% 30%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 70%);transform:rotate(-10deg);}
+
   .bgBlobB{position:absolute;left:120px;bottom:-120px;width:360px;height:240px;border-radius:220px;background:radial-gradient(circle at 60% 40%, rgba(0,27,158,0.08) 0%, rgba(0,27,158,0.00) 72%);transform:rotate(12deg);}
+
   .bgStroke{position:absolute;left:52px;top:36px;width:240px;height:180px;border-radius:28px;transform:rotate(-8deg);border:2px solid rgba(0,27,158,0.10);border-left-color:rgba(0,27,158,0.00);border-bottom-color:rgba(0,27,158,0.00);}
+
   .bgStripe{position:absolute;left:0;right:0;top:44px;height:2px;background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.22) 20%, rgba(0,27,158,0.00) 72%);}
+
   .bgFadeBottom{position:absolute;left:0;right:0;bottom:0;height:360px;background:linear-gradient(180deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 60%, rgba(0,27,158,0.10) 100%);}
+
   .bgMesh{position:absolute;inset:-40px;opacity:0.65;filter:saturate(1.05);background:
+
     radial-gradient(520px 420px at 16% 18%, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.00) 62%),
+
     radial-gradient(540px 460px at 84% 22%, rgba(0,27,158,0.13) 0%, rgba(0,27,158,0.00) 60%),
+
     radial-gradient(700px 560px at 58% 72%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 64%),
+
     linear-gradient(140deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 42%, rgba(0,27,158,0.00) 78%);
+
     mix-blend-mode:multiply;}
+
   .bgTopGlow{position:absolute;left:-40px;right:-40px;top:-40px;height:320px;background:linear-gradient(180deg, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.06) 30%, rgba(0,27,158,0.00) 92%);filter:blur(10px);opacity:0.95;}
+
   .bgDots{position:absolute;inset:0;opacity:0.22;background-image:radial-gradient(rgba(0,27,158,0.18) 0.7px, rgba(0,0,0,0) 0.8px);background-size:22px 22px;background-position:10px 14px;}
+
   .bgDiag{position:absolute;left:-120px;top:260px;width:520px;height:220px;transform:rotate(-18deg);background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 35%, rgba(0,27,158,0.00) 75%);border-radius:28px;}
+
   .bgFrame{position:absolute;inset:18px;border:1px solid rgba(0,27,158,0.10);border-radius:22px;}
+
   .bgWave{position:absolute;left:-120px;right:-120px;top:-170px;height:340px;border-radius:0 0 620px 620px;background:radial-gradient(circle at 50% 120%, rgba(0,27,158,0.14) 0%, rgba(0,27,158,0.08) 38%, rgba(0,27,158,0.00) 82%);transform:rotate(-2deg);filter:blur(6px);opacity:0.85;}
+
   .content{position:relative;z-index:1;}
+
   .top{display:flex;justify-content:space-between;align-items:flex-start;}
+
   .companyName{font-size:22px;font-weight:700;margin-bottom:4px;color:${BLUE};}
+
   .companyMeta{font-size:13px;line-height:1.35;}
+
   .invoiceTitle{font-size:32px;font-weight:800;letter-spacing:1px;color:${BLUE};text-align:right;}
+
   .metaRight{margin-top:10px;font-size:13px;line-height:1.5;text-align:right;}
+
   .metaLabel{font-weight:700;}
+
   .totalLabel{font-weight:800;color:${BLUE};}
+
   .totalAmount{font-weight:900;color:#16a34a;}
+
   .customerNameLine{font-weight:900;font-size:14px;}
+
   .billRow{display:flex;justify-content:space-between;gap:32px;margin-top:48px;font-size:13px;}
+
   .billBox{min-width:280px;}
+
   .billBoxTo{flex:1.2;min-width:360px;}
+
   .billBoxFor{flex:0.8;min-width:220px;}
+
   .card{border:1px solid rgba(0,27,158,0.12);border-radius:14px;padding:12px 14px;background:linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.90) 100%);box-shadow:0 1px 0 rgba(0,27,158,0.06);}
+
   .card .billHead{margin-bottom:8px;}
+
   .billHead{font-weight:900;margin-bottom:6px;display:inline-block;padding:4px 10px;border-radius:999px;background:linear-gradient(90deg, rgba(0,27,158,0.95) 0%, rgba(37,99,235,0.85) 100%);color:#fff;letter-spacing:0.3px;font-size:11px;}
+
   table{width:100%;border-collapse:collapse;margin-top:42px;font-size:12px;table-layout:fixed;}
+
   th,td{border:1px solid ${BLUE};padding:6px 8px;vertical-align:top;}
+
   th{font-weight:800;text-align:center;color:#fff;background:${BLUE};}
+
   td.num{text-align:right;}
+
   td:nth-child(2){white-space:normal;overflow-wrap:anywhere;word-break:break-word;}
+
   .grand{display:flex;justify-content:flex-end;margin-top:18px;}
+
   .grandRow{display:flex;gap:10px;align-items:baseline;}
+
   .grandText{font-weight:900;color:${BLUE};font-size:13px;}
+
   .grandValue{font-weight:900;font-size:18px;color:#16a34a;}
+
   .thanks{margin-top:36px;text-align:center;font-weight:800;color:${BLUE};font-size:13px;}
 
+
+
   .footerAbove{position:absolute;left:0;right:0;bottom:54px;text-align:center;}
+
   .footerTitle{text-align:center;font-weight:900;font-size:12px;color:#000;}
+
   .footerLinks{margin-top:8px;text-align:center;font-size:10px;color:#000;opacity:0.95;}
 
+
+
   .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:10px 64px;border-radius:0;}
+
   .footerPowered{text-align:center;font-size:10px;opacity:0.9;}
 
+
+
   @media print{
+
     @page{margin:12mm;}
+
     html,body{min-height:0;height:auto;}
+
     .page{padding-bottom:130px;}
+
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+
     th{background:${BLUE}!important;color:#fff!important;}
+
     .bg:before{background:radial-gradient(circle at 30% 30%, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.00) 62%)!important;}
+
     .bg:after{background:radial-gradient(circle at 60% 60%, rgba(0,27,158,0.07) 0%, rgba(0,27,158,0.00) 66%)!important;}
+
     .bgBlobA{background:radial-gradient(circle at 30% 30%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 70%)!important;}
+
     .bgBlobB{background:radial-gradient(circle at 60% 40%, rgba(0,27,158,0.08) 0%, rgba(0,27,158,0.00) 72%)!important;}
+
     .bgStroke{border-color:rgba(0,27,158,0.10)!important;border-left-color:rgba(0,27,158,0.00)!important;border-bottom-color:rgba(0,27,158,0.00)!important;}
+
     .bgStripe{background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.22) 20%, rgba(0,27,158,0.00) 72%)!important;}
+
     .bgMesh{background:
+
       radial-gradient(520px 420px at 16% 18%, rgba(37,99,235,0.15) 0%, rgba(37,99,235,0.00) 62%),
+
       radial-gradient(540px 460px at 84% 22%, rgba(0,27,158,0.13) 0%, rgba(0,27,158,0.00) 60%),
+
       radial-gradient(700px 560px at 58% 72%, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0.00) 64%),
+
       linear-gradient(140deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 42%, rgba(0,27,158,0.00) 78%)!important;}
+
     .bgTopGlow{background:linear-gradient(180deg, rgba(0,27,158,0.10) 0%, rgba(0,27,158,0.06) 30%, rgba(0,27,158,0.00) 92%)!important;}
+
     .bgDots{background-image:radial-gradient(rgba(0,27,158,0.18) 0.7px, rgba(0,0,0,0) 0.8px)!important;}
+
     .bgDiag{background:linear-gradient(90deg, rgba(0,27,158,0.00) 0%, rgba(0,27,158,0.06) 35%, rgba(0,27,158,0.00) 75%)!important;}
+
     .bgFrame{border-color:rgba(0,27,158,0.10)!important;}
+
     .bgWave{background:radial-gradient(circle at 50% 120%, rgba(0,27,158,0.14) 0%, rgba(0,27,158,0.08) 38%, rgba(0,27,158,0.00) 82%)!important;}
+
     .footerAbove{position:fixed;left:0;right:0;bottom:54px;}
+
     .footerBar{position:fixed;left:0;right:0;bottom:0;background:${BLUE}!important;color:#fff!important;border-radius:0!important;}
+
   }
+
+
 
 </style>
 
+
+
 </head><body>
+
+
 
   <div class="page">
 
+
+
     <div class="bg" aria-hidden="true">
+
       <div class="bgWave"></div>
+
       <div class="bgMesh"></div>
+
       <div class="bgTopGlow"></div>
+
       <div class="bgFrame"></div>
+
       <div class="bgDots"></div>
+
       <div class="bgStripe"></div>
+
       <div class="bgDiag"></div>
+
       <div class="bgBlobA"></div>
+
       <div class="bgBlobB"></div>
+
       <div class="bgStroke"></div>
+
       <div class="bgFadeBottom"></div>
+
     </div>
+
+
 
     <div class="content">
 
+
+
     <div class="top">
 
+
+
       <div>
+
+
 
         <div class="companyName">${escapeHtml(customer.name || '')}</div>
 
+
+
         <div class="companyMeta">
 
+
+
           ${(() => {
+
             const lines = customerAddressLines(customer);
+
             const line1 = lines.line1 ? String(lines.line1) : '';
+
             const line2 = lines.line2 ? String(lines.line2) : '';
+
             const addr1 = line1.trim() ? `<div>Address: ${escapeHtml(line1.trim())}</div>` : '';
+
             const addr2 = line2.trim() ? `<div>${escapeHtml(line2.trim())}</div>` : '';
+
             return `${addr1}${addr2}`;
+
           })()}
+
+
 
           ${customer.phone ? `<div>Phone: ${escapeHtml(String(customer.phone))}</div>` : ''}
 
+
+
           ${customer.email ? `<div>Email: ${escapeHtml(String(customer.email))}</div>` : ''}
+
+
 
         </div>
 
+
+
       </div>
+
+
 
       <div>
 
+
+
         <div class="invoiceTitle">INVOICE</div>
+
+
 
         <div class="metaRight">
 
+
+
           ${accountNumberStr ? `<div><span class="metaLabel">Account #:</span> ${accountNumberStr}</div>` : ''}
+
+
 
           <div><span class="metaLabel">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
+
+
           <div><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date"></span></div>
+
+
 
           <div><span class="metaLabel">Time:</span> <span id="sb_print_time"></span></div>
 
+
+
           <div><span class="totalLabel">Total Hor:</span> <span class="totalAmount">${escapeHtml(
+
             String(Math.round(totalHours * 100) / 100).replace(/\.00$/, ''),
+
           )}</span></div>
+
+
 
           <div><span class="totalLabel">Total:</span> <span class="totalAmount">${escapeHtml(formatAmount(grandTotalAmount))}</span></div>
 
+
+
         </div>
+
+
 
       </div>
 
+
+
     </div>
+
+
 
     <div class="billRow">
 
+
+
       <div class="billBox billBoxTo">
 
+
+
         <div class="card">
+
+
 
         <div class="billHead">TO:</div>
 
+
+
         <div class="customerNameLine"><strong>HUDSON TRAINING CENTER</strong></div>
+
+
 
         <div>Address: 2321 John F. Kennedy Blvd., Suite 301,</div>
 
+
+
         <div>North Bergen, NJ 07047</div>
+
+
 
         <div>Phone: 1 (888) 883-9192</div>
 
+
+
         <div>E-mail: info@hudsontrainingcenter.com</div>
+
+
 
         </div>
 
+
+
       </div>
+
+
 
       <div class="billBox billBoxFor">
 
+
+
         <div class="card">
+
+
 
         <div class="billHead">FOR:</div>
 
+
+
         <div>${escapeHtml(String((invoice as any).serviceDescription || (invoice as any).job || (invoice as any).project || 'Consulting Services'))}</div>
+
+
 
         </div>
 
+
+
       </div>
 
+
+
     </div>
+
+
 
     <table>
 
+
+
       <thead>
+
+
 
         <tr>
 
+
+
           <th style="width:9%">Date</th>
+
+
 
           <th>Description of Services</th>
 
+
+
           <th style="width:16%">Start Time and End Time</th>
+
+
 
           <th style="width:7%">Hour</th>
 
+
+
           <th style="width:7%">Hourly Rate</th>
+
+
 
           <th style="width:8%">Total Amount</th>
 
+
+
         </tr>
+
+
 
       </thead>
 
+
+
       <tbody>
+
+
 
         ${rows || `<tr><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td><td class="cell">&nbsp;</td></tr>`}
 
+
+
       </tbody>
+
+
 
     </table>
 
+
+
     <div class="grand">
+
       <div class="grandRow">
+
         <div class="grandText">Grand Total:</div>
+
         <div class="grandValue">${escapeHtml(formatAmount(grandTotalAmount))}</div>
+
       </div>
-    </div>
 
     </div>
+
+
+
+    </div>
+
+
 
     <div class="footerAbove">
+
       <div class="footerTitle">Thank you for your business.</div>
+
       ${footerLinks.length ? `<div class="footerLinks">${footerLinks.join(' | ')}</div>` : ''}
+
     </div>
 
+
+
     <div class="footerBar">
+
       <div class="footerPowered">Powered by: ${poweredBy}</div>
+
     </div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
 
 </body></html>`;
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
 export interface InvoicePrintOptions {
 
+
+
   jobEstimate?: JobEstimateSignatureFields;
 
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -434,9 +866,19 @@ interface InvoiceData {
 
 
 
+
+
+
+
   invoiceNumber: string;
 
+
+
   accountNumber?: string;
+
+
+
+
 
 
 
@@ -444,15 +886,31 @@ interface InvoiceData {
 
 
 
+
+
+
+
   dueDate: string;
+
+
+
+
 
 
 
   createdBy?: string;
 
+
+
   paymentMethod?: string;
 
+
+
   paymentReference?: string;
+
+
+
+
 
 
 
@@ -460,7 +918,15 @@ interface InvoiceData {
 
 
 
+
+
+
+
   subtotal: number;
+
+
+
+
 
 
 
@@ -468,7 +934,15 @@ interface InvoiceData {
 
 
 
+
+
+
+
   discount_type?: 'percentage' | 'fixed';
+
+
+
+
 
 
 
@@ -476,7 +950,15 @@ interface InvoiceData {
 
 
 
+
+
+
+
   total_discount?: number;
+
+
+
+
 
 
 
@@ -484,7 +966,15 @@ interface InvoiceData {
 
 
 
+
+
+
+
   notes?: string | null;
+
+
+
+
 
 
 
@@ -492,7 +982,15 @@ interface InvoiceData {
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
@@ -500,7 +998,15 @@ function generateClassicInvoiceTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -508,7 +1014,15 @@ function generateClassicInvoiceTemplate(
 
 
 
+
+
+
+
   company: CompanyData
+
+
+
+
 
 
 
@@ -516,240 +1030,481 @@ function generateClassicInvoiceTemplate(
 
 
 
+
+
+
+
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+
+
+
 
 
 
   const classicDiscountType = (invoice as any).discount_type as 'percentage' | 'fixed' | undefined;
 
+
+
   const classicDiscountValue = Number((invoice as any).discount_value ?? 0) || 0;
+
+
 
   const classicDiscountAmount = Number((invoice as any).total_discount ?? 0) || 0;
 
+
+
   const classicDiscountLabel = classicDiscountType === 'percentage' ? `${classicDiscountValue}%` : '';
 
+
+
   const classicAccountNumber = (() => {
+
     const raw = (invoice as any)?.accountNumber ?? (invoice as any)?.account_number;
+
     const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
     if (!s) return 'N/A';
+
     if (!/^[0-9]+$/.test(s)) return 'N/A';
+
     return s;
+
   })();
+
+
 
   const customerAddr = (() => {
+
     const raw = customer.address ? String(customer.address) : '';
+
     if (!raw) return { street: '', city: '', state: '', zip: '' };
 
+
+
     const parsed = parseAddress(raw);
+
     const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
+
     if (onlyStreet && raw.includes(',')) {
+
       const parts = raw
+
         .split(',')
+
         .map((p) => p.trim())
+
         .filter(Boolean);
+
       return {
+
         street: parts[0] || parsed.street || '',
+
         city: parts[1] || '',
+
         state: parts[2] || '',
+
         zip: parts[3] || '',
+
       };
+
     }
 
+
+
     return parsed;
+
   })();
 
+
+
   const customerAddressHtml = customer.address
+
     ? (() => {
+
         const line1 = customerAddr.street ? `<div>${escapeHtml(customerAddr.street)}</div>` : '';
+
         const city = String(customerAddr.city || '').trim();
+
         const state = String(customerAddr.state || '').trim();
+
         const zip = String(customerAddr.zip || '').trim();
+
         const tail = [state, zip].filter(Boolean).join(' ');
+
         const line2Text = [city, tail].filter(Boolean).join(city && tail ? ', ' : '');
+
         const line2 = line2Text ? `<div>${escapeHtml(line2Text)}</div>` : '';
+
         return `${line1}${line2}`;
+
       })()
+
     : '';
+
+
+
+
 
 
 
   const rows = (invoice.items || [])
 
+
+
     .map(
+
+
 
       (item) => `
 
+
+
         <tr>
+
+
 
           <td style="padding:8px 10px;border:1px solid ${BLUE};">${escapeHtml(String(item.description || ''))}</td>
 
+
+
           <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:center;">${item.quantity}</td>
+
+
 
           <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:right;">${formatAmount(item.total)}</td>
 
+
+
         </tr>
+
+
 
       `.trim()
 
+
+
     )
+
+
 
     .join('');
 
 
 
+
+
+
+
   const footerLinksParts: string[] = [];
+
+
 
   if (company.facebook) footerLinksParts.push('Facebook');
 
+
+
   if (company.instagram) footerLinksParts.push('Instagram');
+
+
 
   if (company.twitter) footerLinksParts.push('X');
 
+
+
   if (company.linkedin) footerLinksParts.push('LinkedIn');
+
+
 
   if (company.youtube) footerLinksParts.push('YouTube');
 
+
+
   if (company.tiktok) footerLinksParts.push('TikTok');
 
+
+
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+
+
 
   const footerLinksText = footerLinksParts.join(' | ');
 
 
 
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+
+
 
 <style>
 
+
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+
+
 
 @page{margin:12mm;}
 
+
+
 body{font-family:Arial, sans-serif;background:#fff;color:#000;}
+
+
 
 .invoice{max-width:900px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:200px;}
 
+
+
 .invoice::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:
+
   radial-gradient(520px 220px at 20% 18%, rgba(0,27,158,0.10), transparent 60%),
+
   radial-gradient(420px 200px at 85% 28%, rgba(22,163,74,0.08), transparent 60%);
+
 }
+
+
 
 .invoice::after{content:'';position:absolute;left:-40px;top:120px;width:260px;height:260px;border-radius:999px;pointer-events:none;z-index:0;background:linear-gradient(135deg, rgba(0,27,158,0.10), rgba(0,27,158,0));filter:blur(0px);}
 
+
+
 .invoice > *{position:relative;z-index:1;}
+
+
 
 .top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 10px 0 10px;}
 
+
+
 .logo{width:170px;height:95px;border:none;display:flex;align-items:center;justify-content:center;font-weight:700;}
+
+
 
 .logo img{max-width:170px;max-height:95px;object-fit:contain;}
 
+
+
 .company{font-size:12px;line-height:1.4;text-align:right;}
+
+
 
 .company .companyName{font-weight:800;font-size:16px;}
 
+
+
 .title{margin-top:8px;text-align:center;font-size:44px;font-weight:800;text-decoration:underline;letter-spacing:1px;color:${BLUE};}
+
+
 
 .powered a{color:inherit;text-decoration:underline;}
 
+
+
 .footer a{color:inherit;text-decoration:underline;}
+
+
 
 .footerBlue a{color:#fff !important;text-decoration:underline;}
 
+
+
 .meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding:0 10px;font-size:12px;align-items:start;}
+
+
 
 .meta .billTo{justify-self:start;line-height:1.35;}
 
+
+
 .meta .invoiceInfo{justify-self:end;text-align:right;line-height:1.35;}
+
+
 
 .meta .box{min-height:40px;}
 
+
+
 .meta .label{font-weight:800;color:#111;margin-bottom:4px;text-transform:uppercase;font-size:10px;letter-spacing:0.4px;}
+
+
 
 .meta .row{margin:2px 0;font-size:11px;}
 
+
+
 .meta .row .label{margin-bottom:0;text-transform:none;font-size:11px;letter-spacing:0;}
+
+
 
 .meta .row .label{display:inline-block;min-width:88px;}
 
+
+
 .meta .billTo .customerName{font-weight:900;font-size:14px;color:#111;}
 
+
+
 .meta .invoiceInfo .row.invoiceTotalRow{margin-top:6px;font-size:13px;}
+
 .meta .invoiceInfo .row.invoiceTotalRow .label{font-weight:900;color:${BLUE};}
+
 .meta .invoiceInfo .row.invoiceTotalRow .value{font-size:14px;font-weight:900;color:#16a34a;}
+
+
 
 .metaDivider{height:2px;background:${BLUE} !important;margin:10px 10px 6px 10px;}
 
+
+
 .table-wrap{margin-top:22px;padding:0 10px;}
+
+
 
 table{width:100%;border-collapse:collapse;}
 
+
+
 th{border:2px solid ${BLUE};padding:8px 10px;text-align:left;font-size:12px;background-color:${BLUE} !important;color:#fff !important;}
+
+
 
 th:nth-child(2){text-align:center;width:80px;}
 
+
+
 th:nth-child(3){text-align:right;width:140px;}
+
+
 
 td{font-size:12px;padding:8px 10px;border-left:1px solid ${BLUE};border-right:1px solid ${BLUE};}
 
+
+
 tbody tr{border-bottom:1px solid ${BLUE};}
+
+
 
 tbody tr:nth-child(even){background:#f9fafb;}
 
+
+
 .bottom{display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;margin-top:28px;padding:0 10px;}
+
+
 
 .notes{border:2px solid ${BLUE};min-height:180px;padding:10px;}
 
+
+
 .notes .label{font-weight:700;margin-bottom:6px;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
+
+
 
 .totals{font-size:12px;line-height:1.9;padding-top:6px;}
 
+
+
 .totals .row{display:flex;justify-content:space-between;gap:12px;}
+
+
 
 .totals .row span:last-child{font-variant-numeric:tabular-nums;}
 
+
+
 .footer{margin-top:26px;text-align:center;font-size:12px;padding-bottom:16px;}
+
+
 
 .footerBottom{position:absolute;left:10px;right:10px;bottom:0;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.08);border-radius:12px;overflow:hidden;}
 
+
+
 .footerThanks{background:#fff;color:#0f172a;text-align:center;padding:16px 14px;border:1px solid #e2e8f0;border-bottom:none;}
+
+
 
 .footerThanks .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
 
+
+
 .footerThanks .links{font-size:10px;color:#0f172a;opacity:0.9;}
+
+
 
 .footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:12px 14px;text-align:center;font-size:10px;letter-spacing:0.2px;}
 
+
+
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
+
+
 
 </style>
 
+
+
 </head><body>
+
+
 
   <div class="invoice">
 
+
+
     <div class="top">
+
+
 
       <div class="logo">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
 
+
+
       <div class="company">
+
+
 
         <div class="companyName">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
+
+
         ${(() => {
+
           const lines = companyAddressLines(company);
+
           return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
+
         })()}
+
+
 
         ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
 
+
+
         ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
+
+
 
         ${company.website ? `<div>${escapeHtml(company.website)}</div>` : ''}
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
@@ -757,41 +1512,83 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
+
+
+
+
     <div class="meta">
+
+
 
       <div class="box billTo">
 
+
+
         <div class="label">Bill To:</div>
+
+
 
         <div class="customerName">${escapeHtml(customer.name || 'Customer')}</div>
 
+
+
         ${customerAddressHtml}
+
+
 
         ${customer.phone ? `<div>${escapeHtml(customer.phone)}</div>` : ''}
 
+
+
         ${customer.email ? `<div>${escapeHtml(customer.email)}</div>` : ''}
 
+
+
       </div>
+
+
 
       <div class="box invoiceInfo">
 
+
+
         <div class="row"><span class="label">Account #:</span> ${escapeHtml(classicAccountNumber)}</div>
+
+
 
         <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
+
+
         <div class="row"><span class="label">Invoice Date:</span> <span id="sb_print_date"></span></div>
+
+
 
         <div class="row"><span class="label">Time:</span> <span id="sb_print_time"></span></div>
 
+
+
         ${invoice.createdBy
+
           ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>`
+
           : ''}
+
+
 
         <div class="row invoiceTotalRow"><span class="label">Invoice Total:</span> <span class="value">${formatAmount(invoice.amount)}</span></div>
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
@@ -799,99 +1596,199 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
+
+
+
+
     <div class="table-wrap">
+
+
 
       <table>
 
+
+
         <thead>
+
+
 
           <tr>
 
+
+
             <th>Description of Service</th>
+
+
 
             <th>Qty</th>
 
+
+
             <th>Amount</th>
+
+
 
           </tr>
 
+
+
         </thead>
+
+
 
         <tbody>
 
+
+
           ${rows || `<tr><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td></tr>`}
+
+
 
         </tbody>
 
+
+
       </table>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="bottom">
 
+
+
       <div class="notes">
+
+
 
         <div class="label">Notes:</div>
 
+
+
         <div style="white-space:pre-wrap;">${notesHtml}</div>
 
+
+
       </div>
+
+
 
       <div class="totals">
 
+
+
         <div class="row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+
+
 
         <div class="row"><span>Discount${classicDiscountLabel ? ` (${escapeHtml(classicDiscountLabel)})` : ''}:</span><span>(-) ${formatAmount(classicDiscountAmount)}</span></div>
 
+
+
         <div class="row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
+
+
 
         <div class="row" style="font-weight:800;"><span>Grand Total:</span><span style="color:#16a34a;font-weight:900;">${formatAmount(invoice.amount)}</span></div>
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="footerBottom">
 
+
+
       <div class="footerThanks">
+
+
 
         <div class="thanks">Thank you for your purchase.</div>
 
+
+
         ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+
 
       </div>
 
+
+
       <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
+
+
     </div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
 </body></html>`;
 
+
+
 }
+
+
+
+
 
 
 
@@ -899,7 +1796,15 @@ function generateCashReceiptTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -907,7 +1812,15 @@ function generateCashReceiptTemplate(
 
 
 
+
+
+
+
   company: CompanyData
+
+
+
+
 
 
 
@@ -915,409 +1828,819 @@ function generateCashReceiptTemplate(
 
 
 
+
+
+
+
   const rows = (invoice.items || [])
+
+
 
     .map(
 
+
+
       (item) => `
+
+
 
         <tr>
 
+
+
           <td style="padding:8px 10px;border:1px solid #d1d5db;">${escapeHtml(String(item.description || ''))}</td>
+
+
 
           <td style="padding:8px 10px;border:1px solid #d1d5db;text-align:right;">${formatAmount(item.total)}</td>
 
+
+
         </tr>
+
+
 
       `.trim()
 
+
+
     )
+
+
 
     .join('');
 
+
+
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
 
+
+
   const paymentMethodStr = String(
+
     (invoice as any).paymentMethod ?? (invoice as any).payment_method ?? ''
+
   )
+
     .trim()
+
     .toLowerCase();
 
+
+
   const paymentRefStr = String(
+
     (invoice as any).paymentReference ?? (invoice as any).payment_reference ?? ''
+
   ).trim();
 
+
+
   const depositAmount = Number(
+
     (invoice as any).deposit ?? (invoice as any).depositAmount ?? (invoice as any).deposit_amount ?? 0
+
   ) || 0;
+
+
+
+
 
 
 
   const balanceDueAmount = Number(
+
     (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
+
   ) || 0;
 
 
 
+
+
+
+
   const footerLinksParts: string[] = [];
+
   if (company.facebook) footerLinksParts.push('Facebook');
+
   if (company.instagram) footerLinksParts.push('Instagram');
+
   if (company.twitter) footerLinksParts.push('X');
+
   if (company.linkedin) footerLinksParts.push('LinkedIn');
+
   if (company.youtube) footerLinksParts.push('YouTube');
+
   if (company.tiktok) footerLinksParts.push('TikTok');
+
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+
   const footerLinksText = footerLinksParts.join(' | ');
+
+
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Cash Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
 
+
+
 <style>
+
+
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
 
+
+
 @page{margin:10mm;}
+
+
 
 html,body{height:100%;}
 
+
+
 body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;margin:0;}
+
+
 
 .doc{width:100%;min-height:100vh;display:flex;flex-direction:column;}
 
+
+
 .bar{height:10px;background:${BLUE};}
+
+
 
 .content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 
+
+
 .shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+
 .shape.s1{width:220px;height:220px;left:-70px;top:70px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.28),rgba(37,99,235,0));}
+
 .shape.s2{width:180px;height:180px;right:-60px;top:170px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.22),rgba(16,185,129,0));}
+
 .shape.s3{width:240px;height:240px;right:-80px;bottom:180px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.18),rgba(37,99,235,0));}
+
+
+
+
 
 
 
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;}
 
+
+
 .title{font-size:24px;font-weight:900;color:${BLUE};letter-spacing:0.3px;margin-top:58px;margin-left:18px;}
+
+
 
 .rightBox{display:flex;flex-direction:column;align-items:center;gap:10px;}
 
+
+
 .logoCircle{width:74px;height:74px;border-radius:999px;background:#6b7280;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;overflow:hidden;flex:0 0 auto;}
+
+
 
 .logoCircle img{width:100%;height:100%;object-fit:cover;}
 
+
+
 .meta{min-width:170px;text-align:center;}
+
+
 
 .metaBox{background:rgba(255,255,255,0.38);border:1px solid rgba(209,213,219,0.18);border-radius:12px;padding:10px 12px;box-shadow:0 2px 7px rgba(17,24,39,0.025);}
 
 
+
+
+
 .metaRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #d1d5db;font-size:11px;width:100%;}
+
+
 
 .metaRow .label{font-weight:900;color:#111;font-size:11px;letter-spacing:0;}
 
+
+
 .metaRow .value{font-weight:700;color:#111;text-align:right;}
+
+
 
 .metaRow:last-child{border-bottom:1px solid #d1d5db;}
 
 
 
+
+
+
+
 .fromTo{margin-top:-138px;display:grid;grid-template-columns:1fr 1fr;gap:26px;font-size:11px;max-width:560px;margin-left:18px;margin-right:auto;position:relative;z-index:1;}
+
+
 
 .fromTo .head{font-weight:900;margin-bottom:8px;text-transform:uppercase;color:#6b7280;font-size:10px;}
 
+
+
 .toCol{margin-left:0;}
+
+
 
 .line{margin:4px 0;line-height:1.25;}
 
+
+
 .addrBox{background:rgba(255,255,255,0.34);border:1px solid rgba(209,213,219,0.16);border-radius:12px;padding:12px 14px;box-shadow:0 2px 7px rgba(17,24,39,0.02);}
 
+
+
 .companyName{font-weight:900;font-size:13px;color:#111;letter-spacing:0.2px;}
+
+
 
 .customerName{font-weight:900;color:#111;}
 
 
 
+
+
+
+
 table{width:100%;border-collapse:collapse;margin-top:18px;}
+
+
 
 th{background:${BLUE} !important;color:#fff !important;text-align:left;font-size:11px;padding:8px 10px;border:1px solid ${BLUE};text-transform:uppercase;letter-spacing:0.3px;}
 
+
+
 th:nth-child(2){text-align:right;width:160px;}
+
+
 
 td{font-size:11px;}
 
 
 
+
+
+
+
 .bottom{margin-top:14px;display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+
+
 
 .notes{font-size:11px;color:#111;}
 
+
+
 .notes .head{font-weight:900;margin-bottom:6px;color:#111;}
+
+
 
 .notes .box{min-height:110px;white-space:pre-wrap;}
 
+
+
 .totals{font-size:11px;color:#111;}
+
+
 
 .totalsRow{display:flex;justify-content:space-between;gap:10px;padding:3px 0;}
 
+
+
 .totalsRow .label{text-transform:uppercase;font-weight:900;color:#6b7280;}
+
+
 
 .totalsRow .value{text-align:right;min-width:110px;}
 
+
+
 .balance{margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#111;}
+
+
 
 .balanceBox{flex:1;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
 
+
+
 .balanceBox .curr{font-weight:900;}
+
+
 
 .balanceBox .amt{font-weight:900;color:#16a34a;}
 
 
 
+
+
+
+
 .payment{margin-top:18px;display:flex;justify-content:space-between;align-items:flex-end;gap:18px;font-size:11px;}
+
+
 
 .payment .left{display:flex;gap:12px;align-items:flex-start;}
 
+
+
 .checks{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
 
+
+
 .checks label{display:flex;align-items:center;gap:6px;}
+
+
 
 .signLine{flex:1;border-bottom:1px solid ${BLUE};height:16px;min-width:160px;display:flex;align-items:flex-end;padding-left:6px;font-weight:700;}
 
 
 
+
+
+
+
 .footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
+
 .footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+
 .footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+
 .footerPoweredBar{background:${BLUE};color:#fff;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
+
+
 
 .metaRow.emphasis .label{color:${BLUE};}
 
+
+
 .metaRow.emphasis .value{color:#16a34a;font-weight:900;}
+
+
 
 .metaRow.emphasis{border-bottom:2px solid rgba(22,163,74,0.25);}
 
+
+
 </style>
+
+
 
 </head><body>
 
+
+
   <div class="doc">
+
+
 
     <div class="bar"></div>
 
+
+
     <div class="content">
+
+
 
       <div class="shape s1"></div>
 
+
+
       <div class="shape s2"></div>
+
+
 
       <div class="shape s3"></div>
 
+
+
       <div class="top">
+
+
 
         <div class="title">CASH RECEIPT</div>
 
+
+
         <div class="rightBox">
+
+
 
           <div class="logoCircle">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
 
+
+
           <div class="meta metaBox">
 
+
+
             ${(() => {
+
               const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+
               const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
               return s ? `<div class="metaRow"><span class="label">Account #:</span><span class="value">${escapeHtml(s)}</span></div>` : '';
+
             })()}
+
+
 
             <div class="metaRow"><span class="label">Invoice #:</span><span class="value">${escapeHtml(invoice.invoiceNumber)}</span></div>
 
+
+
             <div class="metaRow"><span class="label">Invoice Date:</span><span class="value"><span id="sb_print_date"></span></span></div>
+
+
 
             <div class="metaRow"><span class="label">Time:</span><span class="value"><span id="sb_print_time"></span></span></div>
 
+
+
             ${invoice.createdBy ? `<div class="metaRow"><span class="label">Created By:</span><span class="value">${escapeHtml(String(invoice.createdBy))}</span></div>` : ''}
+
+
 
             <div class="metaRow emphasis"><span class="label">Invoice Total:</span><span class="value">${formatAmount(invoice.amount)}</span></div>
 
+
+
           </div>
+
+
 
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="fromTo">
 
+
+
         <div class="addrBox">
+
+
 
           <div class="head">From</div>
 
+
+
           <div class="line companyName">${escapeHtml(company.name || 'Your Company Name')}</div>
 
+
+
           ${(() => {
+
             const lines = companyAddressLines(company);
+
             return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
+
+
 
           ${company.email ? `<div class="line">${escapeHtml(company.email)}</div>` : ''}
 
+
+
           ${company.website ? `<div class="line">${escapeHtml(company.website)}</div>` : ''}
+
+
 
           ${company.phone ? `<div class="line">${escapeHtml(company.phone)}</div>` : ''}
 
+
+
         </div>
+
+
 
         <div class="toCol addrBox">
 
+
+
           <div class="head">To</div>
+
+
 
           <div class="line customerName">${escapeHtml(customer.name || 'Client Name')}</div>
 
+
+
           ${(() => {
+
             const lines = customerAddressLines(customer);
+
             return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
+
+
 
           ${customer.email ? `<div class="line">${escapeHtml(customer.email)}</div>` : ''}
 
+
+
           ${customer.phone ? `<div class="line">${escapeHtml(customer.phone)}</div>` : ''}
+
+
 
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <table>
 
+
+
         <thead>
+
+
 
           <tr>
 
+
+
             <th>Description</th>
+
+
 
             <th>Total</th>
 
+
+
           </tr>
+
+
 
         </thead>
 
+
+
         <tbody>
+
+
 
           ${
 
+
+
             rows ||
+
+
 
             `<tr><td style="padding:8px 10px;border:1px solid #d1d5db;">Payment</td><td style="padding:8px 10px;border:1px solid #d1d5db;text-align:right;">${formatAmount(invoice.amount)}</td></tr>`
 
+
+
           }
 
+
+
         </tbody>
+
+
 
       </table>
 
 
 
+
+
+
+
       <div class="bottom">
+
+
 
         <div class="notes">
 
+
+
           <div class="head">Notes</div>
+
+
 
           <div class="box">${notesHtml || '-'}</div>
 
 
 
+
+
+
+
           <div class="payment">
+
+
 
             <div class="left">
 
+
+
               <div>Payment received as:</div>
+
+
 
               <div class="checks">
 
+
+
                 <label><input type="checkbox" ${paymentMethodStr === 'cash' ? 'checked' : ''}/> Cash</label>
+
+
 
                 <label><input type="checkbox" ${(paymentMethodStr === 'check' || paymentMethodStr === 'cheque') ? 'checked' : ''}/> Cheque</label>
 
+
+
               </div>
 
+
+
             </div>
+
+
 
             <div style="display:flex;gap:10px;align-items:flex-end;">
 
+
+
               <div style="min-width:14px;">#</div>
+
+
 
               <div class="signLine">${paymentRefStr ? escapeHtml(paymentRefStr) : ''}</div>
 
+
+
             </div>
+
+
 
           </div>
 
+
+
         </div>
+
+
+
+
 
 
 
         <div class="totals">
 
+
+
           <div class="totalsRow"><div class="label">Total</div><div class="value">${formatAmount(invoice.amount)}</div></div>
+
+
 
           <div class="totalsRow"><div class="label">Deposit</div><div class="value">${formatAmount(depositAmount)}</div></div>
 
+
+
           <div class="balance">
+
+
 
             <div>Balance Due</div>
 
+
+
             <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
+
+
 
           </div>
 
+
+
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="footer">
 
+
+
         <div class="footerMessage">
+
+
 
           <div class="thanks">Thank you for your Business!</div>
 
+
+
           ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+
 
         </div>
 
+
+
         <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+
+
 
       </div>
 
+
+
     </div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
 </body></html>`;
 
+
+
 }
+
+
+
+
 
 
 
@@ -1325,7 +2648,15 @@ function generateRentReceiptTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -1333,7 +2664,15 @@ function generateRentReceiptTemplate(
 
 
 
+
+
+
+
   company: CompanyData
+
+
+
+
 
 
 
@@ -1341,280 +2680,561 @@ function generateRentReceiptTemplate(
 
 
 
+
+
+
+
   const rows = (invoice.items || [])
+
+
 
     .map(
 
+
+
       (item) => `
+
+
 
         <tr>
 
+
+
           <td style="padding:8px 10px;border:1px solid #d1d5db;">${escapeHtml(String(item.description || ''))}</td>
+
+
 
           <td style="padding:8px 10px;border:1px solid #d1d5db;text-align:right;">${formatAmount(item.total)}</td>
 
+
+
         </tr>
+
+
 
       `.trim()
 
+
+
     )
+
+
 
     .join('');
 
 
 
+
+
+
+
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
   const discountType = (invoice as any).discount_type as 'percentage' | 'fixed' | undefined;
+
   const discountValue = Number((invoice as any).discount_value ?? 0) || 0;
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+
   const discountLabel = discountType === 'percentage' ? `${discountValue}%` : String((invoice as any).discountLabel ?? '').trim();
 
 
 
+
+
+
+
   const lateFeeAmount = Number(
+
     (invoice as any).lateFee ?? (invoice as any).late_fee ?? (invoice as any).late_fee_amount ?? 0
+
   ) || 0;
+
+
+
+
 
 
 
   const bouncedCheckFeeAmount = Number(
+
     (invoice as any).bouncedCheckFee ?? (invoice as any).bounced_check_fee ?? (invoice as any).bounced_check_fee_amount ?? 0
+
   ) || 0;
+
+
+
+
 
 
 
   const depositAmount = Number(
+
     (invoice as any).deposit ?? (invoice as any).depositAmount ?? (invoice as any).deposit_amount ?? 0
+
   ) || 0;
+
+
+
+
 
 
 
   const balanceDueAmount = Number(
+
     (invoice as any).balanceDue ?? (invoice as any).balance_due ?? (invoice as any).balance_due_amount ?? invoice.amount
+
   ) || 0;
+
+
+
+
 
 
 
   const footerLinksParts: string[] = [];
 
+
+
   if (company.facebook) footerLinksParts.push('Facebook');
+
+
 
   if (company.instagram) footerLinksParts.push('Instagram');
 
+
+
   if (company.twitter) footerLinksParts.push('X');
+
+
 
   if (company.linkedin) footerLinksParts.push('LinkedIn');
 
+
+
   if (company.youtube) footerLinksParts.push('YouTube');
+
+
 
   if (company.tiktok) footerLinksParts.push('TikTok');
 
+
+
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+
+
 
   const footerLinksText = footerLinksParts.join(' | ');
 
 
 
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Rent Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
+
+
 
 <style>
 
+
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+
+
 
 @page{margin:10mm;}
 
+
+
 html,body{height:100%;}
+
+
 
 body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;margin:0;}
 
+
+
 .receipt{width:100%;max-width:100%;min-height:100vh;display:flex;flex-direction:column;background:transparent;position:relative;overflow:hidden;}
+
+
 
 .bar{height:10px;background:${BLUE};}
 
+
+
 .bar.bottom{}
+
+
 
 .header{padding:18px 18px 10px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:18px;background:#f7f7f7;}
 
+
+
 .shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+
 .shape.s1{width:240px;height:240px;left:-90px;top:90px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.22),rgba(37,99,235,0));}
+
 .shape.s2{width:200px;height:200px;right:-80px;top:160px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.18),rgba(16,185,129,0));}
+
 .shape.s3{width:280px;height:280px;right:-110px;bottom:140px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.16),rgba(37,99,235,0));}
+
+
 
 .companyLeft{display:flex;gap:14px;align-items:flex-start;}
 
+
+
 .logo{width:70px;height:70px;border-radius:999px;background:#6b7280;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;overflow:hidden;flex:0 0 auto;}
+
+
 
 .logo img{width:100%;height:100%;object-fit:cover;}
 
+
+
 .companyText{font-size:11px;line-height:1.35;color:#374151;}
+
+
 
 .companyText .name{font-weight:900;color:${BLUE};margin-bottom:2px;font-size:14px;}
 
+
+
 .rightTitle{min-width:280px;text-align:right;}
+
+
 
 .rightTitle .title{font-size:28px;font-weight:900;letter-spacing:0.4px;color:${BLUE};}
 
+
+
 .rightMeta{margin-top:10px;display:inline-block;width:260px;}
+
+
 
 .rightMetaRow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid #d1d5db;font-size:11px;color:#111;}
 
+
+
 .rightMetaRow:last-child{border-bottom:1px solid #d1d5db;}
+
+
 
 .rightMetaRow .label{text-transform:uppercase;font-weight:800;color:#1f2937;}
 
 
 
+
+
+
+
 .content{padding:18px 18px 0 18px;flex:1;display:flex;flex-direction:column;position:relative;z-index:1;}
+
+
 
 .billedTo{width:420px;}
 
+
+
 .billedTo .head{font-size:11px;font-weight:900;color:#1f2937;text-transform:uppercase;margin-bottom:8px;}
 
+
+
 .billedTo .line{font-size:11px;color:#111;margin:3px 0;}
+
+
 
 .spacer{height:14px;}
 
 
 
+
+
+
+
 table{width:100%;border-collapse:collapse;margin-top:14px;}
+
+
 
 th{background:${BLUE} !important;color:#fff !important;text-align:left;font-size:11px;padding:8px 10px;border:1px solid ${BLUE};text-transform:uppercase;letter-spacing:0.3px;}
 
+
+
 th:nth-child(2){text-align:right;width:160px;}
+
+
 
 td{font-size:11px;}
 
 
 
+
+
+
+
 .bottom{margin-top:14px;display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+
+
 
 .notes{font-size:11px;color:#111;}
 
+
+
 .notes .head{font-weight:900;margin-bottom:6px;color:#111;}
+
+
 
 .notes .box{min-height:90px;white-space:pre-wrap;}
 
+
+
 .totals{font-size:11px;color:#111;}
+
+
 
 .totalsRow{display:flex;justify-content:space-between;gap:10px;padding:3px 0;}
 
+
+
 .totalsRow .label{text-transform:uppercase;font-weight:800;color:#1f2937;}
+
+
 
 .totalsRow .value{text-align:right;min-width:110px;}
 
+
+
 .balance{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#111;}
+
+
 
 .balanceBox{flex:1;background:#dbeafe;border:1px solid #93c5fd;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
 
+
+
 .balanceBox .curr{font-weight:900;}
+
+
 
 .balanceBox .amt{font-weight:900;color:#16a34a;}
 
+
+
 .footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
+
+
 
 .footerLinksPanel{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:12px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
 
+
+
 .footerLinksPanel .links{color:#0f172a;opacity:0.9;}
+
+
 
 .footerPoweredBar{background:${BLUE};color:#fff;padding:10px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
 
+
+
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
+
+
 
 .rightMetaRow.emphasis .label{color:${BLUE};font-weight:900;}
 
+
+
 .rightMetaRow.emphasis div:last-child{color:#16a34a;font-weight:900;}
+
+
 
 </style>
 
+
+
 </head><body>
+
+
 
   <div class="receipt">
 
+
+
     <div class="shape s1"></div>
+
+
 
     <div class="shape s2"></div>
 
+
+
     <div class="shape s3"></div>
+
+
 
     <div class="bar"></div>
 
 
 
+
+
+
+
     <div class="header">
+
+
 
       <div class="companyLeft">
 
+
+
         <div class="logo">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
+
+
 
         <div class="companyText">
 
+
+
           <div class="name">${escapeHtml(company.name || 'Your Company Name')}</div>
 
+
+
           ${(() => {
+
             const lines = companyAddressLines(company);
+
             return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
+
+
 
           ${company.email ? `<div>${escapeHtml(String(company.email))}</div>` : ''}
 
+
+
           ${company.website ? `<div>${escapeHtml(String(company.website))}</div>` : ''}
+
+
 
           ${company.phone ? `<div>${escapeHtml(String(company.phone))}</div>` : ''}
 
+
+
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="rightTitle">
 
+
+
         <div class="title">RENT RECEIPT</div>
+
+
 
         <div class="rightMeta">
 
+
+
           ${(() => {
+
             const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+
             const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
             return s ? `<div class="rightMetaRow"><div class="label">ACCOUNT #:</div><div>${escapeHtml(s)}</div></div>` : '';
+
           })()}
+
+
 
           <div class="rightMetaRow"><div class="label">INVOICE #:</div><div>${escapeHtml(invoice.invoiceNumber)}</div></div>
 
+
+
           <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div><span id="sb_print_date"></span></div></div>
+
+
 
           <div class="rightMetaRow"><div class="label">TIME:</div><div><span id="sb_print_time"></span></div></div>
 
+
+
           ${invoice.createdBy ? `<div class="rightMetaRow"><div class="label">CREATED BY:</div><div>${escapeHtml(String(invoice.createdBy))}</div></div>` : ''}
+
+
 
           <div class="rightMetaRow emphasis"><div class="label">INVOICE TOTAL:</div><div>${formatAmount(invoice.amount)}</div></div>
 
+
+
         </div>
 
+
+
       </div>
+
+
 
     </div>
 
 
 
+
+
+
+
     <div class="content">
+
+
 
       <div class="billedTo">
 
+
+
         <div class="head">BILLED TO</div>
+
+
 
         <div class="line"><strong>${escapeHtml(customer.name || 'Tenant Name')}</strong></div>
 
+
+
         ${(() => {
+
           const lines = customerAddressLines(customer);
+
           return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line">${escapeHtml(lines.line2)}</div>` : ''}`;
+
         })()}
+
+
 
         ${customer.email ? `<div class="line">${escapeHtml(customer.email)}</div>` : ''}
 
+
+
         ${customer.phone ? `<div class="line">${escapeHtml(customer.phone)}</div>` : ''}
 
+
+
       </div>
+
+
+
+
 
 
 
@@ -1622,120 +3242,241 @@ td{font-size:11px;}
 
 
 
+
+
+
+
       <table>
+
+
 
         <thead>
 
+
+
           <tr>
+
+
 
             <th>Description</th>
 
+
+
             <th>Total</th>
+
+
 
           </tr>
 
+
+
         </thead>
+
+
 
         <tbody>
 
+
+
           ${
+
+
 
             rows ||
 
+
+
             `<tr><td style="padding:8px 10px;border:1px solid #d1d5db;">Rent Payment</td><td style="padding:8px 10px;border:1px solid #d1d5db;text-align:right;">${formatAmount(invoice.amount)}</td></tr>`
+
+
 
           }
 
+
+
         </tbody>
+
+
 
       </table>
 
 
 
+
+
+
+
       <div class="bottom">
+
+
 
         <div class="notes">
 
+
+
           <div class="head">Notes</div>
+
+
 
           <div class="box">${notesHtml || '-'}</div>
 
+
+
         </div>
+
+
+
+
 
 
 
         <div class="totals">
 
+
+
           <div class="totalsRow"><div class="label">SUBTOTAL</div><div class="value">${formatAmount(invoice.subtotal)}</div></div>
+
+
 
           <div class="totalsRow"><div class="label">DISCOUNT${discountLabel ? ` (${escapeHtml(discountLabel)})` : ''}</div><div class="value">${formatAmount(discountAmount)}</div></div>
 
+
+
           <div class="totalsRow"><div class="label">SUBTOTAL LESS DISCOUNT</div><div class="value">${formatAmount(Number(invoice.subtotal) - discountAmount)}</div></div>
+
+
 
           <div class="totalsRow"><div class="label">SALES TAX</div><div class="value">${formatAmount(invoice.tax)}</div></div>
 
+
+
           <div class="totalsRow"><div class="label">LATE FEE</div><div class="value">${formatAmount(lateFeeAmount)}</div></div>
+
+
 
           <div class="totalsRow"><div class="label">BOUNCED CHECK FEE</div><div class="value">${formatAmount(bouncedCheckFeeAmount)}</div></div>
 
+
+
           <div class="totalsRow"><div class="label">TOTAL</div><div class="value">${formatAmount(invoice.amount)}</div></div>
+
+
 
           <div class="totalsRow"><div class="label">DEPOSIT</div><div class="value">${formatAmount(depositAmount)}</div></div>
 
 
 
+
+
+
+
           <div class="balance">
+
+
 
             <div>Balance Due</div>
 
+
+
             <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
+
+
 
           </div>
 
+
+
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="footer">
 
+
+
         ${footerLinksText ? `<div class="footerLinksPanel"><div class="links">${footerLinksText}</div></div>` : ''}
+
+
 
         <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
+
+
       </div>
+
+
 
     </div>
 
 
 
+
+
+
+
     <div class="bar bottom"></div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
 </body></html>`;
 
+
+
 }
+
+
+
+
 
 
 
@@ -1743,11 +3484,23 @@ function generateBlueInvoiceTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
 
 
 
+
+
+
+
   customer: CustomerData,
+
+
+
+
 
 
 
@@ -1755,7 +3508,15 @@ function generateBlueInvoiceTemplate(
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
@@ -1763,393 +3524,787 @@ function generateBlueInvoiceTemplate(
 
 
 
+
+
+
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+
+
 
   const subtotalLessDiscount = Number(invoice.subtotal) - discountAmount;
 
+
+
   const taxRate = ((): number => {
+
+
 
     const base = subtotalLessDiscount;
 
+
+
     if (!base) return 0;
+
+
 
     return (Number(invoice.tax) / base) * 100;
 
+
+
   })();
+
+
 
   const shippingHandling = Number((invoice as any).shipping ?? (invoice as any).shippingHandling ?? 0) || 0;
 
+
+
   const footerLinksParts: string[] = [];
+
   if (company.facebook) footerLinksParts.push('Facebook');
+
   if (company.instagram) footerLinksParts.push('Instagram');
+
   if (company.twitter) footerLinksParts.push('X');
+
   if (company.linkedin) footerLinksParts.push('LinkedIn');
+
   if (company.youtube) footerLinksParts.push('YouTube');
+
   if (company.tiktok) footerLinksParts.push('TikTok');
+
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+
   const footerLinksText = footerLinksParts.join(' | ');
+
+
+
+
 
 
 
   const rows = (invoice.items || [])
 
+
+
     .map(
+
+
 
       (item) => `
 
+
+
         <tr>
+
+
 
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(String(item.description || ''))}</td>
 
+
+
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+
+
 
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td>
 
+
+
           <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td>
+
+
 
         </tr>
 
+
+
       `.trim()
 
+
+
     )
+
+
 
     .join('');
 
 
 
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
+
+
 
 <style>
 
+
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+
+
 
 @page{margin:8mm;}
 
+
+
 html,body{height:100%;}
+
+
 
 body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,#f6f9ff 55%,#ffffff 100%);color:#111;}
 
 
 
+
+
+
+
 .doc{max-width:100%;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;overflow:hidden;}
 
+
+
 .shape{position:absolute;border-radius:999px;pointer-events:none;z-index:0;opacity:0.35;filter:blur(0px);}
+
 .shape.s1{width:260px;height:260px;left:-95px;top:120px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.22),rgba(37,99,235,0));}
+
 .shape.s2{width:210px;height:210px;right:-85px;top:190px;background:radial-gradient(circle at 30% 30%,rgba(16,185,129,0.18),rgba(16,185,129,0));}
+
 .shape.s3{width:320px;height:320px;right:-120px;bottom:160px;background:radial-gradient(circle at 30% 30%,rgba(37,99,235,0.16),rgba(37,99,235,0));}
+
+
 
 .main{flex:1;display:flex;flex-direction:column;}
 
 
 
+
+
+
+
 .top{display:flex;justify-content:space-between;align-items:flex-start;padding:22px 0 0 0;}
+
+
 
 .companyBox{width:300px;background:transparent !important;color:#111 !important;padding:16px 16px;font-size:11px;line-height:1.35;text-align:center;border:2px solid ${BLUE};}
 
+
+
 .companyBox .name{font-weight:900;font-size:14px;letter-spacing:0.4px;margin-bottom:6px;color:${BLUE};}
 
+
+
 .logoBox{width:230px;height:120px;border:none;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;}
+
+
 
 .logoBox img{max-width:100%;max-height:100%;object-fit:contain;}
 
 
 
+
+
+
+
 .mid{display:grid;grid-template-columns:1fr 1fr 280px;gap:26px;margin-top:28px;font-size:12px;align-items:start;}
+
+
 
 .blockTitle{font-weight:900;margin-bottom:6px;}
 
+
+
 .line{margin:4px 0;}
+
+
 
 .addrLine2{white-space:nowrap;}
 
+
+
 .details{justify-self:end;text-align:right;padding-right:12px;}
+
+
 
 .invoiceTitle{font-size:40px;font-weight:900;letter-spacing:0.6px;text-align:right;margin-bottom:10px;color:${BLUE};}
 
+
+
 .details .line strong{display:inline-block;min-width:95px;}
+
+
 
 .shipTo{padding-left:36px;}
 
+
+
 .details .line.invoiceTotalLine strong{color:${BLUE};}
+
+
 
 .details .line.invoiceTotalLine .invoiceTotalAmt{color:#16a34a;font-weight:900;}
 
 
 
+
+
+
+
 .tableWrap{margin-top:38px;}
+
+
 
 table{width:100%;border-collapse:collapse;}
 
+
+
 th{background:${BLUE} !important;color:#fff !important;text-align:left;font-size:12px;padding:12px 14px;border:2px solid ${BLUE};text-transform:uppercase;letter-spacing:0.4px;}
+
+
 
 th:nth-child(2){text-align:center;width:60px;}
 
+
+
 th:nth-child(3){text-align:right;width:110px;}
+
+
 
 th:nth-child(4){text-align:right;width:105px;}
 
+
+
 td{font-size:12px;padding:12px 14px;border-left:1px solid ${BLUE};border-right:1px solid ${BLUE};}
+
+
 
 tbody tr{border-bottom:1px solid ${BLUE};}
 
 
 
+
+
+
+
 .bottom{display:grid;grid-template-columns:1.1fr 0.9fr;gap:34px;margin-top:22px;align-items:start;}
+
+
 
 .notesBox{border:2px solid ${BLUE};min-height:90px;}
 
+
+
 .notesHead{background:${BLUE} !important;color:#fff !important;font-weight:900;padding:12px 14px;font-size:12px;}
+
+
 
 .notesBody{padding:12px 14px;font-size:12px;white-space:pre-wrap;min-height:80px;}
 
 
 
+
+
+
+
 .totals{font-size:12px;padding-top:10px;}
+
+
 
 .totalsRow{display:flex;justify-content:space-between;gap:12px;margin:10px 0;}
 
+
+
 .totalsRow .value{min-width:140px;text-align:right;font-variant-numeric:tabular-nums;}
 
+
+
 .grand{margin-top:14px;background:${BLUE} !important;color:#fff !important;border:2px solid ${BLUE};display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-weight:900;font-size:13px;}
+
+
 
 .grand .value{min-width:140px;text-align:right;}
 
 
 
+
+
+
+
 .thanks{margin:46px 0 0 0;text-align:center;font-weight:700;font-size:13px;}
 
+
+
 .footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
+
 .footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+
 .footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+
 .footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
+
+
 
 </style>
 
+
+
 </head><body>
+
+
 
   <div class="doc">
 
+
+
     <div class="shape s1"></div>
+
+
 
     <div class="shape s2"></div>
 
+
+
     <div class="shape s3"></div>
+
+
 
     <div class="main">
 
+
+
       <div class="top">
+
+
 
         <div class="companyBox">
 
+
+
           <div class="name">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
-          ${(() => {
-            const lines = companyAddressLines(company);
-            return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
-          })()}
+
 
           ${(() => {
+
+            const lines = companyAddressLines(company);
+
+            return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
+
+          })()}
+
+
+
+          ${(() => {
+
+
 
             const parts = [company.phone, company.email, company.website].filter(Boolean).map((v) => escapeHtml(String(v)));
 
+
+
             return parts.length ? `<div>${parts.join('<br/>')}</div>` : '';
+
+
 
           })()}
 
+
+
         </div>
+
+
 
         <div class="logoBox">
 
+
+
           ${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : `<div style="font-weight:900;">LOGO</div>`}
+
+
 
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="mid">
 
+
+
         <div>
+
+
 
           <div class="blockTitle">Bill To:</div>
 
+
+
           <div class="line" style="font-weight:800;">${escapeHtml(customer.name || 'Customer')}</div>
 
+
+
           ${(() => {
+
             const lines = customerAddressLines(customer);
+
             return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
 
+
+
           ${customer.phone ? `<div class="line"><strong>Phone:</strong> ${escapeHtml(customer.phone)}</div>` : ''}
+
+
 
           ${customer.email ? `<div class="line"><strong>Email:</strong> ${escapeHtml(customer.email)}</div>` : ''}
 
+
+
         </div>
+
+
 
         <div class="shipTo">
 
+
+
           <div class="blockTitle">Ship To:</div>
+
+
 
           <div class="line" style="font-weight:800;">${escapeHtml(customer.name || 'Customer')}</div>
 
+
+
           ${(() => {
+
             const lines = customerAddressLines(customer);
+
             return `${lines.line1 ? `<div class="line">${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="line addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
+
+
 
           ${customer.phone ? `<div class="line"><strong>Phone:</strong> ${escapeHtml(customer.phone)}</div>` : ''}
 
+
+
         </div>
+
+
 
         <div class="details">
 
+
+
           <div class="invoiceTitle">INVOICE</div>
 
+
+
           ${(() => {
+
             const raw = (invoice as any).accountNumber ?? (invoice as any).account_number ?? undefined;
+
             const s = raw === null || raw === undefined ? '' : String(raw).trim();
+
             return s ? `<div class="line"><strong>Account #:</strong> ${escapeHtml(s)}</div>` : '';
+
           })()}
+
+
 
           <div class="line"><strong>Invoice #:</strong> ${escapeHtml(invoice.invoiceNumber)}</div>
 
+
+
           <div class="line"><strong>Time:</strong> <span id="sb_print_time"></span></div>
+
+
 
           <div class="line"><strong>Invoice Date:</strong> <span id="sb_print_date"></span></div>
 
+
+
           ${invoice.createdBy ? `<div class="line"><strong>Created By:</strong> ${escapeHtml(invoice.createdBy)}</div>` : ''}
+
+
 
           <div class="line invoiceTotalLine"><strong>Invoice Total:</strong> <span class="invoiceTotalAmt">${formatAmount(invoice.amount)}</span></div>
 
+
+
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="tableWrap">
 
+
+
         <table>
+
+
 
           <thead>
 
+
+
             <tr>
+
+
 
               <th>Description</th>
 
+
+
               <th>QTY</th>
+
+
 
               <th>Unit Price</th>
 
+
+
               <th>Total</th>
+
+
 
             </tr>
 
+
+
           </thead>
+
+
 
           <tbody>
 
+
+
             ${
+
+
 
               rows ||
 
+
+
               `<tr><td style="padding:10px 12px;border-bottom:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px 12px;border-bottom:1px solid ${BLUE};text-align:center;">&nbsp;</td><td style="padding:10px 12px;border-bottom:1px solid ${BLUE};text-align:right;">&nbsp;</td><td style="padding:10px 12px;border-bottom:1px solid ${BLUE};text-align:right;">&nbsp;</td></tr>`
+
+
 
             }
 
+
+
           </tbody>
+
+
 
         </table>
 
+
+
       </div>
+
+
+
+
 
 
 
       <div class="bottom">
 
+
+
         <div class="notesBox">
+
+
 
           <div class="notesHead">Additional Notes:</div>
 
+
+
           <div class="notesBody">${notesHtml || '-'}</div>
 
+
+
         </div>
+
+
 
         <div>
 
+
+
           <div class="totals">
+
+
 
             <div class="totalsRow"><span>Subtotal:</span><span class="value">${formatAmount(invoice.subtotal)}</span></div>
 
+
+
             <div class="totalsRow"><span>Discount:</span><span class="value">${formatAmount(discountAmount)}</span></div>
+
+
 
             <div class="totalsRow"><span>Subtotal (less Disc)</span><span class="value">${formatAmount(subtotalLessDiscount)}</span></div>
 
+
+
             <div class="totalsRow"><span>Sales Tax Rate</span><span class="value">${taxRate.toFixed(2)}%</span></div>
+
+
 
             <div class="totalsRow"><span>Sales Tax:</span><span class="value">${formatAmount(invoice.tax)}</span></div>
 
+
+
             <div class="totalsRow"><span>Total &amp; Sales Tax</span><span class="value">${formatAmount(Number(invoice.amount))}</span></div>
+
+
 
             <div class="totalsRow"><span>Shipping Handling</span><span class="value">${formatAmount(shippingHandling)}</span></div>
 
+
+
           </div>
+
+
 
           <div class="grand"><span>Grand Total:</span><span class="value">${formatAmount(invoice.amount)}</span></div>
 
+
+
         </div>
 
+
+
       </div>
+
+
+
+
 
 
 
       
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="footer">
 
+
+
       <div class="footerMessage">
+
+
 
         <div class="thanks">Thank you for your Business!</div>
 
+
+
         ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+
 
       </div>
 
+
+
       <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
+
+
     </div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
 </body></html>`;
 
+
+
 }
+
+
+
+
 
 
 
@@ -2157,7 +4312,15 @@ function generateJobEstimateTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -2165,7 +4328,15 @@ function generateJobEstimateTemplate(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -2173,216 +4344,433 @@ function generateJobEstimateTemplate(
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
   const terms = invoice.terms ? escapeHtml(String(invoice.terms)) : '';
 
+
+
   const notes = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+
 
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
 
 
 
+
+
+
+
   const rows = (invoice.items || [])
+
+
 
     .map(
 
+
+
       (item) => `
+
+
 
         <tr>
 
+
+
           <td style="border:1px solid ${BLUE};padding:8px 10px;">${escapeHtml(String(item.description || ''))}</td>
+
+
 
           <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:center;">${item.quantity}</td>
 
+
+
           <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:right;">${formatAmount(item.price)}</td>
+
+
 
           <td style="border:1px solid ${BLUE};padding:8px 10px;text-align:right;">${formatAmount(item.total)}</td>
 
+
+
         </tr>
+
+
 
       `.trim()
 
+
+
     )
+
+
 
     .join('');
 
 
 
+
+
+
+
   const paymentTermsHtml = terms
+
+
 
     ? `<div style="white-space:pre-wrap;">${terms}</div>`
 
+
+
     : `
+
+
 
       <div>-20% Due Upon Contract Signing</div>
 
+
+
       <div>-40% Due at Product Midpoint (Date)</div>
+
+
 
       <div>-20% Due to Close to Completion (Date)</div>
 
+
+
       <div>-10% Upon Final Inspection and Approval</div>
+
+
 
     `.trim();
 
 
 
+
+
+
+
   const footerLinksParts: string[] = [];
+
+
 
   if (company.facebook) footerLinksParts.push('Facebook');
 
+
+
   if (company.instagram) footerLinksParts.push('Instagram');
+
+
 
   if (company.twitter) footerLinksParts.push('X');
 
+
+
   if (company.linkedin) footerLinksParts.push('LinkedIn');
+
+
 
   if (company.youtube) footerLinksParts.push('YouTube');
 
+
+
   if (company.tiktok) footerLinksParts.push('TikTok');
 
+
+
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
+
+
 
   const footerLinksText = footerLinksParts.join(' | ');
 
 
 
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Job Estimate ${invoice.invoiceNumber}</title>
+
+
 
 <style>
 
+
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+
+
 
 @page{margin:12mm;}
 
+
+
 body{font-family:Arial, sans-serif;background:#fff;color:#000;}
+
+
 
 .estimate{max-width:900px;margin:0 auto;min-height:100vh;padding:18px 10px 16px 10px;}
 
+
+
 .top{display:flex;justify-content:space-between;align-items:flex-start;}
+
+
 
 .title{font-size:34px;font-weight:900;letter-spacing:1px;color:${BLUE};}
 
+
+
 .valid{font-size:16px;font-weight:900;letter-spacing:0.2px;color:${BLUE};margin-left:10px;}
+
+
 
 .companyBox{border:2px solid ${BLUE};padding:10px;width:240px;font-size:11px;line-height:1.35;background-color:${BLUE} !important;color:#fff !important;}
 
+
+
 .companyBox img{background:#fff;padding:4px;border-radius:4px;}
+
+
 
 .addrLine2{white-space:nowrap;}
 
+
+
 .line{border-top:2px solid ${BLUE};margin:14px 0;}
+
+
 
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11px;}
 
+
+
 .grid .label{font-weight:800;}
+
+
 
 .items{margin-top:18px;}
 
+
+
 table{width:100%;border-collapse:collapse;}
+
+
 
 th{border:1px solid ${BLUE};padding:8px 10px;font-size:12px;text-align:left;background-color:${BLUE} !important;color:#fff !important;}
 
+
+
 th:nth-child(2){width:80px;text-align:center;}
+
+
 
 th:nth-child(3){width:120px;text-align:right;}
 
+
+
 th:nth-child(4){width:140px;text-align:right;}
+
+
 
 .below{display:grid;grid-template-columns:1.2fr 0.8fr;gap:16px;margin-top:18px;}
 
+
+
 .box{border:2px solid ${BLUE};padding:10px;font-size:11px;min-height:120px;}
+
+
 
 .box .head{font-weight:900;margin-bottom:6px;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
 
+
+
 .totals{font-size:12px;}
+
+
 
 .totals .row{display:flex;justify-content:space-between;margin:6px 0;}
 
+
+
 .totals .grand{font-weight:900;border-top:2px solid ${BLUE};padding-top:8px;margin-top:8px;}
+
+
 
 .termsBox{border:2px solid ${BLUE};padding:10px;font-size:11px;margin-top:16px;}
 
+
+
 .termsHead{font-weight:900;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
+
+
 
 .termsBody{white-space:pre-wrap;}
 
+
+
 .sign{display:grid;grid-template-columns:1fr 1fr;gap:50px;margin-top:40px;font-size:12px;}
+
+
 
 .sign .line{border-top:1px solid ${BLUE};margin:18px 0 6px 0;}
 
+
+
 .footer{margin-top:26px;text-align:center;font-size:10px;}
+
 .footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+
 .footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
+
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
+
 .footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
+
+
 
 </style>
 
+
+
 </head><body>
+
+
 
   <div class="estimate">
 
+
+
     <div class="top">
+
+
 
       <div>
 
+
+
         <div class="title">JOB ESTIMATE <span class="valid">(Valid for 30 days)</span></div>
+
+
 
         <div style="margin-top:10px;font-size:11px;line-height:1.5;display:grid;grid-template-columns:1fr;gap:10px;">
 
+
+
           <div>
+
+
 
             <div><span class="label">CUSTOMER:</span> ${escapeHtml(customer.name || '')}</div>
 
+
+
             ${(() => {
+
               const a = parseAddress(customer.address);
+
               const parts = [a.street, [a.city, [a.state, a.zip].filter(Boolean).join(' ')].filter(Boolean).join(a.city ? ', ' : '')].filter(Boolean);
+
               const line1 = parts[0] || '-';
+
               const line2 = parts[1] || '';
+
               return `
+
                 <div><span class="label">ADDRESS:</span> ${escapeHtml(line1)}</div>
+
                 ${line2 ? `<div>${escapeHtml(line2)}</div>` : ''}
+
               `;
+
             })()}
+
+
 
             ${customer.phone ? `<div><span class="label">PHONE:</span> ${escapeHtml(customer.phone)}</div>` : ''}
 
+
+
             ${customer.email ? `<div><span class="label">EMAIL:</span> ${escapeHtml(customer.email)}</div>` : ''}
+
+
 
           </div>
 
+
+
         </div>
 
+
+
       </div>
+
+
 
       <div class="companyBox">
 
+
+
         ${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}" style="display:block;max-width:110px;max-height:60px;object-fit:contain;margin-bottom:8px;"/>` : `<div style="font-weight:900;">LOGO</div>`}
+
+
 
         <div style="margin-top:6px;">
 
+
+
           <div style="font-weight:800;">${escapeHtml(company.name || 'COMPANY NAME')}</div>
 
+
+
           ${(() => {
+
             const lines = companyAddressLines(company);
+
             return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div class="addrLine2">${escapeHtml(lines.line2)}</div>` : ''}`;
+
           })()}
+
+
 
           ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
 
+
+
           ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
+
+
 
           ${company.website ? `<div>${escapeHtml(company.website)}</div>` : ''}
 
+
+
         </div>
+
+
 
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
@@ -2390,184 +4778,369 @@ th:nth-child(4){width:140px;text-align:right;}
 
 
 
+
+
+
+
     <div class="grid">
 
+
+
       <div>
+
+
 
         <div><span class="label">ESTIMATE #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
 
+
+
         <div><span class="label">PO #:</span> </div>
+
+
 
       </div>
 
+
+
       <div>
+
+
 
         <div><span class="label">ESTIMATE DATE:</span> <span id="sb_print_date"></span></div>
 
+
+
         <div><span class="label">MATERIAL COST:</span> </div>
 
+
+
       </div>
+
+
 
       <div>
 
+
+
         <div><span class="label">CREATED BY:</span> ${escapeHtml(invoice.createdBy || '')}</div>
+
+
 
         <div><span class="label">ESTIMATED COST:</span> ${formatAmount(invoice.amount)}</div>
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="items">
 
+
+
       <table>
+
+
 
         <thead>
 
+
+
           <tr>
+
+
 
             <th>Description</th>
 
+
+
             <th>Qty</th>
+
+
 
             <th>Price</th>
 
+
+
             <th>Amount</th>
+
+
 
           </tr>
 
+
+
         </thead>
+
+
 
         <tbody>
 
+
+
           ${rows || `<tr><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td><td style="border:1px solid ${BLUE};padding:8px 10px;">&nbsp;</td></tr>`}
+
+
 
         </tbody>
 
+
+
       </table>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="below">
 
+
+
       <div class="box">
+
+
 
         <div class="head">Payment Terms:</div>
 
+
+
         ${paymentTermsHtml}
 
+
+
       </div>
+
+
 
       <div class="totals">
 
+
+
         <div class="row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+
+
 
         <div class="row"><span>Discount:</span><span>${formatAmount(discountAmount)}</span></div>
 
+
+
         <div class="row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
+
+
 
         <div class="row grand"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="termsBox">
 
+
+
       <div class="termsHead">Terms and Conditions:</div>
+
+
 
       <div class="termsBody">${notes || 'This project estimate is based on information and requirements provided by the client and is not guaranteed. Actual cost and terms may change once all project elements are discussed, negotiated and finalized.'}</div>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="sign">
 
+
+
       <div>
+
+
 
         <div style="font-weight:800;">CLIENT</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Name: ${escapeHtml(String(options?.jobEstimate?.clientName || ''))}</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Signature: ${escapeHtml(String(options?.jobEstimate?.clientSignature || ''))}</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Date: ${escapeHtml(String(options?.jobEstimate?.clientDate || ''))}</div>
 
+
+
       </div>
+
+
 
       <div>
 
+
+
         <div style="font-weight:800;">CONTRACTOR</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Name: ${escapeHtml(String(options?.jobEstimate?.contractorName || ''))}</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Signature: ${escapeHtml(String(options?.jobEstimate?.contractorSignature || ''))}</div>
 
+
+
         <div class="line"></div>
+
+
 
         <div>Date: ${escapeHtml(String(options?.jobEstimate?.contractorDate || ''))}</div>
 
+
+
       </div>
 
+
+
     </div>
+
+
+
+
 
 
 
     <div class="footer">
 
+
+
       <div class="footerMessage">
+
+
 
         <div class="thanks">Thank you for your purchase.</div>
 
+
+
         ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
+
+
 
       </div>
 
+
+
       <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
+
+
     </div>
+
+
 
   </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
 </body></html>`;
 
+
+
 }
+
+
+
+
 
 
 
@@ -2575,7 +5148,15 @@ function escapeHtml(input: string): string {
 
 
 
+
+
+
+
   return input
+
+
+
+
 
 
 
@@ -2583,7 +5164,15 @@ function escapeHtml(input: string): string {
 
 
 
+
+
+
+
     .replace(/</g, '&lt;')
+
+
+
+
 
 
 
@@ -2591,7 +5180,15 @@ function escapeHtml(input: string): string {
 
 
 
+
+
+
+
     .replace(/"/g, '&quot;')
+
+
+
+
 
 
 
@@ -2599,7 +5196,19 @@ function escapeHtml(input: string): string {
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -2611,7 +5220,15 @@ interface CustomerData {
 
 
 
+
+
+
+
   name: string;
+
+
+
+
 
 
 
@@ -2619,7 +5236,15 @@ interface CustomerData {
 
 
 
+
+
+
+
   phone?: string;
+
+
+
+
 
 
 
@@ -2627,7 +5252,15 @@ interface CustomerData {
 
 
 
+
+
+
+
   website?: string;
+
+
+
+
 
 
 
@@ -2635,7 +5268,15 @@ interface CustomerData {
 
 
 
+
+
+
+
   contactName?: string;
+
+
+
+
 
 
 
@@ -2643,11 +5284,27 @@ interface CustomerData {
 
 
 
+
+
+
+
   contactEmail?: string;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -2659,7 +5316,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   name: string;
+
+
+
+
 
 
 
@@ -2667,7 +5332,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   phone?: string;
+
+
+
+
 
 
 
@@ -2675,7 +5348,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   website?: string;
+
+
+
+
 
 
 
@@ -2683,7 +5364,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   city?: string;
+
+
+
+
 
 
 
@@ -2691,7 +5380,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   zip?: string;
+
+
+
+
 
 
 
@@ -2699,7 +5396,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   facebook?: string;
+
+
+
+
 
 
 
@@ -2707,7 +5412,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   twitter?: string;
+
+
+
+
 
 
 
@@ -2715,7 +5428,15 @@ interface CompanyData {
 
 
 
+
+
+
+
   youtube?: string;
+
+
+
+
 
 
 
@@ -2723,11 +5444,27 @@ interface CompanyData {
 
 
 
+
+
+
+
   whatsapp?: string;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -2739,142 +5476,289 @@ const BLUE = '#001B9E';
 
 
 
+
+
+
+
 const BLUE_LIGHT = '#e6e9f7';
+
+
+
+
 
 
 
 function companyAddressLines(company: CompanyData): { line1: string; line2: string } {
 
+
+
   const hasStructuredParts = Boolean(company.city || company.state || company.zip);
+
   const parsed = !hasStructuredParts ? parseAddress(company.address) : { street: '', city: '', state: '', zip: '' };
 
+
+
   const street = String(company.address || parsed.street || '').trim();
+
   const city = String(company.city || (!hasStructuredParts ? parsed.city : '') || '').trim();
+
   const state = String(company.state || (!hasStructuredParts ? parsed.state : '') || '').trim();
+
   const zip = String(company.zip || (!hasStructuredParts ? parsed.zip : '') || '').trim();
 
+
+
   const tail = [state, zip].filter(Boolean).join(' ');
+
   const line2 = [city, tail].filter(Boolean).join(city && tail ? ', ' : '').trim();
 
+
+
   return { line1: street, line2 };
+
 }
+
+
+
+
 
 
 
 function customerAddressLines(customer: CustomerData): { line1: string; line2: string } {
 
+
+
   const raw = customer.address ? String(customer.address) : '';
+
   if (!raw) return { line1: '', line2: '' };
 
+
+
   const parsed = parseAddress(raw);
+
   const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
+
   const addr = onlyStreet && raw.includes(',')
+
     ? (() => {
+
         const parts = raw
+
           .split(',')
+
           .map((p) => p.trim())
+
           .filter(Boolean);
+
         return {
+
           street: parts[0] || parsed.street || '',
+
           city: parts[1] || '',
+
           state: parts[2] || '',
+
           zip: parts[3] || '',
+
         };
+
       })()
+
     : parsed;
 
+
+
   const street = String(addr.street || '').trim();
+
   const city = String(addr.city || '').trim();
+
   const state = String(addr.state || '').trim();
+
   const zip = String(addr.zip || '').trim();
 
+
+
   const tail = [state, zip].filter(Boolean).join(' ');
+
   const line2 = [city, tail].filter(Boolean).join(city && tail ? ', ' : '').trim();
 
+
+
   return { line1: street, line2 };
+
 }
+
+
+
+
 
 
 
 function parseAddress(raw?: string): { street: string; city: string; state: string; zip: string } {
 
+
+
   const s = String(raw || '').replace(/\r\n/g, '\n');
+
+
 
   const lines = s.split('\n').map(l => l.trim()).filter(Boolean);
 
+
+
   const street = lines[0] || '';
 
+
+
   if (lines.length === 1 && street.includes(',')) {
+
     const parts = street
+
       .split(',')
+
       .map((p) => p.trim())
+
       .filter(Boolean);
+
     return {
+
       street: parts[0] || '',
+
       city: parts[1] || '',
+
       state: parts[2] || '',
+
       zip: parts[3] || '',
+
     };
+
   }
+
+
 
   const secondLine = lines.slice(1).join(' ').trim();
 
+
+
   const segs = secondLine.split(',').map(x => x.trim()).filter(Boolean);
+
+
 
   const city = segs[0] || '';
 
+
+
   const rest = segs.slice(1).join(' ').trim();
+
+
 
   const tokens = rest.split(/\s+/).filter(Boolean);
 
+
+
   const state = tokens[0] || '';
+
+
 
   const zip = tokens.slice(1).join(' ').trim();
 
+
+
   return { street, city, state, zip };
 
+
+
 }
+
+
+
+
 
 
 
 function customerBlockHtml(customer: CustomerData): string {
 
+
+
   const addr = customerAddressLines(customer);
+
+
 
   return `
 
+
+
     <div class="customer-section">
+
+
 
       <h3>CUSTOMER</h3>
 
+
+
       <div class="customer-grid">
 
+
+
         <div>
+
+
 
           <p><strong>Name:</strong> ${customer.name}</p>
 
+
+
           <p><strong>Email:</strong> ${customer.email || '-'}</p>
+
+
 
           ${customer.contactEmail ? `<p><strong>Contact Email:</strong> ${customer.contactEmail}</p>` : ''}
 
+
+
           <p><strong>Phone:</strong> ${customer.phone || '-'}</p>
+
+
 
           ${customer.contactPhone ? `<p><strong>Contact Phone:</strong> ${customer.contactPhone}</p>` : ''}
 
+
+
         </div>
+
+
 
         <div>
 
+
+
           <p><strong>Address:</strong> ${addr.line1 || '-'}</p>
+
           <p><strong>City/State/Zip:</strong> ${addr.line2 || '-'}</p>
+
+
 
         </div>
 
+
+
       </div>
+
+
 
     </div>`;
 
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -2886,7 +5770,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -2894,7 +5786,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -2902,11 +5802,23 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   options?: InvoicePrintOptions
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
@@ -2918,7 +5830,19 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
+
+
+
+
   if (templateType === 'simple') {
+
+
+
+
 
 
 
@@ -2926,7 +5850,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'detailed') {
+
+
+
+
 
 
 
@@ -2934,7 +5866,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'classic') {
+
+
+
+
 
 
 
@@ -2942,7 +5882,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'corporate') {
+
+
+
+
 
 
 
@@ -2950,7 +5898,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'job-estimate') {
+
+
+
+
 
 
 
@@ -2958,7 +5914,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'rent-receipt') {
+
+
+
+
 
 
 
@@ -2966,7 +5930,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'blue-invoice') {
+
+
+
+
 
 
 
@@ -2974,7 +5946,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'cash-receipt') {
+
+
+
+
 
 
 
@@ -2982,7 +5962,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else if (templateType === 'service-hours') {
+
+
+
+
 
 
 
@@ -2990,7 +5978,15 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   } else {
+
+
+
+
 
 
 
@@ -2998,11 +5994,27 @@ export function generateInvoiceHtml(
 
 
 
+
+
+
+
   }
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -3014,7 +6026,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -3022,7 +6042,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -3030,7 +6058,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
@@ -3038,7 +6074,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+
+
+
+
 
 
 
@@ -3046,11 +6090,23 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
   const coloredRows = (invoice.items || []).map((item, idx) => 
 
 
 
+
+
+
+
     `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
+
+
+
+
 
 
 
@@ -3062,7 +6118,19 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+
+
+
+
 
 
 
@@ -3070,7 +6138,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
 *{box-sizing:border-box;margin:0;padding:0;}
+
+
+
+
 
 
 
@@ -3078,7 +6154,15 @@ function generateSimpleTemplate(
 
 
 
+
+
+
+
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:10px;}
+
+
+
+
 
 
 
@@ -3086,7 +6170,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .header{display:flex;justify-content:space-between;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+
+
+
+
 
 
 
@@ -3094,7 +6186,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .logo-section p{font-size:11px;color:#666;margin:3px 0;}
+
+
+
+
 
 
 
@@ -3102,7 +6202,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .invoice-info h2{font-size:32px;color:${BLUE};margin-bottom:10px;font-weight:800;letter-spacing:1px;}
+
+
+
+
 
 
 
@@ -3110,7 +6218,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .invoice-info strong{color:#333;}
+
+
+
+
 
 
 
@@ -3118,7 +6234,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .customer-section h3{font-size:13px;color:${BLUE};margin-bottom:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+
+
+
+
 
 
 
@@ -3126,7 +6250,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .customer-grid p{font-size:12px;color:#333;margin:3px 0;}
+
+
+
+
 
 
 
@@ -3134,7 +6266,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 table{width:100%;border-collapse:collapse;table-layout:fixed;}
+
+
+
+
 
 
 
@@ -3142,7 +6282,15 @@ th,td{padding:12px 10px!important;}
 
 
 
+
+
+
+
 th:nth-child(1),td:nth-child(1){width:6%;}
+
+
+
+
 
 
 
@@ -3150,7 +6298,15 @@ th:nth-child(2),td:nth-child(2){width:54%;white-space:normal;word-break:break-wo
 
 
 
+
+
+
+
 th:nth-child(3),td:nth-child(3){width:13%;}
+
+
+
+
 
 
 
@@ -3158,7 +6314,15 @@ th:nth-child(4),td:nth-child(4){width:9%;}
 
 
 
+
+
+
+
 th:nth-child(5),td:nth-child(5){width:18%;}
+
+
+
+
 
 
 
@@ -3166,7 +6330,15 @@ th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4){padding-right:6p
 
 
 
+
+
+
+
 th:nth-child(4),td:nth-child(4){text-align:right!important;}
+
+
+
+
 
 
 
@@ -3174,7 +6346,15 @@ th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:12p
 
 
 
+
+
+
+
 th:nth-child(3),th:nth-child(5){text-align:right;}
+
+
+
+
 
 
 
@@ -3182,7 +6362,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .totals{padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;background:#fafafa;border-top:2px solid ${BLUE};}
+
+
+
+
 
 
 
@@ -3190,7 +6378,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .notes h4{font-size:11px;color:${BLUE};margin-bottom:10px;text-transform:uppercase;font-weight:700;}
+
+
+
+
 
 
 
@@ -3198,7 +6394,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary{min-width:260px;background:#fff;border-radius:8px;padding:16px;border:2px solid ${BLUE_LIGHT};}
+
+
+
+
 
 
 
@@ -3206,7 +6410,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row span:first-child{color:#666;}
+
+
+
+
 
 
 
@@ -3214,7 +6426,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row.total{border-top:3px solid ${BLUE};border-bottom:none;font-weight:700;font-size:18px;margin-top:10px;padding-top:14px;background:${BLUE_LIGHT};margin:-16px;margin-top:10px;padding:14px 16px;border-radius:0 0 6px 6px;}
+
+
+
+
 
 
 
@@ -3222,7 +6442,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row.total span:last-child{color:${BLUE};}
+
+
+
+
 
 
 
@@ -3230,7 +6458,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .footer p{font-size:13px;color:#fff;font-weight:600;margin-bottom:8px;}
+
+
+
+
 
 
 
@@ -3238,7 +6474,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .footer span{color:#fff!important;}
+
+
+
+
 
 
 
@@ -3246,7 +6490,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{width:100%!important;max-width:100%!important;box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.customer-section{background:${BLUE_LIGHT}!important;}.footer{margin-bottom:8mm!important;}}
+
+
+
+
 
 
 
@@ -3254,7 +6506,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 <div class="invoice">
+
+
+
+
 
 
 
@@ -3262,7 +6522,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <div class="logo-section">
+
+
+
+
 
 
 
@@ -3270,14 +6538,29 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <h1>${company.name}</h1>
 
 
 
+
+
+
+
       ${(() => {
+
         const lines = companyAddressLines(company);
+
         return `${lines.line1 ? `<p>${escapeHtml(lines.line1)}</p>` : ''}${lines.line2 ? `<p>${escapeHtml(lines.line2)}</p>` : ''}`;
+
       })()}
+
+
+
+
 
 
 
@@ -3285,13 +6568,27 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       ${company.email ? `<p>${company.email}</p>` : ''}
+
+
 
       ${company.website ? `<p>${company.website}</p>` : ''}
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -3299,7 +6596,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <h2>${docTitle}</h2>
+
+
+
+
 
 
 
@@ -3307,7 +6612,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+
+
+
+
 
 
 
@@ -3315,7 +6628,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
+
+
+
+
 
 
 
@@ -3323,11 +6644,23 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     </div>
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -3335,7 +6668,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   <table>
+
+
+
+
 
 
 
@@ -3343,7 +6684,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <tbody>${coloredRows}</tbody>
+
+
+
+
 
 
 
@@ -3351,7 +6700,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   <div class="totals">
+
+
+
+
 
 
 
@@ -3359,7 +6716,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <div class="summary">
+
+
+
+
 
 
 
@@ -3367,7 +6732,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <div class="summary-row"><span>Discount:</span><span>${formatAmount(discountAmount)}</span></div>
+
+
+
+
 
 
 
@@ -3375,7 +6748,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <div class="summary-row total"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
+
+
+
+
 
 
 
@@ -3383,7 +6764,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -3391,7 +6780,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <p>Thank you for your purchase.</p>
+
+
+
+
 
 
 
@@ -3399,7 +6796,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+
+
+
+
 
 
 
@@ -3407,24 +6812,49 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
@@ -3432,7 +6862,19 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -3444,7 +6886,15 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   const links: string[] = [];
+
+
+
+
 
 
 
@@ -3452,7 +6902,15 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   if (company.instagram) links.push(`<a href="${company.instagram}" style="text-decoration:none;margin:0 6px;" target="_blank">Instagram</a>`);
+
+
+
+
 
 
 
@@ -3460,7 +6918,15 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   if (company.linkedin) links.push(`<a href="${company.linkedin}" style="text-decoration:none;margin:0 6px;" target="_blank">LinkedIn</a>`);
+
+
+
+
 
 
 
@@ -3468,7 +6934,15 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   if (company.tiktok) links.push(`<a href="${company.tiktok}" style="text-decoration:none;margin:0 6px;" target="_blank">TikTok</a>`);
+
+
+
+
 
 
 
@@ -3476,7 +6950,15 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   
+
+
+
+
 
 
 
@@ -3484,11 +6966,27 @@ function generateSocialLinksHtml(company: CompanyData): string {
 
 
 
+
+
+
+
   return `<div style="margin:10px 0;font-size:11px;">${links.join(' | ')}</div>`;
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -3500,7 +6998,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -3508,7 +7014,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -3516,7 +7030,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
@@ -3524,7 +7046,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+
+
+
+
 
 
 
@@ -3532,11 +7062,23 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
   const coloredRows = (invoice.items || []).map((item, idx) => 
 
 
 
+
+
+
+
     `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${idx + 1}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
+
+
+
+
 
 
 
@@ -3548,7 +7090,19 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+
+
+
+
 
 
 
@@ -3556,7 +7110,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
 *{box-sizing:border-box;margin:0;padding:0;}
+
+
+
+
 
 
 
@@ -3564,7 +7126,15 @@ function generateDetailedTemplate(
 
 
 
+
+
+
+
 body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:10px;}
+
+
+
+
 
 
 
@@ -3572,7 +7142,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .header{display:flex;justify-content:space-between;align-items:flex-start;padding:28px;background:#fff;border-bottom:4px solid ${BLUE};}
+
+
+
+
 
 
 
@@ -3580,7 +7158,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .company-wrap img{max-width:70px;max-height:70px;object-fit:contain;border-radius:8px;}
+
+
+
+
 
 
 
@@ -3588,7 +7174,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .company-info h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
+
+
+
+
 
 
 
@@ -3596,7 +7190,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .invoice-info{text-align:right;}
+
+
+
+
 
 
 
@@ -3604,7 +7206,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .invoice-info p{font-size:10px;color:#666;margin:4px 0;}
+
+
+
+
 
 
 
@@ -3612,7 +7222,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .customer-section{padding:20px 28px;background:${BLUE_LIGHT};border-bottom:3px solid ${BLUE};}
+
+
+
+
 
 
 
@@ -3620,7 +7238,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .customer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+
+
+
 
 
 
@@ -3628,7 +7254,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .customer-grid strong{color:${BLUE};}
+
+
+
+
 
 
 
@@ -3636,7 +7270,15 @@ table{width:100%;border-collapse:collapse;table-layout:fixed;}
 
 
 
+
+
+
+
 th,td{padding:12px 10px!important;}
+
+
+
+
 
 
 
@@ -3644,7 +7286,15 @@ th:nth-child(1),td:nth-child(1){width:6%;}
 
 
 
+
+
+
+
 th:nth-child(2),td:nth-child(2){width:54%;white-space:normal;word-break:break-word;}
+
+
+
+
 
 
 
@@ -3652,7 +7302,15 @@ th:nth-child(3),td:nth-child(3){width:13%;}
 
 
 
+
+
+
+
 th:nth-child(4),td:nth-child(4){width:9%;}
+
+
+
+
 
 
 
@@ -3660,7 +7318,15 @@ th:nth-child(5),td:nth-child(5){width:18%;}
 
 
 
+
+
+
+
 th:nth-child(3),td:nth-child(3),th:nth-child(4),td:nth-child(4){padding-right:6px!important;}
+
+
+
+
 
 
 
@@ -3668,7 +7334,15 @@ th:nth-child(4),td:nth-child(4){text-align:right!important;}
 
 
 
+
+
+
+
 th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+
+
+
+
 
 
 
@@ -3676,7 +7350,15 @@ th:nth-child(3),th:nth-child(5){text-align:right;}
 
 
 
+
+
+
+
 th:nth-child(4){text-align:center;}
+
+
+
+
 
 
 
@@ -3684,7 +7366,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .notes{flex:1;}
+
+
+
+
 
 
 
@@ -3692,7 +7382,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .notes-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:145px;font-size:10px;color:#666;background:#fff;}
+
+
+
+
 
 
 
@@ -3700,7 +7398,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px solid #eee;}
+
+
+
+
 
 
 
@@ -3708,7 +7414,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row span:last-child{font-weight:600;color:#333;}
+
+
+
+
 
 
 
@@ -3716,7 +7430,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .summary-row.total span{color:${BLUE};}
+
+
+
+
 
 
 
@@ -3724,7 +7446,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .terms h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+
+
+
+
 
 
 
@@ -3732,7 +7462,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .signature{padding:20px 28px;border-top:1px solid #e5e7eb;background:#fafafa;}
+
+
+
+
 
 
 
@@ -3740,7 +7478,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .signature-line{border-bottom:2px solid ${BLUE};width:220px;margin-bottom:6px;}
+
+
+
+
 
 
 
@@ -3748,7 +7494,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .footer{padding:10px 20px;text-align:center;border-top:1px solid #eee;margin-top:auto;background:${BLUE};color:#fff;}
+
+
+
+
 
 
 
@@ -3756,7 +7510,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .footer a{color:#fff!important;text-decoration:none!important;}
+
+
+
+
 
 
 
@@ -3764,7 +7526,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 .footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
+
+
+
+
 
 
 
@@ -3772,7 +7542,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 </style></head><body>
+
+
+
+
 
 
 
@@ -3780,7 +7558,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   <div class="header">
+
+
+
+
 
 
 
@@ -3788,7 +7574,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       ${company.logo ? `<img src="${company.logo}" alt="${company.name}"/>` : ''}
+
+
+
+
 
 
 
@@ -3796,14 +7590,29 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
         <h1>${company.name}</h1>
 
 
 
+
+
+
+
         ${(() => {
+
           const lines = companyAddressLines(company);
+
           return `${lines.line1 ? `<p>${escapeHtml(lines.line1)}</p>` : ''}${lines.line2 ? `<p>${escapeHtml(lines.line2)}</p>` : ''}`;
+
         })()}
+
+
+
+
 
 
 
@@ -3811,9 +7620,19 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
         ${company.email ? `<p>${company.email}</p>` : ''}
 
+
+
         ${company.website ? `<p>${company.website}</p>` : ''}
+
+
+
+
 
 
 
@@ -3821,7 +7640,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -3829,7 +7656,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <h2>${docTitle}</h2>
+
+
+
+
 
 
 
@@ -3837,7 +7672,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+
+
+
+
 
 
 
@@ -3845,7 +7688,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       ${company.rnc ? `<p><strong>RNC:</strong> ${company.rnc}</p>` : ''}
+
+
+
+
 
 
 
@@ -3853,11 +7704,23 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     </div>
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -3865,7 +7728,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   <table>
+
+
+
+
 
 
 
@@ -3873,7 +7744,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <tbody>${coloredRows}</tbody>
+
+
+
+
 
 
 
@@ -3881,7 +7760,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   <div class="totals">
+
+
+
+
 
 
 
@@ -3889,7 +7776,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <div class="summary">
+
+
+
+
 
 
 
@@ -3897,7 +7792,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <div class="summary-row"><span>Discount:</span><span>${formatAmount(discountAmount)}</span></div>
+
+
+
+
 
 
 
@@ -3905,7 +7808,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
       <div class="summary-row total"><span>Grand Total:</span><span>${formatAmount(invoice.amount)}</span></div>
+
+
+
+
 
 
 
@@ -3913,7 +7824,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -3921,7 +7840,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <p>Thank you for your purchase.</p>
+
+
+
+
 
 
 
@@ -3929,7 +7856,15 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
     <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+
+
+
+
 
 
 
@@ -3937,24 +7872,49 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
@@ -3962,7 +7922,19 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -3974,7 +7946,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -3982,7 +7962,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
   company: CompanyData
+
+
+
+
 
 
 
@@ -3990,7 +7978,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
+
+
+
+
 
 
 
@@ -3998,7 +7994,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+
+
+
+
 
 
 
@@ -4006,11 +8010,27 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
     `<tr><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
 
 
 
+
+
+
+
   ).join('');
+
+
+
+
+
+
+
+
 
 
 
@@ -4022,7 +8042,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
 <style>
+
+
+
+
 
 
 
@@ -4030,7 +8058,15 @@ function generateQuotationTemplate(
 
 
 
+
+
+
+
 @page{margin:10mm;}
+
+
+
+
 
 
 
@@ -4038,7 +8074,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .quote{max-width:980px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);min-height:100vh;display:flex;flex-direction:column;}
+
+
+
+
 
 
 
@@ -4046,7 +8090,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .logo-section h1{font-size:20px;color:${BLUE};margin-bottom:6px;font-weight:700;}
+
+
+
+
 
 
 
@@ -4054,7 +8106,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .quote-info{text-align:right;}
+
+
+
+
 
 
 
@@ -4062,7 +8122,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .quote-info p{font-size:11px;color:#666;margin:4px 0;}
+
+
+
+
 
 
 
@@ -4070,7 +8138,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .meta-section{padding:18px 28px;background:${BLUE_LIGHT};border-bottom:3px solid ${BLUE};display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+
+
+
 
 
 
@@ -4078,7 +8154,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f0f0f0;padding:1
 
 
 
+
+
+
+
 .meta-section strong{color:${BLUE};font-size:11px;}
+
+
+
+
 
 
 
@@ -4086,7 +8170,15 @@ table{width:100%;border-collapse:collapse;}
 
 
 
+
+
+
+
 th{background:${BLUE};color:#fff;padding:14px 16px;text-align:left;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;}
+
+
+
+
 
 
 
@@ -4094,7 +8186,15 @@ th:nth-child(1){text-align:center;}
 
 
 
+
+
+
+
 th:nth-child(3),th:nth-child(4){text-align:right;}
+
+
+
+
 
 
 
@@ -4102,7 +8202,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .summary-bar div{text-align:center;padding:8px;}
+
+
+
+
 
 
 
@@ -4110,7 +8218,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .summary-bar strong{font-size:14px;color:#333;}
+
+
+
+
 
 
 
@@ -4118,7 +8234,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .summary-bar .total strong{color:${BLUE};font-size:16px;}
+
+
+
+
 
 
 
@@ -4126,7 +8250,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .notes h4{font-size:10px;color:${BLUE};margin-bottom:8px;text-transform:uppercase;font-weight:700;}
+
+
+
+
 
 
 
@@ -4134,7 +8266,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .terms{padding:18px 28px;border-top:1px solid #e5e7eb;}
+
+
+
+
 
 
 
@@ -4142,7 +8282,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .terms-box{border:2px solid ${BLUE_LIGHT};border-radius:8px;padding:12px;min-height:154px;font-size:10px;color:#666;background:#fff;}
+
+
+
+
 
 
 
@@ -4150,7 +8298,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .footer p{font-size:13px;color:#fff;font-weight:600;margin-bottom:8px;}
+
+
+
+
 
 
 
@@ -4158,7 +8314,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .footer span{color:#fff!important;}
+
+
+
+
 
 
 
@@ -4166,7 +8330,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.quote{width:100%!important;max-width:100%!important;box-shadow:none!important;border-radius:0!important;}th{background:${BLUE}!important;color:#fff!important;}.meta-section{background:${BLUE_LIGHT}!important;}.summary-bar .total{background:${BLUE_LIGHT}!important;}.footer{margin-bottom:8mm!important;}}
+
+
+
+
 
 
 
@@ -4174,7 +8346,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 <div class="quote">
+
+
+
+
 
 
 
@@ -4182,7 +8362,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div class="logo-section">
+
+
+
+
 
 
 
@@ -4190,7 +8378,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <h1>${company.name}</h1>
+
+
+
+
 
 
 
@@ -4198,7 +8394,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       ${company.phone ? `<p>${company.phone}</p>` : ''}
+
+
+
+
 
 
 
@@ -4206,11 +8410,23 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       ${company.website ? `<p>${company.website}</p>` : ''}
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -4218,7 +8434,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <h2>ESTIMATED COST</h2>
+
+
+
+
 
 
 
@@ -4226,7 +8450,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p><strong>Estimate Date:</strong> <span id="sb_print_date"></span></p>
+
+
+
+
 
 
 
@@ -4234,7 +8466,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> ${formatAmount(invoice.amount)}</p>
+
+
+
+
 
 
 
@@ -4242,7 +8482,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4250,7 +8498,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p><strong>Customer:</strong><br/>${customer.name}<br/>${customer.document || '-'}</p>
+
+
+
+
 
 
 
@@ -4258,7 +8514,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p><strong>Phone:</strong><br/>${customer.phone || '-'}</p>
+
+
+
+
 
 
 
@@ -4266,7 +8530,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p><strong>Contact:</strong><br/>${customer.contactName || '-'}</p>
+
+
+
+
 
 
 
@@ -4274,11 +8546,23 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p><strong>Contact Phone:</strong><br/>${customer.contactPhone || '-'}</p>
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4286,7 +8570,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <thead><tr><th>QTY</th><th>DESCRIPTION</th><th>UNIT PRICE</th><th>AMOUNT</th></tr></thead>
+
+
+
+
 
 
 
@@ -4294,7 +8586,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </table>
+
+
+
+
 
 
 
@@ -4302,7 +8602,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div><span>SUBTOTAL:</span><strong>${formatAmount(invoice.subtotal)}</strong></div>
+
+
+
+
 
 
 
@@ -4310,7 +8618,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div><span>SALES TAX:</span><strong>${formatAmount(invoice.tax)}</strong></div>
+
+
+
+
 
 
 
@@ -4318,7 +8634,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4326,7 +8650,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   <div class="terms"><h4>GENERAL TERMS AND CONDITIONS:</h4><div class="terms-box">${termsHtml || '-'}</div></div>
+
+
+
+
 
 
 
@@ -4334,7 +8666,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p>Thank you for your purchase.</p>
+
+
+
+
 
 
 
@@ -4342,7 +8682,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+
+
+
+
 
 
 
@@ -4350,24 +8698,49 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
@@ -4375,7 +8748,19 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -4387,7 +8772,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -4395,7 +8788,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -4403,7 +8804,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
 ): string {
+
+
+
+
 
 
 
@@ -4411,9 +8820,19 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
   const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
 
+
+
   const subtotalLessDiscount = Number(invoice.subtotal) - discountAmount;
+
+
+
+
 
 
 
@@ -4421,7 +8840,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
     `<tr style="background:${idx % 2 === 0 ? '#fff' : BLUE_LIGHT};"><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;">${item.description}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatAmount(item.price)}</td><td style="padding:12px 16px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700;color:${BLUE};">${formatAmount(item.total)}</td></tr>`
+
+
+
+
 
 
 
@@ -4433,7 +8860,19 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
+
+
+
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
+
+
+
+
 
 
 
@@ -4441,7 +8880,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
 *{box-sizing:border-box;margin:0;padding:0;}
+
+
+
+
 
 
 
@@ -4449,7 +8896,15 @@ function generateCorporateTemplate(
 
 
 
+
+
+
+
 body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:10px;}
+
+
+
+
 
 
 
@@ -4457,7 +8912,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .top-header{background:${BLUE};color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:center;gap:16px;}
+
+
+
+
 
 
 
@@ -4465,7 +8928,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .top-header img{height:68px;width:auto;max-width:130px;object-fit:contain;border-radius:6px;}
+
+
+
+
 
 
 
@@ -4473,7 +8944,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .company-info h1{font-size:18px;font-weight:700;margin-bottom:4px;color:#fff;}
+
+
+
+
 
 
 
@@ -4481,7 +8960,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .invoice-info{text-align:right;min-width:220px;}
+
+
+
+
 
 
 
@@ -4489,7 +8976,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .invoice-info p{font-size:10px;color:#666;margin:3px 0;}
+
+
+
+
 
 
 
@@ -4497,7 +8992,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .header-line{height:3px;background:${BLUE};}
+
+
+
+
 
 
 
@@ -4505,7 +9008,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 .billing-section h3{font-size:11px;font-weight:700;color:#333;margin-bottom:8px;text-transform:uppercase;}
+
+
+
+
 
 
 
@@ -4513,7 +9024,15 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:1
 
 
 
+
+
+
+
 table{width:100%;border-collapse:collapse;}
+
+
+
+
 
 
 
@@ -4521,7 +9040,15 @@ th{background:${BLUE};color:#fff;padding:12px 16px;text-align:left;font-size:11p
 
 
 
+
+
+
+
 th:nth-child(2){text-align:center;}
+
+
+
+
 
 
 
@@ -4529,7 +9056,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .bottom-section{padding:20px 28px;display:grid;grid-template-columns:1fr 280px;gap:24px;}
+
+
+
+
 
 
 
@@ -4537,7 +9072,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .notes-box{border:2px solid #ddd;border-radius:4px;padding:12px;min-height:200px;font-size:10px;color:#666;}
+
+
+
+
 
 
 
@@ -4545,7 +9088,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:12px;border-bottom:1px solid #eee;}
+
+
+
+
 
 
 
@@ -4553,7 +9104,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .summary-row span:last-child{font-weight:600;color:#333;}
+
+
+
+
 
 
 
@@ -4561,7 +9120,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .balance-due span:last-child{font-size:18px;}
+
+
+
+
 
 
 
@@ -4569,7 +9136,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .footer p{font-size:13px;color:#fff;font-weight:600;margin-bottom:8px;}
+
+
+
+
 
 
 
@@ -4577,7 +9152,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 .footer span{color:#fff!important;}
+
+
+
+
 
 
 
@@ -4585,7 +9168,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 @media print{body{background:#fff!important;padding:0!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}.invoice{width:100%!important;max-width:100%!important;border:2px solid #333!important;}th{background:${BLUE}!important;color:#fff!important;}.top-header{background:${BLUE}!important;}.balance-due{background:${BLUE}!important;color:#fff!important;}.footer{margin-bottom:8mm!important;}}
+
+
+
+
 
 
 
@@ -4593,7 +9184,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 <div class="invoice">
+
+
+
+
 
 
 
@@ -4601,7 +9200,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div class="company-wrap">
+
+
+
+
 
 
 
@@ -4609,7 +9216,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="company-info">
+
+
+
+
 
 
 
@@ -4617,7 +9232,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
         ${company.address ? `<p>${company.address}</p>` : ''}
+
+
+
+
 
 
 
@@ -4625,7 +9248,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
         ${company.email ? `<p>${company.email}</p>` : ''}
+
+
+
+
 
 
 
@@ -4633,7 +9264,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       </div>
+
+
+
+
 
 
 
@@ -4641,7 +9280,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4649,11 +9296,23 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   <div class="billing-section">
 
 
 
+
+
+
+
     <div>
+
+
+
+
 
 
 
@@ -4661,7 +9320,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p><strong>${customer.name}</strong></p>
+
+
+
+
 
 
 
@@ -4669,11 +9336,23 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       ${customer.phone ? `<p>Phone: ${customer.phone}</p>` : ''}
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -4681,7 +9360,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <h3>Ship To:</h3>
+
+
+
+
 
 
 
@@ -4689,7 +9376,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p>${customer.address || ''}</p>
+
+
+
+
 
 
 
@@ -4697,7 +9392,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -4705,7 +9408,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <h2>${docTitle}</h2>
+
+
+
+
 
 
 
@@ -4713,7 +9424,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p><strong>Due Date:</strong> ${formatDate(invoice.dueDate)}</p>
+
+
+
+
 
 
 
@@ -4721,7 +9440,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <p style="margin-top:8px;font-size:13px;font-weight:700;"><strong>Total:</strong> <span style="color:${BLUE};font-weight:900;">${formatAmount(invoice.amount)}</span></p>
+
+
+
+
 
 
 
@@ -4729,7 +9456,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4737,7 +9472,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <thead><tr><th>Description of Services</th><th>QTY</th><th>Price</th><th>Amount</th></tr></thead>
+
+
+
+
 
 
 
@@ -4745,7 +9488,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </table>
+
+
+
+
 
 
 
@@ -4753,7 +9504,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div class="notes">
+
+
+
+
 
 
 
@@ -4761,11 +9520,23 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="notes-box">${notesHtml || '-'}</div>
 
 
 
+
+
+
+
     </div>
+
+
+
+
 
 
 
@@ -4773,7 +9544,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="summary-row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
+
+
+
+
 
 
 
@@ -4781,7 +9560,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="summary-row"><span>Subtotal Less Discount:</span><span>${formatAmount(subtotalLessDiscount)}</span></div>
+
+
+
+
 
 
 
@@ -4789,7 +9576,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="summary-row"><span>Total & Sales Tax:</span><span>${formatAmount(invoice.amount)}</span></div>
+
+
+
+
 
 
 
@@ -4797,7 +9592,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
       <div class="balance-due"><span>Balance Due:</span><span>${formatAmount(invoice.amount)}</span></div>
+
+
+
+
 
 
 
@@ -4805,7 +9608,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
   </div>
+
+
+
+
 
 
 
@@ -4813,7 +9624,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <p>Thank you for your purchase.</p>
+
+
+
+
 
 
 
@@ -4821,7 +9640,15 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
     <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+
+
+
+
 
 
 
@@ -4829,24 +9656,49 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 </div>
 
 
 
+
+
+
+
 <script>(function(){
+
   const setNow=function(){
+
     const d=new Date();
+
     const date=d.toLocaleDateString();
+
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const dateEl=document.getElementById('sb_print_date');
+
     if(dateEl) dateEl.textContent=date;
+
     const timeEl=document.getElementById('sb_print_time');
+
     if(timeEl) timeEl.textContent=time;
+
     document.querySelectorAll('.sb_print_date_cell').forEach((el)=>{ el.textContent=date; });
+
   };
+
   window.onbeforeprint=setNow;
+
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+
 })();</script>
+
+
+
+
 
 
 
@@ -4854,7 +9706,19 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+
+
 }
+
+
+
+
+
+
+
+
 
 
 
@@ -4866,7 +9730,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   invoice: InvoiceData,
+
+
+
+
 
 
 
@@ -4874,7 +9746,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   company: CompanyData,
+
+
+
+
 
 
 
@@ -4882,7 +9762,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   options?: InvoicePrintOptions
+
+
+
+
 
 
 
@@ -4890,7 +9778,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   const printWindow = window.open('', '_blank');
+
+
+
+
 
 
 
@@ -4898,7 +9794,15 @@ export function printInvoice(
 
 
 
+
+
+
+
     alert('Could not open print window');
+
+
+
+
 
 
 
@@ -4906,7 +9810,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   }
+
+
+
+
 
 
 
@@ -4914,7 +9826,15 @@ export function printInvoice(
 
 
 
+
+
+
+
   printWindow.document.write(html);
+
+
+
+
 
 
 
@@ -4922,7 +9842,15 @@ export function printInvoice(
 
 
 
+
+
+
+
 }
+
+
+
+
 
 
 
