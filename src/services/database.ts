@@ -15607,9 +15607,23 @@ export const settingsService = {
   async updateUserPlan(userId: string, planId: string, planStatus: 'active' | 'inactive' | 'cancelled' = 'active') {
     try {
       if (!userId) throw new Error('userId required');
+      const startedAtIso = new Date().toISOString();
+      const expiresAtIso = (() => {
+        const start = new Date(startedAtIso);
+        const startValid = !isNaN(start.getTime()) ? start : new Date();
+        const pid = String(planId || '').toLowerCase().trim();
+        const isAnnual = pid === 'student';
+        const d = new Date(startValid.getTime());
+        if (isAnnual) d.setFullYear(d.getFullYear() + 1);
+        else d.setMonth(d.getMonth() + 1);
+        return d.toISOString();
+      })();
+
       const payload: any = {
         plan_id: planId || null,
         plan_status: planId ? planStatus : 'inactive',
+        plan_started_at: planId ? startedAtIso : null,
+        plan_expires_at: planId ? expiresAtIso : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -15641,6 +15655,8 @@ export const settingsService = {
         .update({
           plan_id: null,
           plan_status: 'cancelled',
+          plan_started_at: null,
+          plan_expires_at: null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', userId)

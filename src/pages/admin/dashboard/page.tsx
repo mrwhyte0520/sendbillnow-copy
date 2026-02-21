@@ -13,6 +13,8 @@ interface UserRow {
   status?: 'active' | 'inactive' | string | null;
   plan_id?: string | null;
   plan_status?: string | null;
+  plan_started_at?: string | null;
+  plan_expires_at?: string | null;
   trial_end?: string | null;
   created_at?: string;
   hasAdminRole?: boolean;
@@ -304,6 +306,15 @@ export default function AdminDashboardPage() {
                   const trialEndRaw = (u as any).trial_end ? new Date((u as any).trial_end) : null;
                   const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
                   const trialText = trialEnd ? trialEnd.toLocaleDateString() : '—';
+
+                  const planStartedRaw = (u as any).plan_started_at ? new Date((u as any).plan_started_at) : null;
+                  const planStarted = planStartedRaw && !isNaN(planStartedRaw.getTime()) ? planStartedRaw : null;
+                  const planStartedText = planStarted ? planStarted.toLocaleDateString() : '';
+
+                  const planExpiresRaw = (u as any).plan_expires_at ? new Date((u as any).plan_expires_at) : null;
+                  const planExpires = planExpiresRaw && !isNaN(planExpiresRaw.getTime()) ? planExpiresRaw : null;
+                  const planExpiresText = planExpires ? planExpires.toLocaleDateString() : '';
+
                   const planText = planId
                     ? `${getPlanDisplayName(planId)}${planStatus ? ` (${planStatus})` : ''}`
                     : isHtcAccess
@@ -347,7 +358,15 @@ export default function AdminDashboardPage() {
                         {String((u as any)?.state || '—')}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{trialText}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{planText}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        <div className="whitespace-nowrap">{planText}</div>
+                        {planId ? (
+                          <div className="mt-0.5 text-[11px] text-gray-500 leading-4">
+                            {planStartedText ? <div>Obtained: {planStartedText}</div> : null}
+                            {planExpiresText ? <div>Expires: {planExpiresText}</div> : null}
+                          </div>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3 pr-6 text-right align-top">
                         <div className="flex items-center justify-end gap-1 flex-wrap">
                           <button

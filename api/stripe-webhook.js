@@ -61,6 +61,21 @@ function getPlanLimits(planId) {
   };
 }
 
+function computePlanExpiresAt({ planId, billingPeriod, startedAtIso }) {
+  const start = startedAtIso ? new Date(startedAtIso) : new Date();
+  const startValid = !isNaN(start.getTime()) ? start : new Date();
+
+  const pid = String(planId || '').toLowerCase().trim();
+  const period = String(billingPeriod || '').toLowerCase().trim();
+  const isAnnual = period === 'annual' || pid === 'student';
+
+  const d = new Date(startValid.getTime());
+  if (isAnnual) d.setFullYear(d.getFullYear() + 1);
+  else d.setMonth(d.getMonth() + 1);
+
+  return d.toISOString();
+}
+
 async function activateUserPlan({ userId, email, planId, billingPeriod }) {
   const supabase = getSupabaseAdminClient();
   if (!supabase) {
@@ -70,10 +85,15 @@ async function activateUserPlan({ userId, email, planId, billingPeriod }) {
   // Get plan limits based on planId
   const limits = getPlanLimits(planId);
 
+  const startedAtIso = new Date().toISOString();
+  const expiresAtIso = computePlanExpiresAt({ planId, billingPeriod, startedAtIso });
+
   const patch = {
     plan_id: planId,
     plan_status: 'active',
     trial_end: null,
+    plan_started_at: startedAtIso,
+    plan_expires_at: expiresAtIso,
     max_users: limits.max_users,
     max_warehouses: limits.max_warehouses,
     max_invoices: limits.max_invoices,
