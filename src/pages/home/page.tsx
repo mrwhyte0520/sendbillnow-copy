@@ -178,12 +178,36 @@ export default function HomePage() {
   const startStripeCheckout = async (planId: string) => {
     setSelectedPlanId(planId);
     setIsRedirectingToStripe(true);
+    const resolvedBillingPeriod = planId === 'student' ? 'annual' : billingPeriod;
+    let refCode = '';
     try {
       localStorage.setItem('selected_plan', planId);
-      localStorage.setItem('selected_billing', billingPeriod);
+      localStorage.setItem('selected_billing', resolvedBillingPeriod);
+      refCode = String(localStorage.getItem('ref_code') || '').trim();
     } catch {}
-    navigate(`/auth/register?plan=${encodeURIComponent(planId)}`);
-    setIsRedirectingToStripe(false);
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          planId,
+          billingPeriod: resolvedBillingPeriod,
+          refCode,
+        }),
+      });
+
+      const data = await resp.json().catch(() => null);
+      if (!resp.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not start Stripe Checkout.');
+      }
+
+      window.location.href = data.url;
+    } catch (error: any) {
+      alert(error?.message || 'Could not start Stripe Checkout.');
+      setIsRedirectingToStripe(false);
+    }
   };
 
   const handleSmoothScroll = (elementId: string) => {
@@ -571,13 +595,26 @@ export default function HomePage() {
                   )}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   {billingPeriod === 'monthly' ? (
-                    <div className="flex items-baseline justify-center">
-                      {plan.id === 'student' ? (
-                        <span className="text-3xl font-bold">Annual Only</span>
-                      ) : (
+                    plan.id === 'student' ? (
+                      <div>
+                        <div className="text-sm line-through opacity-60 mb-1">
+                          ${formatMoney(plan.priceAnnual / 0.7)}/yearly
+                        </div>
+                        <div className="flex items-baseline justify-center">
+                          <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
+                        </div>
+                        <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                          Annual Only
+                        </div>
+                        <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                          30% OFF - Save ${formatMoney((plan.priceAnnual / 0.7) - plan.priceAnnual)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline justify-center">
                         <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
-                      )}
-                    </div>
+                      </div>
+                    )
                   ) : (
                     <div>
                       <div className="text-sm line-through opacity-60 mb-1">
@@ -586,6 +623,11 @@ export default function HomePage() {
                       <div className="flex items-baseline justify-center">
                         <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
                       </div>
+                      {plan.id === 'student' && (
+                        <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                          Annual Only
+                        </div>
+                      )}
                       <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
                         30% OFF - Save ${formatMoney((plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12)) - plan.priceAnnual)}
                       </div>
@@ -608,16 +650,14 @@ export default function HomePage() {
 
                   <button
                     onClick={() => startStripeCheckout(plan.id)}
-                    disabled={isRedirectingToStripe || (plan.id === 'student' && billingPeriod === 'monthly')}
+                    disabled={isRedirectingToStripe}
                     className={`w-full py-3 px-4 rounded-lg font-semibold text-center block whitespace-nowrap cursor-pointer text-white shadow-md border border-black/10 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
                       plan.id === 'student'
                         ? 'bg-[#001B9E] shadow-[#001B9E]/25 hover:bg-[#001785] hover:shadow-lg hover:shadow-[#001B9E]/30'
                         : 'bg-[#556B2F] shadow-[#556B2F]/25 hover:bg-[#4a5d29] hover:shadow-lg hover:shadow-[#556B2F]/30'
                     }`}
                   >
-                    {plan.id === 'student' && billingPeriod === 'monthly' ? (
-                      'Annual Only'
-                    ) : isRedirectingToStripe && selectedPlanId === plan.id ? (
+                    {isRedirectingToStripe && selectedPlanId === plan.id ? (
                       <>
                         <i className="ri-loader-4-line animate-spin mr-2"></i>
                         Redirecting to payment...
@@ -627,7 +667,7 @@ export default function HomePage() {
                     )}
                   </button>
 
-                  {plan.id === 'student' && billingPeriod !== 'monthly' && (
+                  {plan.id === 'student' && (
                     <div className="mt-3 text-center">
                       <Link
                         to="/auth/register?plan=student&trial=1"
