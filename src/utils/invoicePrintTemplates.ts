@@ -414,7 +414,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
   .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:10px 64px;border-radius:0;}
 
-  .footerPowered{text-align:center;font-size:10px;opacity:0.9;}
+  .footerPowered{text-align:center;font-size:12px;opacity:0.95;}
 
 
 
@@ -1438,7 +1438,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:12px 14px;text-align:center;font-size:10px;letter-spacing:0.2px;}
+.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:12px 14px;text-align:center;font-size:12px;letter-spacing:0.2px;}
 
 
 
@@ -2176,7 +2176,7 @@ td{font-size:11px;}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE};color:#fff;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
@@ -3034,7 +3034,7 @@ td{font-size:11px;}
 
 
 
-.footerPoweredBar{background:${BLUE};color:#fff;padding:10px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:10px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
 
 
 
@@ -3846,7 +3846,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
@@ -4636,11 +4636,9 @@ th:nth-child(4){width:140px;text-align:right;}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
-
-
 
 </style>
 
@@ -6478,6 +6476,8 @@ th:nth-child(4){text-align:center;}
 
 
 
+
+
 .footer span{color:#fff!important;}
 
 
@@ -6486,7 +6486,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-.footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
+.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
 
 
 
@@ -7530,7 +7530,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-.footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
+.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
 
 
 
@@ -8326,7 +8326,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-.footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
+.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
 
 
 
@@ -9164,7 +9164,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-.footer .powered{font-size:10px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;}
+.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
 
 
 
