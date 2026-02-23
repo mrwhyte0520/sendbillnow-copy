@@ -103,7 +103,6 @@ export default function DateInput({ value, onValueChange, className, defaultValu
         {...restInput}
         type="date"
         name={name}
-        tabIndex={-1}
         aria-hidden="true"
         value={effectiveValue}
         onChange={(e) => {
@@ -115,7 +114,7 @@ export default function DateInput({ value, onValueChange, className, defaultValu
           setDisplayValue(formatDate(next));
           rest.onChange?.(e);
         }}
-        className="absolute inset-0 opacity-0 cursor-pointer"
+        className="absolute inset-0 z-10 cursor-pointer opacity-[0.01]"
       />
 
       <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">

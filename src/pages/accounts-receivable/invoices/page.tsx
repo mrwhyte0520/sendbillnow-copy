@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 import * as ExcelJS from 'exceljs';
-import * as QRCode from 'qrcode';
-import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
 
 import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
@@ -25,62 +20,6 @@ import { formatAmount } from '../../../utils/numberFormat';
 import { formatDate } from '../../../utils/dateFormat';
 import DateInput from '../../../components/common/DateInput';
 import { accountsReceivableTheme as theme } from '../../../theme/accountsReceivable';
-import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
-import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType, type InvoicePrintOptions } from '../../../utils/invoicePrintTemplates';
-
-const isGeneralCustomerName = (name?: string | null) => {
-  if (!name) return false;
-  return String(name).trim().toLowerCase() === 'general customer';
-};
-
-const stripPrintScripts = (html: string) => html.replace(/<script>[\s\S]*?<\/script>/gi, '');
-
-const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    binary += String.fromCharCode(...chunk);
-  }
-  return btoa(binary);
-};
-
-const generatePdfBase64FromHtml = async (html: string): Promise<string> => {
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:1024px;height:1400px;border:0;opacity:0';
-  document.body.appendChild(iframe);
-  const safeHtml = stripPrintScripts(html);
-  await new Promise<void>((resolve) => {
-    iframe.onload = () => resolve();
-    iframe.srcdoc = safeHtml;
-  });
-  const body = iframe.contentDocument?.body;
-  if (!body) {
-    document.body.removeChild(iframe);
-    throw new Error('Failed to render document for PDF');
-  }
-  const canvas = await html2canvas(body, { scale: 1.25, useCORS: true, backgroundColor: '#ffffff' });
-  const imgData = canvas.toDataURL('image/jpeg', 0.72);
-  const pdf = new jsPDF('p', 'pt', 'a4');
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-  const scale = pdfWidth / canvas.width;
-  const scaledHeight = canvas.height * scale;
-  let y = 0;
-  let remaining = scaledHeight;
-  while (remaining > 0) {
-    pdf.addImage(imgData, 'JPEG', 0, y, pdfWidth, scaledHeight);
-    remaining -= pdfHeight;
-    if (remaining > 0) {
-      pdf.addPage();
-      y -= pdfHeight;
-    }
-  }
-  document.body.removeChild(iframe);
-  const arrayBuffer = pdf.output('arraybuffer');
-  return arrayBufferToBase64(arrayBuffer);
-};
 
 interface Invoice {
   id: string;
@@ -144,11 +83,7 @@ export default function InvoicesPage() {
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [customerTypes, setCustomerTypes] = useState<any[]>([]);
 
-  const [cashAccounts, setCashAccounts] = useState<{ id: string; code: string; name: string }[]>([]);
-
-  type NewItem = { itemId?: string; description: string; quantity: number; price: number; total: number };
-
-  const [newInvoiceItems, setNewInvoiceItems] = useState<NewItem[]>([
+  const [newInvoiceItems, setNewInvoiceItems] = useState<{ itemId?: string; description: string; quantity: number; price: number; total: number }[]>([
     { itemId: undefined, description: '', quantity: 1, price: 0, total: 0 },
   ]);
   const [newInvoiceSubtotal, setNewInvoiceSubtotal] = useState(0);
@@ -159,13 +94,10 @@ export default function InvoicesPage() {
   const [newInvoiceNoTax, setNewInvoiceNoTax] = useState(false);
   const [taxConfig, setTaxConfig] = useState<{ itbis_rate: number } | null>(null);
 
-  const [showPrintTypeModal, setShowPrintTypeModal] = useState(false);
-  const [invoiceToPrint, setInvoiceToPrint] = useState<Invoice | null>(null);
-
   const currentItbisRate = taxConfig?.itbis_rate ?? 18;
 
   const recalcNewInvoiceTotals = (
-    items: NewItem[],
+    items: { itemId?: string; description: string; quantity: number; price: number; total: number }[],
     discountType = newInvoiceDiscountType,
     discountValue = newInvoiceDiscountPercent,
     noTaxFlag = newInvoiceNoTax,
@@ -318,7 +250,7 @@ export default function InvoicesPage() {
       .reduce((sum, inv) => sum + inv.balance, 0);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (_status: string) => {
     return 'bg-[#008000] text-white';
   };
 
@@ -372,76 +304,6 @@ export default function InvoicesPage() {
 
     return matchesSearch && matchesStatus;
   });
-
-  const exportToPDF = async () => {
-    const doc = new jsPDF();
-    const pdfStyles = getPdfTableStyles();
-    const statusText = statusFilter === 'all' ? 'All' : getStatusName(statusFilter);
-
-    // Add branded header with logo
-    const startY = await addPdfBrandedHeader(doc, 'Accounts Receivable Report', {
-      subtitle: `Status: ${statusText}`
-    });
-
-    const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const totalBalance = filteredInvoices.reduce((sum, inv) => sum + inv.balance, 0);
-    const totalPaid = filteredInvoices.reduce((sum, inv) => sum + inv.paidAmount, 0);
-
-    doc.setFontSize(12);
-    doc.setTextColor(51, 51, 51);
-    doc.text('Financial Summary', 20, startY);
-
-    const summaryData = [
-      ['Metric', 'Amount'],
-      ['Total Invoiced', ` ${formatAmount(totalAmount)}`],
-      ['Total Paid', ` ${formatAmount(totalPaid)}`],
-      ['Outstanding Balance', ` ${formatAmount(totalBalance)}`],
-      ['Invoice Count', filteredInvoices.length.toString()]
-    ];
-
-    (doc as any).autoTable({
-      startY: startY + 5,
-      head: [summaryData[0]],
-      body: summaryData.slice(1),
-      theme: 'grid',
-      ...pdfStyles
-    });
-
-    doc.setFontSize(14);
-    doc.text('Invoice Detail', 20, (doc as any).lastAutoTable.finalY + 20);
-
-    const invoiceData = filteredInvoices.map(invoice => [
-      invoice.invoiceNumber,
-      invoice.customerName,
-      formatDate(invoice.date),
-      formatDate(invoice.dueDate),
-      ` ${formatAmount(invoice.amount)}`,
-      ` ${formatAmount(invoice.paidAmount)}`,
-      ` ${formatAmount(invoice.balance)}`,
-      getStatusName(invoice.status)
-    ]);
-    
-    (doc as any).autoTable({
-      startY: (doc as any).lastAutoTable.finalY + 30,
-      head: [['Invoice', 'Customer', 'Issue Date', 'Due Date', 'Amount', 'Paid', 'Balance', 'Status']],
-
-      body: invoiceData,
-      theme: 'striped',
-      headStyles: { fillColor: [0, 128, 0] },
-      styles: { fontSize: 8 }
-    });
-    
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.text(`Page ${i} of ${pageCount}`, 20, doc.internal.pageSize.height - 10);
-      doc.text('Sendbillnow Accounting Suite', doc.internal.pageSize.width - 65, doc.internal.pageSize.height - 10);
-
-    }
-    
-    doc.save(`accounts-receivable-${new Date().toISOString().split('T')[0]}.pdf`);
-  };
 
   const exportToExcel = async () => {
     const totalAmount = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
@@ -622,7 +484,7 @@ export default function InvoicesPage() {
 
     worksheet.addRow([]);
     worksheet.addRow(['', '', 'Subtotal', formatAmount(invoice.subtotal)]);
-    worksheet.addRow(['', '', 'ITBIS', formatAmount(invoice.tax)]);
+    worksheet.addRow(['', '', 'Sales Tax', formatAmount(invoice.tax)]);
     worksheet.addRow(['', '', 'Total', formatAmount(invoice.amount)]);
     worksheet.addRow(['', '', 'Pagado', formatAmount(invoice.paidAmount)]);
     worksheet.addRow(['', '', 'Saldo', formatAmount(invoice.balance)]);
@@ -740,14 +602,6 @@ export default function InvoicesPage() {
     setReceiptPreviewUrl('');
   };
 
-  const handlePrintReceiptPreview = () => {
-    const iframe = receiptPreviewIframeRef.current;
-    const win = iframe?.contentWindow;
-    if (!win) return;
-    win.focus();
-    win.print();
-  };
-
   const handleDownloadReceiptPreview = () => {
     if (!receiptPreviewBlob || !receiptPreviewFilename) return;
     const url = URL.createObjectURL(receiptPreviewBlob);
@@ -803,7 +657,6 @@ export default function InvoicesPage() {
       const paymentPayload: any = {
         customer_id: currentInvoice.customerId,
         invoice_id: invoiceId,
-        bank_account_id: null,
         amount: effectivePayment,
         payment_method: paymentMethod,
         payment_date: paymentDate,
@@ -1017,57 +870,21 @@ export default function InvoicesPage() {
     }
   };
 
-  const handlePrintInvoice = (invoiceId: string) => {
-    const invoice = invoices.find((inv) => inv.id === invoiceId);
-    if (!invoice) return;
-    setInvoiceToPrint(invoice);
-    setShowPrintTypeModal(true);
-  };
-
-  const handlePrintTypeSelect = (type: InvoiceTemplateType, options?: InvoicePrintOptions) => {
-    if (!invoiceToPrint) return;
-    const fullCustomer = invoiceToPrint.customerId ? customers.find((c) => c.id === invoiceToPrint.customerId) : undefined;
-    const customerData = {
-      name: invoiceToPrint.customerName || fullCustomer?.name || 'Customer',
-      document: fullCustomer?.document,
-      phone: fullCustomer?.phone,
-      email: fullCustomer?.email,
-      address: fullCustomer?.address,
-    };
-    const companyData = {
-      name: (companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now',
-      rnc: (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id,
-      phone: (companyInfo as any)?.phone,
-      email: (companyInfo as any)?.email,
-      address: (companyInfo as any)?.address,
-      logo: (companyInfo as any)?.logo,
-      facebook: (companyInfo as any)?.facebook,
-      instagram: (companyInfo as any)?.instagram,
-      twitter: (companyInfo as any)?.twitter,
-      linkedin: (companyInfo as any)?.linkedin,
-      youtube: (companyInfo as any)?.youtube,
-      tiktok: (companyInfo as any)?.tiktok,
-      whatsapp: (companyInfo as any)?.whatsapp,
-    };
-    printInvoice(invoiceToPrint, customerData, companyData, type, options);
-    setInvoiceToPrint(null);
-  };
-
   const handleCancelInvoice = async (invoice: Invoice) => {
     if (!user?.id) return;
     if (invoice.status === 'cancelled') return;
 
-    if (!confirm(`¿Desea anular la factura ${invoice.invoiceNumber}? Esta acción no se puede deshacer.`)) {
+    if (!confirm(`Do you want to void invoice ${invoice.invoiceNumber}? This action cannot be undone.`)) {
       return;
     }
 
     try {
       await invoicesService.cancel(user.id, invoice.id);
       await loadInvoices();
-      alert('Factura anulada exitosamente');
+      alert('Invoice voided successfully');
     } catch (error: any) {
-      console.error('Error anulando factura:', error);
-      alert(error?.message || 'Error al anular la factura');
+      console.error('Error voiding invoice:', error);
+      alert(error?.message || 'Error voiding the invoice');
     }
   };
 
@@ -1128,14 +945,6 @@ export default function InvoicesPage() {
             </select>
           </div>
           <div className="flex space-x-2">
-            <button
-              onClick={exportToPDF}
-              className={primaryButtonClasses}
-              style={{ backgroundColor: theme.danger }}
-            >
-              <i className="ri-file-pdf-line"></i>
-              <span>PDF</span>
-            </button>
             <button
               onClick={exportToExcel}
               className={primaryButtonClasses}
@@ -1237,13 +1046,6 @@ export default function InvoicesPage() {
                           title="View details"
                         >
                           <i className="ri-eye-line"></i>
-                        </button>
-                        <button
-                          onClick={() => handlePrintInvoice(invoice.id)}
-                          className="text-[#6d28d9] hover:text-[#5018a7]"
-                          title="Print invoice"
-                        >
-                          <i className="ri-printer-line"></i>
                         </button>
                         <button
                           onClick={() => handleExportInvoiceExcel(invoice.id)}
@@ -1465,7 +1267,7 @@ export default function InvoicesPage() {
                                     return next;
                                   });
                                 }}
-                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                className="w-full p-2 border border-gray-300 rounded text-sm text-right"
                               />
                             </td>
                             <td className="px-4 py-2 align-top">
@@ -1626,7 +1428,7 @@ export default function InvoicesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-96">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Registrar Pago</h3>
+                <h3 className="text-lg font-semibold">Record Payment</h3>
                 <button
                   onClick={() => {
                     setShowPaymentModal(false);
@@ -1641,20 +1443,20 @@ export default function InvoicesPage() {
               {selectedInvoice && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600">
-                    Factura: <span className="font-medium">{selectedInvoice.invoiceNumber}</span>
+                    Invoice: <span className="font-medium">{selectedInvoice.invoiceNumber}</span>
                   </p>
                   <p className="text-sm text-gray-600">
-                    Cliente: <span className="font-medium">{selectedInvoice.customerName}</span>
+                    Customer: <span className="font-medium">{selectedInvoice.customerName}</span>
                   </p>
                   <p className="text-sm text-gray-600">
-                    Deuda total del cliente:{' '}
+                    Customer total balance:{' '}
                     <span className="font-semibold">
                       
                       {formatAmount(getCustomerTotalBalance(selectedInvoice.customerId))}
                     </span>
                   </p>
                   <p className="text-lg font-semibold text-blue-600">
-                    Saldo de esta factura:{' '}
+                    Invoice balance:{' '}
                     
                     {formatAmount(selectedInvoice.balance)}
                   </p>
@@ -1665,14 +1467,14 @@ export default function InvoicesPage() {
                 {!selectedInvoice && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Factura
+                      Invoice
                     </label>
                     <select 
                       required
                       name="invoice_id"
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                     >
-                      <option value="">Seleccionar factura</option>
+                      <option value="">Select invoice</option>
                       {invoices.filter(inv => inv.balance > 0).map((invoice) => (
                         <option key={invoice.id} value={invoice.id}>
                           {invoice.invoiceNumber} - {invoice.customerName} ({formatAmount(invoice.balance)})
@@ -1684,7 +1486,7 @@ export default function InvoicesPage() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Monto a Pagar
+                    Amount to Pay
                   </label>
                   <input
                     type="number" min="0"
@@ -1695,50 +1497,32 @@ export default function InvoicesPage() {
                     placeholder="0.00"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cuenta contable de efectivo / banco
-                  </label>
-                  <select
-                    name="cash_account_id"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
-                    defaultValue=""
-                  >
-                    <option value="">Seleccionar cuenta (100101)</option>
-                    {cashAccounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Método de Pago
+                    Payment Method
                   </label>
                   <select 
                     required
                     name="payment_method"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
                   >
-                    <option value="cash">Efectivo</option>
-                    <option value="check">Cheque</option>
-                    <option value="transfer">Transferencia</option>
-                    <option value="card">Tarjeta</option>
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="card">Card</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Referencia
+                    Reference
                   </label>
                   <input
                     type="text"
                     name="reference"
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Número de referencia"
+                    placeholder="Reference number"
                   />
                 </div>
                 
@@ -1751,13 +1535,13 @@ export default function InvoicesPage() {
                     }}
                     className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition-colors whitespace-nowrap"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
                   >
-                    Registrar Pago
+                    Record Payment
                   </button>
                 </div>
               </form>
@@ -1798,31 +1582,25 @@ export default function InvoicesPage() {
                     className="w-full h-[70vh]"
                   />
                 ) : (
-                  <div className="p-6 text-gray-600">No hay vista previa disponible.</div>
+                  <div className="p-6 text-gray-600">No preview available.</div>
                 )}
               </div>
 
               <div className="flex justify-end gap-3 mt-4">
                 {receiptPreviewUrl ? (
                   <button
-                    onClick={handlePrintReceiptPreview}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                    onClick={handleDownloadReceiptPreview}
+                    disabled={!receiptPreviewBlob || !receiptPreviewFilename}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
-                    Imprimir
+                    Download
                   </button>
                 ) : null}
                 <button
                   onClick={handleCloseReceiptPreview}
                   className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
                 >
-                  Cerrar
-                </button>
-                <button
-                  onClick={handleDownloadReceiptPreview}
-                  disabled={!receiptPreviewBlob || !receiptPreviewFilename}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Descargar
+                  Close
                 </button>
               </div>
             </div>
@@ -1939,7 +1717,7 @@ export default function InvoicesPage() {
                       <span className="font-medium text-gray-900"> {formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">ITBIS:</span>
+                      <span className="text-gray-600">Sales Tax:</span>
                       <span className="font-medium text-gray-900"> {formatAmount(selectedInvoice.tax)}</span>
                     </div>
                     <div className="border-t border-gray-300 my-2"></div>
@@ -2035,13 +1813,6 @@ export default function InvoicesPage() {
                     Register Payment
                   </button>
                 )}
-                <button
-                  onClick={() => handlePrintInvoice(selectedInvoice.id)}
-                  className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors flex items-center gap-2"
-                >
-                  <i className="ri-printer-line"></i>
-                  Print
-                </button>
                 <button
                   onClick={() => handleExportInvoiceExcel(selectedInvoice.id)}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -2198,81 +1969,6 @@ export default function InvoicesPage() {
             </div>
           </div>
         )}
-
-        <InvoiceTypeModal
-          isOpen={showPrintTypeModal}
-          onClose={() => {
-            setShowPrintTypeModal(false);
-            setInvoiceToPrint(null);
-          }}
-          onSelect={handlePrintTypeSelect}
-          documentType="invoice"
-          title="Select Invoice Format"
-          customerEmail={
-            invoiceToPrint && !isGeneralCustomerName(invoiceToPrint.customerName)
-              ? customers.find((c) => c.id === invoiceToPrint.customerId)?.email
-              : undefined
-          }
-          onSendEmail={async (templateType, options) => {
-            if (!invoiceToPrint) return;
-            const fullCustomer = customers.find((c) => c.id === invoiceToPrint.customerId);
-            const email = fullCustomer?.email;
-            if (!email || !email.includes('@')) {
-              alert('Customer email not available');
-              return;
-            }
-            const invoiceData = {
-              invoiceNumber: invoiceToPrint.invoiceNumber,
-              accountNumber: (invoiceToPrint as any).account_number ?? (invoiceToPrint as any).accountNumber ?? undefined,
-              date: invoiceToPrint.date,
-              dueDate: invoiceToPrint.dueDate,
-              amount: invoiceToPrint.amount,
-              subtotal: invoiceToPrint.subtotal,
-              tax: invoiceToPrint.tax,
-              items: invoiceToPrint.items,
-            };
-            const customerData = {
-              name: invoiceToPrint.customerName || fullCustomer?.name || 'Customer',
-              document: fullCustomer?.document,
-              phone: fullCustomer?.phone,
-              email: fullCustomer?.email,
-              address: fullCustomer?.address,
-            };
-            const companyData = {
-              name: companyInfo?.name || companyInfo?.company_name || 'Send Bill Now',
-              rnc: companyInfo?.rnc || companyInfo?.tax_id || '',
-              phone: companyInfo?.phone || '',
-              email: companyInfo?.email || '',
-              website: companyInfo?.website || '',
-              address: companyInfo?.address || '',
-              logo: companyInfo?.logo,
-            };
-            try {
-              const invoiceHtml = generateInvoiceHtml(invoiceData, customerData, companyData, templateType, options);
-              const pdfBase64 = await generatePdfBase64FromHtml(invoiceHtml);
-              const res = await fetch('/api/send-receipt-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  to: email,
-                  subject: `Invoice ${invoiceToPrint.invoiceNumber}`,
-                  invoiceNumber: invoiceToPrint.invoiceNumber,
-                  customerName: customerData.name,
-                  total: invoiceToPrint.amount,
-                  pdfBase64,
-                }),
-              });
-              if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || 'Failed to send email');
-              }
-              alert('Email sent successfully!');
-            } catch (err: any) {
-              console.error('Error sending invoice email:', err);
-              alert(err.message || 'Failed to send email');
-            }
-          }}
-        />
       </div>
     </DashboardLayout>
   );
