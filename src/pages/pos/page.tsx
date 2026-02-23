@@ -16128,18 +16128,6 @@ const payload = {
                     </button>
 
                     <button
-                      type="button"
-                      onClick={() => {
-                        setShowNewCustomerModal(false);
-                        setQuickAddPhone('');
-                        setShowQuickAddModal(true);
-                      }}
-                      className="flex-1 px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#4a5e35] transition-colors whitespace-nowrap text-sm"
-                    >
-                      Quick Add (Phone Only)
-                    </button>
-
-                    <button
 
 
 

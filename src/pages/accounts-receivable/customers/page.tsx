@@ -406,15 +406,9 @@ export default function CustomersPage() {
           </div>
           <div className="flex gap-3">
             <button
-              onClick={() => { setQuickAddPhone(''); setShowQuickAddModal(true); }}
-              className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-gradient-to-br from-[#2f3e1e] to-[#4a5e35] text-white shadow-[0_4px_15px_rgba(47,62,30,0.3)] hover:from-[#243015] hover:to-[#3a4d28] hover:shadow-[0_6px_20px_rgba(47,62,30,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
-            >
-              <i className="ri-phone-line mr-2"></i>
-              Quick Add (Phone)
-            </button>
-            <button 
               onClick={handleNewCustomer}
               className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-gradient-to-br from-[#008000] to-[#006600] text-white shadow-[0_4px_15px_rgb(0,128,0,0.3)] hover:from-[#006600] hover:to-[#005500] hover:shadow-[0_6px_20px_rgb(0,128,0,0.4)] hover:-translate-y-0.5 transition-all duration-300 whitespace-nowrap font-semibold"
+              type="button"
             >
               <i className="ri-user-add-line mr-2"></i>
               New Customer
