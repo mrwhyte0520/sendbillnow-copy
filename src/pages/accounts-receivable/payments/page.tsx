@@ -850,9 +850,6 @@ export default function PaymentsPage() {
                     VAT withheld
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                    ISR withheld
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -882,9 +879,6 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatMoney(payment.itbisWithheld)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatMoney(payment.isrWithheld)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
@@ -975,11 +969,6 @@ export default function PaymentsPage() {
                   <div className="rounded-lg border border-gray-200 p-4">
                     <p className="text-xs text-gray-500">VAT withheld</p>
                     <p className="text-sm font-semibold text-gray-900">{formatMoney(selectedPayment.itbisWithheld)}</p>
-                  </div>
-
-                  <div className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-xs text-gray-500">ISR withheld</p>
-                    <p className="text-sm font-semibold text-gray-900">{formatMoney(selectedPayment.isrWithheld)}</p>
                   </div>
                 </div>
 
