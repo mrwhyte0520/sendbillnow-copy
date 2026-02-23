@@ -913,7 +913,7 @@ export default function DebitNotesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold">Detalles de la Nota de Débito</h3>
+                <h3 className="text-lg font-semibold">Debit Note Details</h3>
                 <button
                   onClick={() => {
                     setShowNoteDetails(false);
@@ -928,66 +928,66 @@ export default function DebitNotesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Número de Nota</label>
+                    <label className="block text-sm font-medium text-gray-500">Note Number</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedNote.noteNumber}</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Cliente</label>
+                    <label className="block text-sm font-medium text-gray-500">Customer</label>
                     <p className="text-gray-900">{selectedNote.customerName}</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Fecha</label>
+                    <label className="block text-sm font-medium text-gray-500">Date</label>
                     <p className="text-gray-900">{selectedNote.date}</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Monto Original</label>
+                    <label className="block text-sm font-medium text-gray-500">Original Amount</label>
                     <p className="text-2xl font-bold text-red-600">{formatMoney(selectedNote.amount, '')}</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Motivo</label>
+                    <label className="block text-sm font-medium text-gray-500">Reason</label>
                     <p className="text-gray-900">{selectedNote.reason}</p>
                   </div>
                   
                   {selectedNote.relatedInvoice && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-500">Factura Relacionada</label>
+                      <label className="block text-sm font-medium text-gray-500">Related Invoice</label>
                       <p className="text-gray-900">{selectedNote.relatedInvoice}</p>
                     </div>
                   )}
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Monto Aplicado</label>
+                    <label className="block text-sm font-medium text-gray-500">Applied Amount</label>
                     <p className="text-lg font-semibold text-green-600">{formatMoney(selectedNote.appliedAmount, '')}</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-500">Saldo Pendiente</label>
+                    <label className="block text-sm font-medium text-gray-500">Pending Balance</label>
                     <p className="text-2xl font-bold text-orange-600">{formatMoney(selectedNote.balance, '')}</p>
                   </div>
                 </div>
               </div>
               
               <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-500">Estado</label>
+                <label className="block text-sm font-medium text-gray-500">Status</label>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedNote.status)} mt-1`}>
                   {getStatusName(selectedNote.status)}
                 </span>
               </div>
               
               <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-500">Concepto</label>
+                <label className="block text-sm font-medium text-gray-500">Concept</label>
                 <p className="text-gray-900 mt-1">{selectedNote.concept}</p>
               </div>
               
               {selectedNote.appliedInvoices.length > 0 && (
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-500">Facturas Aplicadas</label>
+                  <label className="block text-sm font-medium text-gray-500">Applied Invoices</label>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {selectedNote.appliedInvoices.map((invoice, index) => (
                       <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
@@ -1008,7 +1008,7 @@ export default function DebitNotesPage() {
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
                   >
                     <i className="ri-check-line mr-2"></i>
-                    Aplicar Nota
+                    Apply Note
                   </button>
                 )}
                 {selectedNote.status === 'pending' && (
@@ -1017,7 +1017,7 @@ export default function DebitNotesPage() {
                     className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors whitespace-nowrap"
                   >
                     <i className="ri-close-circle-line mr-2"></i>
-                    Cancelar Nota
+                    Cancel Note
                   </button>
                 )}
               </div>
