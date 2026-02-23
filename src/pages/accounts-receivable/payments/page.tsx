@@ -43,7 +43,7 @@ export default function PaymentsPage() {
   const [showPaymentDetailModal, setShowPaymentDetailModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [companyName, setCompanyName] = useState('');
-  const [companyRnc, setCompanyRnc] = useState('');
+  const [companyLogo, setCompanyLogo] = useState('');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [invoices, setInvoices] = useState<InvoiceOption[]>([]);
   const [showDocumentPreviewModal, setShowDocumentPreviewModal] = useState(false);
@@ -153,9 +153,9 @@ export default function PaymentsPage() {
         const info = await settingsService.getCompanyInfo();
         if (info && (info as any)) {
           const name = (info as any).name || (info as any).company_name;
-          const rnc = (info as any).rnc || (info as any).tax_id || (info as any).ruc;
+          const logo = (info as any).logo;
           if (name) setCompanyName(String(name));
-          if (rnc) setCompanyRnc(String(rnc));
+          if (logo) setCompanyLogo(String(logo));
         }
       } catch (error) {
         console.error('Error cargando información de la empresa (Pagos Recibidos):', error);
@@ -587,21 +587,16 @@ export default function PaymentsPage() {
         const receiptDate = (createdReceipt as any)?.receipt_date || paymentDate;
 
         let companyName = '';
-        let companyRnc = '';
         try {
           const info = await settingsService.getCompanyInfo();
           if (info && (info as any)) {
             const name = (info as any).name || (info as any).company_name;
-            const rnc = (info as any).rnc || (info as any).tax_id || (info as any).ruc;
             if (name) {
               companyName = String(name);
             }
-            if (rnc) {
-              companyRnc = String(rnc);
-            }
           }
         } catch (err) {
-          console.error('Error obteniendo información de la empresa para impresión de recibo:', err);
+          console.error('Error loading company info for receipt preview:', err);
         }
 
         const amountText = formatAmount(effectivePayment);
@@ -662,7 +657,7 @@ export default function PaymentsPage() {
                   <div class="header">
                     <div class="brand">
                       <h1>${companyName}</h1>
-                      ${companyRnc ? `<p>Tax ID: ${companyRnc}</p>` : `<p>&nbsp;</p>`}
+                      <p>&nbsp;</p>
                     </div>
                     <div class="doc">
                       <h2>Collection Receipt #${receiptNo}</h2>
@@ -755,9 +750,24 @@ export default function PaymentsPage() {
     <DashboardLayout>
       <style>{`
         @media print {
+          html, body { height: auto !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           body * { visibility: hidden !important; }
           #payment-detail-print, #payment-detail-print * { visibility: visible !important; }
-          #payment-detail-print { position: fixed !important; left: 0 !important; top: 0 !important; width: 100% !important; }
+          #payment-detail-print {
+            position: fixed !important;
+            left: 50% !important;
+            top: 24px !important;
+            transform: translateX(-50%) scale(1.25) !important;
+            transform-origin: top center !important;
+            width: 560px !important;
+            max-width: 92vw !important;
+            max-height: none !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 14px !important;
+          }
           .no-print { display: none !important; }
         }
       `}</style>
@@ -908,16 +918,23 @@ export default function PaymentsPage() {
               className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6 border-b border-gray-200 flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Payment Details</h3>
-                  <p className="text-sm text-gray-500">
-                    {companyName}{companyRnc ? ` • Tax ID: ${companyRnc}` : ''}
-                  </p>
+              <div className="p-6 border-b border-blue-200 bg-gradient-to-r from-[#1d4ed8] to-[#2563eb] flex items-start justify-between">
+                <div className="flex items-start gap-3 min-w-0">
+                  {companyLogo ? (
+                    <img
+                      src={companyLogo}
+                      alt="Company logo"
+                      className="h-10 w-10 rounded-lg object-contain bg-white/90 p-1 border border-white/60 flex-shrink-0"
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{companyName || 'Company'}</p>
+                    <h3 className="text-lg font-bold text-white leading-tight">Payment Details</h3>
+                  </div>
                 </div>
                 <button
                   onClick={handleClosePaymentDetail}
-                  className="no-print text-gray-400 hover:text-gray-600"
+                  className="no-print text-white/80 hover:text-white"
                   aria-label="Cerrar"
                 >
                   <i className="ri-close-line text-xl"></i>
@@ -925,7 +942,7 @@ export default function PaymentsPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                <div className="bg-gradient-to-r from-[#f0f7e6] to-[#e4efcf] border border-[#d3e0b2] rounded-lg p-4">
+                <div className="bg-gradient-to-r from-[#eff6ff] to-[#dbeafe] border border-[#bfdbfe] rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Amount received</p>
