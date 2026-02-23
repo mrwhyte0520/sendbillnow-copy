@@ -157,8 +157,8 @@ function buildReceiptHtml({ companyName, customerName, sale, templateType }) {
           Thank you for your purchase!
         </div>
 
-        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee; text-align: center; font-size: 14px; color: #555;">
-          Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">sendbillnow.com</a>
+        <div style="margin-top: 14px; background: #001b9e; color: #fff; text-align: center; font-size: 14px; padding: 6px 14px 14px 14px; line-height: 1.15;">
+          Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color: #fff; text-decoration: underline;">sendbillnow.com</a>
         </div>
             </div>
           </div>

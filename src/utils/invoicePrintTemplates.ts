@@ -8,6 +8,52 @@ import { formatAmount } from './numberFormat';
 
 import { formatDate } from './dateFormat';
 
+function resolveInvoiceDateTimeText(invoice: any): { dateText: string; timeText: string } {
+  const dateRaw = invoice?.date ?? invoice?.invoiceDate ?? invoice?.invoice_date;
+  const timeRaw = invoice?.time ?? invoice?.invoiceTime ?? invoice?.invoice_time;
+  const createdRaw = invoice?.createdAt ?? invoice?.created_at ?? invoice?.created_on ?? invoice?.createdOn;
+
+  const now = new Date();
+
+  const parseToDate = (raw: any): Date | null => {
+    if (!raw) return null;
+    if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split('-').map((v) => Number(v));
+      if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+      const local = new Date(y, m - 1, d);
+      return Number.isNaN(local.getTime()) ? null : local;
+    }
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const dateFromInvoice = parseToDate(dateRaw);
+  const dateFromCreated = parseToDate(createdRaw);
+  const dateForDisplay = dateFromInvoice || dateFromCreated || now;
+
+  const dateText = (() => {
+    if (typeof dateRaw === 'string' && dateRaw.trim()) {
+      try {
+        return formatDate(dateRaw.trim());
+      } catch {
+        return dateForDisplay.toLocaleDateString();
+      }
+    }
+    return dateForDisplay.toLocaleDateString();
+  })();
+
+  const timeText = (() => {
+    const s = timeRaw === null || timeRaw === undefined ? '' : String(timeRaw).trim();
+    if (s) return s;
+    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  })();
+
+  return { dateText, timeText };
+}
+
 
 
 
@@ -109,6 +155,8 @@ export interface JobEstimateSignatureFields {
 function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: CustomerData, company: CompanyData): string {
 
   const items = Array.isArray(invoice.items) ? invoice.items : [];
+
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
 
   const totalHours = items.reduce((acc, it: any) => acc + (Number(it?.quantity ?? 0) || 0), 0);
 
@@ -282,22 +330,6 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
 
 
-  const poweredBy = (() => {
-
-    const w = (company as any).website;
-
-    const s = w === null || w === undefined ? '' : String(w).trim();
-
-    return s ? escapeHtml(s) : 'sendbillnow.com';
-
-  })();
-
-
-
-
-
-
-
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
 
 
@@ -415,6 +447,8 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
   .footerBar{position:absolute;left:0;right:0;bottom:0;background:${BLUE};color:#fff;padding:10px 64px;border-radius:0;}
 
   .footerPowered{text-align:center;font-size:12px;opacity:0.95;}
+
+  .footerPowered a{color:#fff !important;text-decoration:underline;}
 
 
 
@@ -584,11 +618,11 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
 
 
-          <div><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date"></span></div>
+          <div><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date">${escapeHtml(dateText)}</span></div>
 
 
 
-          <div><span class="metaLabel">Time:</span> <span id="sb_print_time"></span></div>
+          <div><span class="metaLabel">Time:</span> <span id="sb_print_time">${escapeHtml(timeText)}</span></div>
 
 
 
@@ -778,7 +812,7 @@ function generateServiceHoursInvoiceTemplate(invoice: InvoiceData, customer: Cus
 
     <div class="footerBar">
 
-      <div class="footerPowered">Powered by: ${poweredBy}</div>
+      <div class="footerPowered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
     </div>
 
@@ -1056,17 +1090,21 @@ function generateClassicInvoiceTemplate(
 
   const classicDiscountLabel = classicDiscountType === 'percentage' ? `${classicDiscountValue}%` : '';
 
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
+
 
 
   const classicAccountNumber = (() => {
 
-    const raw = (invoice as any)?.accountNumber ?? (invoice as any)?.account_number;
+    const raw =
+      (invoice as any)?.accountNumber ??
+      (invoice as any)?.account_number ??
+      (customer as any)?.accountNumber ??
+      (customer as any)?.account_number ??
+      (customer as any)?.account ??
+      (customer as any)?.accountNo;
 
     const s = raw === null || raw === undefined ? '' : String(raw).trim();
-
-    if (!s) return 'N/A';
-
-    if (!/^[0-9]+$/.test(s)) return 'N/A';
 
     return s;
 
@@ -1438,7 +1476,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:12px 14px;text-align:center;font-size:12px;letter-spacing:0.2px;}
+.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:6px 14px 16px 14px;text-align:center;font-size:12px;letter-spacing:0.2px;line-height:1.15;}
 
 
 
@@ -1552,7 +1590,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-        <div class="row"><span class="label">Account #:</span> ${escapeHtml(classicAccountNumber)}</div>
+        ${classicAccountNumber ? `<div class="row"><span class="label">Account #:</span> ${escapeHtml(classicAccountNumber)}</div>` : ''}
 
 
 
@@ -1560,11 +1598,11 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-        <div class="row"><span class="label">Invoice Date:</span> <span id="sb_print_date"></span></div>
+        <div class="row"><span class="label">Invoice Date:</span> <span id="sb_print_date">${escapeHtml(dateText)}</span></div>
 
 
 
-        <div class="row"><span class="label">Time:</span> <span id="sb_print_time"></span></div>
+        <div class="row"><span class="label">Time:</span> <span id="sb_print_time">${escapeHtml(timeText)}</span></div>
 
 
 
@@ -1938,6 +1976,8 @@ function generateCashReceiptTemplate(
 
   const footerLinksText = footerLinksParts.join(' | ');
 
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
+
 
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Cash Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
@@ -2176,7 +2216,7 @@ td{font-size:11px;}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE};color:#fff;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:6px 14px 16px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;line-height:1.15;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
@@ -2262,11 +2302,11 @@ td{font-size:11px;}
 
 
 
-            <div class="metaRow"><span class="label">Invoice Date:</span><span class="value"><span id="sb_print_date"></span></span></div>
+            <div class="metaRow"><span class="label">Invoice Date:</span><span class="value"><span id="sb_print_date">${escapeHtml(dateText)}</span></span></div>
 
 
 
-            <div class="metaRow"><span class="label">Time:</span><span class="value"><span id="sb_print_time"></span></span></div>
+            <div class="metaRow"><span class="label">Time:</span><span class="value"><span id="sb_print_time">${escapeHtml(timeText)}</span></span></div>
 
 
 
@@ -2809,31 +2849,13 @@ function generateRentReceiptTemplate(
 
 
   if (company.linkedin) footerLinksParts.push('LinkedIn');
-
-
-
   if (company.youtube) footerLinksParts.push('YouTube');
-
-
-
   if (company.tiktok) footerLinksParts.push('TikTok');
-
-
-
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
-
-
-
   const footerLinksText = footerLinksParts.join(' | ');
-
-
-
-
-
-
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Rent Receipt ${escapeHtml(invoice.invoiceNumber)}</title>
-
 
 
 <style>
@@ -3034,7 +3056,7 @@ td{font-size:11px;}
 
 
 
-.footerPoweredBar{background:${BLUE};color:#fff;padding:10px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
+.footerPoweredBar{background:${BLUE};color:#fff;padding:6px 14px 16px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;line-height:1.15;}
 
 
 
@@ -3164,11 +3186,11 @@ td{font-size:11px;}
 
 
 
-          <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div><span id="sb_print_date"></span></div></div>
+          <div class="rightMetaRow"><div class="label">INVOICE DATE:</div><div><span id="sb_print_date">${escapeHtml(dateText)}</span></div></div>
 
 
 
-          <div class="rightMetaRow"><div class="label">TIME:</div><div><span id="sb_print_time"></span></div></div>
+          <div class="rightMetaRow"><div class="label">TIME:</div><div><span id="sb_print_time">${escapeHtml(timeText)}</span></div></div>
 
 
 
@@ -3534,6 +3556,8 @@ function generateBlueInvoiceTemplate(
 
   const subtotalLessDiscount = Number(invoice.subtotal) - discountAmount;
 
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
+
 
 
   const taxRate = ((): number => {
@@ -3846,7 +3870,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:6px 14px 16px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;line-height:1.15;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
@@ -4034,11 +4058,11 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 
 
-          <div class="line"><strong>Time:</strong> <span id="sb_print_time"></span></div>
+          <div class="line"><strong>Time:</strong> <span id="sb_print_time">${escapeHtml(timeText)}</span></div>
 
 
 
-          <div class="line"><strong>Invoice Date:</strong> <span id="sb_print_date"></span></div>
+          <div class="line"><strong>Invoice Date:</strong> <span id="sb_print_date">${escapeHtml(dateText)}</span></div>
 
 
 
@@ -4636,7 +4660,7 @@ th:nth-child(4){width:140px;text-align:right;}
 
 .footerMessage .links{font-size:10px;opacity:0.9;color:#0f172a;}
 
-.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:12px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;}
+.footerPoweredBar{background:${BLUE} !important;color:#fff !important;padding:6px 14px 16px 14px;border-radius:0 0 12px 12px;box-shadow:0 10px 24px rgba(15,23,42,0.2);text-align:center;font-size:12px;line-height:1.15;}
 
 .footerPoweredBar a{color:#fff !important;text-decoration:underline;}
 
@@ -6486,7 +6510,9 @@ th:nth-child(4){text-align:center;}
 
 
 
-.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+.footerPoweredBar{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline !important;}
 
 
 
@@ -6786,21 +6812,9 @@ th:nth-child(4){text-align:center;}
 
     <p>Thank you for your purchase.</p>
 
-
-
-
-
-
-
     ${generateSocialLinksHtml(company)}
 
-
-
-
-
-
-
-    <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+    <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
 
 
@@ -7530,7 +7544,9 @@ th:nth-child(4){text-align:center;}
 
 
 
-.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+.footerPoweredBar{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline !important;}
 
 
 
@@ -7860,7 +7876,7 @@ th:nth-child(4){text-align:center;}
 
 
 
-    <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+    <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
 
 
@@ -8326,7 +8342,9 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+.footerPoweredBar{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline !important;}
 
 
 
@@ -8686,7 +8704,7 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-    <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
+    <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
 
 
 
@@ -9164,7 +9182,9 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
-.footer .powered{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+.footerPoweredBar{font-size:12px;color:#fff;border-top:1px solid rgba(255,255,255,0.3);padding-top:10px;margin-top:10px;text-align:center;}
+
+.footerPoweredBar a{color:#fff !important;text-decoration:underline !important;}
 
 
 
@@ -9629,23 +9649,6 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
     <p>Thank you for your purchase.</p>
-
-
-
-
-
-
-
-    ${generateSocialLinksHtml(company)}
-
-
-
-
-
-
-
-    <div class="powered">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">sendbillnow.com</a></div>
-
 
 
 

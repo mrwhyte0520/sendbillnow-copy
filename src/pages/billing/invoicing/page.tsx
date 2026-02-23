@@ -10944,6 +10944,15 @@ export default function InvoicingPage() {
 
               notes: (invoiceToPrint as any).notes || null,
 
+              accountNumber:
+                (invoiceToPrint as any).accountNumber ??
+                (invoiceToPrint as any).account_number ??
+                (fullCustomer as any)?.accountNumber ??
+                (fullCustomer as any)?.account_number ??
+                (fullCustomer as any)?.account ??
+                (fullCustomer as any)?.accountNo ??
+                null,
+
 
 
             };
@@ -10971,6 +10980,15 @@ export default function InvoicingPage() {
 
 
               address: fullCustomer?.address || invoiceToPrint.customerAddress,
+
+              accountNumber:
+                (fullCustomer as any)?.accountNumber ??
+                (fullCustomer as any)?.account_number ??
+                (fullCustomer as any)?.account ??
+                (fullCustomer as any)?.accountNo ??
+                (invoiceToPrint as any).accountNumber ??
+                (invoiceToPrint as any).account_number ??
+                null,
 
 
 
