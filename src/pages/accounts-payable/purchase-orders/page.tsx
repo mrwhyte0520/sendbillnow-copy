@@ -571,12 +571,6 @@ export default function PurchaseOrdersPage() {
       (companyInfo as any)?.company_name ||
       '';
 
-    const headerCompanyRnc =
-      (companyInfo as any)?.rnc ||
-      (companyInfo as any)?.tax_id ||
-      (companyInfo as any)?.ruc ||
-      '';
-
     const workbook = new ExcelJS.Workbook();
 
     const applyHeaderStyle = (row: ExcelJS.Row) => {
@@ -609,14 +603,6 @@ export default function PurchaseOrdersPage() {
     wsOrders.getCell(currentRow, 1).font = { bold: true, size: 14 };
     wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
     currentRow++;
-
-    if (headerCompanyRnc) {
-      wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
-      wsOrders.getCell(currentRow, 1).value = `RNC: ${headerCompanyRnc}`;
-      wsOrders.getCell(currentRow, 1).font = { bold: true };
-      wsOrders.getCell(currentRow, 1).alignment = { horizontal: 'left', vertical: 'middle' } as any;
-      currentRow++;
-    }
 
     wsOrders.mergeCells(currentRow, 1, currentRow, totalColumnsOrders);
     wsOrders.getCell(currentRow, 1).value = 'Órdenes de Compra';
@@ -963,7 +949,6 @@ export default function PurchaseOrdersPage() {
 
   const handleExportOrderExcel = async (order: any) => {
     const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
-    const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
 
     const supplier = suppliers.find((s: any) => String(s.id) === String(order.supplierId));
     const supplierName = supplier?.legalName || supplier?.name || order.supplier;
@@ -980,14 +965,7 @@ export default function PurchaseOrdersPage() {
     worksheet.getCell('A1').font = { bold: true, size: 16 };
     worksheet.getCell('A1').alignment = { horizontal: 'center' } as any;
 
-    if (companyRnc) {
-      worksheet.mergeCells('A2:D2');
-      worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
-      worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-      worksheet.getCell('A2').font = { size: 10 };
-    }
-
-    const headerStartRow = companyRnc ? 3 : 2;
+    const headerStartRow = 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
     worksheet.getCell(`A${headerStartRow}`).value = `Orden de Compra #${order.number}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };
@@ -996,6 +974,9 @@ export default function PurchaseOrdersPage() {
 
     worksheet.addRow(['Proveedor', supplierName]);
     if (supplierTaxId) worksheet.addRow(['RNC', supplierTaxId]);
+    worksheet.addRow(['Teléfono', supplierPhone]);
+    worksheet.addRow(['Correo', supplierEmail]);
+    worksheet.addRow(['Dirección', supplierAddress]);
     if (supplierPhone) worksheet.addRow(['Teléfono', supplierPhone]);
     if (supplierEmail) worksheet.addRow(['Correo', supplierEmail]);
     if (supplierAddress) worksheet.addRow(['Dirección', supplierAddress]);

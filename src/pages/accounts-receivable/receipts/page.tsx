@@ -800,17 +800,12 @@ export default function ReceiptsPage() {
 
   const handleExportReceiptExcel = async (receipt: Receipt) => {
     let companyName = '';
-    let companyRnc = '';
     try {
       const info = await settingsService.getCompanyInfo();
       if (info && (info as any)) {
         const name = (info as any).name || (info as any).company_name;
-        const rnc = (info as any).rnc || (info as any).tax_id || (info as any).ruc;
         if (name) {
           companyName = String(name);
-        }
-        if (rnc) {
-          companyRnc = String(rnc);
         }
       }
     } catch (error) {
@@ -834,14 +829,7 @@ export default function ReceiptsPage() {
     worksheet.getCell('A1').font = { bold: true, size: 16 } as any;
     worksheet.getCell('A1').alignment = { horizontal: 'center' } as any;
 
-    if (companyRnc) {
-      worksheet.mergeCells('A2:D2');
-      worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
-      worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-      worksheet.getCell('A2').font = { size: 10 } as any;
-    }
-
-    const headerStartRow = companyRnc ? 3 : 2;
+    const headerStartRow = 2;
     worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
     worksheet.getCell(`A${headerStartRow}`).value = `Recibo #${receipt.receiptNumber}`;
     worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 } as any;

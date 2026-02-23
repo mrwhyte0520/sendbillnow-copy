@@ -1240,7 +1240,6 @@ ${items
       const supplierEmail = String((supplier as any)?.email || '').trim();
       const supplierAddress = String((supplier as any)?.address || '').trim();
       const companyName = (companyInfo as any)?.name || (companyInfo as any)?.company_name || '';
-      const companyRnc = (companyInfo as any)?.rnc || (companyInfo as any)?.tax_id || (companyInfo as any)?.ruc || '';
 
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Factura');
@@ -1250,19 +1249,7 @@ ${items
       worksheet.getCell('A1').font = { bold: true, size: 16 };
       worksheet.getCell('A1').alignment = { horizontal: 'center' } as any;
 
-      if (companyRnc) {
-        worksheet.mergeCells('A2:D2');
-        worksheet.getCell('A2').value = `RNC: ${companyRnc}`;
-        worksheet.getCell('A2').alignment = { horizontal: 'center' } as any;
-        worksheet.getCell('A2').font = { bold: true, size: 12, color: { argb: 'FF0b2a6f' } };
-        worksheet.getCell('A2').fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFe0e7ff' }
-        };
-      }
-
-      const headerStartRow = companyRnc ? 3 : 2;
+      const headerStartRow = 2;
       worksheet.mergeCells(`A${headerStartRow}:D${headerStartRow}`);
       worksheet.getCell(`A${headerStartRow}`).value = `Factura de Suplidor #${invoice.invoiceNumber}`;
       worksheet.getCell(`A${headerStartRow}`).font = { bold: true, size: 12 };

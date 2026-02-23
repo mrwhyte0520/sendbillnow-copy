@@ -396,13 +396,6 @@ export default function Report606Page() {
       sCompanyCell.font = { bold: true };
       sRow++;
 
-      if (companyRnc) {
-        wsSummary.mergeCells(sRow, 1, sRow, 2);
-        const sRncCell = wsSummary.getCell(sRow, 1);
-        sRncCell.value = `RNC: ${companyRnc}`;
-        sRow++;
-      }
-
       wsSummary.mergeCells(sRow, 1, sRow, 2);
       const sTitleCell = wsSummary.getCell(sRow, 1);
       sTitleCell.value = 'Reporte 606 - Resumen';

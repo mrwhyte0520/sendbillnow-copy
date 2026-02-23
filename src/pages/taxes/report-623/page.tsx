@@ -69,11 +69,6 @@ export default function Report623Page() {
       (companyInfo as any)?.company_name ||
       '';
 
-    const companyRnc =
-      (companyInfo as any)?.rnc ||
-      (companyInfo as any)?.tax_id ||
-      '';
-
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Reporte 623');
 
@@ -98,15 +93,6 @@ export default function Report623Page() {
     companyCell.font = { bold: true, size: 14 };
     companyCell.alignment = { horizontal: 'left', vertical: 'middle' };
     currentRow++;
-
-    if (companyRnc) {
-      ws.mergeCells(currentRow, 1, currentRow, totalColumns);
-      const rncCell = ws.getCell(currentRow, 1);
-      rncCell.value = `RNC: ${companyRnc}`;
-      rncCell.font = { bold: true };
-      rncCell.alignment = { horizontal: 'left', vertical: 'middle' };
-      currentRow++;
-    }
 
     ws.mergeCells(currentRow, 1, currentRow, totalColumns);
     const titleCell = ws.getCell(currentRow, 1);
