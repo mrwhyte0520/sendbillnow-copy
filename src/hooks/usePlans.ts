@@ -246,7 +246,7 @@ export function usePlans() {
             const trialEnd = trialEndRaw && !isNaN(trialEndRaw.getTime()) ? trialEndRaw : null;
             const trialPlan = (row as any).trial_plan_id ? String((row as any).trial_plan_id) : '';
 
-            if (planId && planStatus === 'active') {
+            if (planId) {
               const plan = buildPlan(planId);
               setCurrentPlan(plan);
               setTrialPlanId(null);

@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase';
 import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
+import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 // Removed sample data: the view only feeds from the database
 
@@ -12,6 +13,7 @@ export default function InventoryPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { currentPlanId } = usePlanPermissions();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [items, setItems] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
@@ -402,6 +404,7 @@ export default function InventoryPage() {
       }));
 
       const created = await warehouseTransfersService.create(user.id, transferPayload, linesPayload);
+      // Auto-post the transfer to actually move inventory
       await warehouseTransfersService.post(user.id, created.transfer.id);
 
       const data = await warehouseTransfersService.getAll(user.id);
@@ -910,7 +913,7 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow overflow-hidden">
           <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
             <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Low Stock Products</h3>
           </div>
@@ -941,7 +944,7 @@ export default function InventoryPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] overflow-hidden hover:shadow-[0_12px_35px_rgb(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300">
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] border border-[#e8e0d0] rounded-2xl shadow overflow-hidden">
           <div className="px-6 py-5 border-b border-[#e8ddc7] bg-gradient-to-r from-[#fdf6e7] to-[#f8f4e8]">
             <h3 className="text-lg font-bold text-[#3b4d2d] drop-shadow-sm">Recent Movements</h3>
           </div>
@@ -1555,14 +1558,7 @@ export default function InventoryPage() {
   const renderWarehouses = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-900">Location Management</h3>
-        <button
-          onClick={() => handleOpenModal('warehouse')}
-          className="bg-[#008000] text-white px-4 py-2 rounded-lg hover:bg-[#006600] transition-colors whitespace-nowrap"
-        >
-          <i className="ri-add-line mr-2"></i>
-          New Location
-        </button>
+        <h3 className="text-lg font-semibold text-[#2e3c21]">Location Management</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -2931,7 +2927,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Document Date</label>
                       <input
                         type="date"
-                        value={formData.document_date || new Date().toISOString().slice(0, 10)}
+                        value={formData.document_date || new Date().toISOString().split('T')[0]}
                         onChange={(e) => setFormData({ ...formData, document_date: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -3132,7 +3128,7 @@ export default function InventoryPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Transfer Date *</label>
                       <input
                         type="date"
-                        value={formData.transfer_date || new Date().toISOString().slice(0, 10)}
+                        value={formData.transfer_date || new Date().toISOString().split('T')[0]}
                         onChange={(e) => setFormData({ ...formData, transfer_date: e.target.value })}
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
@@ -3334,13 +3330,15 @@ export default function InventoryPage() {
             <span>Back to Home</span>
           </button>
 
-          <button
-            onClick={() => navigate('/pos?tab=pos')}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#008000] text-white text-sm font-medium shadow-sm hover:bg-[#006600] transition-colors"
-          >
-            <i className="ri-shopping-cart-2-line text-lg"></i>
-            <span>Go to POS</span>
-          </button>
+          {currentPlanId !== 'student' && (
+            <button
+              onClick={() => navigate('/pos?tab=pos')}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#008000] text-white text-sm font-medium shadow-sm hover:bg-[#006600] transition-colors"
+            >
+              <i className="ri-shopping-cart-2-line text-lg"></i>
+              <span>Go to POS</span>
+            </button>
+          )}
 
           <div className="h-6 w-px bg-gray-300"></div>
           <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>

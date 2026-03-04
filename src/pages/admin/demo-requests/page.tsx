@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { supabase } from '../../../lib/supabase';
@@ -13,7 +12,7 @@ interface DemoRequest {
   location: string | null;
   business_type: string;
   description: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'confirmed' | 'rejected';
   created_at: string;
   approved_at?: string;
   trial_days?: number;
@@ -21,20 +20,10 @@ interface DemoRequest {
 
 export default function AdminDemoRequestsPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [requests, setRequests] = useState<DemoRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('pending');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Modal para aprobar
-  const [approveModal, setApproveModal] = useState<{ show: boolean; request: DemoRequest | null }>({
-    show: false,
-    request: null
-  });
-  const [trialDays, setTrialDays] = useState(14);
-  const [generatedPassword, setGeneratedPassword] = useState('');
 
   useEffect(() => {
     // Access is enforced by ProtectedRoute (RBAC admin module)
@@ -58,92 +47,6 @@ export default function AdminDemoRequestsPage() {
     }
   };
 
-  const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let password = '';
-    for (let i = 0; i < 10; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
-
-  const openApproveModal = (request: DemoRequest) => {
-    const pwd = generatePassword();
-    setGeneratedPassword(pwd);
-    setTrialDays(14);
-    setApproveModal({ show: true, request });
-  };
-
-  const handleApprove = async () => {
-    if (!approveModal.request) return;
-
-    const request = approveModal.request;
-    setProcessing(request.id);
-
-    try {
-      // Llamar al API endpoint para crear usuario y enviar email
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
-
-      const response = await fetch(`${apiBase}/api/approve-demo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requestId: request.id,
-          email: request.email,
-          fullName: request.full_name,
-          password: generatedPassword,
-          trialDays: trialDays,
-          businessName: request.business_name
-        })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Error al aprobar la solicitud');
-      }
-
-      // Actualizar estado local
-      setRequests(prev => prev.map(r => 
-        r.id === request.id 
-          ? { ...r, status: 'approved' as const, approved_at: new Date().toISOString(), trial_days: trialDays }
-          : r
-      ));
-
-      setApproveModal({ show: false, request: null });
-      alert(`Usuario creado exitosamente.\n\nEmail: ${request.email}\nContraseña: ${generatedPassword}\nTrial: ${trialDays} días\n\nSe ha enviado un email con las credenciales.`);
-
-    } catch (error: any) {
-      console.error('Error approving request:', error);
-      alert(error.message || 'Error al aprobar la solicitud');
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  const handleReject = async (request: DemoRequest) => {
-    if (!confirm(`¿Rechazar la solicitud de ${request.full_name}?`)) return;
-
-    setProcessing(request.id);
-    try {
-      const { error } = await supabase
-        .from('demo_requests')
-        .update({ status: 'rejected' })
-        .eq('id', request.id);
-
-      if (error) throw error;
-
-      setRequests(prev => prev.map(r => 
-        r.id === request.id ? { ...r, status: 'rejected' as const } : r
-      ));
-    } catch (error) {
-      console.error('Error rejecting request:', error);
-      alert('Error al rechazar la solicitud');
-    } finally {
-      setProcessing(null);
-    }
-  };
-
   const filteredRequests = requests.filter(r => {
     const matchesStatus = filterStatus === 'all' || r.status === filterStatus;
     const matchesSearch = 
@@ -154,7 +57,7 @@ export default function AdminDemoRequestsPage() {
   });
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
-  const approvedCount = requests.filter(r => r.status === 'approved').length;
+  const approvedCount = requests.filter(r => r.status === 'confirmed').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
 
   return (
@@ -247,7 +150,7 @@ export default function AdminDemoRequestsPage() {
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
+                <option value="confirmed">Confirmed</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
@@ -315,42 +218,20 @@ export default function AdminDemoRequestsPage() {
                       <td className="px-4 py-4">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                          request.status === 'confirmed' ? 'bg-green-100 text-green-800' :
                           'bg-red-100 text-red-800'
                         }`}>
                           {request.status === 'pending' ? 'Pending' :
-                           request.status === 'approved' ? 'Approved' : 'Rejected'}
+                           request.status === 'confirmed' ? 'Confirmed' : 'Rejected'}
                         </span>
-                        {request.status === 'approved' && request.trial_days && (
+                        {request.status === 'confirmed' && request.trial_days && (
                           <div className="text-xs text-gray-500 mt-1">
                             {request.trial_days} days trial
                           </div>
                         )}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        {request.status === 'pending' && (
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => openApproveModal(request)}
-                              disabled={processing === request.id}
-                              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-                            >
-                              <i className="ri-check-line mr-1"></i>
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(request)}
-                              disabled={processing === request.id}
-                              className="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                            >
-                              <i className="ri-close-line mr-1"></i>
-                              Reject
-                            </button>
-                          </div>
-                        )}
-                        {request.status !== 'pending' && (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
+                        <span className="text-xs text-gray-400">—</span>
                       </td>
                     </tr>
                   ))}
@@ -359,102 +240,6 @@ export default function AdminDemoRequestsPage() {
             </div>
           )}
         </div>
-
-        {/* Approve Modal */}
-        {approveModal.show && approveModal.request && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Approve Demo Request</h3>
-                <button
-                  onClick={() => setApproveModal({ show: false, request: null })}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <i className="ri-close-line text-xl"></i>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Applicant</p>
-                  <p className="font-medium text-gray-900">{approveModal.request.full_name}</p>
-                  <p className="text-sm text-gray-600">{approveModal.request.email}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Trial Duration (days)
-                  </label>
-                  <select
-                    value={trialDays}
-                    onChange={(e) => setTrialDays(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]/30 focus:border-[#008000]"
-                  >
-                    <option value={7}>7 days</option>
-                    <option value={14}>14 days</option>
-                    <option value={30}>30 days</option>
-                    <option value={60}>60 days</option>
-                    <option value={90}>90 days</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Generated Password
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={generatedPassword}
-                      onChange={(e) => setGeneratedPassword(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#008000]/30 focus:border-[#008000] font-mono"
-                    />
-                    <button
-                      onClick={() => setGeneratedPassword(generatePassword())}
-                      className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      <i className="ri-refresh-line"></i>
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This password will be sent to the user via email.
-                  </p>
-                </div>
-
-                <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
-                  <i className="ri-information-line mr-1"></i>
-                  An email will be sent to <strong>{approveModal.request.email}</strong> with the login credentials.
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => setApproveModal({ show: false, request: null })}
-                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleApprove}
-                  disabled={processing === approveModal.request.id || !generatedPassword}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {processing === approveModal.request.id ? (
-                    <>
-                      <i className="ri-loader-4-line animate-spin mr-2"></i>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <i className="ri-check-line mr-2"></i>
-                      Approve & Create User
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );
