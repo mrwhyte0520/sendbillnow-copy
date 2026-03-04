@@ -12,7 +12,7 @@ interface DemoRequest {
   location: string | null;
   business_type: string;
   description: string | null;
-  status: 'pending' | 'confirmed' | 'rejected';
+  status: 'pending' | 'confirmed' | 'approved' | 'rejected';
   created_at: string;
   approved_at?: string;
   trial_days?: number;
@@ -22,7 +22,7 @@ export default function AdminDemoRequestsPage() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<DemoRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<string>('pending');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -48,7 +48,11 @@ export default function AdminDemoRequestsPage() {
   };
 
   const filteredRequests = requests.filter(r => {
-    const matchesStatus = filterStatus === 'all' || r.status === filterStatus;
+    const matchesStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'approved'
+        ? (r.status === 'approved' || r.status === 'confirmed')
+        : r.status === filterStatus);
     const matchesSearch = 
       r.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -57,7 +61,7 @@ export default function AdminDemoRequestsPage() {
   });
 
   const pendingCount = requests.filter(r => r.status === 'pending').length;
-  const approvedCount = requests.filter(r => r.status === 'confirmed').length;
+  const approvedCount = requests.filter(r => r.status === 'confirmed' || r.status === 'approved').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
 
   return (
@@ -151,6 +155,7 @@ export default function AdminDemoRequestsPage() {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
@@ -216,15 +221,16 @@ export default function AdminDemoRequestsPage() {
                         })}
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          request.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
+                        <span className={`inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap min-w-[88px] ${
+                          request.status === 'pending' ? 'bg-yellow-600 text-white' :
+                          (request.status === 'confirmed' || request.status === 'approved') ? 'bg-green-700 text-white' :
+                          'bg-red-600 text-white'
                         }`}>
                           {request.status === 'pending' ? 'Pending' :
-                           request.status === 'confirmed' ? 'Confirmed' : 'Rejected'}
+                           request.status === 'confirmed' ? 'Confirmed' :
+                           request.status === 'approved' ? 'Approved' : 'Rejected'}
                         </span>
-                        {request.status === 'confirmed' && request.trial_days && (
+                        {(request.status === 'confirmed' || request.status === 'approved') && request.trial_days && (
                           <div className="text-xs text-gray-500 mt-1">
                             {request.trial_days} days trial
                           </div>
