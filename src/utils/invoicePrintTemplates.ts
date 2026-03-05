@@ -2176,15 +2176,19 @@ td{font-size:11px;}
 
 
 
-.balance{margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#111;}
+.balance{margin-top:4px;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900;font-size:14px;color:#fff !important;background:${BLUE} !important;border:2px solid ${BLUE};border-radius:6px;padding:10px 12px;}
 
 
 
-.balanceBox{flex:1;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+.balanceBox{display:flex;justify-content:flex-end;align-items:center;gap:10px;min-width:130px;background:transparent !important;border:none;padding:0;min-height:auto;}
 
 
 
-.balanceBox .curr{font-weight:900;}
+.balanceLabel{color:#fff !important;font-weight:900;}
+
+
+
+.balanceBox .curr{font-weight:900;color:#fff !important;}
 
 
 
@@ -2586,11 +2590,11 @@ td{font-size:11px;}
 
 
 
-            <div>Balance Due</div>
+            <div class="balanceLabel">Balance Due</div>
 
 
 
-            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
+            <div class="balanceBox"><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
 
 
 
@@ -3044,7 +3048,7 @@ td{font-size:11px;}
 
 
 
-.balanceBox{flex:1;background:#dbeafe;border:1px solid #93c5fd;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;min-height:44px;}
+.balanceBox{flex:1;background:#dbeafe;border:1px solid #93c5fd;padding:10px 12px;display:flex;justify-content:flex-end;align-items:center;min-height:44px;}
 
 
 
@@ -3412,7 +3416,7 @@ td{font-size:11px;}
 
 
 
-            <div class="balanceBox"><div class="curr">$</div><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
+            <div class="balanceBox"><div class="amt">${formatAmount(balanceDueAmount)}</div></div>
 
 
 
