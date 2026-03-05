@@ -441,9 +441,28 @@ export default function PlansPage() {
           )}
           <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
           {billingPeriod === 'monthly' ? (
-            <div className="flex items-baseline justify-center mb-2">
-              <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}{getPeriodLabel()}</span>
-            </div>
+            <>
+              <div className="flex items-baseline justify-center mb-2">
+                <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}{getPeriodLabel()}</span>
+              </div>
+              {(plan.id === 'student' || plan.id === 'student-biennial') && (
+                <>
+                  <div className="mt-1 mb-2 flex items-center justify-center gap-3">
+                    <div className="h-px w-24 bg-white/45" />
+                    <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/35 shadow-[0_0_18px_rgba(255,255,255,0.25)]">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M12 2l1.1 4.2L17 7.3l-3.9 1.1L12 12l-1.1-3.6L7 7.3l3.9-1.1L12 2Z" fill="currentColor" />
+                        <path d="M19 12l.7 2.6 2.3.7-2.3.7L19 19l-.7-2.6-2.3-.7 2.3-.7L19 12Z" fill="currentColor" opacity="0.9" />
+                      </svg>
+                    </div>
+                    <div className="h-px w-24 bg-white/45" />
+                  </div>
+                  <div className="text-[17px] font-extrabold tracking-wide">
+                    {plan.tagline || ''}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <div className="mb-2">
               <div className="flex items-baseline justify-center">
