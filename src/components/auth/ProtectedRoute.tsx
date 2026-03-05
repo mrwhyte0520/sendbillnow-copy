@@ -63,6 +63,7 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   const navigate = useNavigate();
   const [allowed, setAllowed] = useState<Set<string> | null>(null);
   const [userStatus, setUserStatus] = useState<string | null>(null);
+  const [hasAdminRole, setHasAdminRole] = useState(false);
   const [isHtcPortalOnly, setIsHtcPortalOnly] = useState(() => {
     try {
       return localStorage.getItem('htc_portal_only') === '1';
@@ -87,11 +88,87 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
       if (!user?.id) {
         setAllowed(new Set());
         setUserStatus(null);
+        setHasAdminRole(false);
         setIsLoading(false);
         return;
       }
 
-      const isAdminRoute = window.location.pathname.startsWith('/admin');
+      try {
+        const isAdminRoute = window.location.pathname.startsWith('/admin');
+
+      // Definitive Admin check (server-side, service role) for /admin routes.
+      // This avoids client-side RLS issues on user_roles/roles.
+      if (isAdminRoute) {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token || '';
+          if (token) {
+            const host = String(window.location.hostname || '').toLowerCase();
+            const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+            let apiBase = (import.meta as any)?.env?.VITE_API_BASE_URL?.trim() || '';
+            // If a production build accidentally has a localhost API base configured,
+            // ignore it and use same-origin so /api/* resolves correctly.
+            if (!isLocalHost && apiBase && apiBase.includes('localhost')) {
+              apiBase = '';
+            }
+            const controller = new AbortController();
+            const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+            const resp = await fetch(`${apiBase}/api/admin/verify`, {
+              method: 'GET',
+              headers: {
+                authorization: `Bearer ${token}`,
+              },
+              signal: controller.signal,
+            }).finally(() => window.clearTimeout(timeoutId));
+
+            if (resp.ok) {
+              const json = await resp.json().catch(() => null);
+              if (json && json.success) {
+                const status = String(json.status || 'active');
+                const isAdmin = Boolean(json.isAdmin);
+                setUserStatus(status);
+                setHasAdminRole(isAdmin);
+                if (status === 'inactive') {
+                  alert('Tu cuenta ha sido desactivada. Contacta al administrador.');
+                  try {
+                    await signOut();
+                  } finally {
+                    setAllowed(new Set());
+                    setIsLoading(false);
+                    navigate('/login', { replace: true });
+                  }
+                  return;
+                }
+
+                if (isAdmin) {
+                  setAllowed(new Set(['admin']));
+                  setIsLoading(false);
+                  return;
+                }
+              }
+            }
+          }
+        } catch {
+          // ignore and fallback to client checks
+        }
+      }
+
+      // Determine admin role directly (avoid tenant-scoped role_permissions issues)
+      let adminRole = false;
+      try {
+        const candidates = [user.id, user.email].filter(Boolean) as string[];
+        if (candidates.length > 0) {
+          const { data: roleRows, error: roleErr } = await supabase
+            .from('user_roles')
+            .select('id, roles!inner(name)')
+            .in('user_id', candidates);
+
+          adminRole = !roleErr && Array.isArray(roleRows) && roleRows.some((r: any) => String(r?.roles?.name || '').toLowerCase() === 'admin');
+        }
+      } catch {
+        adminRole = false;
+      }
+      // Note: we may also infer admin from public.users.role (fallback) below.
 
       // Verificar status del usuario
       try {
@@ -134,6 +211,8 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         setUserStatus(status);
         const resolvedHtc = Boolean((userData as any)?.htc_portal_only) || metaFlag;
         setIsHtcPortalOnly(resolvedHtc);
+
+        setHasAdminRole(adminRole);
         try {
           if (resolvedHtc) localStorage.setItem('htc_portal_only', '1');
           else localStorage.removeItem('htc_portal_only');
@@ -144,13 +223,20 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         // Si el usuario está inactivo, bloquear acceso
         if (status === 'inactive') {
           alert('Tu cuenta ha sido desactivada. Contacta al administrador.');
-          await signOut();
+          try {
+            await signOut();
+          } finally {
+            setAllowed(new Set());
+            setIsLoading(false);
+            navigate('/login', { replace: true });
+          }
           return;
         }
       } catch (error) {
         console.error('Error verificando status del usuario:', error);
         // Fail-open: do not block navigation for transient read errors
         setUserStatus('active');
+        setHasAdminRole(adminRole);
         try {
           const { data: authData, error: authErr } = await supabase.auth.getUser();
           const resolvedHtc = !authErr && Boolean((authData as any)?.user?.user_metadata?.htc_portal_only);
@@ -206,9 +292,25 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
         return;
       }
 
-      const modules = await fetchAllowedModules(user.id, user.email, tenantIdResolved);
-      setAllowed(modules);
-      setIsLoading(false);
+      // Admin routes: if user has admin role, allow regardless of plan/tenant RBAC resolution
+      if (isAdminRoute && adminRole) {
+        setAllowed(new Set(['admin']));
+        setIsLoading(false);
+        return;
+      }
+
+        const modules = await fetchAllowedModules(user.id, user.email, tenantIdResolved);
+        setAllowed(modules);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('ProtectedRoute checkAccess failed:', err);
+        setAllowed(new Set());
+        setUserStatus('active');
+        setHasAdminRole(false);
+        setIsLoading(false);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     checkAccess();
@@ -216,7 +318,13 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   }, [user?.id]);
 
   // Wait for access check to complete before making decisions
-  if (isLoading || allowed === null || userStatus === null) return null;
+  if (isLoading || allowed === null || userStatus === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-gray-700">Loading...</div>
+      </div>
+    );
+  }
 
   // Si el usuario está inactivo, no renderizar nada (ya se hizo signOut arriba)
   if (userStatus === 'inactive') return null;
@@ -225,6 +333,9 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
   const currentPath = location.pathname;
   const isAdminRoute = currentPath.startsWith('/admin');
   const isHtcRoute = currentPath.startsWith('/htc');
+
+  // Admin routes: do not enforce plan rules; admin is role-gated
+  if (isAdminRoute && hasAdminRole) return children;
 
   if (isHtcPortalOnly && !isHtcRoute) {
     return <Navigate to="/htc/service-hours" replace />;

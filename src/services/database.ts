@@ -15781,26 +15781,35 @@ export const settingsService = {
 
       // 4) Check if user_roles entry exists
       const candidates = [targetUserId, targetEmail].filter(Boolean) as string[];
-      const { data: existing } = await supabase
+
+      // IMPORTANT:
+      // A user can end up with admin assigned under a different owner_user_id.
+      // The UI checks admin globally, but the old toggle only removed within current owner.
+      // So we remove ANY admin role entries for the user (by id or email), then re-add if needed.
+      const { data: existingAnyAdmin } = await supabase
         .from('user_roles')
-        .select('id,user_id')
-        .eq('owner_user_id', ownerId)
-        .eq('role_id', role.id)
+        .select('id, user_id, role_id, roles!inner(name)')
         .in('user_id', candidates);
 
-      if (existing && existing.length > 0) {
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('owner_user_id', ownerId)
-          .eq('role_id', role.id)
-          .in('user_id', candidates);
+      const adminRoleRows = (existingAnyAdmin || []).filter((r: any) => r.roles?.name === 'admin');
+
+      if (adminRoleRows.length > 0) {
+        const ids = adminRoleRows.map((r: any) => r.id).filter(Boolean);
+        if (ids.length > 0) {
+          const { error: delErr } = await supabase
+            .from('user_roles')
+            .delete()
+            .in('id', ids);
+          if (delErr) throw delErr;
+        }
         return { hasAdmin: false };
       }
 
-      await supabase
+      const { error: insErr } = await supabase
         .from('user_roles')
         .insert({ owner_user_id: ownerId, user_id: targetUserId, role_id: role.id });
+      if (insErr) throw insErr;
+
       return { hasAdmin: true };
     } catch (error) {
       console.error('Error toggling admin role:', error);

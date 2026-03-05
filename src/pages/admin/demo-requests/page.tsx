@@ -33,6 +33,27 @@ export default function AdminDemoRequestsPage() {
   const loadRequests = async () => {
     try {
       setLoading(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || '';
+
+      if (token) {
+        const apiBase = (import.meta as any)?.env?.VITE_API_BASE_URL?.trim() || '';
+        const resp = await fetch(`${apiBase}/api/admin/demo-requests`, {
+          method: 'GET',
+          headers: {
+            'authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (resp.ok) {
+          const json = await resp.json().catch(() => null);
+          if (json && json.success && Array.isArray(json.data)) {
+            setRequests(json.data);
+            return;
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('demo_requests')
         .select('*')

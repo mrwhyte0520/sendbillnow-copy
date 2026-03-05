@@ -104,7 +104,9 @@ export default async function handler(req, res) {
   const apiKeys = getWebnotiApiKeys();
 
   if (!baseUrl || apiKeys.length === 0) {
-    return res.status(500).json({ ok: false, error: 'Missing WEBNOTI_BASE_URL or WEBNOTI_API_KEYS/WEBNOTI_API_KEY' });
+    // WebNotiCenter integration is optional (especially in local/dev).
+    // Do not fail login flows just because notification config is missing.
+    return res.status(204).end();
   }
 
   const body = await readJsonBody(req);

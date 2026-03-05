@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 
 import demoRequestHandler from './api/demo-request.js';
 import approveDemoHandler from './api/approve-demo.js';
+import adminDemoRequestsHandler from './api/admin-demo-requests.js';
+import adminVerifyHandler from './api/admin-verify.js';
 import webnotiEventHandler from './api/webnoti/event.js';
 import createCheckoutSessionHandler from './api/create-checkout-session.js';
 import getCheckoutSessionHandler from './api/get-checkout-session.js';
@@ -93,6 +95,8 @@ app.use('/api', (req, res, next) => {
 // API routes (same signatures as Vercel handlers)
 app.all('/api/demo-request', (req, res) => demoRequestHandler(req, res));
 app.all('/api/approve-demo', (req, res) => approveDemoHandler(req, res));
+app.all('/api/admin/demo-requests', (req, res) => adminDemoRequestsHandler(req, res));
+app.all('/api/admin/verify', (req, res) => adminVerifyHandler(req, res));
 app.all('/api/webnoti/event', (req, res) => webnotiEventHandler(req, res));
 app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandler(req, res));
 app.all('/api/get-checkout-session', (req, res) => getCheckoutSessionHandler(req, res));
