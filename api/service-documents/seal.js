@@ -552,7 +552,7 @@ export default async function handler(req, res) {
   // Compute box height dynamically
   const logo = String(doc.company_logo || '').trim();
   const hasLogo = Boolean(logo);
-  const logoSquare = 36; // small square for logo
+  const logoSquare = 44; // small square for logo
 
   // Company address formatting (street on one line, city/state/zip on the next)
   const rawCompanyAddr = String(companyAddressForPdf || '').replace(/\r\n/g, '\n');
@@ -584,9 +584,6 @@ export default async function handler(req, res) {
 
   pdf.setFillColor(255, 255, 255);
   pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'F');
-  pdf.setDrawColor(64, 99, 198);
-  pdf.setLineWidth(0.6);
-  pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'S');
 
   const centerX = companyBoxX + companyBoxW / 2;
   let companyTextY = companyBoxY + 14;
@@ -604,12 +601,12 @@ export default async function handler(req, res) {
 
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
+  pdf.setFontSize(13);
   pdf.setTextColor(0, 27, 158);
   pdf.text(companyLines[0], centerX, companyTextY, { align: 'center' });
   pdf.setTextColor(0, 0, 0);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
+  pdf.setFontSize(9);
   let cY = companyTextY + 12;
   for (let ci = 1; ci < companyLines.length; ci++) {
     pdf.text(companyLines[ci], centerX, cY, { align: 'center' });
@@ -956,12 +953,7 @@ export default async function handler(req, res) {
   const footerH = thanksH + poweredH;
   const footerY = pageHeight - 26 - footerH;
 
-  // Thanks / social links panel (white background, black text)
-  pdf.setFillColor(255, 255, 255);
-  pdf.rect(marginX, footerY, contentW, thanksH, 'F');
-  pdf.setDrawColor(226, 232, 240);
-  pdf.setLineWidth(1);
-  pdf.rect(marginX, footerY, contentW, thanksH, 'S');
+  // Thanks / social links panel (blend into page background; no box/border)
 
   pdf.setTextColor(15, 23, 42);
   pdf.setFont('helvetica', 'bold');
