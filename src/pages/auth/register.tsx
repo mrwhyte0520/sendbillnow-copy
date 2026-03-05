@@ -92,7 +92,8 @@ export default function Register() {
     try {
       const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
       const refCode = localStorage.getItem('ref_code') || undefined;
-      const billingPeriod = localStorage.getItem('selected_billing') === 'annual' ? 'annual' : 'monthly';
+      const rawBilling = String(localStorage.getItem('selected_billing') || '').trim();
+      const billingPeriod = rawBilling === 'annual' ? 'annual' : rawBilling === 'biennial' ? 'biennial' : 'monthly';
 
       const resp = await fetch(`${apiBase}/api/create-checkout-session`, {
         method: 'POST',
@@ -225,7 +226,7 @@ export default function Register() {
               if (!resp.ok || !out?.ok) {
                 const code = String(out?.code || '');
                 if (code === 'DEVICE_ALREADY_CLAIMED') {
-                  setError('This device has already used the 7-day free trial. Please subscribe to continue.');
+                  setError('This device has already used the 15-day free trial. Please subscribe to continue.');
                 } else {
                   setError(out?.error || 'Could not activate free trial. Please try again or subscribe.');
                 }

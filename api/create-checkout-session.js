@@ -54,6 +54,10 @@ const PLAN_PRICES_ANNUAL = {
   student: 8500,
 };
 
+const PLAN_PRICES_BIENNIAL = {
+  student: 11999,
+};
+
 const PLAN_NAMES = {
   pyme: 'PYME',
   pro: 'PRO',
@@ -62,7 +66,7 @@ const PLAN_NAMES = {
   'facturacion-premium': 'Facturación Premium',
   'pos-basic': 'POS Basic',
   'pos-premium': 'POS Premium',
-  student: 'Contractor Plan',
+  student: 'Contractor Subscription Plan',
 };
 
 function normalizePlanIdForEnv(planId) {
@@ -102,7 +106,7 @@ export default async function handler(req, res) {
   }
 
   const planId = typeof body.planId === 'string' ? body.planId.trim() : '';
-  const billingPeriod = body.billingPeriod === 'annual' ? 'annual' : 'monthly';
+  const billingPeriod = body.billingPeriod === 'annual' ? 'annual' : body.billingPeriod === 'biennial' ? 'biennial' : 'monthly';
   const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
   const userEmail = typeof body.userEmail === 'string' ? body.userEmail.trim() : '';
   const refCode = typeof body.refCode === 'string' ? body.refCode.trim() : '';
@@ -111,8 +115,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'Missing planId' });
   }
 
-  if (planId === 'student' && billingPeriod !== 'annual') {
-    return res.status(400).json({ ok: false, error: 'Student plan is annual-only' });
+  if (planId === 'student' && billingPeriod !== 'annual' && billingPeriod !== 'biennial') {
+    return res.status(400).json({ ok: false, error: 'Student plan is annual-only or biennial' });
   }
 
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -122,6 +126,8 @@ export default async function handler(req, res) {
 
   const unitAmount = billingPeriod === 'annual'
     ? PLAN_PRICES_ANNUAL[planId]
+    : billingPeriod === 'biennial'
+    ? PLAN_PRICES_BIENNIAL[planId]
     : PLAN_PRICES_MONTHLY[planId];
 
   if (!unitAmount) {
@@ -137,7 +143,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ ok: false, error: 'Could not determine PUBLIC_BASE_URL' });
     }
 
-    const interval = billingPeriod === 'annual' ? 'year' : 'month';
+    const interval = billingPeriod === 'annual' || billingPeriod === 'biennial' ? 'year' : 'month';
+    const intervalCount = billingPeriod === 'biennial' ? 2 : 1;
     const priceId = getStripePriceId(planId, billingPeriod);
 
     const subscriptionMetadata = {
@@ -160,7 +167,7 @@ export default async function handler(req, res) {
               price_data: {
                 currency: 'usd',
                 unit_amount: unitAmount,
-                recurring: { interval },
+                recurring: { interval, interval_count: intervalCount },
                 product_data: { name: `Sendbillnow - ${planName}` },
               },
             },

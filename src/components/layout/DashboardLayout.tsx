@@ -1393,7 +1393,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
             <div className="p-8">
               <div className="text-center mb-6">
                 <p className="text-gray-700 mb-4">
-                  Your free trial period of <span className="font-bold">7 days</span> has ended.
+                  Your free trial period of <span className="font-bold">15 days</span> has ended.
                 </p>
                 <p className="text-gray-600 mb-6">
                   To continue using Send Bill Now, you need to select a payment plan.

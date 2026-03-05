@@ -25,7 +25,7 @@ interface UserRow {
 const AVAILABLE_PLANS = [
   { id: 'pos-basic', name: 'Basic Plan', price: '$99.99/monthly' },
   { id: 'pos-premium', name: 'Premium Plan', price: '$399.99/monthly' },
-  { id: 'student', name: 'Contractor Plan', price: '$85.00/yearly' },
+  { id: 'student', name: 'Contractor Subscription Plan', price: '$85.00/yearly' },
 ];
 
 export default function AdminDashboardPage() {

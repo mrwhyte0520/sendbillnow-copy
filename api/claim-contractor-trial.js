@@ -75,7 +75,7 @@ export default async function handler(req, res) {
   const userEmail = normalizeEmail(body.userEmail);
   const deviceId = normalizeDeviceId(body.deviceId);
   const planId = 'student';
-  const days = 7;
+  const days = 15;
 
   if (!deviceId) {
     return res.status(400).json({ ok: false, error: 'Missing or invalid deviceId' });

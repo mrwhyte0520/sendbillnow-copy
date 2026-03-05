@@ -91,10 +91,10 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
             <i className="ri-gift-line text-4xl text-white"></i>
           </div>
           <h2 className="text-3xl font-bold text-white mb-2">Welcome to Sendbillnow!</h2>
-          <p className="text-blue-100 text-lg">Select your plan and start your 7-day free trial</p>
+          <p className="text-blue-100 text-lg">Select your plan and start your 15-day free trial</p>
           <div className="mt-4 inline-flex items-center bg-white/20 rounded-full px-4 py-2">
             <i className="ri-timer-line text-white mr-2"></i>
-            <span className="text-white font-semibold">7 days free • No credit card</span>
+            <span className="text-white font-semibold">15 days free • No credit card</span>
           </div>
         </div>
 
@@ -149,7 +149,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
               <div>
                 <h4 className="font-semibold text-amber-900 mb-1">Important</h4>
                 <p className="text-sm text-amber-800">
-                  • After 7 days, you'll need to select a paid plan to continue using the system.
+                  • After 15 days, you'll need to select a paid plan to continue using the system.
                 </p>
                 <p className="text-sm text-amber-800">
                   • You can only use the trial period once per account.
@@ -168,7 +168,7 @@ export default function InitialPlanSelectionModal({ onPlanSelected }: InitialPla
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             <i className="ri-rocket-line mr-2 text-2xl"></i>
-            {selectedPlan ? 'Start my 7-day trial' : 'Select a plan to continue'}
+            {selectedPlan ? 'Start my 15-day trial' : 'Select a plan to continue'}
           </button>
         </div>
       </div>

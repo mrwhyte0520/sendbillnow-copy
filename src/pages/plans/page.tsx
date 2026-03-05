@@ -8,8 +8,11 @@ import { referralsService } from '../../services/database';
 interface Plan {
   id: string;
   name: string;
+  tagline?: string;
   priceMonthly: number;
   priceAnnual: number;
+  priceBiennial?: number;
+  billingPeriodOverride?: 'annual' | 'biennial';
   description: string;
   features: string[];
   popular: boolean;
@@ -22,6 +25,7 @@ export default function PlansPage() {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState<string>('');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [contractorBillingPeriod, setContractorBillingPeriod] = useState<'annual' | 'biennial'>('annual');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successPlanName, setSuccessPlanName] = useState('');
@@ -40,9 +44,35 @@ export default function PlansPage() {
   const plans: Plan[] = [
     {
       id: 'student',
-      name: 'Contractor Plan',
+      name: 'Contractor Subscription Plan',
+      tagline: 'The Perfect Resource for a Contractor!',
       priceMonthly: 0,
       priceAnnual: 85.0,
+      priceBiennial: 119.99,
+      billingPeriodOverride: 'annual',
+      description: 'Annual plan for students with limited module access',
+      features: [
+        'Dashboard access',
+        'Create invoices',
+        'Customers (AR) module',
+        'Suppliers (AP) module',
+        'Products & Inventory',
+        'Inventory reports',
+        'Settings access',
+      ],
+      popular: false,
+      color: 'from-[#001B9E] to-[#001B9E]',
+      icon: 'ri-graduation-cap-line',
+      category: 'contabilidad'
+    },
+    {
+      id: 'student-biennial',
+      name: 'Contractor Subscription Plan',
+      tagline: 'The Perfect Resource for a Contractor!',
+      priceMonthly: 0,
+      priceAnnual: 119.99,
+      priceBiennial: 119.99,
+      billingPeriodOverride: 'biennial',
       description: 'Annual plan for students with limited module access',
       features: [
         'Dashboard access',
@@ -107,14 +137,22 @@ export default function PlansPage() {
       return;
     }
 
-    if (planId === 'student' && billingPeriod !== 'annual') {
+    if ((planId === 'student' || planId === 'student-biennial') && billingPeriod !== 'annual') {
       return;
+    }
+
+    if (planId === 'student-biennial') {
+      setContractorBillingPeriod('biennial');
+    } else if (planId === 'student') {
+      setContractorBillingPeriod('annual');
     }
 
     if (!user?.id) {
       try {
-        localStorage.setItem('selected_plan', planId);
-        localStorage.setItem('selected_billing', planId === 'student' ? 'annual' : billingPeriod);
+        const normalizedPlanId = planId === 'student-biennial' ? 'student' : planId;
+        const normalizedBilling = planId === 'student-biennial' ? 'biennial' : planId === 'student' ? 'annual' : billingPeriod;
+        localStorage.setItem('selected_plan', normalizedPlanId);
+        localStorage.setItem('selected_billing', normalizedBilling);
       } catch {}
       navigate(`/auth/register?plan=${encodeURIComponent(planId)}`);
       return;
@@ -138,8 +176,8 @@ export default function PlansPage() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          planId: selectedPlanData.id,
-          billingPeriod,
+          planId: selectedPlanData.id === 'student-biennial' ? 'student' : selectedPlanData.id,
+          billingPeriod: selectedPlanData.id === 'student-biennial' ? 'biennial' : selectedPlanData.id === 'student' ? 'annual' : billingPeriod,
           userId: user.id,
           userEmail: user.email,
         }),
@@ -236,11 +274,34 @@ export default function PlansPage() {
   }, [user?.id]);
 
   const getPrice = (plan: Plan) => {
-    return billingPeriod === 'monthly' ? plan.priceMonthly : plan.priceAnnual;
+    if (billingPeriod === 'monthly') return plan.priceMonthly;
+    return plan.priceAnnual;
   };
 
   const getPeriodLabel = () => {
-    return billingPeriod === 'monthly' ? '/monthly' : '/yearly';
+    if (billingPeriod === 'monthly') return '/monthly';
+    return '/yearly';
+  };
+
+  const getContractorLabel = (plan: Plan) => {
+    if (plan.billingPeriodOverride === 'biennial') return 'every two years';
+    return 'yearly';
+  };
+
+  const getContractorOriginalPrice = (plan: Plan) => {
+    if (plan.billingPeriodOverride === 'biennial') {
+      const base = plan.priceBiennial ?? plan.priceAnnual;
+      return base / 0.7;
+    }
+    return plan.priceAnnual / 0.7;
+  };
+
+  const getContractorSavings = (plan: Plan) => {
+    const original = getContractorOriginalPrice(plan);
+    const base = plan.billingPeriodOverride === 'biennial'
+      ? (plan.priceBiennial ?? plan.priceAnnual)
+      : plan.priceAnnual;
+    return original - base;
   };
 
   const getSavingsPercent = (plan: Plan) => {
@@ -386,13 +447,15 @@ export default function PlansPage() {
           ) : (
             <div className="mb-2">
               <div className="text-sm line-through opacity-60 mb-1">
-                ${formatMoney(plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12))}/yearly
+                ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getContractorOriginalPrice(plan) : (plan.priceMonthly * 12))}/{(plan.id === 'student' || plan.id === 'student-biennial') ? getContractorLabel(plan) : 'yearly'}
               </div>
               <div className="flex items-baseline justify-center">
-                <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
+                <span className="text-3xl font-bold">
+                  ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getPrice(plan) : plan.priceAnnual)}/{(plan.id === 'student' || plan.id === 'student-biennial') ? getContractorLabel(plan) : 'yearly'}
+                </span>
               </div>
               <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                30% OFF - Save ${formatMoney((plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12)) - plan.priceAnnual)}
+                30% OFF - Save ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getContractorSavings(plan) : ((plan.priceMonthly * 12) - plan.priceAnnual))}
               </div>
             </div>
           )}
@@ -400,7 +463,9 @@ export default function PlansPage() {
       </div>
 
       <div className="p-6">
-        <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
+        <p className="text-gray-600 text-sm mb-4 text-center">
+          {(plan.id === 'student' || plan.id === 'student-biennial') ? (plan.tagline || '') : plan.description}
+        </p>
 
         <div className="max-h-64 overflow-y-auto mb-4">
           <ul className="space-y-2">
@@ -415,20 +480,20 @@ export default function PlansPage() {
 
         <button
           onClick={() => handleSelectPlan(plan.id)}
-          disabled={!canSelectPlan() || (plan.id === 'student' && billingPeriod === 'monthly')}
+          disabled={!canSelectPlan() || ((plan.id === 'student' || plan.id === 'student-biennial') && billingPeriod === 'monthly')}
           className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${
-            !canSelectPlan() || (plan.id === 'student' && billingPeriod === 'monthly')
+            !canSelectPlan() || ((plan.id === 'student' || plan.id === 'student-biennial') && billingPeriod === 'monthly')
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : plan.popular
               ? 'bg-gradient-to-r from-[#7A5CA8] to-[#5E3E88] text-white hover:from-[#694B99] hover:to-[#4B316E]'
-              : plan.id === 'student'
+              : plan.id === 'student' || plan.id === 'student-biennial'
               ? 'bg-gradient-to-r from-[#001B9E] to-[#001B9E] text-white hover:from-[#00157A] hover:to-[#00157A]'
               : 'bg-gradient-to-r from-[#566738] to-[#3E4D2C] text-white hover:from-[#455532] hover:to-[#2F3C21]'
           }`}
         >
           {!canSelectPlan()
             ? 'Payment Required'
-            : plan.id === 'student' && billingPeriod === 'monthly'
+            : (plan.id === 'student' || plan.id === 'student-biennial') && billingPeriod === 'monthly'
             ? 'Annual Only'
             : currentPlan?.active
             ? 'Change Plan'
@@ -448,7 +513,7 @@ export default function PlansPage() {
               }}
               className="inline-block pointer-events-auto text-[#001B9E] font-semibold text-sm underline underline-offset-4 hover:text-[#00157A] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#001B9E]/40 focus-visible:ring-offset-2 rounded"
             >
-              TRY IT FREE FOR 7 DAYS!
+              TRY IT FREE FOR 15 DAYS!
             </Link>
           </div>
         )}
@@ -671,7 +736,7 @@ export default function PlansPage() {
                   )}
                   <h4 className="text-lg font-bold">{selectedPlanData.name}</h4>
                   <div className="text-2xl font-bold">
-                    ${formatMoney(getPrice(selectedPlanData))}{getPeriodLabel()}
+                    ${formatMoney(getPrice(selectedPlanData))}{selectedPlanData.id === 'student' && contractorBillingPeriod === 'biennial' ? '/every two years' : getPeriodLabel()}
                   </div>
                   {billingPeriod === 'annual' && getSavingsPercent(selectedPlanData) > 0 && (
                     <div className="text-sm mt-1 bg-white/20 px-3 py-1 rounded-full inline-block">

@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { referralsService } from '../../services/database';
 
@@ -30,7 +30,6 @@ function useInViewOnce<T extends HTMLElement>(options?: IntersectionObserverInit
 
 export default function HomePage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const heroImageRef = useRef<HTMLDivElement | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [heroTilt, setHeroTilt] = useState({ rotateX: 0, rotateY: 0 });
@@ -109,6 +108,7 @@ export default function HomePage() {
   ];
 
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
+  const [contractorBillingPeriod, setContractorBillingPeriod] = useState<'annual' | 'biennial'>('annual');
   const [isRedirectingToStripe, setIsRedirectingToStripe] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
@@ -153,9 +153,11 @@ export default function HomePage() {
     },
     {
       id: 'student',
-      name: 'Contractor Plan',
+      name: 'Contractor Subscription Plan',
+      tagline: 'The Perfect Resource for a Contractor!',
       priceMonthly: 85.0,
       priceAnnual: 85.0,
+      priceBiennial: 119.99,
       description: 'Designed for contractors and service providers that need invoicing, AR/AP, and inventory tools.',
       features: [
         'Dashboard access',
@@ -178,7 +180,7 @@ export default function HomePage() {
   const startStripeCheckout = async (planId: string) => {
     setSelectedPlanId(planId);
     setIsRedirectingToStripe(true);
-    const resolvedBillingPeriod = planId === 'student' ? 'annual' : billingPeriod;
+    const resolvedBillingPeriod = planId === 'student' ? contractorBillingPeriod : billingPeriod;
     let refCode = '';
     try {
       localStorage.setItem('selected_plan', planId);
@@ -594,49 +596,70 @@ export default function HomePage() {
                     <i className="ri-store-2-line text-4xl mb-3"></i>
                   )}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  {billingPeriod === 'monthly' ? (
-                    plan.id === 'student' ? (
-                      <div>
-                        <div className="text-sm line-through opacity-60 mb-1">
-                          ${formatMoney(plan.priceAnnual / 0.7)}/yearly
-                        </div>
-                        <div className="flex items-baseline justify-center">
-                          <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
-                        </div>
-                        <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                          Annual Only
-                        </div>
-                        <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                          30% OFF - Save ${formatMoney((plan.priceAnnual / 0.7) - plan.priceAnnual)}
-                        </div>
+                  {plan.id === 'student' ? (
+                    <div>
+                      <div className="text-sm line-through opacity-60 mb-1">
+                        ${formatMoney(((contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual) / 0.7))}/{contractorBillingPeriod === 'biennial' ? 'every two years' : 'yearly'}
                       </div>
-                    ) : (
                       <div className="flex items-baseline justify-center">
-                        <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
+                        <span className="text-3xl font-bold">
+                          ${formatMoney(contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual)}/{contractorBillingPeriod === 'biennial' ? 'every two years' : 'yearly'}
+                        </span>
                       </div>
-                    )
+                      <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                        Annual Only
+                      </div>
+                      <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                        30% OFF - Save ${formatMoney((((contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual) / 0.7) - (contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual)))}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setContractorBillingPeriod('annual')}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            contractorBillingPeriod === 'annual'
+                              ? 'bg-white text-[#001B9E]'
+                              : 'bg-white/15 text-white hover:bg-white/25'
+                          }`}
+                        >
+                          $85.00 yearly
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setContractorBillingPeriod('biennial')}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            contractorBillingPeriod === 'biennial'
+                              ? 'bg-white text-[#001B9E]'
+                              : 'bg-white/15 text-white hover:bg-white/25'
+                          }`}
+                        >
+                          $119.99 every two years
+                        </button>
+                      </div>
+                    </div>
+                  ) : billingPeriod === 'monthly' ? (
+                    <div className="flex items-baseline justify-center">
+                      <span className="text-3xl font-bold">${formatMoney(plan.priceMonthly)}/monthly</span>
+                    </div>
                   ) : (
                     <div>
                       <div className="text-sm line-through opacity-60 mb-1">
-                        ${formatMoney(plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12))}/yearly
+                        ${formatMoney(plan.priceMonthly * 12)}/yearly
                       </div>
                       <div className="flex items-baseline justify-center">
                         <span className="text-3xl font-bold">${formatMoney(plan.priceAnnual)}/yearly</span>
                       </div>
-                      {plan.id === 'student' && (
-                        <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                          Annual Only
-                        </div>
-                      )}
                       <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                        30% OFF - Save ${formatMoney((plan.id === 'student' ? (plan.priceAnnual / 0.7) : (plan.priceMonthly * 12)) - plan.priceAnnual)}
+                        30% OFF - Save ${formatMoney((plan.priceMonthly * 12) - plan.priceAnnual)}
                       </div>
                     </div>
                   )}
                 </div>
 
                 <div className="p-6">
-                  <p className="text-gray-600 text-sm mb-4 text-center">{plan.description}</p>
+                  <p className="text-gray-600 text-sm mb-4 text-center">
+                    {plan.id === 'student' ? String((plan as any).tagline || '') : plan.description}
+                  </p>
                   <div className="max-h-64 overflow-y-auto mb-6">
                     <ul className="space-y-3">
                       {plan.features.map((feature, featureIndex) => (
@@ -680,7 +703,7 @@ export default function HomePage() {
                         }}
                         className="inline-block pointer-events-auto text-[#001B9E] font-semibold text-sm underline underline-offset-4 hover:text-[#00157A] transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#001B9E]/40 focus-visible:ring-offset-2 rounded"
                       >
-                        TRY IT FREE FOR 7 DAYS!
+                        TRY IT FREE FOR 15 DAYS!
                       </Link>
                     </div>
                   )}
