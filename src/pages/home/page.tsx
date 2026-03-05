@@ -598,19 +598,13 @@ export default function HomePage() {
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   {plan.id === 'student' ? (
                     <div>
-                      <div className="text-sm line-through opacity-60 mb-1">
-                        ${formatMoney(((contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual) / 0.7))}/{contractorBillingPeriod === 'biennial' ? 'every two years' : 'yearly'}
-                      </div>
                       <div className="flex items-baseline justify-center">
                         <span className="text-3xl font-bold">
                           ${formatMoney(contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual)}/{contractorBillingPeriod === 'biennial' ? 'every two years' : 'yearly'}
                         </span>
                       </div>
-                      <div className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                        Annual Only
-                      </div>
-                      <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                        30% OFF - Save ${formatMoney((((contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual) / 0.7) - (contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual)))}
+                      <div className="mt-3 text-[17px] font-extrabold tracking-wide">
+                        {String((plan as any).tagline || '')}
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                         <button
@@ -658,7 +652,7 @@ export default function HomePage() {
 
                 <div className="p-6">
                   <p className="text-gray-600 text-sm mb-4 text-center">
-                    {plan.id === 'student' ? String((plan as any).tagline || '') : plan.description}
+                    {plan.id === 'student' ? '' : plan.description}
                   </p>
                   <div className="max-h-64 overflow-y-auto mb-6">
                     <ul className="space-y-3">

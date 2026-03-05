@@ -1452,6 +1452,18 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
+.totals .grandTotalBox{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-top:6px;border:2px solid ${BLUE};border-radius:6px;padding:6px 10px;background:${BLUE} !important;}
+
+
+
+.totals .grandTotalBox .label{font-weight:900;color:#fff !important;}
+
+
+
+.totals .grandTotalBox .value{color:#16a34a;font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;}
+
+
+
 .totals .row span:last-child{font-variant-numeric:tabular-nums;}
 
 
@@ -1460,11 +1472,11 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-.footerBottom{position:absolute;left:10px;right:10px;bottom:0;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,0.08);border-radius:12px;overflow:hidden;}
+.footerBottom{position:absolute;left:10px;right:10px;bottom:0;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:transparent;box-shadow:none;}
 
 
 
-.footerThanks{background:#fff;color:#0f172a;text-align:center;padding:16px 14px;border:1px solid #e2e8f0;border-bottom:none;}
+.footerThanks{background:transparent;color:#0f172a;text-align:center;padding:16px 14px;border:none;}
 
 
 
@@ -1734,7 +1746,7 @@ tbody tr:nth-child(even){background:#f9fafb;}
 
 
 
-        <div class="row" style="font-weight:800;"><span>Grand Total:</span><span style="color:#16a34a;font-weight:900;">${formatAmount(invoice.amount)}</span></div>
+        <div class="grandTotalBox"><span class="label">Grand Total:</span><span class="value">${formatAmount(invoice.amount)}</span></div>
 
 
 
@@ -2210,7 +2222,7 @@ td{font-size:11px;}
 
 .footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
 
-.footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerMessage{background:transparent;color:#0f172a;border:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:none;}
 
 .footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
 
@@ -3048,7 +3060,7 @@ td{font-size:11px;}
 
 
 
-.footerLinksPanel{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:12px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerLinksPanel{background:transparent;color:#0f172a;border:none;padding:12px;border-radius:12px 12px 0 0;box-shadow:none;}
 
 
 
@@ -3694,11 +3706,11 @@ body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,
 
 
 
-.companyBox{width:300px;background:transparent !important;color:#111 !important;padding:16px 16px;font-size:11px;line-height:1.35;text-align:center;border:2px solid ${BLUE};}
+.companyBox{width:300px;background:transparent !important;color:#111 !important;padding:16px 16px;font-size:13px;line-height:1.45;text-align:center;border:none;}
 
 
 
-.companyBox .name{font-weight:900;font-size:14px;letter-spacing:0.4px;margin-bottom:6px;color:${BLUE};}
+.companyBox .name{font-weight:900;font-size:18px;letter-spacing:0.4px;margin-bottom:6px;color:${BLUE};}
 
 
 
@@ -3710,11 +3722,15 @@ body{font-family:Arial, sans-serif;background:linear-gradient(135deg,#ffffff 0%,
 
 
 
+.headerDivider{height:6px;background:${BLUE} !important;margin:18px 0 0 0;opacity:0.95;}
 
 
 
 
-.mid{display:grid;grid-template-columns:1fr 1fr 280px;gap:26px;margin-top:28px;font-size:12px;align-items:start;}
+
+
+
+.mid{display:grid;grid-template-columns:1fr 1fr 280px;gap:26px;margin-top:52px;font-size:12px;align-items:start;}
 
 
 
@@ -3844,7 +3860,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 .footer{margin-top:auto;padding:0 18px 18px 18px;text-align:center;font-size:10px;}
 
-.footerMessage{background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-bottom:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:0 -4px 18px rgba(15,23,42,0.08);}
+.footerMessage{background:transparent;color:#0f172a;border:none;padding:14px;border-radius:12px 12px 0 0;box-shadow:none;}
 
 .footerMessage .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
 
@@ -3940,11 +3956,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
       </div>
 
-
-
-
-
-
+      <div class="headerDivider"></div>
 
       <div class="mid">
 

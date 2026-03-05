@@ -392,7 +392,7 @@ export default function PlansPage() {
 
       <div className={`bg-gradient-to-r ${plan.color} p-6 text-white ${plan.popular ? 'pt-12' : ''}`}>
         <div className="text-center">
-          {plan.id === 'student' ? (
+          {plan.id === 'student' || plan.id === 'student-biennial' ? (
             <svg
               viewBox="0 0 64 64"
               className="w-10 h-10 mx-auto mb-3 text-white"
@@ -446,17 +446,21 @@ export default function PlansPage() {
             </div>
           ) : (
             <div className="mb-2">
-              <div className="text-sm line-through opacity-60 mb-1">
-                ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getContractorOriginalPrice(plan) : (plan.priceMonthly * 12))}/{(plan.id === 'student' || plan.id === 'student-biennial') ? getContractorLabel(plan) : 'yearly'}
-              </div>
               <div className="flex items-baseline justify-center">
                 <span className="text-3xl font-bold">
                   ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getPrice(plan) : plan.priceAnnual)}/{(plan.id === 'student' || plan.id === 'student-biennial') ? getContractorLabel(plan) : 'yearly'}
                 </span>
               </div>
-              <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
-                30% OFF - Save ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getContractorSavings(plan) : ((plan.priceMonthly * 12) - plan.priceAnnual))}
-              </div>
+              {(plan.id === 'student' || plan.id === 'student-biennial') && (
+                <div className="mt-3 text-[17px] font-extrabold tracking-wide">
+                  {plan.tagline || ''}
+                </div>
+              )}
+              {(plan.id === 'student' || plan.id === 'student-biennial') ? null : (
+                <div className="text-sm bg-white/20 px-3 py-1 rounded-full inline-block mt-2">
+                  30% OFF - Save ${formatMoney((plan.id === 'student' || plan.id === 'student-biennial') ? getContractorSavings(plan) : ((plan.priceMonthly * 12) - plan.priceAnnual))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -464,7 +468,7 @@ export default function PlansPage() {
 
       <div className="p-6">
         <p className="text-gray-600 text-sm mb-4 text-center">
-          {(plan.id === 'student' || plan.id === 'student-biennial') ? (plan.tagline || '') : plan.description}
+          {(plan.id === 'student' || plan.id === 'student-biennial') ? '' : plan.description}
         </p>
 
         <div className="max-h-64 overflow-y-auto mb-4">
