@@ -37,6 +37,28 @@ export default function UsersPage() {
   const { user } = useAuth();
   const { limits } = usePlanPermissions();
 
+  const formatMmDdYyyy = (raw: string) => {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 8);
+    const mm = digits.slice(0, 2);
+    const dd = digits.slice(2, 4);
+    const yyyy = digits.slice(4, 8);
+    let out = '';
+    if (mm) out += mm;
+    if (digits.length > 2) out += `/${dd}`;
+    if (digits.length > 4) out += `/${yyyy}`;
+    return out;
+  };
+
+  const formatPhoneHyphen = (raw: string) => {
+    const digits = String(raw || '').replace(/\D/g, '').slice(0, 10);
+    const a = digits.slice(0, 3);
+    const b = digits.slice(3, 6);
+    const c = digits.slice(6, 10);
+    if (digits.length <= 3) return a;
+    if (digits.length <= 6) return `${a}-${b}`;
+    return `${a}-${b}-${c}`;
+  };
+
   const [activeDepartment, setActiveDepartment] = useState<'roles' | 'employee' | 'jobs' | 'idcards'>('roles');
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -61,7 +83,9 @@ export default function UsersPage() {
   const [cardFullName, setCardFullName] = useState('');
   const [cardDepartment, setCardDepartment] = useState('');
   const [cardEmployeeId, setCardEmployeeId] = useState('');
-  const [cardBloodGroup, setCardBloodGroup] = useState('');
+  const [cardDob, setCardDob] = useState('');
+  const [cardIssueDate, setCardIssueDate] = useState('');
+  const [cardExpiresDate, setCardExpiresDate] = useState('');
   const [cardPhone, setCardPhone] = useState('');
   const [cardEmail, setCardEmail] = useState('');
   const [cardAddress, setCardAddress] = useState('');
@@ -670,7 +694,9 @@ export default function UsersPage() {
           fullName: cardFullName || null,
           department: cardDepartment || null,
           employeeId: cardEmployeeId || null,
-          bloodGroup: cardBloodGroup || null,
+          dob: cardDob || null,
+          issueDate: cardIssueDate || null,
+          expiresDate: cardExpiresDate || null,
           phone: cardPhone || null,
           email: cardEmail || null,
           address: cardAddress || null,
@@ -725,7 +751,9 @@ export default function UsersPage() {
     cardFullName,
     cardDepartment,
     cardEmployeeId,
-    cardBloodGroup,
+    cardDob,
+    cardIssueDate,
+    cardExpiresDate,
     cardPhone,
     cardEmail,
     cardAddress,
@@ -814,6 +842,16 @@ export default function UsersPage() {
     .contact-row { display: flex; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #e5e7eb; }
     .contact-label { font-weight: bold; color: #1e293b; width: 100px; font-size: 14px; }
     .contact-value { color: #475569; font-size: 14px; flex: 1; }
+    .contact-value.address-value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+    }
     .disclaimer { background: linear-gradient(135deg, #2563eb, #06b6d4); padding: 16px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 12px 30px rgba(37, 99, 235, 0.20); }
     .disclaimer-title { color: white; font-weight: bold; font-size: 16px; margin-bottom: 10px; text-transform: uppercase; }
     .disclaimer-text { color: white; font-size: 12px; line-height: 1.5; display: flex; align-items: start; gap: 10px; }
@@ -860,15 +898,13 @@ export default function UsersPage() {
             <div class="doctor-name">${safe(cardFullName)}</div>
             <div class="specialty">${safe(cardDepartment)}</div>
             <div class="info-table">
-              <div class="info-row"><div class="info-label">Department:</div><div class="info-value">${safe(cardDepartment)}</div></div>
+              <div class="info-row"><div class="info-label">DOB:</div><div class="info-value">${safe(cardDob)}</div></div>
               <div class="info-row"><div class="info-label">Employee ID:</div><div class="info-value">${safe(cardEmployeeId)}</div></div>
-              <div class="info-row"><div class="info-label">Blood Group:</div><div class="info-value">${safe(cardBloodGroup)}</div></div>
+              <div class="info-row"><div class="info-label">Issue:</div><div class="info-value">${safe(cardIssueDate)}</div></div>
             </div>
-            <div class="footer">
-              <div class="footer-text">${safe((companyName || 'company').toLowerCase().replace(/\s+/g, ''))}.com</div>
-              <div class="microtext">Issued ${safe(new Date().toISOString().slice(0, 10))}</div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:#1d4ed8;display:flex;align-items:center;padding:0 16px;color:#fff;font-weight:800;letter-spacing:0.8px;font-size:13px;text-transform:uppercase;">
+              <div style="margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">EXPIRES: ${safe(cardExpiresDate)}</div>
             </div>
-            <div class="qr-code">${qrHtml}</div>
             <div class="accent-strip"></div>
           </div>
         </div>
@@ -888,7 +924,7 @@ export default function UsersPage() {
             <div class="contact-info">
               <div class="contact-row"><div class="contact-label">Phone:</div><div class="contact-value">${safe(cardPhone)}</div></div>
               <div class="contact-row"><div class="contact-label">Email:</div><div class="contact-value">${safe(cardEmail)}</div></div>
-              <div class="contact-row"><div class="contact-label">Address:</div><div class="contact-value">${safe(cardAddress)}</div></div>
+              <div class="contact-row"><div class="contact-label">Address:</div><div class="contact-value address-value">${safe(cardAddress)}</div></div>
             </div>
             <div class="disclaimer">
               <div class="disclaimer-title">Disclaimer:</div>
@@ -1194,12 +1230,26 @@ export default function UsersPage() {
                       <input value={cardEmployeeId} onChange={(e) => setCardEmployeeId(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Blood group</label>
-                      <input value={cardBloodGroup} onChange={(e) => setCardBloodGroup(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">DOB</label>
+                      <input value={cardDob} onChange={(e) => setCardDob(formatMmDdYyyy(e.target.value))} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="MM/DD/YYYY" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Issue</label>
+                      <input value={cardIssueDate} onChange={(e) => setCardIssueDate(formatMmDdYyyy(e.target.value))} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="MM/DD/YYYY" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Expires</label>
+                      <input value={cardExpiresDate} onChange={(e) => setCardExpiresDate(formatMmDdYyyy(e.target.value))} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="MM/DD/YYYY" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                      <input value={cardPhone} onChange={(e) => setCardPhone(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                      <input
+                        value={cardPhone}
+                        onChange={(e) => setCardPhone(formatPhoneHyphen(e.target.value))}
+                        className="w-full p-2 border border-[#E2D6BD] rounded-lg"
+                        placeholder="Optional"
+                        maxLength={12}
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -1209,7 +1259,13 @@ export default function UsersPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <input value={cardAddress} onChange={(e) => setCardAddress(e.target.value)} className="w-full p-2 border border-[#E2D6BD] rounded-lg" placeholder="Optional" />
+                    <input
+                      value={cardAddress}
+                      onChange={(e) => setCardAddress(e.target.value.slice(0, 50))}
+                      className="w-full p-2 border border-[#E2D6BD] rounded-lg"
+                      placeholder="Optional"
+                      maxLength={50}
+                    />
                   </div>
                 </div>
               </div>
@@ -1242,30 +1298,20 @@ export default function UsersPage() {
                       </div>
                       <div className="w-full mt-auto">
                         <div className="flex border-b border-[#e5e7eb] py-3">
-                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Department</div>
-                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardDepartment || '—'}</div>
+                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">DOB</div>
+                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardDob || '—'}</div>
                         </div>
                         <div className="flex border-b border-[#e5e7eb] py-3">
                           <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Employee ID</div>
                           <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardEmployeeId || '—'}</div>
                         </div>
                         <div className="flex border-b border-[#e5e7eb] py-3">
-                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Blood Group</div>
-                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardBloodGroup || '—'}</div>
+                          <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">Issue</div>
+                          <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardIssueDate || '—'}</div>
                         </div>
                       </div>
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/90 flex items-center justify-between gap-2">
-                        <div className="text-[11px] text-slate-500 font-semibold tracking-[0.4px]">
-                          {(companyName || 'company').toLowerCase().replace(/\s+/g, '')}.com
-                        </div>
-                        <div className="text-[10px] text-slate-400 tracking-[0.8px] uppercase">Issued {new Date().toISOString().slice(0, 10)}</div>
-                      </div>
-                      <div className="absolute bottom-5 right-5">
-                        <div className="w-[64px] h-[64px] rounded-[14px] bg-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] border border-slate-200 p-[4px]">
-                          <div className="w-full h-full rounded-[10px] bg-[#0f172a] border border-white/10 overflow-hidden flex items-center justify-center text-white text-[10px]">
-                            {idCardQrDataUrl ? <img src={idCardQrDataUrl} alt="QR" className="w-full h-full object-cover" /> : <>▦▦▦<br />▦▦▦<br />▦▦▦</>}
-                          </div>
-                        </div>
+                      <div className="absolute left-0 right-0 bottom-0 h-[34px] bg-[#1d4ed8] flex items-center px-4 text-white font-extrabold tracking-[0.8px] text-[13px] uppercase">
+                        <div className="ml-auto truncate">EXPIRES: {cardExpiresDate || '—'}</div>
                       </div>
                       <div className="absolute left-0 right-0 bottom-0 h-[10px]" style={{ background: 'linear-gradient(90deg, #2563eb, #06b6d4, #22c55e)' }} />
                     </div>
@@ -1297,7 +1343,21 @@ export default function UsersPage() {
                         </div>
                         <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
                           <div className="w-[100px] font-bold text-[#1e293b] text-sm">Address:</div>
-                          <div className="text-[#475569] text-sm flex-1">{cardAddress || '—'}</div>
+                          <div
+                            className="text-[#475569] text-sm flex-1"
+                            style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflowWrap: 'anywhere',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'normal',
+                            }}
+                          >
+                            {cardAddress || '—'}
+                          </div>
                         </div>
                       </div>
                       <div className="p-4 rounded-[16px] mb-5 shadow-[0_12px_30px_rgba(37,99,235,0.20)]" style={{ background: 'linear-gradient(135deg, #2563eb, #06b6d4)' }}>
