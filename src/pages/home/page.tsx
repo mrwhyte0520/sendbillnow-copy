@@ -603,7 +603,17 @@ export default function HomePage() {
                           ${formatMoney(contractorBillingPeriod === 'biennial' ? (plan.priceBiennial ?? plan.priceAnnual) : plan.priceAnnual)}/{contractorBillingPeriod === 'biennial' ? 'every two years' : 'yearly'}
                         </span>
                       </div>
-                      <div className="mt-3 text-[17px] font-extrabold tracking-wide">
+                      <div className="mt-3 mb-2 flex items-center justify-center gap-3">
+                        <div className="h-px w-24 bg-white/45" />
+                        <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 ring-1 ring-white/35 shadow-[0_0_18px_rgba(255,255,255,0.25)]">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M12 2l1.1 4.2L17 7.3l-3.9 1.1L12 12l-1.1-3.6L7 7.3l3.9-1.1L12 2Z" fill="currentColor" />
+                            <path d="M19 12l.7 2.6 2.3.7-2.3.7L19 19l-.7-2.6-2.3-.7 2.3-.7L19 12Z" fill="currentColor" opacity="0.9" />
+                          </svg>
+                        </div>
+                        <div className="h-px w-24 bg-white/45" />
+                      </div>
+                      <div className="text-[17px] font-extrabold tracking-wide">
                         {String((plan as any).tagline || '')}
                       </div>
                       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
