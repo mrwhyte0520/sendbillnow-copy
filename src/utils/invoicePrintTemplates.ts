@@ -3560,26 +3560,6 @@ function generateBlueInvoiceTemplate(
 
 
 
-  const taxRate = ((): number => {
-
-
-
-    const base = subtotalLessDiscount;
-
-
-
-    if (!base) return 0;
-
-
-
-    return (Number(invoice.tax) / base) * 100;
-
-
-
-  })();
-
-
-
   const shippingHandling = Number((invoice as any).shipping ?? (invoice as any).shippingHandling ?? 0) || 0;
 
 
@@ -4202,15 +4182,7 @@ tbody tr{border-bottom:1px solid ${BLUE};}
 
 
 
-            <div class="totalsRow"><span>Sales Tax Rate</span><span class="value">${taxRate.toFixed(2)}%</span></div>
-
-
-
             <div class="totalsRow"><span>Sales Tax:</span><span class="value">${formatAmount(invoice.tax)}</span></div>
-
-
-
-            <div class="totalsRow"><span>Total &amp; Sales Tax</span><span class="value">${formatAmount(Number(invoice.amount))}</span></div>
 
 
 
@@ -9585,22 +9557,6 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
       <div class="summary-row"><span>Subtotal Less Discount:</span><span>${formatAmount(subtotalLessDiscount)}</span></div>
-
-
-
-
-
-
-
-      <div class="summary-row"><span>Sales Tax Rate:</span><span>${subtotalLessDiscount > 0 ? ((invoice.tax / subtotalLessDiscount) * 100).toFixed(0) + '%' : '0%'}</span></div>
-
-
-
-
-
-
-
-      <div class="summary-row"><span>Total & Sales Tax:</span><span>${formatAmount(invoice.amount)}</span></div>
 
 
 
