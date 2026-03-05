@@ -33,33 +33,6 @@ async function readJsonBody(req) {
   }
 }
 
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) {
-    return xff.split(',')[0].trim();
-  }
-  const xrip = req.headers['x-real-ip'];
-  if (typeof xrip === 'string' && xrip.trim()) return xrip.trim();
-  return req.socket?.remoteAddress || 'unknown';
-}
-
-function normalizeString(value, maxLen) {
-  if (value == null) return null;
-  const s = String(value).trim();
-  if (!s) return null;
-  return s.length > maxLen ? s.slice(0, maxLen) : s;
-}
-
-function normalizeEmail(value) {
-  const raw = normalizeString(value, 254);
-  return raw ? raw.toLowerCase() : null;
-}
-
-function isValidEmail(email) {
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
 function getSupabaseAdminClient() {
   const url = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -71,9 +44,18 @@ function getSupabaseAdminClient() {
   });
 }
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
-const rateBucket = new Map();
+async function isAdminUser(supabase, userId, userEmail) {
+  const candidates = [userId, userEmail].filter(Boolean);
+  if (candidates.length === 0) return false;
+
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('id, roles!inner(name)')
+    .in('user_id', candidates);
+
+  if (error) return false;
+  return Array.isArray(data) && data.some((r) => String(r?.roles?.name || '').toLowerCase() === 'admin');
+}
 
 async function sendCredentialsEmail(email, fullName, password, trialDays) {
   const resendApiKey = process.env.RESEND_API_KEY;
@@ -143,7 +125,6 @@ async function sendCredentialsEmail(email, fullName, password, trialDays) {
       } catch {
         errorData = errorText;
       }
-      console.error('Resend error response:', errorData);
       throw new Error((errorData && errorData.message) || 'Failed to send email via Resend');
     }
 
@@ -160,23 +141,10 @@ async function sendCredentialsEmail(email, fullName, password, trialDays) {
   return true;
 }
 
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const arr = rateBucket.get(ip) || [];
-  const next = arr.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  if (next.length >= RATE_LIMIT_MAX) {
-    rateBucket.set(ip, next);
-    return { ok: false, retryAfterSeconds: Math.ceil((RATE_LIMIT_WINDOW_MS - (now - next[0])) / 1000) };
-  }
-  next.push(now);
-  rateBucket.set(ip, next);
-  return { ok: true, retryAfterSeconds: 0 };
-}
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
@@ -187,11 +155,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   }
 
-  const ip = getClientIp(req);
-  const rl = checkRateLimit(ip);
-  if (!rl.ok) {
-    res.setHeader('Retry-After', String(rl.retryAfterSeconds));
-    return res.status(429).json({ success: false, error: 'Too many requests. Please try again shortly.' });
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    console.error('admin-confirm-demo: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    return res.status(500).json({ success: false, error: 'Server misconfiguration.' });
+  }
+
+  const authHeader = String(req.headers.authorization || '');
+  const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : '';
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Missing authorization token' });
   }
 
   const body = await readJsonBody(req);
@@ -199,145 +172,139 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'Invalid JSON body' });
   }
 
-  const honeypot = normalizeString(body.honeypot ?? body.website ?? body.hp, 200);
-  if (honeypot) {
-    return res.status(400).json({ success: false, error: 'Invalid request' });
-  }
-
-  const full_name = normalizeString(body.full_name, 140);
-  const email = normalizeEmail(body.email);
-  const phone = normalizeString(body.phone, 60);
-  const business_name = normalizeString(body.business_name, 160);
-  const location = normalizeString(body.location, 140);
-  const business_type = normalizeString(body.business_type, 80);
-  const description = normalizeString(body.description, 200);
-  const message = normalizeString(body.message, 2000);
-
-  if (!full_name) return res.status(400).json({ success: false, error: 'Full name is required.' });
-  if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
-  if (!isValidEmail(email)) return res.status(400).json({ success: false, error: 'Invalid email.' });
-  if (!phone) return res.status(400).json({ success: false, error: 'Phone is required.' });
-  if (!business_type) return res.status(400).json({ success: false, error: 'Business type is required.' });
-
-  const supabase = getSupabaseAdminClient();
-  if (!supabase) {
-    return res.status(500).json({ success: false, error: 'Server misconfiguration.' });
+  const requestId = body.requestId;
+  if (!requestId) {
+    return res.status(400).json({ success: false, error: 'Missing requestId' });
   }
 
   try {
-    const now = new Date();
-    const trialDays = 15;
-    const password = generatePassword();
-
-    const { data: insertReq, error: insertReqErr } = await supabase.from('demo_requests').insert({
-      full_name,
-      email,
-      phone,
-      business_name,
-      location,
-      business_type,
-      description,
-      message,
-      status: 'confirmed',
-    }).select('id').maybeSingle();
-
-    if (insertReqErr) {
-      return res.status(500).json({ success: false, error: 'Could not save request. Please try again.' });
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user?.id) {
+      if (userErr) console.error('admin-confirm-demo: auth.getUser failed:', userErr);
+      return res.status(401).json({ success: false, error: 'Invalid token' });
     }
 
-    let userId = null;
+    const userId = userData.user.id;
+    const userEmail = userData.user.email || null;
+
+    const adminOk = await isAdminUser(supabase, userId, userEmail);
+    if (!adminOk) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+
+    const { data: reqRow, error: reqErr } = await supabase
+      .from('demo_requests')
+      .select('*')
+      .eq('id', requestId)
+      .maybeSingle();
+
+    if (reqErr || !reqRow?.email) {
+      if (reqErr) console.error('admin-confirm-demo: failed loading demo request:', reqErr);
+      return res.status(404).json({ success: false, error: 'Demo request not found' });
+    }
+
+    const now = new Date();
+    const email = String(reqRow.email).toLowerCase();
+    const fullName = reqRow.full_name || '';
+    const businessName = reqRow.business_name || '';
+
+    const trialDays = typeof body.trialDays === 'number' ? body.trialDays : (reqRow.trial_days || 15);
+    const password = generatePassword();
+
+    let targetUserId = null;
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: email.toLowerCase(),
+      email,
       password,
       email_confirm: true,
       user_metadata: {
-        full_name: full_name || '',
-        company: business_name || '',
+        full_name: fullName,
+        company: businessName,
       },
     });
 
     if (authError) {
-      const msg = String(authError.message || '');
-      const alreadyExists = msg.toLowerCase().includes('already') || msg.toLowerCase().includes('exists');
+      const msg = String(authError.message || '').toLowerCase();
+      const alreadyExists = msg.includes('already') || msg.includes('exists');
 
       if (!alreadyExists) {
-        console.error('Auth creation error:', authError);
+        console.error('admin-confirm-demo: createUser failed:', authError);
         return res.status(500).json({ success: false, error: authError.message || 'Failed to create user account.' });
       }
 
       const { data: existingProfile, error: existingProfileErr } = await supabase
         .from('users')
         .select('id')
-        .eq('email', email.toLowerCase())
-        .maybeSingle();
+        .eq('email', email)
+        .limit(1);
 
-      if (existingProfileErr || !existingProfile?.id) {
-        console.error('Existing user lookup error:', existingProfileErr);
+      const existingUserId = Array.isArray(existingProfile) ? existingProfile[0]?.id : null;
+
+      if (existingProfileErr || !existingUserId) {
+        if (existingProfileErr) console.error('admin-confirm-demo: existing profile lookup failed:', existingProfileErr);
         return res.status(400).json({ success: false, error: 'A user with this email already exists.' });
       }
 
-      userId = existingProfile.id;
-      const { error: updAuthErr } = await supabase.auth.admin.updateUserById(userId, {
+      targetUserId = existingUserId;
+
+      const { error: updAuthErr } = await supabase.auth.admin.updateUserById(targetUserId, {
         password,
         email_confirm: true,
         user_metadata: {
-          full_name: full_name || '',
-          company: business_name || '',
+          full_name: fullName,
+          company: businessName,
         },
       });
 
       if (updAuthErr) {
-        console.error('Auth update error:', updAuthErr);
+        console.error('admin-confirm-demo: updateUserById failed:', updAuthErr);
         return res.status(500).json({ success: false, error: 'Failed to update existing user password.' });
       }
     } else {
-      userId = authData.user?.id || null;
+      targetUserId = authData.user?.id || null;
     }
 
-    if (!userId) {
+    if (!targetUserId) {
       return res.status(500).json({ success: false, error: 'Failed to resolve user ID.' });
     }
 
-    const trialEndDate = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+    const trialEndDate = new Date(now.getTime() + Number(trialDays) * 24 * 60 * 60 * 1000);
 
-    const { error: updProfileErr } = await supabase
+    await supabase
       .from('users')
-      .update({
+      .upsert({
+        id: targetUserId,
+        email,
+        full_name: fullName,
+        company: businessName,
+        status: 'active',
+        trial_start: now.toISOString(),
         trial_end: trialEndDate.toISOString(),
-        trial_plan_id: 'student',
-        plan_id: null,
-        plan_status: 'inactive',
-        billing_period: 'annual',
         updated_at: now.toISOString(),
+      }, { onConflict: 'id' });
+
+    const { error: updReqErr } = await supabase
+      .from('demo_requests')
+      .update({
+        status: 'confirmed',
       })
-      .eq('id', userId);
+      .eq('id', requestId);
 
-    if (updProfileErr) {
-      console.error('Profile update error:', updProfileErr);
-    }
-
-    const requestId = insertReq?.id || null;
-    if (requestId) {
-      const { error: updReqErr } = await supabase
-        .from('demo_requests')
-        .update({
-          status: 'confirmed',
-          trial_days: trialDays,
-        })
-        .eq('id', requestId);
-      if (updReqErr) {
-        console.error('Demo request update error:', updReqErr);
-      }
+    if (updReqErr) {
+      console.error('admin-confirm-demo: failed updating demo request:', updReqErr);
+      return res.status(500).json({ success: false, error: 'Failed to update demo request' });
     }
 
     try {
-      await sendCredentialsEmail(email, full_name, password, trialDays);
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      await sendCredentialsEmail(email, fullName, password, trialDays);
+    } catch {
     }
 
     return res.status(200).json({ success: true });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Unexpected server error.' });
+  } catch (e) {
+    console.error('admin-confirm-demo: unexpected error:', e);
+    return res.status(500).json({
+      success: false,
+      error: (e && typeof e === 'object' && 'message' in e) ? String(e.message) : 'Unexpected server error.',
+    });
   }
 }

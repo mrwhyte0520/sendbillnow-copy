@@ -25,6 +25,8 @@ export default function AdminDemoRequestsPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
   useEffect(() => {
     // Access is enforced by ProtectedRoute (RBAC admin module)
     if (user) loadRequests();
@@ -65,6 +67,42 @@ export default function AdminDemoRequestsPage() {
       console.error('Error loading demo requests:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const confirmAndSend = async (requestId: string) => {
+    try {
+      setConfirmingId(requestId);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || '';
+      const apiBase = (import.meta as any)?.env?.VITE_API_BASE_URL?.trim() || '';
+
+      if (!token) {
+        alert('Missing session token. Please sign in again.');
+        return;
+      }
+
+      const resp = await fetch(`${apiBase}/api/admin-confirm-demo`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ requestId }),
+      });
+
+      const json = await resp.json().catch(() => null);
+      if (!resp.ok || !json?.success) {
+        alert(json?.error || 'Failed to confirm request');
+        return;
+      }
+
+      await loadRequests();
+    } catch (e) {
+      console.error('Error confirming demo request:', e);
+      alert('Unexpected error confirming request');
+    } finally {
+      setConfirmingId(null);
     }
   };
 
@@ -258,7 +296,21 @@ export default function AdminDemoRequestsPage() {
                         )}
                       </td>
                       <td className="px-4 py-4 text-right">
-                        <span className="text-xs text-gray-400">—</span>
+                        {request.status === 'pending' ? (
+                          <button
+                            onClick={() => confirmAndSend(request.id)}
+                            disabled={confirmingId === request.id}
+                            className={`px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${
+                              confirmingId === request.id
+                                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                : 'bg-[#008000] text-white hover:bg-[#006600]'
+                            }`}
+                          >
+                            {confirmingId === request.id ? 'Confirming…' : 'Confirm + Send'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -119,7 +119,6 @@ export default async function handler(req, res) {
       .from('demo_requests')
       .update({ 
         status: 'approved',
-        approved_at: new Date().toISOString(),
         trial_days: trialDays
       })
       .eq('id', requestId);

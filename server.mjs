@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import demoRequestHandler from './api/demo-request.js';
 import approveDemoHandler from './api/approve-demo.js';
 import adminDemoRequestsHandler from './api/admin-demo-requests.js';
+import adminConfirmDemoHandler from './api/admin-confirm-demo.js';
 import adminVerifyHandler from './api/admin-verify.js';
 import webnotiEventHandler from './api/webnoti/event.js';
 import createCheckoutSessionHandler from './api/create-checkout-session.js';
@@ -96,6 +97,7 @@ app.use('/api', (req, res, next) => {
 app.all('/api/demo-request', (req, res) => demoRequestHandler(req, res));
 app.all('/api/approve-demo', (req, res) => approveDemoHandler(req, res));
 app.all('/api/admin/demo-requests', (req, res) => adminDemoRequestsHandler(req, res));
+app.all('/api/admin-confirm-demo', (req, res) => adminConfirmDemoHandler(req, res));
 app.all('/api/admin/verify', (req, res) => adminVerifyHandler(req, res));
 app.all('/api/webnoti/event', (req, res) => webnotiEventHandler(req, res));
 app.all('/api/create-checkout-session', (req, res) => createCheckoutSessionHandler(req, res));
