@@ -61,6 +61,42 @@ function formatInSantoDomingo(raw?: string | null) {
   }
 }
 
+function formatMoneyDisplay(value: number | string | null | undefined) {
+  const numeric =
+    typeof value === 'number' ? value : Number(String(value ?? '').replace(/,/g, '').trim());
+  const safeValue = Number.isFinite(numeric) ? numeric : 0;
+  return safeValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMoneyInput(value: number | string | null | undefined) {
+  const raw = String(value ?? '').replace(/\s+/g, '').replace(/,/g, '');
+  if (!raw) return '';
+
+  const negative = raw.startsWith('-');
+  const unsigned = (negative ? raw.slice(1) : raw).replace(/[^0-9.]/g, '');
+  if (!unsigned) return negative ? '-' : '';
+
+  const firstDot = unsigned.indexOf('.');
+  const intPartRaw = firstDot === -1 ? unsigned : unsigned.slice(0, firstDot);
+  const fracPartRaw =
+    firstDot === -1 ? '' : unsigned.slice(firstDot + 1).replace(/\./g, '').slice(0, 2);
+  const normalizedInt = intPartRaw.replace(/^0+(?=\d)/, '') || '0';
+  const intWithCommas = normalizedInt.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  if (firstDot !== -1) {
+    return `${negative ? '-' : ''}${intWithCommas}.${fracPartRaw}`;
+  }
+
+  return `${negative ? '-' : ''}${intWithCommas}`;
+}
+
+function parseMoneyInput(value: string | number | null | undefined) {
+  const normalized = String(value ?? '').replace(/,/g, '').trim();
+  if (!normalized || normalized === '-') return 0;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
 type ServiceDocument = {
   id: string;
   doc_type: 'JOB_ESTIMATE' | 'CLASSIC_INVOICE';
@@ -399,7 +435,7 @@ export default function ServiceDocumentsEditPage() {
       }
       setTerms(String((d as any).terms_snapshot || ''));
       setTaxRate(String((d as any).tax_rate ?? ''));
-      setMaterialCost(String((d as any).material_cost ?? ''));
+      setMaterialCost(formatMoneyInput(String((d as any).material_cost ?? '')));
     } catch (e: any) {
       console.error('ServiceDocumentsEditPage load error', e);
       toast.error(e?.message || 'Could not load document');
@@ -640,7 +676,7 @@ export default function ServiceDocumentsEditPage() {
   }, [computeLineAmount, numericTaxRate, visibleLines]);
 
   const numericMaterialCost = useMemo(() => {
-    const n = Number(materialCost);
+    const n = parseMoneyInput(materialCost);
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }, [materialCost]);
 
@@ -1051,7 +1087,7 @@ export default function ServiceDocumentsEditPage() {
         },
         body: JSON.stringify({
           documentId,
-          materialCost: materialCost.trim() === '' ? null : Number(materialCost),
+          materialCost: materialCost.trim() === '' ? null : parseMoneyInput(materialCost),
           lines: prepared.map((l) => ({
             id: l.id,
             position: l.position,
@@ -1070,7 +1106,7 @@ export default function ServiceDocumentsEditPage() {
       if (!resp.ok || !json?.ok) throw new Error(json?.error || 'Could not save lines');
 
       if (json?.document) setDoc((prev) => (prev ? { ...prev, ...json.document } : json.document));
-      if (json?.document?.material_cost !== undefined) setMaterialCost(String(json.document.material_cost ?? ''));
+      if (json?.document?.material_cost !== undefined) setMaterialCost(formatMoneyInput(String(json.document.material_cost ?? '')));
       if (Array.isArray(json?.lines)) {
         setLines((json.lines as any[]).map((x, idx) => ({
           id: x.id,
@@ -1244,10 +1280,10 @@ export default function ServiceDocumentsEditPage() {
                         <div className="font-semibold text-[#2F3D2E]">Total</div>
                       </div>
                       <div className="text-right">
-                        <div>{Number(computedSubtotal ?? 0).toFixed(2)}</div>
-                        <div>{Number(computedTax ?? 0).toFixed(2)}</div>
-                        <div className="mt-1 text-xs">{Number(numericMaterialCost ?? 0).toFixed(2)}</div>
-                        <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
+                        <div>{formatMoneyDisplay(computedSubtotal)}</div>
+                        <div>{formatMoneyDisplay(computedTax)}</div>
+                        <div className="mt-1 text-xs">{formatMoneyDisplay(numericMaterialCost)}</div>
+                        <div className="font-semibold">{formatMoneyDisplay(computedTotal)}</div>
                       </div>
                     </div>
                   </div>
@@ -1294,8 +1330,8 @@ export default function ServiceDocumentsEditPage() {
                         <tr key={l.id || idx} className="hover:bg-[#FFF7E8] transition">
                           <td className={TABLE_CELL_CLASSES}>{l.description}</td>
                           <td className={`${TABLE_CELL_CLASSES} text-right`}>{Number(l.quantity ?? 0)}</td>
-                          <td className={`${TABLE_CELL_CLASSES} text-right`}>{Number(l.unit_price ?? 0).toFixed(2)}</td>
-                          <td className={`${TABLE_CELL_CLASSES} text-right font-semibold`}>{Number(computeLineAmount(l) ?? 0).toFixed(2)}</td>
+                          <td className={`${TABLE_CELL_CLASSES} text-right`}>{formatMoneyDisplay(l.unit_price)}</td>
+                          <td className={`${TABLE_CELL_CLASSES} text-right font-semibold`}>{formatMoneyDisplay(computeLineAmount(l))}</td>
                         </tr>
                       ))
                     )}
@@ -1566,9 +1602,10 @@ export default function ServiceDocumentsEditPage() {
                               </td>
                               <td className="px-6 py-3 text-right">
                                 <input
-                                  value={String(l.unit_price)}
-                                  onChange={(e) => updateLine(idx, { unit_price: Number(e.target.value) })}
+                                  value={formatMoneyInput(l.unit_price)}
+                                  onChange={(e) => updateLine(idx, { unit_price: parseMoneyInput(e.target.value) })}
                                   className={`${INPUT_CLASSES} w-32 text-right`}
+                                  inputMode="decimal"
                                   disabled={!canEdit}
                                 />
                               </td>
@@ -1581,7 +1618,7 @@ export default function ServiceDocumentsEditPage() {
                                 />
                               </td>
                               <td className="px-6 py-3 text-right font-semibold text-[#2F3D2E]">
-                                {Number(computeLineAmount(l) ?? 0).toFixed(2)}
+                                {formatMoneyDisplay(computeLineAmount(l))}
                               </td>
                               <td className="px-6 py-3 text-right">
                                 <button
@@ -1616,24 +1653,25 @@ export default function ServiceDocumentsEditPage() {
                   <div className="bg-white border border-[#EADDC4] rounded-2xl px-4 py-3 min-w-[280px]">
                     <div className="flex justify-between gap-6">
                       <div className="text-[#7A705A]">Subtotal</div>
-                      <div className="font-semibold">{Number(computedSubtotal ?? 0).toFixed(2)}</div>
+                      <div className="font-semibold">{formatMoneyDisplay(computedSubtotal)}</div>
                     </div>
                     <div className="flex justify-between gap-6 mt-1">
                       <div className="text-[#7A705A]">Tax</div>
-                      <div className="font-semibold">{Number(computedTax ?? 0).toFixed(2)}</div>
+                      <div className="font-semibold">{formatMoneyDisplay(computedTax)}</div>
                     </div>
                     <div className="flex justify-between gap-6 mt-1 items-center">
                       <div className="text-[#7A705A]">Material Cost</div>
                       <input
                         value={materialCost}
-                        onChange={(e) => setMaterialCost(e.target.value)}
+                        onChange={(e) => setMaterialCost(formatMoneyInput(e.target.value))}
                         className={`${INPUT_CLASSES} w-32 text-right`}
+                        inputMode="decimal"
                         disabled={!canEdit || savingLines}
                       />
                     </div>
                     <div className="flex justify-between gap-6 mt-2 pt-2 border-t border-[#EADDC4]">
                       <div className="text-[#2F3D2E] font-semibold">Total</div>
-                      <div className="font-semibold">{Number(computedTotal ?? 0).toFixed(2)}</div>
+                      <div className="font-semibold">{formatMoneyDisplay(computedTotal)}</div>
                     </div>
                   </div>
                 </div>
