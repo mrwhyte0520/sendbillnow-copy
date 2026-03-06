@@ -90,7 +90,12 @@ function buildEmailHtml({ companyName, clientName, docType, docNumber, sealedPdf
 function safeMoney(n) {
   const num = Number(n);
   if (!Number.isFinite(num)) return '0.00';
-  return num.toFixed(2);
+  const fixed = num.toFixed(2);
+  const [intPart, fracPart] = fixed.split('.');
+  const sign = intPart.startsWith('-') ? '-' : '';
+  const digits = sign ? intPart.slice(1) : intPart;
+  const withCommas = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${sign}${withCommas}.${fracPart || '00'}`;
 }
 
 function currencyPrefix(code) {
@@ -98,7 +103,7 @@ function currencyPrefix(code) {
 }
 
 function moneyWithCurrency(n, currency) {
-  return `$${safeMoney(n)}`;
+  return `${currencyPrefix(currency)}${safeMoney(n)}`;
 }
 
 function normalizeMoney(n) {

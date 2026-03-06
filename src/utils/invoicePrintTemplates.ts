@@ -1,4 +1,4 @@
-import { formatAmount } from './numberFormat';
+import { formatAmountWithCommas as formatAmount } from './numberFormat';
 
 
 

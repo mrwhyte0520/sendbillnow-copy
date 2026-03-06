@@ -15,6 +15,7 @@ const DOLLAR_SYMBOL = '$';
 let globalDecimalPlaces: number = 2;
 let globalSeparators: NumberSeparators = { thousand: ',', decimal: '.' };
 let globalCurrencyLabel: string = DOLLAR_SYMBOL;
+const COMMA_NUMBER_SEPARATORS: NumberSeparators = { thousand: ',', decimal: '.' };
 
 const parseSeparators = (format: string | null | undefined): NumberSeparators => {
   const fmt = String(format || '').trim();
@@ -71,6 +72,21 @@ export const formatNumber = (
   return formatBySeparators(numeric, decimals, globalSeparators);
 };
 
+export const formatNumberWithCommas = (
+  value: number | string | null | undefined,
+  options?: FormatNumberOptions,
+): string => {
+  if (value == null || value === '') return '';
+
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(numeric)) return '';
+
+  const minimumFractionDigits = options?.minimumFractionDigits ?? globalDecimalPlaces;
+  const maximumFractionDigits = options?.maximumFractionDigits ?? globalDecimalPlaces;
+  const decimals = Math.max(minimumFractionDigits, maximumFractionDigits);
+  return formatBySeparators(numeric, decimals, COMMA_NUMBER_SEPARATORS);
+};
+
 export const formatMoney = (
   value: number | string | null | undefined,
   currencyLabel?: string,
@@ -82,6 +98,24 @@ export const formatMoney = (
   return `${label} ${amount}`;
 };
 
+export const formatMoneyWithCommas = (
+  value: number | string | null | undefined,
+  currencyLabel?: string,
+): string => {
+  const amount = formatNumberWithCommas(value, {
+    minimumFractionDigits: globalDecimalPlaces,
+    maximumFractionDigits: globalDecimalPlaces,
+  });
+  if (!amount) return '';
+  const label = coerceCurrencyLabel(currencyLabel ?? globalCurrencyLabel);
+  if (!label) return amount;
+  return `${label} ${amount}`;
+};
+
 export const formatAmount = (value: number | string | null | undefined): string => {
   return formatMoney(value);
+};
+
+export const formatAmountWithCommas = (value: number | string | null | undefined): string => {
+  return formatMoneyWithCommas(value);
 };
