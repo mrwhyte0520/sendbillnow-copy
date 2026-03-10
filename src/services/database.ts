@@ -5565,17 +5565,37 @@ export const inventoryService = {
     try {
       const tenantId = await resolveTenantId(userId);
       if (!tenantId) throw new Error('userId required');
-      const payload = {
+      const extractMissingColumn = (err: any): string | null => {
+        const msg = String(err?.message || '');
+        const match = msg.match(/Could not find the '([^']+)' column/i);
+        return match?.[1] || null;
+      };
+
+      let payload: any = {
         ...item,
         user_id: tenantId,
       };
-      const { data, error } = await supabase
-        .from('inventory_items')
-        .insert(payload)
-        .select('*')
-        .single();
-      if (error) throw error;
-      return data;
+
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const { data, error } = await supabase
+          .from('inventory_items')
+          .insert(payload)
+          .select('*')
+          .single();
+
+        if (!error) return data;
+
+        const code = (error as any)?.code;
+        const missingColumn = extractMissingColumn(error);
+        if (code === 'PGRST204' && missingColumn && Object.prototype.hasOwnProperty.call(payload, missingColumn)) {
+          delete payload[missingColumn];
+          continue;
+        }
+
+        throw error;
+      }
+
+      throw new Error('Could not create inventory item');
     } catch (error) {
       console.error('inventoryService.createItem error', error);
       throw error;

@@ -357,6 +357,18 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
       icon: 'ri-bar-chart-2-line',
       current: location.pathname === '/statistics'
     },
+    {
+      name: 'Supplier Intelligence',
+      href: '/supplier-intelligence',
+      icon: 'ri-building-4-line',
+      current: location.pathname.startsWith('/supplier-intelligence')
+    },
+    {
+      name: 'Client History',
+      href: '/client-history',
+      icon: 'ri-file-history-line',
+      current: location.pathname.startsWith('/client-history')
+    },
     // ACCOUNTING MODULE (CONTADOR – USA)
     {
       name: 'Accounting',
@@ -558,6 +570,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
     // Map href segments to permission module names (handle mismatches like contador → accounting)
     const MODULE_MAP: Record<string, string> = {
       'contador': 'accounting',
+      'supplier-intelligence': 'inventory',
     };
     const moduleOf = (href: string) => {
       const segment = href.split('/').filter(Boolean)[0] || 'dashboard';

@@ -82,6 +82,9 @@ const TrialBalancePage = lazy(() => import('../pages/accounting/trial-balance/pa
 const POSPage = lazy(() => import('../pages/pos/page'));
 const CustomerDisplayPage = lazy(() => import('../pages/pos/customer-display'));
 const ProductsPage = lazy(() => import('../pages/products/page'));
+const SupplierPortalPage = lazy(() => import('../pages/supplier-portal/page'));
+const ClientPurchaseHistoryPage = lazy(() => import('../modules/client-history/pages/ClientPurchaseHistory'));
+const SupplierProfilePage = lazy(() => import('../pages/suppliers/profile/page'));
 const CustomersPage = lazy(() => import('../pages/customers/page'));
 const UsersPage = lazy(() => import('../pages/users/page'));
 const InventoryPage = lazy(() => import('../pages/inventory/page'));
@@ -483,6 +486,22 @@ const routes: RouteObject[] = [
   {
     path: '/products',
     element: <ProtectedRoute><ProductsPage /></ProtectedRoute>
+  },
+  {
+    path: '/supplier-intelligence',
+    element: <ProtectedRoute><ProductsPage /></ProtectedRoute>
+  },
+  {
+    path: '/supplier-portal',
+    element: <ProtectedRoute><SupplierPortalPage /></ProtectedRoute>
+  },
+  {
+    path: '/client-history',
+    element: <ProtectedRoute><ClientPurchaseHistoryPage /></ProtectedRoute>
+  },
+  {
+    path: '/suppliers/:supplierId',
+    element: <ProtectedRoute><SupplierProfilePage /></ProtectedRoute>
   },
   {
     path: '/customers',

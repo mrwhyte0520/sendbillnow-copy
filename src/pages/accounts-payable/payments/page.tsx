@@ -88,16 +88,16 @@ export default function PaymentsPage() {
     paymentStatusLabels[status as PaymentStatus] || status || 'Unknown';
 
   const methodPillClasses = (method: PaymentMethod) => {
-    if (method === 'Transferencia') return 'bg-[#d7e2b0] text-[#2f3c24]';
-    if (method === 'Cheque') return 'bg-[#b5c38a] text-[#2f3c24]';
-    if (method === 'Efectivo') return 'bg-[#f3d8b6] text-[#2f3c24]';
-    return 'bg-[#d7d4e3] text-[#2f3c24]';
+    if (method === 'Transferencia') return 'bg-blue-50 text-blue-700';
+    if (method === 'Cheque') return 'bg-amber-50 text-amber-700';
+    if (method === 'Efectivo') return 'bg-emerald-50 text-emerald-700';
+    return 'bg-slate-100 text-slate-700';
   };
 
   const statusBadgeClasses = (status: PaymentStatus) => {
-    if (status === 'Completado') return 'bg-[#d7e2b0] text-[#2f3c24]';
-    if (status === 'Pendiente') return 'bg-[#f3d8b6] text-[#5b441d]';
-    return 'bg-[#f5c2b0] text-[#5b2a1c]';
+    if (status === 'Completado') return 'bg-emerald-50 text-emerald-700';
+    if (status === 'Pendiente') return 'bg-amber-50 text-amber-700';
+    return 'bg-slate-100 text-slate-700';
   };
 
   const resolveApInvoiceBalance = (inv: any) => {
@@ -503,7 +503,7 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2f3c24]">{payment.reference}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${methodPillClasses(payment.method)}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${methodPillClasses(payment.method)}`}>
                         {getMethodLabel(payment.method)}
                       </span>
                     </td>
@@ -511,7 +511,7 @@ export default function PaymentsPage() {
                        {payment.amount.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClasses(payment.status)}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${statusBadgeClasses(payment.status)}`}>
                         {getStatusLabel(payment.status)}
                       </span>
                     </td>
@@ -752,7 +752,7 @@ export default function PaymentsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[#5c6b42]">Status</p>
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusBadgeClasses(selectedPayment.status)}`}>
+                    <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${statusBadgeClasses(selectedPayment.status)}`}>
                       {getStatusLabel(selectedPayment.status)}
                     </span>
                   </div>

@@ -21,6 +21,8 @@ import htcSubmitHandler from './api/htc-submit.js';
 import sendCustomerSmsHandler from './api/send-customer-sms.js';
 import validateCustomerTokenHandler from './api/validate-customer-token.js';
 import completeCustomerProfileHandler from './api/complete-customer-profile.js';
+import supplierSearchHandler from './api/suppliers/search.js';
+import createPurchaseOrderFromQuoteHandler from './api/purchase-orders/create-from-quote.js';
 
 import serviceDocumentsCreateHandler from './api/service-documents/create.js';
 import serviceDocumentsUpdateHandler from './api/service-documents/update.js';
@@ -111,6 +113,8 @@ app.all('/api/htc/submit', (req, res) => htcSubmitHandler(req, res));
 app.all('/api/send-customer-sms', (req, res) => sendCustomerSmsHandler(req, res));
 app.all('/api/validate-customer-token', (req, res) => validateCustomerTokenHandler(req, res));
 app.all('/api/complete-customer-profile', (req, res) => completeCustomerProfileHandler(req, res));
+app.all('/api/suppliers/search', (req, res) => supplierSearchHandler(req, res));
+app.all('/api/purchase-orders/create-from-quote', (req, res) => createPurchaseOrderFromQuoteHandler(req, res));
 
 // Service Documents (MVP)
 app.all('/api/service-documents/create', (req, res) => serviceDocumentsCreateHandler(req, res));

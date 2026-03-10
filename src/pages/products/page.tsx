@@ -1,9 +1,14 @@
-
 import { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { inventoryService, chartAccountsService, settingsService } from '../../services/database';
 import { useAuth } from '../../hooks/useAuth';
 import { usePlanLimitations } from '../../hooks/usePlanLimitations';
+import SupplierResultsTable from '../../modules/suppliers/SupplierResultsTable';
+import SupplierIntelligenceTable from '../../modules/supplier-intelligence/SupplierIntelligenceTable';
+import SupplierCatalogManager from '../../modules/supplier-catalog/SupplierCatalogManager';
+import { supplierApiService } from '../../modules/suppliers/supplierApi.service';
+import type { SupplierProductResult } from '../../modules/supplier-adapters/SupplierAdapter';
 
 interface Product {
   id: string;
@@ -26,6 +31,9 @@ interface Product {
   inventoryAccountId?: string | null;
   cogsAccountId?: string | null;
   warehouseId?: string | null;
+  preferredSupplier?: string | null;
+  lastSupplierPrice?: number | null;
+  supplierProductId?: string | null;
 }
 
 interface Category {
@@ -36,6 +44,8 @@ interface Category {
 export default function ProductsPage() {
   const { user } = useAuth();
   const { checkQuantityLimit } = usePlanLimitations();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -53,7 +63,6 @@ export default function ProductsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [accounts, setAccounts] = useState<{ id: string; code: string; name: string }[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(false);
 
   const [warehouses, setWarehouses] = useState<any[]>([]);
 
@@ -74,18 +83,34 @@ export default function ProductsPage() {
     expenseAccountId: '' as string | '',
     inventoryAccountId: '' as string | '',
     cogsAccountId: '' as string | '',
-    warehouseId: '' as string | ''
+    warehouseId: '' as string | '',
+    preferredSupplier: '' as string | '',
+    lastSupplierPrice: '' as string | '',
+    supplierProductId: '' as string | ''
   });
 
   const [categoryFormData, setCategoryFormData] = useState({
     name: ''
   });
 
-  
+  const [supplierResults, setSupplierResults] = useState<SupplierProductResult[]>([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+  const [supplierError, setSupplierError] = useState('');
+  const isSupplierIntelligenceRoute = location.pathname.startsWith('/supplier-intelligence');
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/supplier-intelligence')) {
+      setActiveTab('products');
+      return;
+    }
+
+    if (location.pathname === '/products' && activeTab !== 'dashboard' && activeTab !== 'products') {
+      setActiveTab('dashboard');
+    }
+  }, [location.pathname]);
+
   const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
 
-
-  // Load products from database or use sample data
   useEffect(() => {
     loadProducts();
     loadCategories();
@@ -120,6 +145,9 @@ export default function ProductsPage() {
             inventoryAccountId: item.inventory_account_id || null,
             cogsAccountId: item.cogs_account_id || null,
             warehouseId: item.warehouse_id || null,
+            preferredSupplier: item.preferred_supplier || item.supplier || null,
+            lastSupplierPrice: item.last_supplier_price ?? item.last_purchase_price ?? null,
+            supplierProductId: item.supplier_product_id || null,
           }));
           setProducts(transformedProducts);
         } else {
@@ -138,7 +166,6 @@ export default function ProductsPage() {
 
   const loadAccounts = async () => {
     if (!user) return;
-    setLoadingAccounts(true);
     try {
       const data = await chartAccountsService.getAll(user.id);
       const options = (data || [])
@@ -146,10 +173,7 @@ export default function ProductsPage() {
         .map((acc: any) => ({ id: acc.id, code: acc.code, name: acc.name }));
       setAccounts(options);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading chart of accounts for products:', error);
-    } finally {
-      setLoadingAccounts(false);
     }
   };
 
@@ -158,7 +182,6 @@ export default function ProductsPage() {
       const data = await settingsService.getWarehouses();
       setWarehouses(data || []);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Error loading warehouses for products:', error);
       setWarehouses([]);
     }
@@ -198,259 +221,59 @@ export default function ProductsPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Dashboard calculations
-  const totalProducts = products.length;
-  const activeProducts = products.filter(p => p.status === 'active').length;
-  const lowStockProducts = products.filter(p => p.stock <= p.minStock).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
-  const totalCost = products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
-  const potentialProfit = totalValue - totalCost;
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (max 2MB)
-    const maxSizeBytes = 2 * 1024 * 1024; // 2MB
-    if (file.size > maxSizeBytes) {
-      alert('Image too large. Maximum size is 2MB.');
-      event.target.value = '';
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file.');
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setFormData(prev => ({ ...prev, imageUrl: e.target?.result as string }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      if (!editingProduct) {
-        const { allowed, message } = checkQuantityLimit('maxProducts', products.length);
-        if (!allowed) {
-          alert(message || 'Has alcanzado el límite de productos de tu plan.');
-          return;
-        }
-      }
-
-      const newProduct: Product = {
-        id: editingProduct?.id || Date.now().toString(),
-        name: formData.name,
-        sku: formData.sku,
-        category: formData.category,
-        price: parseFloat(formData.price),
-        cost: parseFloat(formData.cost),
-        stock: parseInt(formData.stock),
-        minStock: parseInt(formData.minStock),
-        maxStock: parseInt(formData.maxStock),
-        barcode: formData.barcode,
-        description: formData.description,
-        supplier: formData.supplier,
-        imageUrl: formData.imageUrl,
-        status: formData.status,
-        createdAt: editingProduct?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        expenseAccountId: formData.expenseAccountId || null,
-        inventoryAccountId: formData.inventoryAccountId || null,
-        cogsAccountId: formData.cogsAccountId || null,
-        warehouseId: formData.warehouseId || null,
-      };
-
-      if (user) {
-        const itemData = {
-          name: formData.name,
-          sku: formData.sku,
-          category: formData.category,
-          selling_price: parseFloat(formData.price),
-          cost_price: parseFloat(formData.cost),
-          current_stock: parseInt(formData.stock),
-          min_stock: parseInt(formData.minStock),
-          max_stock: parseInt(formData.maxStock),
-          barcode: formData.barcode,
-          description: formData.description,
-          supplier: formData.supplier,
-          image_url: formData.imageUrl,
-          is_active: formData.status === 'active',
-          expense_account_id: formData.expenseAccountId || null,
-          inventory_account_id: formData.inventoryAccountId || null,
-          cogs_account_id: formData.cogsAccountId || null,
-          warehouse_id: formData.warehouseId || null,
-        };
-
-        if (editingProduct && isUuid(editingProduct.id)) {
-          await inventoryService.updateItem(user.id, editingProduct.id, itemData);
-        } else {
-          await inventoryService.createItem(user.id, itemData);
-        }
-      }
-
-      if (editingProduct) {
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? newProduct : p));
-      } else {
-        setProducts(prev => [...prev, newProduct]);
-      }
-
-      resetForm();
-      setShowModal(false);
-    } catch (error) {
-      console.error('Error saving product:', error);
-      alert('Error al guardar el producto. Intente nuevamente.');
-    }
-  };
-
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      sku: product.sku,
-      category: product.category,
-      price: product.price.toString(),
-      cost: product.cost.toString(),
-      stock: product.stock.toString(),
-      minStock: product.minStock.toString(),
-      maxStock: product.maxStock.toString(),
-      barcode: product.barcode,
-      description: product.description,
-      supplier: product.supplier,
-      imageUrl: product.imageUrl,
-      status: product.status,
-      expenseAccountId: product.expenseAccountId || '',
-      inventoryAccountId: product.inventoryAccountId || '',
-      cogsAccountId: product.cogsAccountId || '',
-      warehouseId: product.warehouseId || ''
-    });
-    setShowModal(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (confirm('¿Está seguro de que desea eliminar este producto?')) {
-      try {
-        if (user) {
-          await inventoryService.deleteItem(id);
-        }
-        setProducts(prev => prev.filter(p => p.id !== id));
-      } catch (error) {
-        console.error('Error deleting product:', error);
-        alert('Error al eliminar el producto. Intente nuevamente.');
-      }
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (confirm(`¿Está seguro de que desea eliminar ${selectedProducts.length} productos seleccionados?`)) {
-      try {
-        for (const id of selectedProducts) {
-          if (user) {
-            await inventoryService.deleteItem(id);
-          }
-        }
-        setProducts(prev => prev.filter(p => !selectedProducts.includes(p.id)));
-        setSelectedProducts([]);
-        setShowBulkActions(false);
-      } catch (error) {
-        console.error('Error deleting products:', error);
-        alert('Error al eliminar los productos. Intente nuevamente.');
-      }
-    }
-  };
-
-  const handleBulkStatusChange = (status: 'active' | 'inactive') => {
-    setProducts(prev => prev.map(p => 
-      selectedProducts.includes(p.id) ? { ...p, status, updatedAt: new Date().toISOString() } : p
-    ));
-    setSelectedProducts([]);
-    setShowBulkActions(false);
-  };
-
-  const exportToCSV = () => {
-    const headers = ['Nombre', 'SKU', 'Categoría', 'Precio', 'Costo', 'Stock', 'Stock Mín', 'Stock Máx', 'Proveedor', 'Estado'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredProducts.map(product => [
-        `"${product.name}"`,
-        product.sku,
-        product.category,
-        product.price,
-        product.cost,
-        product.stock,
-        product.minStock,
-        product.maxStock,
-        `"${product.supplier}"`,
-        product.status === 'active' ? 'Activo' : 'Inactivo'
-      ].join(','))
-    ].join('\n');
-
-    const csvForExcel = '\uFEFF' + csvContent.replace(/\n/g, '\r\n');
-    const blob = new Blob([csvForExcel], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `productos_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      sku: '',
-      category: '',
-      price: '',
-      cost: '',
-      stock: '',
-      minStock: '',
-      maxStock: '',
-      barcode: '',
-      description: '',
-      supplier: '',
-      imageUrl: '',
-      status: 'active',
-      expenseAccountId: '',
-      inventoryAccountId: '',
-      cogsAccountId: '',
-      warehouseId: ''
-    });
-    setEditingProduct(null);
-  };
-
-  const generateSKU = () => {
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `PRD-${timestamp}-${random}`;
-  };
-
-  const generateBarcode = () => {
-    return Math.floor(Math.random() * 9000000000000) + 1000000000000;
-  };
-
-  const toggleProductSelection = (productId: string) => {
-    setSelectedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
-  const selectAllProducts = () => {
-    if (selectedProducts.length === filteredProducts.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(filteredProducts.map(p => p.id));
-    }
-  };
-
   useEffect(() => {
     setShowBulkActions(selectedProducts.length > 0);
   }, [selectedProducts]);
+
+  useEffect(() => {
+    const normalizedSearch = searchTerm.trim();
+    let isCancelled = false;
+
+    if (!normalizedSearch) {
+      setSupplierResults([]);
+      setSupplierError('');
+      setSupplierLoading(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setSupplierLoading(true);
+
+      try {
+        setSupplierError('');
+        const results = await supplierApiService.searchProducts(normalizedSearch, {
+          sortBy: 'price',
+          limit: 50,
+        });
+
+        if (isCancelled) {
+          return;
+        }
+
+        console.log('Supplier search query:', normalizedSearch);
+        console.log('Supplier results:', results.length);
+
+        setSupplierResults(Array.isArray(results) ? results : []);
+      } catch (error: any) {
+        if (isCancelled) {
+          return;
+        }
+
+        console.error('Supplier search error:', error);
+        setSupplierResults([]);
+        setSupplierError(error?.message || '⚠️ Unable to load suppliers. Please try again.');
+      } finally {
+        if (!isCancelled) {
+          setSupplierLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchTerm]);
 
   useEffect(() => {
     const activeProducts = products
@@ -469,7 +292,10 @@ export default function ProductsPage() {
         maxStock: p.maxStock,
         description: p.description,
         supplier: p.supplier,
-        status: p.status
+        status: p.status,
+        preferredSupplier: p.preferredSupplier,
+        lastSupplierPrice: p.lastSupplierPrice,
+        supplierProductId: p.supplierProductId,
       }));
     try {
       localStorage.setItem('contabi_products', JSON.stringify(activeProducts));
@@ -567,6 +393,320 @@ export default function ProductsPage() {
     setEditingCategory(null);
   };
 
+  const totalProducts = products.length;
+  const activeProducts = products.filter(p => p.status === 'active').length;
+  const lowStockProducts = products.filter(p => p.stock <= p.minStock).length;
+  const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+  const displayProducts = isSupplierIntelligenceRoute ? products : filteredProducts;
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const maxSizeBytes = 2 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      alert('Image too large. Maximum size is 2MB.');
+      event.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFormData(prev => ({ ...prev, imageUrl: e.target?.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      if (!editingProduct) {
+        const { allowed, message } = checkQuantityLimit('maxProducts', products.length);
+        if (!allowed) {
+          alert(message || 'Has alcanzado el límite de productos de tu plan.');
+          return;
+        }
+      }
+
+      const newProduct: Product = {
+        id: editingProduct?.id || Date.now().toString(),
+        name: formData.name,
+        sku: formData.sku,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        cost: parseFloat(formData.cost),
+        stock: parseInt(formData.stock),
+        minStock: parseInt(formData.minStock),
+        maxStock: parseInt(formData.maxStock),
+        barcode: formData.barcode,
+        description: formData.description,
+        supplier: formData.supplier,
+        imageUrl: formData.imageUrl,
+        status: formData.status,
+        createdAt: editingProduct?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        expenseAccountId: formData.expenseAccountId || null,
+        inventoryAccountId: formData.inventoryAccountId || null,
+        cogsAccountId: formData.cogsAccountId || null,
+        warehouseId: formData.warehouseId || null,
+        preferredSupplier: formData.preferredSupplier || formData.supplier || null,
+        lastSupplierPrice: formData.lastSupplierPrice ? parseFloat(formData.lastSupplierPrice) : null,
+        supplierProductId: formData.supplierProductId || null,
+      };
+
+      if (user) {
+        const itemData = {
+          name: formData.name,
+          sku: formData.sku,
+          category: formData.category,
+          selling_price: parseFloat(formData.price),
+          cost_price: parseFloat(formData.cost),
+          current_stock: parseInt(formData.stock),
+          min_stock: parseInt(formData.minStock),
+          max_stock: parseInt(formData.maxStock),
+          barcode: formData.barcode,
+          description: formData.description,
+          supplier: formData.supplier,
+          image_url: formData.imageUrl,
+          is_active: formData.status === 'active',
+          expense_account_id: formData.expenseAccountId || null,
+          inventory_account_id: formData.inventoryAccountId || null,
+          cogs_account_id: formData.cogsAccountId || null,
+          warehouse_id: formData.warehouseId || null,
+          preferred_supplier: formData.preferredSupplier || formData.supplier || null,
+          last_supplier_price: formData.lastSupplierPrice ? parseFloat(formData.lastSupplierPrice) : null,
+          supplier_product_id: formData.supplierProductId || null,
+        };
+
+        if (editingProduct && isUuid(editingProduct.id)) {
+          await inventoryService.updateItem(user.id, editingProduct.id, itemData);
+        } else {
+          await inventoryService.createItem(user.id, itemData);
+        }
+      }
+
+      if (editingProduct) {
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? newProduct : p));
+      } else {
+        setProducts(prev => [...prev, newProduct]);
+      }
+
+      resetForm();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert('Error al guardar el producto. Intente nuevamente.');
+    }
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      sku: product.sku,
+      category: product.category,
+      price: product.price.toString(),
+      cost: product.cost.toString(),
+      stock: product.stock.toString(),
+      minStock: product.minStock.toString(),
+      maxStock: product.maxStock.toString(),
+      barcode: product.barcode,
+      description: product.description,
+      supplier: product.supplier,
+      imageUrl: product.imageUrl,
+      status: product.status,
+      expenseAccountId: product.expenseAccountId || '',
+      inventoryAccountId: product.inventoryAccountId || '',
+      cogsAccountId: product.cogsAccountId || '',
+      warehouseId: product.warehouseId || '',
+      preferredSupplier: product.preferredSupplier || '',
+      lastSupplierPrice: product.lastSupplierPrice != null ? String(product.lastSupplierPrice) : '',
+      supplierProductId: product.supplierProductId || '',
+    });
+    setShowModal(true);
+  };
+
+  const handleUseSupplierQuote = (quote: SupplierProductResult) => {
+    setFormData((prev) => ({
+      ...prev,
+      name: quote.productName,
+      sku: quote.sku,
+      category: quote.category,
+      price: String(quote.price),
+      cost: String(quote.price),
+      stock: prev.stock || String(quote.quantity || 1),
+      description: quote.description,
+      supplier: quote.supplier,
+      preferredSupplier: quote.supplier,
+      lastSupplierPrice: String(quote.price),
+      supplierProductId: quote.productId,
+    }));
+    setShowModal(true);
+  };
+
+  const handleAddQuoteToInvoice = (quote: SupplierProductResult) => {
+    navigate('/accounts-payable/invoices', {
+      state: {
+        prefillSupplierQuote: {
+          supplier: quote.supplier,
+          supplierProductId: quote.productId,
+          delivery: quote.delivery,
+          productName: quote.productName,
+          quantity: quote.quantity,
+          price: quote.price,
+          sku: quote.sku,
+          description: quote.description,
+        },
+      },
+    });
+  };
+
+  const handleCreatePurchaseOrderFromQuote = async (quote: SupplierProductResult) => {
+    try {
+      const response = await supplierApiService.createPurchaseOrderFromQuote(quote);
+      const draft = response?.purchaseOrderDraft;
+      navigate('/accounts-payable/purchase-orders', {
+        state: {
+          prefillSupplierQuote: {
+            ...draft,
+            supplierName: quote.supplier,
+            quantity: quote.quantity,
+            productName: quote.productName,
+            delivery: quote.delivery,
+            price: quote.price,
+          },
+        },
+      });
+    } catch (error: any) {
+      alert(error?.message || 'No se pudo preparar la orden de compra.');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm('¿Está seguro de que desea eliminar este producto?')) {
+      try {
+        if (user) {
+          await inventoryService.deleteItem(id);
+        }
+        setProducts(prev => prev.filter(p => p.id !== id));
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        alert('Error al eliminar el producto. Intente nuevamente.');
+      }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (confirm(`¿Está seguro de que desea eliminar ${selectedProducts.length} productos seleccionados?`)) {
+      try {
+        for (const id of selectedProducts) {
+          if (user) {
+            await inventoryService.deleteItem(id);
+          }
+        }
+        setProducts(prev => prev.filter(p => !selectedProducts.includes(p.id)));
+        setSelectedProducts([]);
+        setShowBulkActions(false);
+      } catch (error) {
+        console.error('Error deleting products:', error);
+        alert('Error al eliminar los productos. Intente nuevamente.');
+      }
+    }
+  };
+
+  const handleBulkStatusChange = (status: 'active' | 'inactive') => {
+    setProducts(prev => prev.map(p =>
+      selectedProducts.includes(p.id) ? { ...p, status, updatedAt: new Date().toISOString() } : p
+    ));
+    setSelectedProducts([]);
+    setShowBulkActions(false);
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Nombre', 'SKU', 'Categoría', 'Precio', 'Costo', 'Stock', 'Stock Mín', 'Stock Máx', 'Proveedor', 'Estado'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredProducts.map(product => [
+        `"${product.name}"`,
+        product.sku,
+        product.category,
+        product.price,
+        product.cost,
+        product.stock,
+        product.minStock,
+        product.maxStock,
+        `"${product.supplier}"`,
+        product.status === 'active' ? 'Activo' : 'Inactivo'
+      ].join(','))
+    ].join('\n');
+
+    const csvForExcel = '\uFEFF' + csvContent.replace(/\n/g, '\r\n');
+    const blob = new Blob([csvForExcel], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `productos_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      sku: '',
+      category: '',
+      price: '',
+      cost: '',
+      stock: '',
+      minStock: '',
+      maxStock: '',
+      barcode: '',
+      description: '',
+      supplier: '',
+      imageUrl: '',
+      status: 'active',
+      expenseAccountId: '',
+      inventoryAccountId: '',
+      cogsAccountId: '',
+      warehouseId: ''
+      ,preferredSupplier: ''
+      ,lastSupplierPrice: ''
+      ,supplierProductId: ''
+    });
+    setEditingProduct(null);
+  };
+
+  const generateSKU = () => {
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `PRD-${timestamp}-${random}`;
+  };
+
+  const generateBarcode = () => {
+    return Math.floor(Math.random() * 9000000000000) + 1000000000000;
+  };
+
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProducts(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const selectAllProducts = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map(p => p.id));
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -594,21 +734,24 @@ export default function ProductsPage() {
               Volver al Inicio
             </button>
             <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Productos</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{isSupplierIntelligenceRoute ? 'Supplier Intelligence' : 'Gestión de Productos'}</h1>
           </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-          >
-            <i className="ri-add-line mr-2"></i>
-            Agregar Producto
-          </button>
+          {!isSupplierIntelligenceRoute ? (
+            <button
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              <i className="ri-add-line mr-2"></i>
+              Agregar Producto
+            </button>
+          ) : null}
         </div>
 
         {/* Tabs */}
+        {!isSupplierIntelligenceRoute ? (
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -657,9 +800,111 @@ export default function ProductsPage() {
             </button>
           </nav>
         </div>
+        ) : null}
+
+        {isSupplierIntelligenceRoute ? (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-blue-600 to-emerald-600 rounded-2xl p-6 text-white shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-blue-100">Supplier Intelligence</p>
+                  <h2 className="mt-2 text-3xl font-bold">Compare suppliers in a dedicated view</h2>
+                  <p className="mt-2 text-sm text-blue-50 max-w-3xl">
+                    Search materials or products and compare pricing, delivery, stock, and direct actions for quotes, invoices, and purchase orders.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 lg:min-w-[320px]">
+                  <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                    <p className="text-xs text-blue-100">Active Products</p>
+                    <p className="mt-1 text-2xl font-semibold">{activeProducts}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+                    <p className="text-xs text-blue-100">Low Stock</p>
+                    <p className="mt-1 text-2xl font-semibold">{lowStockProducts}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative md:col-span-2">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i className="ri-search-line text-gray-400"></i>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    placeholder="Search hammer, drill, screws, ceramic..."
+                  />
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <span className="font-medium">{supplierResults.length}</span>
+                  <span className="ml-1">offers found</span>
+                </div>
+              </div>
+            </div>
+
+            <SupplierIntelligenceTable
+              loading={supplierLoading}
+              query={searchTerm}
+              results={supplierResults}
+              error={supplierError}
+              onUseQuote={handleUseSupplierQuote}
+              onAddToInvoice={handleAddQuoteToInvoice}
+              onCreatePurchaseOrder={handleCreatePurchaseOrderFromQuote}
+            />
+
+            <SupplierCatalogManager compact onCatalogUpdated={() => {
+              if (!searchTerm.trim()) {
+                return;
+              }
+
+              setSupplierLoading(true);
+              supplierApiService.searchProducts(searchTerm.trim(), {
+                sortBy: 'price',
+                limit: 50,
+              }).then((results) => {
+                setSupplierResults(Array.isArray(results) ? results : []);
+              }).catch((error: any) => {
+                console.error('Supplier catalog refresh error:', error);
+                setSupplierError(error?.message || '⚠️ Unable to refresh suppliers after import.');
+              }).finally(() => {
+                setSupplierLoading(false);
+              });
+            }} />
+
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Related Internal Products</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Use this reference to see which items already exist in your inventory before using a quote.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {displayProducts.slice(0, 8).map((product) => (
+                  <div key={product.id} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-500">{product.category}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${product.stock <= product.minStock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {product.stock <= product.minStock ? 'Low Stock' : 'Available'}
+                      </span>
+                    </div>
+                    <h4 className="font-medium text-gray-900">{product.name}</h4>
+                    <p className="text-xs text-gray-500 mt-1">SKU: {product.sku}</p>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Stock: {product.stock}</span>
+                      <span className="font-semibold text-gray-900">{product.price.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
+        {!isSupplierIntelligenceRoute && activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -670,7 +915,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Total Productos</p>
-                    <p className="text-2xl font-semibold text-gray-900">{totalProducts}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{products.length}</p>
                   </div>
                 </div>
               </div>
@@ -682,7 +927,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Productos Activos</p>
-                    <p className="text-2xl font-semibold text-gray-900">{activeProducts}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{products.filter(p => p.status === 'active').length}</p>
                   </div>
                 </div>
               </div>
@@ -694,7 +939,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Stock Bajo</p>
-                    <p className="text-2xl font-semibold text-gray-900">{lowStockProducts}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{products.filter(p => p.stock <= p.minStock).length}</p>
                   </div>
                 </div>
               </div>
@@ -706,7 +951,7 @@ export default function ProductsPage() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                    <p className="text-2xl font-semibold text-gray-900">{totalValue.toLocaleString()}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{products.reduce((sum, p) => sum + (p.price * p.stock), 0).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -718,28 +963,28 @@ export default function ProductsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Valor Total Inventario</p>
-                  <p className="text-2xl font-bold text-blue-600">{totalValue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-blue-600">{products.reduce((sum, p) => sum + (p.price * p.stock), 0).toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Costo Total</p>
-                  <p className="text-2xl font-bold text-orange-600">{totalCost.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-orange-600">{products.reduce((sum, p) => sum + (p.cost * p.stock), 0).toLocaleString()}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Ganancia Potencial</p>
-                  <p className="text-2xl font-bold text-green-600">{potentialProfit.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">{(products.reduce((sum, p) => sum + (p.price * p.stock), 0) - products.reduce((sum, p) => sum + (p.cost * p.stock), 0)).toLocaleString()}</p>
                 </div>
               </div>
             </div>
 
             {/* Low Stock Alert */}
-            {lowStockProducts > 0 && (
+            {products.filter(p => p.stock <= p.minStock).length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-center">
                   <i className="ri-alert-line text-red-600 text-xl mr-3"></i>
                   <div>
                     <h4 className="text-red-800 font-medium">Alerta de Stock Bajo</h4>
                     <p className="text-red-700 text-sm">
-                      {lowStockProducts} productos tienen stock por debajo del mínimo recomendado.
+                      {products.filter(p => p.stock <= p.minStock).length} productos tienen stock por debajo del mínimo recomendado.
                     </p>
                   </div>
                   <button
@@ -915,8 +1160,18 @@ export default function ProductsPage() {
         )}
 
         {/* Products Tab */}
-        {activeTab === 'products' && (
+        {!isSupplierIntelligenceRoute && activeTab === 'products' && (
           <div className="space-y-6">
+            <SupplierResultsTable
+              loading={supplierLoading}
+              query={searchTerm}
+              results={supplierResults}
+              error={supplierError}
+              onUseQuote={handleUseSupplierQuote}
+              onAddToInvoice={handleAddQuoteToInvoice}
+              onCreatePurchaseOrder={handleCreatePurchaseOrderFromQuote}
+            />
+
             {/* Filters and Actions */}
             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">

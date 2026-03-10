@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
+
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
 import jsPDF from 'jspdf';
@@ -8,7 +9,8 @@ import { saveAs } from 'file-saver';
 import { useAuth } from '../../../hooks/useAuth';
 import { purchaseOrdersService, purchaseOrderItemsService, suppliersService, inventoryService, chartAccountsService, settingsService } from '../../../services/database';
 import { formatMoney } from '../../../utils/numberFormat';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+
 import InvoiceTypeModal from '../../../components/common/InvoiceTypeModal';
 import { generateInvoiceHtml, printInvoice, type InvoiceTemplateType, type InvoicePrintOptions } from '../../../utils/invoicePrintTemplates';
 import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImportUtils';
@@ -113,6 +115,8 @@ declare module 'jspdf' {
 export default function PurchaseOrdersPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [showModal, setShowModal] = useState(false);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -340,6 +344,42 @@ export default function PurchaseOrdersPage() {
 
     loadCompany();
   }, [user?.id]);
+
+  useEffect(() => {
+    const quote = (location.state as any)?.prefillSupplierQuote;
+    if (!quote) return;
+
+    const matchedSupplier = suppliers.find(
+      (supplier: any) => String(supplier.id || '') === String(quote.supplierId || ''),
+    ) || suppliers.find(
+      (supplier: any) => String(supplier.name || supplier.legalName || '').trim().toLowerCase() === String(quote.supplierName || quote.supplier || '').trim().toLowerCase(),
+    );
+    const matchedInventoryItem = inventoryItems.find(
+      (item: any) => String(item.id || '') === String(quote.inventoryItemId || ''),
+    ) || inventoryItems.find(
+      (item: any) => String(item.sku || '').trim().toLowerCase() === String(quote.sku || '').trim().toLowerCase(),
+    );
+    const today = new Date().toISOString().split('T')[0];
+
+    setEditingOrder(null);
+    setFormData({
+      supplierId: matchedSupplier?.id ? String(matchedSupplier.id) : '',
+      startDate: today,
+      deliveryDate: today,
+      notes: String(quote.notes || `Prepared from Supplier Intelligence quote ${quote.supplierProductId || ''}`),
+      products: [
+        {
+          itemId: matchedInventoryItem?.id ? String(matchedInventoryItem.id) : null,
+          name: String(quote.productName || quote.product || ''),
+          quantity: Number(quote.quantity || 1) || 1,
+          price: Number(quote.price || 0) || 0,
+        },
+      ],
+      inventoryAccountId: '',
+    });
+    setShowModal(true);
+    navigate(location.pathname, { replace: true });
+  }, [inventoryItems, location.pathname, location.state, navigate, suppliers]);
 
   const filteredOrders = orders.filter(order => {
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
@@ -1281,7 +1321,7 @@ export default function PurchaseOrdersPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                        className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md"
                         style={{
                           backgroundColor: getStatusBadgeStyle(order.status).bg,
                           color: getStatusBadgeStyle(order.status).color,

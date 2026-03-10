@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
@@ -120,6 +121,8 @@ interface LineFormRow {
 
 export default function APInvoicesPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [invoices, setInvoices] = useState<APInvoice[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -459,6 +462,35 @@ export default function APInvoicesPage() {
     loadTaxConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useEffect(() => {
+    const quote = (location.state as any)?.prefillSupplierQuote;
+    if (!quote) return;
+
+    const matchedSupplier = suppliers.find(
+      (supplier: any) => String(supplier.name || supplier.legal_name || '').trim().toLowerCase() === String(quote.supplier || '').trim().toLowerCase(),
+    );
+
+    resetForm();
+    setHeaderForm((prev) => ({
+      ...prev,
+      supplierId: matchedSupplier?.id ? String(matchedSupplier.id) : '',
+      legalName: matchedSupplier?.legal_name || matchedSupplier?.name || String(quote.supplier || ''),
+      taxId: matchedSupplier?.tax_id || matchedSupplier?.rnc || '',
+      notes: `Supplier quote ${String(quote.supplierProductId || '').trim()} | Delivery: ${String(quote.delivery || '').trim()}`,
+    }));
+    setLines([
+      {
+        description: String(quote.description || quote.productName || ''),
+        quantity: String(quote.quantity || 1),
+        unitPrice: String(quote.price || 0),
+        inventoryItemId: '',
+        discountPercentage: '0',
+      },
+    ]);
+    setShowModal(true);
+    navigate(location.pathname, { replace: true });
+  }, [location.pathname, location.state, navigate, suppliers]);
 
   useEffect(() => {
     const loadCompanyInfo = async () => {
@@ -1565,7 +1597,10 @@ ${items
   });
 
   const getStatusBadgeClass = (status: string) => {
-    return 'bg-[#001B9E] text-white';
+    if (status === 'paid') return 'bg-emerald-50 text-emerald-700';
+    if (status === 'approved') return 'bg-blue-50 text-blue-700';
+    if (status === 'cancelled') return 'bg-slate-100 text-slate-700';
+    return 'bg-amber-50 text-amber-700';
   };
 
   const inputBaseClass =
@@ -1669,7 +1704,7 @@ ${items
                         )}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(inv.status)}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${getStatusBadgeClass(inv.status)}`}>
                           {inv.status}
                         </span>
                       </td>
