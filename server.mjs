@@ -23,6 +23,11 @@ import validateCustomerTokenHandler from './api/validate-customer-token.js';
 import completeCustomerProfileHandler from './api/complete-customer-profile.js';
 import supplierSearchHandler from './api/suppliers/search.js';
 import createPurchaseOrderFromQuoteHandler from './api/purchase-orders/create-from-quote.js';
+import productsHandler from './api/products.js';
+import productByIdHandler from './api/product-by-id.js';
+import suppliersListHandler from './api/suppliers-list.js';
+import invoicesListHandler from './api/invoices-list.js';
+import clientsHandler from './api/clients.js';
 
 import serviceDocumentsCreateHandler from './api/service-documents/create.js';
 import serviceDocumentsUpdateHandler from './api/service-documents/update.js';
@@ -113,6 +118,11 @@ app.all('/api/htc/submit', (req, res) => htcSubmitHandler(req, res));
 app.all('/api/send-customer-sms', (req, res) => sendCustomerSmsHandler(req, res));
 app.all('/api/validate-customer-token', (req, res) => validateCustomerTokenHandler(req, res));
 app.all('/api/complete-customer-profile', (req, res) => completeCustomerProfileHandler(req, res));
+app.all('/api/products', (req, res) => productsHandler(req, res));
+app.all('/api/products/:id', (req, res) => productByIdHandler(req, res));
+app.all('/api/suppliers', (req, res) => suppliersListHandler(req, res));
+app.all('/api/invoices', (req, res) => invoicesListHandler(req, res));
+app.all('/api/clients', (req, res) => clientsHandler(req, res));
 app.all('/api/suppliers/search', (req, res) => supplierSearchHandler(req, res));
 app.all('/api/purchase-orders/create-from-quote', (req, res) => createPurchaseOrderFromQuoteHandler(req, res));
 

@@ -242,6 +242,99 @@ export const resolveTenantId = async (userId: string | null | undefined): Promis
   return userIdStr;
 };
 
+export const resolveBusinessId = async (userId: string | null | undefined): Promise<string | null> => {
+  if (!userId) return null;
+  const tenantId = await resolveTenantId(userId);
+  if (!tenantId) return null;
+
+  const markMissing = () => {
+    (globalThis as typeof globalThis & { __sbnBusinessesTableMissing?: boolean }).__sbnBusinessesTableMissing = true;
+  };
+
+  const isMissingTable = (err: any) => {
+    const msg = String(err?.message || '').toLowerCase();
+    return err?.code === '42P01' || err?.status === 404 || msg.includes('does not exist') || msg.includes('relation');
+  };
+
+  const businessTableMissing = (() => {
+    const scope = globalThis as typeof globalThis & { __sbnBusinessesTableMissing?: boolean };
+    return Boolean(scope.__sbnBusinessesTableMissing);
+  })();
+
+  if (businessTableMissing) {
+    return null;
+  }
+
+  try {
+    // 1. Try to find existing business for this tenant
+    const { data: existing, error: existingError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('owner_user_id', tenantId)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      if (isMissingTable(existingError)) { markMissing(); return null; }
+      throw existingError;
+    }
+
+    if ((existing as any)?.id) {
+      return String((existing as any).id);
+    }
+
+    // 2. Business doesn't exist yet — resolve a display name from profiles
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', tenantId)
+      .maybeSingle();
+
+    const fallbackName = String((profile as any)?.email || 'Business').trim() || 'Business';
+
+    // 3. Create the business
+    const { data: created, error: insertError } = await supabase
+      .from('businesses')
+      .insert({
+        owner_user_id: tenantId,
+        name: fallbackName,
+      })
+      .select('id')
+      .single();
+
+    if (!insertError && (created as any)?.id) {
+      return String((created as any).id);
+    }
+
+    if (insertError) {
+      if (isMissingTable(insertError)) { markMissing(); return null; }
+      // Might be a unique constraint conflict (concurrent creation) — retry SELECT
+    }
+
+    // 4. Retry SELECT in case of concurrent insert
+    const { data: retry, error: retryError } = await supabase
+      .from('businesses')
+      .select('id')
+      .eq('owner_user_id', tenantId)
+      .limit(1)
+      .maybeSingle();
+
+    if (retryError) {
+      if (isMissingTable(retryError)) { markMissing(); return null; }
+      throw retryError;
+    }
+
+    if ((retry as any)?.id) {
+      return String((retry as any).id);
+    }
+  } catch (err) {
+    console.warn('resolveBusinessId failed:', (err as any)?.message ?? err);
+  }
+
+  // NEVER return tenantId as businessId — it's a user UUID, not a business UUID
+  return null;
+};
+
 // Helper to ensure userId is always a string for DB queries (text columns)
 export const toTextId = (id: string | null | undefined): string => {
   return id ? String(id) : '';
@@ -5592,7 +5685,12 @@ export const inventoryService = {
           continue;
         }
 
-        throw error;
+        const wrapped: any = new Error(describeSupabaseError(error));
+        wrapped.code = (error as any)?.code;
+        wrapped.details = (error as any)?.details;
+        wrapped.hint = (error as any)?.hint;
+        wrapped.original = error;
+        throw wrapped;
       }
 
       throw new Error('Could not create inventory item');

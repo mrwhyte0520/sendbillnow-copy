@@ -67,6 +67,36 @@ export default function InventoryPage() {
     { inventory_item_id: '', quantity: '', notes: '' },
   ]);
 
+  const getItemStockStatus = (item: any): 'in_stock' | 'low_stock' | 'out_of_stock' => {
+    const rawStatus = String(item?.stock_status || '').toLowerCase();
+    if (rawStatus === 'in_stock' || rawStatus === 'low_stock' || rawStatus === 'out_of_stock') {
+      return rawStatus;
+    }
+
+    const currentStock = Number(item?.current_stock) || 0;
+    const minimumStock = Number(item?.minimum_stock ?? item?.min_stock ?? 0) || 0;
+
+    if (currentStock <= 0) return 'out_of_stock';
+    if (currentStock <= minimumStock) return 'low_stock';
+    return 'in_stock';
+  };
+
+  const getItemStockStatusLabel = (status: 'in_stock' | 'low_stock' | 'out_of_stock') => {
+    if (status === 'out_of_stock') return 'Out of Stock';
+    if (status === 'low_stock') return 'Low Stock';
+    return 'In Stock';
+  };
+
+  const getItemStockStatusClasses = (status: 'in_stock' | 'low_stock' | 'out_of_stock') => {
+    if (status === 'out_of_stock') return 'bg-[#f7d8d0] text-[#b7422a]';
+    if (status === 'low_stock') return 'bg-[#f5e7c5] text-[#6b562d]';
+    return 'bg-[#d7e4c5] text-[#4f5f33]';
+  };
+
+  const isSupplierImportedItem = (item: any) => {
+    return String(item?.source || '').toLowerCase() === 'supplier-intelligence' || Boolean(item?.supplier_product_id);
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search || '');
     const tab = String(params.get('tab') || '').toLowerCase();
@@ -1088,7 +1118,7 @@ export default function InventoryPage() {
           <table className="min-w-full divide-y divide-[#eadfc6]">
             <thead className="bg-[#f1ead6]">
               <tr>
-                {['SKU', 'Name', 'Category', 'Stock', 'Cost Price', 'Sale Price', 'Status', 'Actions'].map((header) => (
+                {['SKU', 'Product', 'Category', 'Supplier', 'Stock', 'Cost Price', 'Sale Price', 'Status', 'Actions'].map((header) => (
                   <th
                     key={header}
                     className="px-6 py-3 text-left text-xs font-semibold text-[#5f543a] uppercase tracking-wider"
@@ -1104,22 +1134,44 @@ export default function InventoryPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2e3c21]">
                     {item.sku}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
-                    {item.name}
+                  <td className="px-6 py-4 text-sm text-[#2e3c21]">
+                    <div className="flex items-center gap-3 min-w-[220px]">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="h-10 w-10 rounded-md object-cover"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-md bg-[#f1ead6]" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{item.name}</p>
+                        {isSupplierImportedItem(item) ? (
+                          <span className="mt-1 inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-[#dfe7f7] text-[#37486b]">
+                            Supplier
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7b6e4f]">
                     {item.category || 'N/A'}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#7b6e4f]">
+                    {item.supplier || item.preferred_supplier || 'N/A'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
-                    <span className={item.current_stock <= item.minimum_stock ? 'text-[#b7422a] font-semibold' : ''}>
+                    <span className={getItemStockStatus(item) !== 'in_stock' ? 'text-[#b7422a] font-semibold' : ''}>
                       {item.current_stock} {item.unit_of_measure}
                     </span>
-                    {item.minimum_stock && (
+                    {(item.minimum_stock || item.min_stock) && (
                       <div className="text-xs text-[#7b6e4f]">
-                        Min: {item.minimum_stock}
+                        Min: {item.minimum_stock ?? item.min_stock}
                       </div>
                     )}
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2e3c21]">
                     {(() => {
                       const cost = item.average_cost ?? item.cost_price ?? 0;
@@ -1135,14 +1187,20 @@ export default function InventoryPage() {
                     ${item.selling_price?.toLocaleString('es-DO') || '0'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      item.is_active
-                        ? 'bg-[#d7e4c5] text-[#4f5f33]'
-                        : 'bg-[#f7d8d0] text-[#b7422a]'
-                    }`}>
-                      {item.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    <div className="flex flex-col gap-2">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        item.is_active
+                          ? 'bg-[#d7e4c5] text-[#4f5f33]'
+                          : 'bg-[#f7d8d0] text-[#b7422a]'
+                      }`}>
+                        {item.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getItemStockStatusClasses(getItemStockStatus(item))}`}>
+                        {getItemStockStatusLabel(getItemStockStatus(item))}
+                      </span>
+                    </div>
                   </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button
                       onClick={() => handleOpenModal('item', item)}

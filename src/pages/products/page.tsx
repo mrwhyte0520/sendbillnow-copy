@@ -7,6 +7,7 @@ import { usePlanLimitations } from '../../hooks/usePlanLimitations';
 import SupplierResultsTable from '../../modules/suppliers/SupplierResultsTable';
 import SupplierIntelligenceTable from '../../modules/supplier-intelligence/SupplierIntelligenceTable';
 import SupplierCatalogManager from '../../modules/supplier-catalog/SupplierCatalogManager';
+import { supplierCatalogService } from '../../modules/supplier-catalog/supplierCatalog.service';
 import { supplierApiService } from '../../modules/suppliers/supplierApi.service';
 import type { SupplierProductResult } from '../../modules/supplier-adapters/SupplierAdapter';
 
@@ -34,6 +35,8 @@ interface Product {
   preferredSupplier?: string | null;
   lastSupplierPrice?: number | null;
   supplierProductId?: string | null;
+  source?: string | null;
+  stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock';
 }
 
 interface Category {
@@ -112,11 +115,18 @@ export default function ProductsPage() {
   const isUuid = (val: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(val);
 
   useEffect(() => {
+    if (isSupplierIntelligenceRoute) {
+      setProducts([]);
+      setCategories([]);
+      setLoading(false);
+      return;
+    }
+
     loadProducts();
     loadCategories();
     loadAccounts();
     loadWarehouses();
-  }, [user]);
+  }, [user, isSupplierIntelligenceRoute]);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -229,11 +239,42 @@ export default function ProductsPage() {
     const normalizedSearch = searchTerm.trim();
     let isCancelled = false;
 
-    if (!normalizedSearch) {
+    if (!isSupplierIntelligenceRoute) {
       setSupplierResults([]);
       setSupplierError('');
       setSupplierLoading(false);
       return;
+    }
+
+    if (!user?.id) {
+      setSupplierResults([]);
+      setSupplierError('');
+      setSupplierLoading(false);
+      return;
+    }
+
+    if (!normalizedSearch) {
+      setSupplierLoading(true);
+      supplierCatalogService.searchProducts('', user.id).then((results) => {
+        if (isCancelled) {
+          return;
+        }
+        setSupplierError('');
+        setSupplierResults(Array.isArray(results) ? results : []);
+      }).catch((error: any) => {
+        if (isCancelled) {
+          return;
+        }
+        setSupplierResults([]);
+        setSupplierError(error?.message || '⚠️ Unable to load imported supplier catalog.');
+      }).finally(() => {
+        if (!isCancelled) {
+          setSupplierLoading(false);
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
     }
 
     const timeoutId = window.setTimeout(async () => {
@@ -244,6 +285,7 @@ export default function ProductsPage() {
         const results = await supplierApiService.searchProducts(normalizedSearch, {
           sortBy: 'price',
           limit: 50,
+          userId: user.id,
         });
 
         if (isCancelled) {
@@ -273,7 +315,7 @@ export default function ProductsPage() {
       isCancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [searchTerm]);
+  }, [isSupplierIntelligenceRoute, searchTerm, user?.id]);
 
   useEffect(() => {
     const activeProducts = products
@@ -394,10 +436,14 @@ export default function ProductsPage() {
   };
 
   const totalProducts = products.length;
-  const activeProducts = products.filter(p => p.status === 'active').length;
-  const lowStockProducts = products.filter(p => p.stock <= p.minStock).length;
+  const activeProducts = isSupplierIntelligenceRoute
+    ? supplierResults.length
+    : products.filter(p => p.status === 'active').length;
+  const lowStockProducts = isSupplierIntelligenceRoute
+    ? supplierResults.filter((p: any) => Number(p?.stock) <= 5).length
+    : products.filter(p => p.stock <= p.minStock).length;
   const totalValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
-  const displayProducts = isSupplierIntelligenceRoute ? products : filteredProducts;
+  const displayProducts = filteredProducts;
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -586,6 +632,57 @@ export default function ProductsPage() {
       });
     } catch (error: any) {
       alert(error?.message || 'No se pudo preparar la orden de compra.');
+    }
+  };
+
+  const handleDeleteSupplierQuote = async (quote: SupplierProductResult) => {
+    if (!user?.id) return;
+    if (!confirm('¿Está seguro de que desea eliminar este producto importado?')) {
+      return;
+    }
+
+    try {
+      const quoteSku = String(quote.sku || '').trim().toLowerCase();
+      const quoteName = String(quote.productName || '').trim().toLowerCase();
+
+      const catalogProducts = await supplierCatalogService.getProducts(user.id);
+      const catalogMatch = catalogProducts.find((item) => {
+        const itemSku = String(item.sku || '').trim().toLowerCase();
+        const itemName = String(item.productName || '').trim().toLowerCase();
+        if (quoteSku && itemSku === quoteSku) return true;
+        return itemName === quoteName;
+      });
+
+      if (catalogMatch?.id) {
+        await supplierCatalogService.deleteProduct(user.id, catalogMatch.id);
+      }
+
+      const inventoryItems = await inventoryService.getItems(user.id);
+      const inventoryMatch = (inventoryItems || []).find((item: any) => {
+        const itemSku = String(item?.sku || '').trim().toLowerCase();
+        const itemName = String(item?.name || '').trim().toLowerCase();
+        if (quoteSku && itemSku === quoteSku) return true;
+        return itemName === quoteName;
+      });
+
+      if (inventoryMatch?.id) {
+        await inventoryService.deleteItem(String(inventoryMatch.id));
+      }
+
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+
+      const refreshed = searchTerm.trim()
+        ? await supplierApiService.searchProducts(searchTerm.trim(), {
+            sortBy: 'price',
+            limit: 50,
+            userId: user.id,
+          })
+        : await supplierCatalogService.searchProducts('', user.id);
+
+      setSupplierResults(Array.isArray(refreshed) ? refreshed : []);
+    } catch (error: any) {
+      console.error('Supplier quote delete error:', error);
+      setSupplierError(error?.message || '⚠️ Unable to remove imported supplier product.');
     }
   };
 
@@ -852,21 +949,29 @@ export default function ProductsPage() {
               query={searchTerm}
               results={supplierResults}
               error={supplierError}
+              onDeleteQuote={handleDeleteSupplierQuote}
               onUseQuote={handleUseSupplierQuote}
               onAddToInvoice={handleAddQuoteToInvoice}
               onCreatePurchaseOrder={handleCreatePurchaseOrderFromQuote}
             />
 
             <SupplierCatalogManager compact onCatalogUpdated={() => {
-              if (!searchTerm.trim()) {
+              if (!user?.id) {
+                setSupplierResults([]);
+                setSupplierError('');
+                setSupplierLoading(false);
                 return;
               }
-
               setSupplierLoading(true);
-              supplierApiService.searchProducts(searchTerm.trim(), {
-                sortBy: 'price',
-                limit: 50,
-              }).then((results) => {
+              const refreshPromise = searchTerm.trim()
+                ? supplierApiService.searchProducts(searchTerm.trim(), {
+                    sortBy: 'price',
+                    limit: 50,
+                    userId: user.id,
+                  })
+                : supplierCatalogService.searchProducts('', user.id);
+
+              refreshPromise.then((results) => {
                 setSupplierResults(Array.isArray(results) ? results : []);
               }).catch((error: any) => {
                 console.error('Supplier catalog refresh error:', error);
@@ -876,30 +981,32 @@ export default function ProductsPage() {
               });
             }} />
 
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Related Internal Products</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Use this reference to see which items already exist in your inventory before using a quote.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {displayProducts.slice(0, 8).map((product) => (
-                  <div key={product.id} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-500">{product.category}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${product.stock <= product.minStock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {product.stock <= product.minStock ? 'Low Stock' : 'Available'}
-                      </span>
+            {!isSupplierIntelligenceRoute && (
+              <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Related Internal Products</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Use this reference to see which items already exist in your inventory before using a quote.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {displayProducts.slice(0, 8).map((product) => (
+                    <div key={product.id} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-500">{product.category}</span>
+                        <span className={`text-xs px-2 py-1 rounded-full ${product.stock <= product.minStock ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {product.stock <= product.minStock ? 'Low Stock' : 'Available'}
+                        </span>
+                      </div>
+                      <h4 className="font-medium text-gray-900">{product.name}</h4>
+                      <p className="text-xs text-gray-500 mt-1">SKU: {product.sku}</p>
+                      <div className="mt-3 flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Stock: {product.stock}</span>
+                        <span className="font-semibold text-gray-900">{product.price.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <h4 className="font-medium text-gray-900">{product.name}</h4>
-                    <p className="text-xs text-gray-500 mt-1">SKU: {product.sku}</p>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Stock: {product.stock}</span>
-                      <span className="font-semibold text-gray-900">{product.price.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : null}
 
@@ -1324,6 +1431,7 @@ export default function ProductsPage() {
 
                       <h3 className="font-semibold text-gray-900 mb-1 text-sm">{product.name}</h3>
                       <p className="text-xs text-gray-500 mb-2">SKU: {product.sku}</p>
+                      <p className="text-xs text-gray-500 mb-3">Supplier: {product.supplier || 'N/A'}</p>
                       
                       <div className="flex items-center justify-between mb-3">
                         <div>
@@ -1338,12 +1446,12 @@ export default function ProductsPage() {
                         </div>
                       </div>
 
-                      {product.stock <= product.minStock && (
+                      {product.stock <= product.minStock ? (
                         <div className="bg-red-50 text-red-700 text-xs p-2 rounded mb-3">
                           <i className="ri-alert-line mr-1"></i>
                           Stock bajo
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Actions */}
                       <div className="flex space-x-2">

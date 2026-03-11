@@ -1,0 +1,4 @@
+product_name,description,category,supplier,price,stock,image_url
+Wireless Mouse,Ergonomic wireless mouse,Electronics,TechSupply,24.99,150,https://example.com/images/mouse.jpg
+Office Chair,Adjustable mesh office chair,Furniture,OfficeHub,189.50,35,https://example.com/images/chair.jpg
+Notebook Set,Premium paper notebook set,Stationery,PaperWorld,12.75,240,https://example.com/images/notebooks.jpg

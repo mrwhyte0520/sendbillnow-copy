@@ -1,0 +1,29 @@
+[
+  {
+    "product_name": "Wireless Mouse",
+    "description": "Ergonomic wireless mouse",
+    "category": "Electronics",
+    "supplier": "TechSupply",
+    "price": 24.99,
+    "stock": 150,
+    "image_url": "https://example.com/images/mouse.jpg"
+  },
+  {
+    "product_name": "Office Chair",
+    "description": "Adjustable mesh office chair",
+    "category": "Furniture",
+    "supplier": "OfficeHub",
+    "price": 189.5,
+    "stock": 35,
+    "image_url": "https://example.com/images/chair.jpg"
+  },
+  {
+    "product_name": "Notebook Set",
+    "description": "Premium paper notebook set",
+    "category": "Stationery",
+    "supplier": "PaperWorld",
+    "price": 12.75,
+    "stock": 240,
+    "image_url": "https://example.com/images/notebooks.jpg"
+  }
+]

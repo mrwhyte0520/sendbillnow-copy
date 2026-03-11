@@ -1284,7 +1284,7 @@ export default function UsersPage() {
                           {companyLogoSrc ? <img src={companyLogoSrc} alt="Logo" className="w-full h-full object-cover" /> : '🏢'}
                         </div>
                         <div className="text-white font-extrabold text-[18px] leading-[1.1] uppercase tracking-[0.6px] max-w-[235px]">
-                          {(companyName || 'Company')}<br />ID Card
+                          {(companyName || 'Company')}
                         </div>
                       </div>
                       <div className="w-[180px] h-[180px] rounded-[30px] p-2 mx-auto mb-5 shadow-[0_10px_30px_rgba(59,130,246,0.3)]" style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
@@ -1329,7 +1329,7 @@ export default function UsersPage() {
                           {companyLogoSrc ? <img src={companyLogoSrc} alt="Logo" className="w-full h-full object-cover" /> : '🏢'}
                         </div>
                         <div className="text-[#0f172a] font-extrabold text-[18px] leading-[1.1] uppercase tracking-[0.6px] max-w-[235px]">
-                          {(companyName || 'Company')}<br />ID Card
+                          {(companyName || 'Company')}
                         </div>
                       </div>
                       <div className="mb-7">

@@ -815,7 +815,7 @@ export function DashboardLayout({ children, hideSidebar = false }: DashboardLayo
       {/* Sidebar */}
       {!hideSidebar && (
         <div
-          className={`fixed inset-y-0 left-0 z-40 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#faf8f3] via-[#f5f2ea] to-[#efe9dc] border-r border-[#e0d6c4] shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform overflow-hidden transition-all duration-500 ease-in-out ${
+          className={`fixed inset-y-0 left-0 z-40 shrink-0 ${sidebarCollapsed ? 'w-20' : 'w-72'} bg-gradient-to-b from-[#faf8f3] via-[#f5f2ea] to-[#efe9dc] border-r border-[#e0d6c4] shadow-[0_8px_30px_rgb(0,0,0,0.12)] transform overflow-x-hidden transition-all duration-500 ease-in-out ${
             sidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
           } lg:translate-x-0 lg:opacity-100 lg:static lg:inset-0`}
         >
