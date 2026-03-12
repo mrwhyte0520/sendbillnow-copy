@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
+import PlanGate from '../../components/PlanGate';
 import { useAuth } from '../../hooks/useAuth';
 import UploadCatalog from './UploadCatalog';
 import SupplierTable from './SupplierTable';
@@ -77,12 +78,27 @@ export default function SupplierIntelligencePage() {
     }
   };
 
+  const handleEdit = async (row: SupplierProductRow, updates: SupplierProductRow) => {
+    if (!user?.id) return;
+    setWorking(true);
+    setError('');
+
+    try {
+      await supplierService.updateProduct(row.db_id, updates, user.id);
+      await load();
+    } catch (err: any) {
+      setError(err?.message || 'Unable to update supplier product.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     const sameBusiness = rows.filter((row) => row.business_id === businessId);
     if (!query) return sameBusiness;
 
-    return sameBusiness.filter((row) => [row.product, row.prov, row.category, row.description, row.location]
+    return sameBusiness.filter((row) => Object.values(row)
       .some((value) => String(value || '').toLowerCase().includes(query)));
   }, [rows, search, businessId]);
 
@@ -90,8 +106,9 @@ export default function SupplierIntelligencePage() {
   const supplierInsights = useMemo(() => analyzeSupplierProducts(rows, businessId), [rows, businessId]);
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-6">
+    <PlanGate module="supplier-intelligence">
+      <DashboardLayout>
+        <div className="space-y-6 p-6">
         <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-600 p-6 text-white">
           <p className="text-xs uppercase tracking-[0.2em] text-blue-100">Supplier Intelligence</p>
           <h1 className="mt-2 text-3xl font-bold">Secure Multi-tenant Supplier Intelligence</h1>
@@ -154,7 +171,7 @@ export default function SupplierIntelligencePage() {
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search supplier, product, category..."
+              placeholder="Search any column: product, id, category, supplier..."
               className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
           </div>
@@ -162,10 +179,12 @@ export default function SupplierIntelligencePage() {
           {loading ? (
             <div className="py-8 text-center text-sm text-slate-500">Loading supplier products...</div>
           ) : (
-            <SupplierTable products={visibleRows} currentBusinessId={businessId} onDelete={handleDelete} />
+            <SupplierTable products={visibleRows} currentBusinessId={businessId} onDelete={handleDelete} onEdit={handleEdit} />
           )}
         </div>
-      </div>
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+    </PlanGate>
   );
 }
+

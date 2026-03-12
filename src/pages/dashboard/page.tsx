@@ -5,6 +5,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { supabase } from '../../lib/supabase';
 import { invoicesService, apInvoicesService, purchaseOrdersService } from '../../services/database';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
+import { supplierService } from '../../modules/supplier-intelligence/SupplierService';
+import type { SupplierProductRow } from '../../modules/supplier-intelligence/types';
+import { MODULE_NAMES, ROUTE_TO_MODULE } from '../../config/planPermissions';
 
 interface InvoiceDueItem {
   id: string;
@@ -21,6 +24,14 @@ interface DayInvoices {
   payables: InvoiceDueItem[];
 }
 
+interface GlobalSearchResult {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  type: 'quick-access' | 'route' | 'supplier-product';
+}
+
 const STORAGE_PREFIX = 'contabi_rbac_';
 
 export default function DashboardPage() {
@@ -31,6 +42,8 @@ export default function DashboardPage() {
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
   const [invoicesByDay, setInvoicesByDay] = useState<Record<string, DayInvoices>>({});
   const [selectedDayInvoices, setSelectedDayInvoices] = useState<{ day: number; data: DayInvoices } | null>(null);
+  const [dashboardSearch, setDashboardSearch] = useState('');
+  const [supplierProducts, setSupplierProducts] = useState<SupplierProductRow[]>([]);
 
   const isAdminAllowed = Boolean(allowedModules?.has('admin'));
 
@@ -71,6 +84,24 @@ export default function DashboardPage() {
       }
     };
     fetchAllowed();
+  }, [user?.id]);
+
+  useEffect(() => {
+    const loadSupplierProducts = async () => {
+      if (!user?.id) {
+        setSupplierProducts([]);
+        return;
+      }
+
+      try {
+        const products = await supplierService.listProducts(user.id);
+        setSupplierProducts(products);
+      } catch {
+        setSupplierProducts([]);
+      }
+    };
+
+    loadSupplierProducts();
   }, [user?.id]);
 
   // Load pending invoices (AR and AP) for calendar
@@ -229,6 +260,72 @@ export default function DashboardPage() {
     return filtered.length > 0 ? filtered : byPlan;
   }, [allowedModules, currentPlanId, canAccessRoute, isAdminAllowed]);
 
+  const visibleQuickAccessButtons = useMemo(() => {
+    const query = dashboardSearch.trim().toLowerCase();
+    if (!query) return quickAccessButtons;
+    return quickAccessButtons.filter((button) => [button.name, button.href, button.module].some((value) => String(value || '').toLowerCase().includes(query)));
+  }, [dashboardSearch, quickAccessButtons]);
+
+  const appRoutes = useMemo(() => {
+    const quickAccessRouteSet = new Set(quickAccessButtons.map((button) => String(button.href || '').split('?')[0]));
+
+    return Object.entries(ROUTE_TO_MODULE)
+      .filter(([route]) => route !== '/')
+      .filter(([route]) => {
+        if (!isAdminAllowed && currentPlanId === 'student') {
+          return canAccessRoute(route);
+        }
+        return true;
+      })
+      .map(([route, module]) => ({
+        route,
+        module: String(module || ''),
+        moduleName: MODULE_NAMES[String(module || '')] || String(module || ''),
+        isQuickAccess: quickAccessRouteSet.has(route),
+      }));
+  }, [quickAccessButtons, isAdminAllowed, currentPlanId, canAccessRoute]);
+
+  const globalSearchResults = useMemo(() => {
+    const query = dashboardSearch.trim().toLowerCase();
+    if (!query) return [] as GlobalSearchResult[];
+
+    const quickAccessResults: GlobalSearchResult[] = visibleQuickAccessButtons.map((button) => ({
+      id: `quick-${button.href}`,
+      title: button.name,
+      subtitle: `${button.module} • ${button.href}`,
+      href: button.href,
+      type: 'quick-access',
+    }));
+
+    const routeResults: GlobalSearchResult[] = appRoutes
+      .filter(({ route, module, moduleName }) =>
+        [route, module, moduleName].some((value) => String(value || '').toLowerCase().includes(query)),
+      )
+      .filter(({ route }) => !quickAccessResults.some((item) => String(item.href || '').split('?')[0] === route))
+      .map(({ route, moduleName, module }) => ({
+        id: `route-${route}`,
+        title: moduleName || route,
+        subtitle: `${module} • ${route}`,
+        href: route,
+        type: 'route',
+      }));
+
+    const supplierResults: GlobalSearchResult[] = supplierProducts
+      .filter((product) =>
+        Object.values(product).some((value) => String(value || '').toLowerCase().includes(query)),
+      )
+      .slice(0, 20)
+      .map((product) => ({
+        id: `supplier-${product.db_id}`,
+        title: product.product || 'Supplier product',
+        subtitle: `${product.prov} • ${product.category} • ${product.id || 'No ID'} • $${Number(product.price || 0).toFixed(2)}`,
+        href: '/supplier-intelligence',
+        type: 'supplier-product',
+      }));
+
+    return [...quickAccessResults, ...routeResults, ...supplierResults];
+  }, [dashboardSearch, visibleQuickAccessButtons, appRoutes, supplierProducts]);
+
   // Generar días del calendario
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -273,11 +370,67 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-[#2f3e1e]">Dashboard Search</h2>
+              <p className="text-sm text-[#6b7280]">Search across modules, routes, quick actions and imported Supplier Intelligence products.</p>
+            </div>
+            <input
+              type="text"
+              value={dashboardSearch}
+              onChange={(event) => setDashboardSearch(event.target.value)}
+              placeholder="Search the whole app and imported supplier products..."
+              className="w-full rounded-xl border border-[#d6cfbf] px-4 py-3 text-sm text-[#2f3e1e] shadow-sm focus:border-[#008000] focus:outline-none focus:ring-2 focus:ring-[#008000]/10 lg:max-w-md"
+            />
+          </div>
+        </div>
+
+        {dashboardSearch.trim() ? (
+          <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-8">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-[#2f3e1e]">Global Search Results</h2>
+                <p className="text-sm text-[#6b7280]">Results from the app and imported supplier products.</p>
+              </div>
+              <span className="rounded-full bg-[#eef6ea] px-3 py-1 text-xs font-semibold text-[#2f6b1f]">
+                {globalSearchResults.length} result{globalSearchResults.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {globalSearchResults.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {globalSearchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    onClick={() => navigate(result.href)}
+                    className="rounded-xl border border-[#e0d8c8] bg-white px-4 py-4 text-left transition-all duration-200 hover:border-[#008000]/30 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#2f3e1e]">{result.title}</p>
+                        <p className="mt-1 text-xs text-[#6b7280]">{result.subtitle}</p>
+                      </div>
+                      <span className="rounded-full bg-[#f4f1e8] px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-[#7a6f57]">
+                        {result.type.replace('-', ' ')}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-[#d6cfbf] px-4 py-6 text-center text-sm text-[#6b7280]">
+                No results found across the app or imported supplier products.
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* Botones de Acceso Rápido */}
         <div className="bg-gradient-to-br from-white to-[#faf9f5] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-[#e8e0d0] p-8">
           <h2 className="text-2xl font-bold text-[#2f3e1e] mb-6 drop-shadow-sm">Quick Access</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-8 gap-4">
-            {quickAccessButtons.map((button) => (
+            {visibleQuickAccessButtons.map((button) => (
               <button
                 key={button.name}
                 onClick={() => navigate(button.href)}
@@ -295,6 +448,11 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
+          {visibleQuickAccessButtons.length === 0 ? (
+            <div className="mt-6 rounded-xl border border-dashed border-[#d6cfbf] px-4 py-6 text-center text-sm text-[#6b7280]">
+              No quick access options match your search.
+            </div>
+          ) : null}
         </div>
 
         {/* Calendario */}
@@ -469,3 +627,4 @@ export default function DashboardPage() {
     </DashboardLayout>
   );
 }
+

@@ -52,6 +52,7 @@ export const MODULES = {
   STATISTICS: 'statistics',
   REFERRALS: 'referrals',
   ACCOUNTING_SETTINGS: 'accounting-settings',
+  SUPPLIER_INTELLIGENCE: 'supplier-intelligence',
 } as const;
 
 // Configuración de cada plan
@@ -188,6 +189,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.PRODUCTS,
       MODULES.CUSTOMERS,
       MODULES.SETTINGS,
+      MODULES.SUPPLIER_INTELLIGENCE,
     ],
     routes: [
       '/dashboard',
@@ -203,6 +205,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/inventory/warehouses',
       '/customers',
       '/settings',
+      '/supplier-intelligence',
       '/profile',
       '/plans',
     ],
@@ -247,6 +250,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.STATISTICS,
       MODULES.REFERRALS,
       MODULES.ACCOUNTING_SETTINGS,
+      MODULES.SUPPLIER_INTELLIGENCE,
     ],
     routes: [
       '/dashboard',
@@ -283,6 +287,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       '/fixed-assets',
       '/statistics',
       '/referrals',
+      '/supplier-intelligence',
       '/profile',
       '/plans',
     ],
@@ -497,6 +502,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.STATISTICS,
       MODULES.REFERRALS,
       MODULES.ACCOUNTING_SETTINGS,
+      MODULES.SUPPLIER_INTELLIGENCE,
     ],
     routes: ['*'], // Todas las rutas - todas las funciones
     limits: {
@@ -538,6 +544,7 @@ export const PLAN_CONFIGS: Record<PlanId, PlanConfig> = {
       MODULES.USERS,
       MODULES.FIXED_ASSETS,
       MODULES.ACCOUNTING_SETTINGS,
+      MODULES.SUPPLIER_INTELLIGENCE,
     ],
     routes: ['*'], // Todas las rutas durante prueba
     limits: {
@@ -609,6 +616,7 @@ export const ROUTE_TO_MODULE: Record<string, string> = {
   '/statistics': MODULES.STATISTICS,
   '/referrals': MODULES.REFERRALS,
   '/settings/accounting': MODULES.ACCOUNTING_SETTINGS,
+  '/supplier-intelligence': MODULES.SUPPLIER_INTELLIGENCE,
 };
 
 // Nombres amigables para los módulos
@@ -645,6 +653,7 @@ export const MODULE_NAMES: Record<string, string> = {
   [MODULES.STATISTICS]: 'Estadísticas',
   [MODULES.REFERRALS]: 'Referidos',
   [MODULES.ACCOUNTING_SETTINGS]: 'Configuración Contable',
+  [MODULES.SUPPLIER_INTELLIGENCE]: 'Supplier Intelligence',
 };
 
 // Función para obtener el plan mínimo requerido para un módulo
@@ -656,6 +665,8 @@ export function getMinimumPlanForModule(module: string): PlanId {
   // Módulos de inventario disponibles desde Facturación Premium
   const inventoryModules: string[] = [MODULES.INVENTORY, MODULES.PRODUCTS];
   if (inventoryModules.includes(module)) return 'pyme';
+
+  if (module === MODULES.SUPPLIER_INTELLIGENCE) return 'pos-basic';
 
   // Módulos contables / banca / nómina: mínimo PRO
   const accountingModules: string[] = [
@@ -682,3 +693,4 @@ export function getMinimumPlanName(module: string): string {
   const planId = getMinimumPlanForModule(module);
   return PLAN_CONFIGS[planId]?.name || 'Plan desconocido';
 }
+

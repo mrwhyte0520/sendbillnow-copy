@@ -273,8 +273,11 @@ export const supplierService = {
           created += 1;
         }
 
-        const synced = await syncToInventory(context, [{ ...item, image: imageUrl }]);
-        syncedToInventory += synced;
+        try {
+          const synced = await syncToInventory(context, [{ ...item, image: imageUrl }]);
+          syncedToInventory += synced;
+        } catch {
+        }
 
         if (data) {
           const mapped = mapSupplierRow(data);
@@ -301,6 +304,67 @@ export const supplierService = {
   async createManualProduct(item: SupplierProductInput, userId?: string) {
     const result = await this.importProducts([item], 'manual', userId);
     return result.products[0] || null;
+  },
+
+  async updateProduct(productId: string, updates: SupplierProductInput, userId?: string) {
+    const context = await resolveContext(userId);
+    const existing = await this.listProducts(context.userId);
+    const match = existing.find((row) => row.db_id === productId && row.business_id === context.businessId);
+    if (!match) {
+      throw new Error('Supplier product not found.');
+    }
+
+    const item = normalizeProductInput(updates);
+    validateRequired(context, [item]);
+
+    const key = `${item.product.toLowerCase()}::${item.prov.toLowerCase()}`;
+    const shouldUploadImage = Boolean(item.image) && !/^https?:\/\//i.test(item.image) && !item.image.startsWith('data:image/svg+xml');
+    const uploadedImageUrl = shouldUploadImage
+      ? await uploadProductImage(item.image, context.businessId, item.id || key.replace(/[^a-z0-9]+/g, '-')).catch(() => '')
+      : '';
+    const imageUrl = uploadedImageUrl || item.image || match.image || '';
+    const now = new Date().toISOString();
+
+    const payload = {
+      prov: item.prov,
+      location: item.location,
+      product: item.product,
+      external_id: item.id,
+      product_name: item.product,
+      supplier_name: item.prov,
+      category: item.category,
+      description: item.description,
+      qty: item.qty,
+      stock: item.qty,
+      price: item.price,
+      margin_percent: item.margin_percent,
+      delivery: item.delivery,
+      tax: item.tax,
+      amount: item.amount,
+      image: imageUrl,
+      image_url: imageUrl,
+      source: item.source || match.source || 'manual',
+      created_at: match.created_at,
+      updated_at: now,
+    };
+
+    const { data, error } = await supabase
+      .from(SUPPLIER_PRODUCTS_TABLE)
+      .update(payload)
+      .eq('id', match.db_id)
+      .eq('business_id', context.businessId)
+      .eq('tenant_id', context.tenantId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    try {
+      await syncToInventory(context, [{ ...item, image: imageUrl }]);
+    } catch {
+    }
+
+    return data ? mapSupplierRow(data) : null;
   },
 
   async deleteProduct(productId: string, userId?: string) {

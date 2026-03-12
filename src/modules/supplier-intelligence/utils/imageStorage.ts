@@ -76,6 +76,11 @@ const fetchImageBlob = async (input: string) => {
 };
 
 export async function uploadProductImage(input: string, businessId: string, productId: string) {
+  const source = String(input || '').trim();
+  if (!source || /^https?:\/\//i.test(source)) {
+    return '';
+  }
+
   const blob = await fetchImageBlob(input).catch(() => null);
   if (!blob || typeof document === 'undefined') {
     return '';
@@ -88,8 +93,15 @@ export async function uploadProductImage(input: string, businessId: string, prod
   const mainPath = `${businessId}/${productId}.jpg`;
   const thumbPath = `${businessId}/${productId}_thumb.jpg`;
 
-  await supabase.storage.from(BUCKET).upload(mainPath, optimized, { upsert: true, contentType: 'image/jpeg' });
-  await supabase.storage.from(BUCKET).upload(thumbPath, thumbnail, { upsert: true, contentType: 'image/jpeg' });
+  const mainUpload = await supabase.storage.from(BUCKET).upload(mainPath, optimized, { upsert: true, contentType: 'image/jpeg' });
+  if (mainUpload.error) {
+    return '';
+  }
+
+  const thumbUpload = await supabase.storage.from(BUCKET).upload(thumbPath, thumbnail, { upsert: true, contentType: 'image/jpeg' });
+  if (thumbUpload.error) {
+    return '';
+  }
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(mainPath);
   return String(data?.publicUrl || '').trim();

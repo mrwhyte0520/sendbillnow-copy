@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { lazy } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import PlanGate from '../components/PlanGate';
 
 import TaxConfigurationPage from '../pages/taxes/configuration/page';
 import NcfManagementPage from '../pages/taxes/ncf/page';
@@ -490,7 +491,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '/supplier-intelligence',
-    element: <ProtectedRoute><SupplierIntelligencePage /></ProtectedRoute>
+    element: <ProtectedRoute><PlanGate module="supplier-intelligence"><SupplierIntelligencePage /></PlanGate></ProtectedRoute>
   },
   {
     path: '/supplier-portal',
@@ -887,3 +888,4 @@ const routes: RouteObject[] = [
 ];
 
 export default routes;
+

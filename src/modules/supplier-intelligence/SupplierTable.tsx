@@ -5,6 +5,7 @@ type SupplierTableProps = {
   products: SupplierProductRow[];
   currentBusinessId: string;
   onDelete?: (row: SupplierProductRow) => Promise<void>;
+  onEdit?: (row: SupplierProductRow, updates: SupplierProductRow) => Promise<void>;
 };
 
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%23e2e8f0'/%3E%3Cpath d='M12 25l5-5 4 4 7-8 4 9H12z' fill='%2394a3b8'/%3E%3Ccircle cx='15' cy='15' r='3' fill='%2394a3b8'/%3E%3C/svg%3E";
@@ -36,6 +37,12 @@ const resolveImageValue = (value: unknown): string => {
   }
 
   return asText(value);
+};
+
+const parseNumericInput = (value: string) => {
+  if (value.trim() === '') return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 function resolveImageSource(row: SupplierProductRow) {
@@ -75,9 +82,23 @@ function SupplierImageCell({ src, alt }: { src: string; alt: string }) {
   return <img src={currentSrc} alt={alt} className="h-10 w-10 rounded object-cover bg-slate-100" onError={() => setFailed(true)} />;
 }
 
-export default function SupplierTable({ products, currentBusinessId, onDelete }: SupplierTableProps) {
+export default function SupplierTable({ products, currentBusinessId, onDelete, onEdit }: SupplierTableProps) {
   const safeRows = products.filter((item) => item.business_id === currentBusinessId);
   const [selectedRow, setSelectedRow] = useState<SupplierProductRow | null>(null);
+  const [editingRow, setEditingRow] = useState<SupplierProductRow | null>(null);
+  const [draftRow, setDraftRow] = useState<SupplierProductRow | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const beginEdit = (row: SupplierProductRow) => {
+    setEditingRow(row);
+    setDraftRow({ ...row });
+  };
+
+  const closeEdit = () => {
+    setEditingRow(null);
+    setDraftRow(null);
+    setSavingEdit(false);
+  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -131,13 +152,22 @@ export default function SupplierTable({ products, currentBusinessId, onDelete }:
                   <td className="px-3 py-2 text-slate-700">${Number(row.amount || 0).toFixed(2)}</td>
                   <td className="px-3 py-2"><SupplierImageCell src={resolveImageSource(row)} alt={row.product} /></td>
                   <td className="px-3 py-2">
-                    <button
-                      type="button"
-                      onClick={() => onDelete?.(row)}
-                      className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => beginEdit(row)}
+                        className="rounded border border-blue-200 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete?.(row)}
+                        className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -184,6 +214,66 @@ export default function SupplierTable({ products, currentBusinessId, onDelete }:
                 <div><span className="font-medium text-slate-900">Tax:</span> {Number(selectedRow.tax || 0).toFixed(2)}</div>
                 <div><span className="font-medium text-slate-900">Amount:</span> ${Number(selectedRow.amount || 0).toFixed(2)}</div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {editingRow && draftRow ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" onClick={closeEdit}>
+          <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">{draftRow.prov}</p>
+                <h3 className="mt-1 text-2xl font-semibold text-slate-900">Edit supplier product</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="rounded border border-slate-200 px-3 py-1 text-sm text-slate-600 hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.product} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, product: event.target.value }) : prev)} placeholder="Product" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.prov} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, prov: event.target.value }) : prev)} placeholder="Supplier" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.id} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, id: event.target.value }) : prev)} placeholder="ID / SKU" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.category} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, category: event.target.value }) : prev)} placeholder="Category" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.location} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, location: event.target.value }) : prev)} placeholder="Location" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.delivery} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, delivery: event.target.value }) : prev)} placeholder="Delivery" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="1" value={draftRow.qty === 0 ? '' : draftRow.qty} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, qty: parseNumericInput(event.target.value) }) : prev)} placeholder="Qty" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.price === 0 ? '' : draftRow.price} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, price: parseNumericInput(event.target.value) }) : prev)} placeholder="Price" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.margin_percent === 0 ? '' : draftRow.margin_percent} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, margin_percent: parseNumericInput(event.target.value) }) : prev)} placeholder="Margin %" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.tax === 0 ? '' : draftRow.tax} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, tax: parseNumericInput(event.target.value) }) : prev)} placeholder="Tax" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-2" value={draftRow.image} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, image: event.target.value }) : prev)} placeholder="Image URL" />
+              <textarea className="min-h-[110px] rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-2" value={draftRow.description} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, description: event.target.value }) : prev)} placeholder="Description" />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={closeEdit} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingEdit || !onEdit}
+                onClick={async () => {
+                  if (!onEdit) return;
+                  setSavingEdit(true);
+                  try {
+                    await onEdit(editingRow, {
+                      ...draftRow,
+                      amount: Number((draftRow.price || 0) * (draftRow.qty || 0)),
+                    });
+                    closeEdit();
+                  } finally {
+                    setSavingEdit(false);
+                  }
+                }}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
