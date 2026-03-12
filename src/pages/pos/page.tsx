@@ -10393,7 +10393,7 @@ const payload = {
 
 
 
-                  <span>Sales Tax:</span>
+                  <span>{`Sales Tax (${Number(currentItbisRate || 0).toFixed(2).replace(/\.00$/, '')}%):`}</span>
 
 
 
@@ -16276,7 +16276,7 @@ const payload = {
 
 
 
-          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours']}
+          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours', 'rent-receipt', 'cash-receipt']}
 
 
 

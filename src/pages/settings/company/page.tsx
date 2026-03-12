@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 
 import { settingsService } from '../../../services/database';
+import { supplierService } from '../../../modules/supplier-intelligence/SupplierService';
 
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -148,7 +149,7 @@ type SettingsTab = 'company' | 'social' | 'printers' | 'register';
 
 export default function CompanySettingsPage() {
 
-  useAuth();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('company');
 
@@ -549,6 +550,11 @@ export default function CompanySettingsPage() {
         setLogoPreview(saved.logo || null);
 
         setContractorSignaturePreview((saved as any).contractor_signature_image || null);
+
+        const savedTaxRate = Number((saved as any).default_tax_rate);
+        if (user?.id && Number.isFinite(savedTaxRate) && savedTaxRate >= 0) {
+          await supplierService.syncDefaultTaxRate(savedTaxRate, user.id);
+        }
 
       }
 

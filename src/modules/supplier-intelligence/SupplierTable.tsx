@@ -45,6 +45,13 @@ const parseNumericInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const calculateAmount = (row: Pick<SupplierProductRow, 'qty' | 'price' | 'delivery' | 'tax'>) => {
+  const subtotal = Number(row.qty || 0) * Number(row.price || 0);
+  const delivery = Number(row.delivery || 0);
+  const tax = Number(row.tax || 0);
+  return subtotal + (Number.isFinite(delivery) ? delivery : 0) + (Number.isFinite(tax) ? tax : 0);
+};
+
 function resolveImageSource(row: SupplierProductRow) {
   const record = row as unknown as Record<string, unknown>;
   const directCandidates = [
@@ -241,7 +248,7 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.id} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, id: event.target.value }) : prev)} placeholder="ID / SKU" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.category} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, category: event.target.value }) : prev)} placeholder="Category" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.location} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, location: event.target.value }) : prev)} placeholder="Location" />
-              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.delivery} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, delivery: event.target.value }) : prev)} placeholder="Delivery" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={Number(draftRow.delivery || 0) === 0 ? '' : draftRow.delivery} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, delivery: String(parseNumericInput(event.target.value)) }) : prev)} placeholder="Delivery" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="1" value={draftRow.qty === 0 ? '' : draftRow.qty} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, qty: parseNumericInput(event.target.value) }) : prev)} placeholder="Qty" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.price === 0 ? '' : draftRow.price} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, price: parseNumericInput(event.target.value) }) : prev)} placeholder="Price" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.margin_percent === 0 ? '' : draftRow.margin_percent} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, margin_percent: parseNumericInput(event.target.value) }) : prev)} placeholder="Margin %" />
@@ -263,7 +270,7 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
                   try {
                     await onEdit(editingRow, {
                       ...draftRow,
-                      amount: Number((draftRow.price || 0) * (draftRow.qty || 0)),
+                      amount: calculateAmount(draftRow),
                     });
                     closeEdit();
                   } finally {
