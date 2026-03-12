@@ -16276,11 +16276,16 @@ const payload = {
 
 
 
+          allowedTypes={['classic', 'blue-invoice']}
+
+
+
           hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours', 'rent-receipt', 'cash-receipt']}
 
 
 
           title="Print Receipt"
+
 
 
 

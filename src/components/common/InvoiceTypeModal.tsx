@@ -7,6 +7,7 @@ interface InvoiceTypeModalProps {
   onClose: () => void;
   onSelect: (type: InvoiceTemplateType, options?: InvoicePrintOptions) => void;
   documentType?: 'invoice' | 'supplier_invoice' | 'quote';
+  allowedTypes?: InvoiceTemplateType[];
   hiddenTypes?: InvoiceTemplateType[];
   title?: string;
   customerEmail?: string;
@@ -22,6 +23,7 @@ export default function InvoiceTypeModal({
   onClose,
   onSelect,
   documentType = 'invoice',
+  allowedTypes,
   hiddenTypes,
   title = 'Select Document Format',
   customerEmail,
@@ -481,8 +483,15 @@ export default function InvoiceTypeModal({
   );
 
   const visibleTemplates = useMemo(() => {
-    return hiddenTypes?.length ? templates.filter((t) => !hiddenTypes.includes(t.id)) : templates;
-  }, [hiddenTypes, templates]);
+    let next = templates;
+    if (allowedTypes?.length) {
+      next = next.filter((t) => allowedTypes.includes(t.id));
+    }
+    if (hiddenTypes?.length) {
+      next = next.filter((t) => !hiddenTypes.includes(t.id));
+    }
+    return next;
+  }, [allowedTypes, hiddenTypes, templates]);
 
   useEffect(() => {
     if (!isOpen) return;
