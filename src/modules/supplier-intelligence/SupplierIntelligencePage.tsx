@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import PlanGate from '../../components/PlanGate';
 import { useAuth } from '../../hooks/useAuth';
 import UploadCatalog from './UploadCatalog';
 import SupplierTable from './SupplierTable';
@@ -17,11 +16,32 @@ export default function SupplierIntelligencePage() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [lastImportSummary, setLastImportSummary] = useState('');
+  const [defaultMarginPercent, setDefaultMarginPercent] = useState(0);
+
+  const notifyProductsUpdated = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('productsUpdated'));
+    } catch {
+    }
+
+    try {
+      localStorage.setItem('productsUpdatedAt', String(Date.now()));
+    } catch {
+    }
+
+    try {
+      const channel = new BroadcastChannel('products_updates');
+      channel.postMessage({ type: 'productsUpdated', at: Date.now() });
+      channel.close();
+    } catch {
+    }
+  };
 
   const load = async () => {
     if (!user?.id) {
       setRows([]);
       setBusinessId('');
+      setDefaultMarginPercent(0);
       setLoading(false);
       return;
     }
@@ -32,6 +52,7 @@ export default function SupplierIntelligencePage() {
     try {
       const context = await supplierService.getContext(user.id);
       setBusinessId(context.businessId);
+      setDefaultMarginPercent(await supplierService.getDefaultMarginPercent());
       const products = await supplierService.listProducts(user.id);
       setRows(products.filter((item) => item.business_id === context.businessId));
     } catch (err: any) {
@@ -55,6 +76,7 @@ export default function SupplierIntelligencePage() {
       const result = await supplierService.importProducts(products, source, user.id);
       setRows(result.products);
       setLastImportSummary(`Import completed successfully. Processed: ${result.processed}. Imported: ${result.imported}. Skipped: ${result.skipped}.`);
+      notifyProductsUpdated();
       return result;
     } catch (err: any) {
       setError(err?.message || 'Unable to import supplier products.');
@@ -71,6 +93,7 @@ export default function SupplierIntelligencePage() {
     try {
       await supplierService.deleteProduct(row.db_id, user.id);
       await load();
+      notifyProductsUpdated();
     } catch (err: any) {
       setError(err?.message || 'Unable to delete supplier product.');
     } finally {
@@ -86,8 +109,27 @@ export default function SupplierIntelligencePage() {
     try {
       await supplierService.updateProduct(row.db_id, updates, user.id);
       await load();
+      notifyProductsUpdated();
     } catch (err: any) {
       setError(err?.message || 'Unable to update supplier product.');
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleApplyDefaultMargin = async () => {
+    if (!user?.id) return;
+    setWorking(true);
+    setError('');
+
+    try {
+      const products = await supplierService.syncDefaultMarginPercent(defaultMarginPercent, user.id);
+      const filtered = products.filter((item) => item.business_id === businessId);
+      setRows(filtered);
+      setLastImportSummary(`Default profit % applied to ${filtered.length} supplier products.`);
+      notifyProductsUpdated();
+    } catch (err: any) {
+      setError(err?.message || 'Unable to apply the default profit percentage.');
     } finally {
       setWorking(false);
     }
@@ -106,9 +148,8 @@ export default function SupplierIntelligencePage() {
   const supplierInsights = useMemo(() => analyzeSupplierProducts(rows, businessId), [rows, businessId]);
 
   return (
-    <PlanGate module="supplier-intelligence">
-      <DashboardLayout>
-        <div className="space-y-6 p-6">
+    <DashboardLayout>
+      <div className="space-y-6 p-6">
         <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-600 p-6 text-white">
           <p className="text-xs uppercase tracking-[0.2em] text-blue-100">Supplier Intelligence</p>
           <h1 className="mt-2 text-3xl font-bold">Secure Multi-tenant Supplier Intelligence</h1>
@@ -165,6 +206,34 @@ export default function SupplierIntelligencePage() {
         <UploadCatalog disabled={working} onImport={handleImport} />
 
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Default % Profit</h2>
+              <p className="text-sm text-slate-500">Apply a default profit percentage automatically to Supplier Intelligence products.</p>
+            </div>
+            <div className="flex w-full max-w-md gap-3">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={defaultMarginPercent === 0 ? '' : defaultMarginPercent}
+                onChange={(event) => setDefaultMarginPercent(Number(event.target.value) || 0)}
+                placeholder="Default % Profit"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleApplyDefaultMargin}
+                disabled={working}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-900">Supplier products</h2>
             <input
@@ -182,9 +251,8 @@ export default function SupplierIntelligencePage() {
             <SupplierTable products={visibleRows} currentBusinessId={businessId} onDelete={handleDelete} onEdit={handleEdit} />
           )}
         </div>
-        </div>
-      </DashboardLayout>
-    </PlanGate>
+      </div>
+    </DashboardLayout>
   );
 }
 

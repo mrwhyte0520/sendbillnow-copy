@@ -16,11 +16,16 @@ const normalizeTaxRate = (value: unknown) => {
   return numeric > 1 ? numeric / 100 : numeric;
 };
 
-const calculateSupplierAmount = (item: Pick<SupplierProductInput, 'qty' | 'price' | 'delivery' | 'tax'>) => {
+const calculateSupplierAmount = (item: Pick<SupplierProductInput, 'qty' | 'price' | 'tax'>) => {
   const subtotal = Math.max(toSafeNumber(item.qty, 0), 0) * Math.max(toSafeNumber(item.price, 0), 0);
-  const delivery = Math.max(toSafeNumber(item.delivery, 0), 0);
   const tax = Math.max(toSafeNumber(item.tax, 0), 0);
-  return subtotal + delivery + tax;
+  return subtotal + tax;
+};
+
+const calculateSalePrice = (item: Pick<SupplierProductInput, 'price' | 'margin_percent'>) => {
+  const purchasePrice = Math.max(toSafeNumber(item.price, 0), 0);
+  const marginPercent = Math.max(toSafeNumber(item.margin_percent, 0), 0);
+  return Number((purchasePrice * (1 + (marginPercent / 100))).toFixed(2));
 };
 
 const calculateTaxFromRate = (item: Pick<SupplierProductInput, 'qty' | 'price'>, defaultTaxRate: unknown) => {
@@ -43,7 +48,6 @@ const buildSupplierFinancials = (
     amount: calculateSupplierAmount({
       qty: item.qty,
       price: item.price,
-      delivery: item.delivery,
       tax,
     }),
   };
@@ -77,8 +81,17 @@ const resolveImageValue = (value: unknown): string => {
 
 const normalizeProductInput = (
   item: SupplierProductInput,
-  options?: { defaultTaxRate?: unknown; forceDefaultTaxRate?: boolean },
+  options?: {
+    defaultTaxRate?: unknown;
+    forceDefaultTaxRate?: boolean;
+    defaultMarginPercent?: unknown;
+    forceDefaultMarginPercent?: boolean;
+  },
 ): SupplierProductInput => {
+  const resolvedMarginPercent = options?.forceDefaultMarginPercent === true
+    ? Math.max(toSafeNumber(options.defaultMarginPercent, 0), 0)
+    : Math.max(toSafeNumber(item.margin_percent, toSafeNumber(options?.defaultMarginPercent, 0)), 0);
+
   const normalized = {
     prov: String(item.prov || '').trim(),
     location: String(item.location || '').trim(),
@@ -88,7 +101,7 @@ const normalizeProductInput = (
     description: String(item.description || '').trim(),
     qty: Math.max(toSafeNumber(item.qty, 0), 0),
     price: Math.max(toSafeNumber(item.price, 0), 0),
-    margin_percent: toSafeNumber(item.margin_percent, 0),
+    margin_percent: resolvedMarginPercent,
     delivery: String(item.delivery || '').trim(),
     image: resolveImageValue(item.image),
     source: item.source || 'manual',
@@ -107,6 +120,7 @@ const normalizeProductInput = (
 
   return {
     ...normalized,
+    sale_price: calculateSalePrice({ price: normalized.price, margin_percent: normalized.margin_percent }),
     tax: financials.tax,
     amount: financials.amount,
   };
@@ -125,6 +139,7 @@ const mapSupplierRow = (row: any): SupplierProductRow => ({
   qty: Math.max(toSafeNumber(row?.qty ?? row?.stock, 0), 0),
   price: toSafeNumber(row?.price, 0),
   margin_percent: toSafeNumber(row?.margin_percent, 0),
+  sale_price: toSafeNumber(row?.sale_price, toSafeNumber(row?.selling_price, row?.price)),
   delivery: String(row?.delivery || ''),
   tax: toSafeNumber(row?.tax, 0),
   amount: toSafeNumber(row?.amount, 0),
@@ -153,6 +168,11 @@ const getDefaultTaxRate = async () => {
   return Number((companyInfo as any)?.default_tax_rate);
 };
 
+const getDefaultSupplierMarginPercent = async () => {
+  const companyInfo = await settingsService.getCompanyInfo();
+  return Number((companyInfo as any)?.default_supplier_margin_percent);
+};
+
 const validateRequired = (context: SupplierContext, items: SupplierProductInput[]) => {
   if (!context.businessId) {
     throw new Error('business_id is required.');
@@ -171,11 +191,31 @@ const syncToInventory = async (context: SupplierContext, items: SupplierProductI
 
   const existing = await inventoryService.getItems(context.userId);
   const byNameSupplier = new Map<string, any>();
+  const bySku = new Map<string, any>();
+  const bySupplierProductId = new Map<string, any>();
+  const byNameOnly = new Map<string, any[]>();
 
   (existing || []).forEach((row: any) => {
+    const normalizedName = String(row?.name || '').trim().toLowerCase();
     const key = `${String(row?.name || '').trim().toLowerCase()}::${String(row?.supplier || '').trim().toLowerCase()}`;
     if (key !== '::') {
       byNameSupplier.set(key, row);
+    }
+
+    if (normalizedName) {
+      const current = byNameOnly.get(normalizedName) || [];
+      current.push(row);
+      byNameOnly.set(normalizedName, current);
+    }
+
+    const sku = String(row?.sku || '').trim().toLowerCase();
+    if (sku) {
+      bySku.set(sku, row);
+    }
+
+    const supplierProductId = String(row?.supplier_product_id || '').trim();
+    if (supplierProductId) {
+      bySupplierProductId.set(supplierProductId, row);
     }
   });
 
@@ -183,12 +223,15 @@ const syncToInventory = async (context: SupplierContext, items: SupplierProductI
   for (const item of items) {
     const normalized = normalizeProductInput(item);
     const key = `${normalized.product.toLowerCase()}::${normalized.prov.toLowerCase()}`;
+    const normalizedName = normalized.product.toLowerCase();
+    const sku = `${normalized.prov}-${normalized.id || normalized.product}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+    const supplierProductId = String((item as any)?.db_id || '').trim();
 
     const payload = {
       name: normalized.product,
-      sku: `${normalized.prov}-${normalized.id || normalized.product}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60),
+      sku,
       category: normalized.category,
-      selling_price: normalized.price,
+      selling_price: normalized.sale_price,
       cost_price: normalized.price,
       current_stock: normalized.qty,
       min_stock: 0,
@@ -199,13 +242,39 @@ const syncToInventory = async (context: SupplierContext, items: SupplierProductI
       is_active: true,
       preferred_supplier: normalized.prov,
       last_supplier_price: normalized.price,
+      supplier_product_id: supplierProductId || null,
       source: 'supplier-intelligence',
     };
 
-    const existingRow = byNameSupplier.get(key);
+    const sameNameRows = byNameOnly.get(normalizedName) || [];
+    const preferredSameNameRow = sameNameRows.find((row) => String(row?.source || '').toLowerCase() !== 'supplier-intelligence')
+      || sameNameRows[0];
+    const existingRow = (supplierProductId ? bySupplierProductId.get(supplierProductId) : null)
+      || bySku.get(sku)
+      || byNameSupplier.get(key)
+      || preferredSameNameRow;
     if (existingRow?.id) {
-      await inventoryService.updateItem(context.userId, String(existingRow.id), payload);
-      byNameSupplier.set(key, { ...existingRow, ...payload });
+      const rowsToUpdate = sameNameRows.length > 0
+        ? sameNameRows.filter((row) => {
+          const rowName = String(row?.name || '').trim().toLowerCase();
+          return rowName === normalizedName;
+        })
+        : [existingRow];
+
+      for (const row of rowsToUpdate) {
+        if (!row?.id) continue;
+        await inventoryService.updateItem(context.userId, String(row.id), payload);
+      }
+
+      const mergedRow = { ...existingRow, ...payload };
+      byNameSupplier.set(key, mergedRow);
+      bySku.set(sku, mergedRow);
+      byNameOnly.set(normalizedName, rowsToUpdate.length > 0
+        ? rowsToUpdate.map((row) => ({ ...row, ...payload }))
+        : [mergedRow]);
+      if (supplierProductId) {
+        bySupplierProductId.set(supplierProductId, mergedRow);
+      }
       synced += 1;
       continue;
     }
@@ -213,6 +282,10 @@ const syncToInventory = async (context: SupplierContext, items: SupplierProductI
     const created = await inventoryService.createItem(context.userId, payload);
     if (created) {
       byNameSupplier.set(key, created);
+      bySku.set(sku, created);
+      if (supplierProductId) {
+        bySupplierProductId.set(supplierProductId, created);
+      }
       synced += 1;
     }
   }
@@ -228,6 +301,7 @@ export const supplierService = {
   async listProducts(userId?: string) {
     const context = await resolveContext(userId);
     const defaultTaxRate = await getDefaultTaxRate();
+    const defaultMarginPercent = await getDefaultSupplierMarginPercent();
 
     const { data, error } = await supabase
       .from(SUPPLIER_PRODUCTS_TABLE)
@@ -254,6 +328,15 @@ export const supplierService = {
 
         return {
           ...mapped,
+          margin_percent: Number.isFinite(defaultMarginPercent) && defaultMarginPercent > 0 && mapped.margin_percent <= 0
+            ? defaultMarginPercent
+            : mapped.margin_percent,
+          sale_price: calculateSalePrice({
+            price: mapped.price,
+            margin_percent: Number.isFinite(defaultMarginPercent) && defaultMarginPercent > 0 && mapped.margin_percent <= 0
+              ? defaultMarginPercent
+              : mapped.margin_percent,
+          }),
           tax: financials.tax,
           amount: financials.amount,
         };
@@ -264,9 +347,15 @@ export const supplierService = {
   async importProducts(rawItems: SupplierProductInput[], source: SupplierProductInput['source'] = 'manual', userId?: string): Promise<SupplierImportResult> {
     const context = await resolveContext(userId);
     const defaultTaxRate = await getDefaultTaxRate();
+    const defaultMarginPercent = await getDefaultSupplierMarginPercent();
     const items = rawItems.map((item) => normalizeProductInput(
       { ...item, source: source || item.source || 'manual' },
-      { defaultTaxRate, forceDefaultTaxRate: Number.isFinite(defaultTaxRate) && defaultTaxRate >= 0 },
+      {
+        defaultTaxRate,
+        forceDefaultTaxRate: Number.isFinite(defaultTaxRate) && defaultTaxRate >= 0,
+        defaultMarginPercent,
+        forceDefaultMarginPercent: Number.isFinite(defaultMarginPercent) && defaultMarginPercent > 0 && toSafeNumber(item.margin_percent, 0) <= 0,
+      },
     ));
     validateRequired(context, items);
 
@@ -290,6 +379,8 @@ export const supplierService = {
         const item = normalizeProductInput(rawItem, {
           defaultTaxRate,
           forceDefaultTaxRate: Number.isFinite(defaultTaxRate) && defaultTaxRate >= 0,
+          defaultMarginPercent,
+          forceDefaultMarginPercent: Number.isFinite(defaultMarginPercent) && defaultMarginPercent > 0 && toSafeNumber(rawItem.margin_percent, 0) <= 0,
         });
         validateRequired(context, [item]);
         const key = `${item.product.toLowerCase()}::${item.prov.toLowerCase()}`;
@@ -317,6 +408,7 @@ export const supplierService = {
               stock: item.qty,
               price: item.price,
               margin_percent: item.margin_percent,
+              sale_price: item.sale_price,
               delivery: item.delivery,
               tax: item.tax,
               amount: item.amount,
@@ -341,6 +433,7 @@ export const supplierService = {
               stock: item.qty,
               price: item.price,
               margin_percent: item.margin_percent,
+              sale_price: item.sale_price,
               delivery: item.delivery,
               tax: item.tax,
               amount: item.amount,
@@ -364,7 +457,7 @@ export const supplierService = {
         }
 
         try {
-          const synced = await syncToInventory(context, [{ ...item, image: imageUrl }]);
+          const synced = await syncToInventory(context, [{ ...item, db_id: data?.id || match?.db_id, image: imageUrl } as SupplierProductInput]);
           syncedToInventory += synced;
         } catch {
         }
@@ -399,6 +492,7 @@ export const supplierService = {
   async updateProduct(productId: string, updates: SupplierProductInput, userId?: string) {
     const context = await resolveContext(userId);
     const defaultTaxRate = await getDefaultTaxRate();
+    const defaultMarginPercent = await getDefaultSupplierMarginPercent();
     const existing = await this.listProducts(context.userId);
     const match = existing.find((row) => row.db_id === productId && row.business_id === context.businessId);
     if (!match) {
@@ -408,6 +502,8 @@ export const supplierService = {
     const item = normalizeProductInput(updates, {
       defaultTaxRate,
       forceDefaultTaxRate: false,
+      defaultMarginPercent,
+      forceDefaultMarginPercent: false,
     });
     validateRequired(context, [item]);
 
@@ -432,6 +528,7 @@ export const supplierService = {
       stock: item.qty,
       price: item.price,
       margin_percent: item.margin_percent,
+      sale_price: item.sale_price,
       delivery: item.delivery,
       tax: item.tax,
       amount: item.amount,
@@ -442,21 +539,33 @@ export const supplierService = {
       updated_at: now,
     };
 
-    const { data, error } = await supabase
-      .from(SUPPLIER_PRODUCTS_TABLE)
-      .update(payload)
-      .eq('id', match.db_id)
-      .eq('business_id', context.businessId)
-      .eq('tenant_id', context.tenantId)
-      .select('*')
-      .single();
+    let updatePayload: Record<string, any> = { ...payload };
+    let data: any = null;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await supabase
+        .from(SUPPLIER_PRODUCTS_TABLE)
+        .update(updatePayload)
+        .eq('id', match.db_id)
+        .eq('business_id', context.businessId)
+        .eq('tenant_id', context.tenantId)
+        .select('*')
+        .single();
 
-    if (error) throw error;
+      if (!response.error) {
+        data = response.data;
+        break;
+      }
 
-    try {
-      await syncToInventory(context, [{ ...item, image: imageUrl }]);
-    } catch {
+      const missingColumn = String(response.error?.message || '').match(/Could not find the '([^']+)' column/i)?.[1];
+      if ((response.error as any)?.code === 'PGRST204' && missingColumn && Object.prototype.hasOwnProperty.call(updatePayload, missingColumn)) {
+        delete updatePayload[missingColumn];
+        continue;
+      }
+
+      throw response.error;
     }
+
+    await syncToInventory(context, [{ ...item, db_id: data?.id || match.db_id, image: imageUrl } as SupplierProductInput]);
 
     return data ? mapSupplierRow(data) : null;
   },
@@ -491,6 +600,82 @@ export const supplierService = {
     return this.listProducts(context.userId);
   },
 
+  async getDefaultMarginPercent() {
+    return Math.max(toSafeNumber(await getDefaultSupplierMarginPercent(), 0), 0);
+  },
+
+  async saveDefaultMarginPercent(defaultMarginPercent: number) {
+    const companyInfo = await settingsService.getCompanyInfo();
+    const normalizedMarginPercent = Math.max(toSafeNumber(defaultMarginPercent, 0), 0);
+
+    if (companyInfo && Object.prototype.hasOwnProperty.call(companyInfo, 'default_supplier_margin_percent')) {
+      await settingsService.saveCompanyInfo({
+        ...(companyInfo || {}),
+        default_supplier_margin_percent: normalizedMarginPercent,
+      });
+      return normalizedMarginPercent;
+    }
+
+    try {
+      await settingsService.saveCompanyInfo({
+        ...(companyInfo || {}),
+        default_supplier_margin_percent: normalizedMarginPercent,
+      });
+    } catch (error: any) {
+      if (!String(error?.message || '').includes('default_supplier_margin_percent')) {
+        throw error;
+      }
+    }
+
+    return normalizedMarginPercent;
+  },
+
+  async syncDefaultMarginPercent(defaultMarginPercent: number, userId?: string) {
+    const context = await resolveContext(userId);
+    const products = await this.listProducts(context.userId);
+    const normalizedMarginPercent = await this.saveDefaultMarginPercent(defaultMarginPercent);
+
+    for (const product of products) {
+      const normalized = normalizeProductInput({
+        ...product,
+        margin_percent: normalizedMarginPercent,
+      }, {
+        defaultMarginPercent: normalizedMarginPercent,
+        forceDefaultMarginPercent: true,
+      });
+
+      const payload = {
+        margin_percent: normalized.margin_percent,
+        sale_price: normalized.sale_price,
+        updated_at: new Date().toISOString(),
+      };
+
+      let updatePayload: Record<string, any> = { ...payload };
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const { error } = await supabase
+          .from(SUPPLIER_PRODUCTS_TABLE)
+          .update(updatePayload)
+          .eq('id', product.db_id)
+          .eq('business_id', context.businessId)
+          .eq('tenant_id', context.tenantId);
+
+        if (!error) break;
+
+        const missingColumn = String(error?.message || '').match(/Could not find the '([^']+)' column/i)?.[1];
+        if ((error as any)?.code === 'PGRST204' && missingColumn && Object.prototype.hasOwnProperty.call(updatePayload, missingColumn)) {
+          delete updatePayload[missingColumn];
+          continue;
+        }
+
+        throw error;
+      }
+
+      await syncToInventory(context, [{ ...normalized, db_id: product.db_id } as SupplierProductInput]);
+    }
+
+    return this.listProducts(context.userId);
+  },
+
   async deleteProduct(productId: string, userId?: string) {
     const context = await resolveContext(userId);
 
@@ -504,3 +689,6 @@ export const supplierService = {
     if (error) throw error;
   },
 };
+
+
+

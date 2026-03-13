@@ -100,16 +100,66 @@ const Modal = ({ children }: { children: ReactNode }) =>
 
   );
 
+const buildProductDedupKey = (product: any) => {
+  const supplierProductId = String(product?.supplier_product_id || '').trim().toLowerCase();
+  if (supplierProductId) return `supplier_product_id:${supplierProductId}`;
 
+  const sku = String(product?.sku || '').trim().toLowerCase();
+  if (sku) return `sku:${sku}`;
 
+  const name = String(product?.name || '').trim().toLowerCase();
+  const supplier = String(product?.supplier || product?.preferred_supplier || '').trim().toLowerCase();
+  return `name_supplier:${name}::${supplier}`;
+};
 
+const chooseCanonicalProduct = (current: any, candidate: any) => {
+  if (!current) return candidate;
 
+  const currentSupplierLinked = Boolean(current?.supplier_product_id);
+  const candidateSupplierLinked = Boolean(candidate?.supplier_product_id);
+  if (candidateSupplierLinked && !currentSupplierLinked) return candidate;
+  if (currentSupplierLinked && !candidateSupplierLinked) return current;
 
+  const currentPrice = Number(current?.selling_price ?? current?.price ?? 0) || 0;
+  const candidatePrice = Number(candidate?.selling_price ?? candidate?.price ?? 0) || 0;
+  if (candidatePrice > currentPrice) return candidate;
+  if (currentPrice > candidatePrice) return current;
+
+  const currentUpdatedAt = new Date(current?.updated_at || current?.created_at || 0).getTime();
+  const candidateUpdatedAt = new Date(candidate?.updated_at || candidate?.created_at || 0).getTime();
+  if (candidateUpdatedAt > currentUpdatedAt) return candidate;
+
+  return current;
+};
+
+const dedupeProducts = <T extends Record<string, any>>(items: T[]) => {
+  const byKey = new Map<string, T & { current_stock?: number; stock?: number }>();
+
+  for (const item of items || []) {
+    const key = buildProductDedupKey(item);
+    const current = byKey.get(key);
+
+    if (!current) {
+      byKey.set(key, {
+        ...item,
+        current_stock: Number(item?.current_stock) || 0,
+        stock: Number(item?.stock ?? item?.current_stock) || 0,
+      });
+      continue;
+    }
+
+    const canonical = chooseCanonicalProduct(current, item);
+    byKey.set(key, {
+      ...canonical,
+      current_stock: (Number(current?.current_stock) || 0) + (Number(item?.current_stock) || 0),
+      stock: (Number(current?.stock ?? current?.current_stock) || 0) + (Number(item?.stock ?? item?.current_stock) || 0),
+    });
+  }
+
+  return Array.from(byKey.values());
+};
 
 interface Product {
-
-
-
   id: string;
 
 
@@ -1193,6 +1243,7 @@ export default function POSPage() {
 
 
   const customerDisplayChannel = useRef<BroadcastChannel | null>(null);
+  const productsUpdateChannel = useRef<BroadcastChannel | null>(null);
 
 
 
@@ -2989,29 +3040,34 @@ const payload = {
 
 
     const onProductsUpdated = () => {
-
-
-
       loadProducts();
-
-
-
     };
 
-
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'productsUpdatedAt') {
+        loadProducts();
+      }
+    };
 
     window.addEventListener('productsUpdated', onProductsUpdated);
+    window.addEventListener('storage', onStorage);
 
-
+    try {
+      productsUpdateChannel.current = new BroadcastChannel('products_updates');
+      productsUpdateChannel.current.onmessage = () => {
+        loadProducts();
+      };
+    } catch {
+      productsUpdateChannel.current = null;
+    }
 
     return () => {
-
-
-
       window.removeEventListener('productsUpdated', onProductsUpdated);
-
-
-
+      window.removeEventListener('storage', onStorage);
+      if (productsUpdateChannel.current) {
+        productsUpdateChannel.current.close();
+        productsUpdateChannel.current = null;
+      }
     };
 
 
@@ -3236,7 +3292,8 @@ const payload = {
 
 
 
-        const mapped: Product[] = (items || []).map((it: any) => ({
+        const dedupedItems = dedupeProducts(items || []);
+        const mapped: Product[] = dedupedItems.map((it: any) => ({
 
 
 

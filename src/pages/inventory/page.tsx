@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+
 import { useAuth } from '../../hooks/useAuth';
 import { inventoryService, settingsService, storesService, warehouseEntriesService, warehouseTransfersService, deliveryNotesService, invoicesService, suppliersService, resolveTenantId, productCategoriesService } from '../../services/database';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -8,6 +9,64 @@ import { exportToExcelWithHeaders } from '../../utils/exportImportUtils';
 import { usePlanPermissions } from '../../hooks/usePlanPermissions';
 
 // Removed sample data: the view only feeds from the database
+
+const buildInventoryDedupKey = (item: any) => {
+  const supplierProductId = String(item?.supplier_product_id || '').trim().toLowerCase();
+  if (supplierProductId) return `supplier_product_id:${supplierProductId}`;
+
+  const sku = String(item?.sku || '').trim().toLowerCase();
+  if (sku) return `sku:${sku}`;
+
+  const name = String(item?.name || '').trim().toLowerCase();
+  const supplier = String(item?.supplier || item?.preferred_supplier || '').trim().toLowerCase();
+  return `name_supplier:${name}::${supplier}`;
+};
+
+const chooseCanonicalInventoryItem = (current: any, candidate: any) => {
+  if (!current) return candidate;
+
+  const currentSupplierLinked = Boolean(current?.supplier_product_id);
+  const candidateSupplierLinked = Boolean(candidate?.supplier_product_id);
+  if (candidateSupplierLinked && !currentSupplierLinked) return candidate;
+  if (currentSupplierLinked && !candidateSupplierLinked) return current;
+
+  const currentPrice = Number(current?.selling_price ?? 0) || 0;
+  const candidatePrice = Number(candidate?.selling_price ?? 0) || 0;
+  if (candidatePrice > currentPrice) return candidate;
+  if (currentPrice > candidatePrice) return current;
+
+  const currentUpdatedAt = new Date(current?.updated_at || current?.created_at || 0).getTime();
+  const candidateUpdatedAt = new Date(candidate?.updated_at || candidate?.created_at || 0).getTime();
+  if (candidateUpdatedAt > currentUpdatedAt) return candidate;
+
+  return current;
+};
+
+const dedupeInventoryItems = <T extends Record<string, any>>(items: T[]) => {
+  const byKey = new Map<string, T & { current_stock: number }>();
+
+  for (const item of items || []) {
+    const key = buildInventoryDedupKey(item);
+    const current = byKey.get(key);
+
+    if (!current) {
+      byKey.set(key, { ...item, current_stock: Number(item?.current_stock) || 0 });
+      continue;
+    }
+
+    const canonical = chooseCanonicalInventoryItem(current, item);
+    byKey.set(key, {
+      ...canonical,
+      current_stock: (Number(current?.current_stock) || 0) + (Number(item?.current_stock) || 0),
+      min_stock: Math.max(Number(current?.min_stock ?? 0) || 0, Number(item?.min_stock ?? 0) || 0),
+      minimum_stock: Math.max(Number(current?.minimum_stock ?? 0) || 0, Number(item?.minimum_stock ?? 0) || 0),
+      max_stock: Math.max(Number(current?.max_stock ?? 0) || 0, Number(item?.max_stock ?? 0) || 0),
+      maximum_stock: Math.max(Number(current?.maximum_stock ?? 0) || 0, Number(item?.maximum_stock ?? 0) || 0),
+    });
+  }
+
+  return Array.from(byKey.values());
+};
 
 export default function InventoryPage() {
   const navigate = useNavigate();
@@ -786,7 +845,8 @@ export default function InventoryPage() {
   };
 
   // Applied filters
-  const filteredItems = items.filter(item => {
+  const visibleItems = useMemo(() => dedupeInventoryItems(items), [items]);
+  const filteredItems = visibleItems.filter(item => {
     const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !categoryFilter || item.category === categoryFilter;
@@ -829,7 +889,7 @@ export default function InventoryPage() {
         ...productCategories
           .map((category: any) => (category?.name ? String(category.name) : ''))
           .filter((name) => Boolean(name && name.trim().length)),
-        ...items
+        ...visibleItems
           .map((item) => item.category)
           .filter((category): category is string => Boolean(category && category.trim().length)),
       ],
@@ -838,7 +898,7 @@ export default function InventoryPage() {
 
   // Build warehouseBalances: { warehouseId: { itemId: quantity } }
   const warehouseBalances: Record<string, Record<string, number>> = {};
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     if (item.warehouse_id) {
       const wid = String(item.warehouse_id);
       if (!warehouseBalances[wid]) {
@@ -847,9 +907,9 @@ export default function InventoryPage() {
       warehouseBalances[wid][String(item.id)] = Number(item.current_stock) || 0;
     }
   });
-  const totalProducts = items.length;
-  const activeProducts = items.filter(item => item.is_active).length;
-  const lowStockCount = items.filter(
+  const totalProducts = visibleItems.length;
+  const activeProducts = visibleItems.filter(item => item.is_active).length;
+  const lowStockCount = visibleItems.filter(
     item => item.item_type !== 'service' && item.minimum_stock != null && item.current_stock <= item.minimum_stock,
   ).length;
   const dashboardStats = [
