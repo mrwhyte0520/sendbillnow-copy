@@ -10,6 +10,7 @@ export type SupplierProductInput = {
   qty: number;
   price: number;
   margin_percent: number;
+  sale_price: number;
   delivery: string;
   tax: number;
   amount: number;

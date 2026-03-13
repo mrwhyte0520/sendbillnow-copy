@@ -16,6 +16,7 @@ const emptyManualProduct: SupplierProductInput = {
   price: 0,
   qty: 0,
   margin_percent: 0,
+  sale_price: 0,
   delivery: '',
   tax: 0,
   amount: 0,

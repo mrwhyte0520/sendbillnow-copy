@@ -45,6 +45,12 @@ const parseNumericInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const calculateSalePrice = (row: Pick<SupplierProductRow, 'price' | 'margin_percent'>) => {
+  const purchasePrice = Number(row.price || 0);
+  const marginPercent = Number(row.margin_percent || 0);
+  return Number((purchasePrice * (1 + (marginPercent / 100))).toFixed(2));
+};
+
 const calculateAmount = (row: Pick<SupplierProductRow, 'qty' | 'price' | 'delivery' | 'tax'>) => {
   const subtotal = Number(row.qty || 0) * Number(row.price || 0);
   const delivery = Number(row.delivery || 0);
@@ -97,8 +103,15 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
   const [savingEdit, setSavingEdit] = useState(false);
 
   const beginEdit = (row: SupplierProductRow) => {
+    const marginPercent = Number(row.margin_percent || 0);
+    const salePrice = marginPercent > 0 ? Number(row.sale_price || 0) : calculateSalePrice(row);
     setEditingRow(row);
-    setDraftRow({ ...row });
+    setDraftRow({
+      ...row,
+      margin_percent: marginPercent,
+      sale_price: salePrice,
+      amount: Number(row.amount || calculateAmount(row)),
+    });
   };
 
   const closeEdit = () => {
@@ -120,10 +133,10 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
               <th className="px-3 py-2">CATEGORY</th>
               <th className="px-3 py-2">DESCRIPTION</th>
               <th className="px-3 py-2">QTY</th>
-              <th className="px-3 py-2">PRICE</th>
-              <th className="px-3 py-2">%</th>
-              <th className="px-3 py-2">DELIVERY</th>
+              <th className="px-3 py-2">PURCHASE PRICE</th>
               <th className="px-3 py-2">TAX</th>
+              <th className="px-3 py-2">% PROFIT</th>
+              <th className="px-3 py-2">SALE PRICE</th>
               <th className="px-3 py-2">AMOUNT</th>
               <th className="px-3 py-2">IMAGE</th>
               <th className="px-3 py-2">Actions</th>
@@ -153,10 +166,10 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
                   <td className="px-3 py-2 text-slate-700 max-w-[240px] truncate" title={row.description}>{row.description}</td>
                   <td className="px-3 py-2 text-slate-700">{Number(row.qty || 0)}</td>
                   <td className="px-3 py-2 text-slate-700">${Number(row.price || 0).toFixed(2)}</td>
-                  <td className="px-3 py-2 text-slate-700">{Number(row.margin_percent || 0).toFixed(2)}</td>
-                  <td className="px-3 py-2 text-slate-700">{row.delivery}</td>
-                  <td className="px-3 py-2 text-slate-700">{Number(row.tax || 0).toFixed(2)}</td>
-                  <td className="px-3 py-2 text-slate-700">${Number(row.amount || 0).toFixed(2)}</td>
+                  <td className="px-3 py-2 text-slate-700">${Number(row.tax || 0).toFixed(2)}</td>
+                  <td className="px-3 py-2 text-slate-700">{Number(row.margin_percent || 0).toFixed(2)}%</td>
+                  <td className="px-3 py-2 text-slate-700">${Number(row.sale_price || calculateSalePrice(row)).toFixed(2)}</td>
+                  <td className="px-3 py-2 text-slate-700">${Number(row.amount || calculateAmount(row)).toFixed(2)}</td>
                   <td className="px-3 py-2"><SupplierImageCell src={resolveImageSource(row)} alt={row.product} /></td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -215,11 +228,11 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
                 <div><span className="font-medium text-slate-900">ID:</span> {selectedRow.id || '-'}</div>
                 <div><span className="font-medium text-slate-900">Category:</span> {selectedRow.category || '-'}</div>
                 <div><span className="font-medium text-slate-900">Qty:</span> {Number(selectedRow.qty || 0)}</div>
-                <div><span className="font-medium text-slate-900">Price:</span> ${Number(selectedRow.price || 0).toFixed(2)}</div>
-                <div><span className="font-medium text-slate-900">Margin:</span> {Number(selectedRow.margin_percent || 0).toFixed(2)}%</div>
-                <div><span className="font-medium text-slate-900">Delivery:</span> {selectedRow.delivery || '-'}</div>
-                <div><span className="font-medium text-slate-900">Tax:</span> {Number(selectedRow.tax || 0).toFixed(2)}</div>
-                <div><span className="font-medium text-slate-900">Amount:</span> ${Number(selectedRow.amount || 0).toFixed(2)}</div>
+                <div><span className="font-medium text-slate-900">Purchase Price:</span> ${Number(selectedRow.price || 0).toFixed(2)}</div>
+                <div><span className="font-medium text-slate-900">Tax:</span> ${Number(selectedRow.tax || 0).toFixed(2)}</div>
+                <div><span className="font-medium text-slate-900">% Profit:</span> {Number(selectedRow.margin_percent || 0).toFixed(2)}%</div>
+                <div><span className="font-medium text-slate-900">Sale Price:</span> ${Number(selectedRow.sale_price || calculateSalePrice(selectedRow)).toFixed(2)}</div>
+                <div><span className="font-medium text-slate-900">Amount:</span> ${Number(selectedRow.amount || calculateAmount(selectedRow)).toFixed(2)}</div>
               </div>
             </div>
           </div>
@@ -248,11 +261,43 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.id} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, id: event.target.value }) : prev)} placeholder="ID / SKU" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.category} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, category: event.target.value }) : prev)} placeholder="Category" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" value={draftRow.location} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, location: event.target.value }) : prev)} placeholder="Location" />
-              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={Number(draftRow.delivery || 0) === 0 ? '' : draftRow.delivery} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, delivery: String(parseNumericInput(event.target.value)) }) : prev)} placeholder="Delivery" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="1" value={draftRow.qty === 0 ? '' : draftRow.qty} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, qty: parseNumericInput(event.target.value) }) : prev)} placeholder="Qty" />
-              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.price === 0 ? '' : draftRow.price} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, price: parseNumericInput(event.target.value) }) : prev)} placeholder="Price" />
-              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.margin_percent === 0 ? '' : draftRow.margin_percent} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, margin_percent: parseNumericInput(event.target.value) }) : prev)} placeholder="Margin %" />
-              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.tax === 0 ? '' : draftRow.tax} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, tax: parseNumericInput(event.target.value) }) : prev)} placeholder="Tax" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.price === 0 ? '' : draftRow.price} onChange={(event) => setDraftRow((prev) => {
+                if (!prev) return prev;
+                const price = parseNumericInput(event.target.value);
+                const next = {
+                  ...prev,
+                  price,
+                };
+                return {
+                  ...next,
+                  sale_price: calculateSalePrice(next),
+                  amount: calculateAmount({ ...next, tax: prev.tax }),
+                };
+              })} placeholder="Purchase Price" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.tax === 0 ? '' : draftRow.tax} onChange={(event) => setDraftRow((prev) => {
+                if (!prev) return prev;
+                const tax = parseNumericInput(event.target.value);
+                const next = { ...prev, tax };
+                return {
+                  ...next,
+                  amount: calculateAmount(next),
+                };
+              })} placeholder="Tax" />
+              <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={draftRow.margin_percent === 0 ? '' : draftRow.margin_percent} onChange={(event) => setDraftRow((prev) => {
+                if (!prev) return prev;
+                const margin_percent = parseNumericInput(event.target.value);
+                const next = {
+                  ...prev,
+                  margin_percent,
+                };
+                return {
+                  ...next,
+                  sale_price: calculateSalePrice(next),
+                };
+              })} placeholder="% Profit" />
+              <input className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={Number(draftRow.sale_price || calculateSalePrice(draftRow)).toFixed(2)} readOnly placeholder="Sale Price" />
+              <input className="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm" type="number" min={0} step="0.01" value={Number(draftRow.amount || calculateAmount(draftRow)).toFixed(2)} readOnly placeholder="Amount" />
               <input className="rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-2" value={draftRow.image} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, image: event.target.value }) : prev)} placeholder="Image URL" />
               <textarea className="min-h-[110px] rounded-xl border border-slate-300 px-3 py-2 text-sm md:col-span-2" value={draftRow.description} onChange={(event) => setDraftRow((prev) => prev ? ({ ...prev, description: event.target.value }) : prev)} placeholder="Description" />
             </div>
@@ -268,9 +313,17 @@ export default function SupplierTable({ products, currentBusinessId, onDelete, o
                   if (!onEdit) return;
                   setSavingEdit(true);
                   try {
-                    await onEdit(editingRow, {
+                    const normalizedDraft = {
                       ...draftRow,
-                      amount: calculateAmount(draftRow),
+                      qty: Number(draftRow.qty || 0),
+                      price: Number(draftRow.price || 0),
+                      tax: Number(draftRow.tax || 0),
+                      margin_percent: Number(draftRow.margin_percent || 0),
+                    };
+                    await onEdit(editingRow, {
+                      ...normalizedDraft,
+                      sale_price: calculateSalePrice(normalizedDraft),
+                      amount: calculateAmount(normalizedDraft),
                     });
                     closeEdit();
                   } finally {
