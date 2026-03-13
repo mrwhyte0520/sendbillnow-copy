@@ -8098,6 +8098,58 @@ const payload = {
 
 
 
+              <div className="min-w-[180px] rounded-2xl border-2 border-[#e0d8c8] bg-white/90 px-4 py-2.5 shadow-sm">
+
+
+
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b7a55]">
+
+
+
+                  Current total
+
+
+
+                </div>
+
+
+
+                <div className="mt-1 text-right text-2xl font-bold leading-none text-[#008000]">
+
+
+
+                  {money(getTotal())}
+
+
+
+                </div>
+
+
+
+                <div className="mt-1 text-right text-xs text-[#6b7280]">
+
+
+
+                  {cart.length > 0
+
+
+
+                    ? `${cart.reduce((acc, item) => acc + (item.quantity || 0), 0)} item(s)`
+
+
+
+                    : 'Cart empty'}
+
+
+
+                </div>
+
+
+
+              </div>
+
+
+
               <button
 
 
