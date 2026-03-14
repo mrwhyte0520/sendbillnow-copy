@@ -35,6 +35,7 @@ import { formatAmount, formatMoney } from '../../../utils/numberFormat';
 
 
 import { formatDate } from '../../../utils/dateFormat';
+import InvoiceBluePreview from '../../../components/common/InvoiceBluePreview';
 
 
 
@@ -8129,14 +8130,46 @@ export default function InvoicingPage() {
 
 
 
-
+                  if (!isEditingInvoice) {
+                    return (
+                      <InvoiceBluePreview
+                        invoiceNumber={invoice.id}
+                        businessName={invoice.customer}
+                        dateLabel={formatDate(invoice.date)}
+                        dueDateLabel={formatDate(invoice.dueDate)}
+                        subtotal={formatMoney(invoice.amount)}
+                        tax={formatMoney(invoice.tax)}
+                        total={formatMoney(invoice.total)}
+                        notes={invoice.notes}
+                        items={invoice.items.map((item, index) => ({
+                          id: `${item.description ?? 'item'}-${index}`,
+                          description: item.description,
+                          qty: item.quantity,
+                          price: item.price,
+                          total: item.total,
+                        }))}
+                        accountNumber={invoice.account_number || null}
+                        createdBy={invoice.salesRepName || null}
+                        companyName={(companyInfo as any)?.name || (companyInfo as any)?.company_name || 'Send Bill Now'}
+                        companyAddress={(companyInfo as any)?.address || ''}
+                        companyPhone={(companyInfo as any)?.phone || ''}
+                        companyEmail={(companyInfo as any)?.email || ''}
+                        companyWebsite={(companyInfo as any)?.website || ''}
+                        customerAddress={invoice.customerAddress || ''}
+                        customerEmail={invoice.customerEmail || ''}
+                        onClose={() => {
+                          setShowInvoiceDetailModal(false);
+                          setSelectedInvoice(null);
+                          setIsEditingInvoice(false);
+                        }}
+                      />
+                    );
+                  }
 
 
                   return (
-
-
-
                     <div className="space-y-6">
+
 
 
 

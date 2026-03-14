@@ -789,10 +789,6 @@ export default function UsersPage() {
       ? `<img class="company-logo" src="${safe(companyLogoDataUrl)}" alt="logo" />`
       : (companyLogoUrl ? `<img class="company-logo" src="${safe(companyLogoUrl)}" alt="logo" />` : '🏢');
 
-    const qrHtml = idCardQrDataUrl
-      ? `<img class="qr-img" src="${safe(idCardQrDataUrl)}" alt="QR" />`
-      : '▦▦▦<br/>▦▦▦<br/>▦▦▦';
-
     const headerTitle = safe(companyName || 'Company');
 
     const html = `<!DOCTYPE html>
@@ -829,7 +825,7 @@ export default function UsersPage() {
     .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .doctor-name { font-size: 30px; font-weight: 800; color: #0f172a; margin-bottom: 6px; text-align: center; letter-spacing: -0.5px; }
     .specialty { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 0 auto 20px; }
-    .info-table { width: 100%; margin-top: auto; }
+    .info-table { width: 100%; margin-top: auto; padding-bottom: 52px; }
     .info-row { display: flex; border-bottom: 1px solid #e5e7eb; padding: 12px 0; }
     .info-label { font-weight: 700; color: #0f172a; width: 40%; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
     .info-value { color: #334155; width: 60%; font-size: 14px; font-weight: 600; }
@@ -897,45 +893,14 @@ export default function UsersPage() {
             <div class="photo-container"><div class="photo">${photoHtml}</div></div>
             <div class="doctor-name">${safe(cardFullName)}</div>
             <div class="specialty">${safe(cardDepartment)}</div>
-            <div class="info-table">
+            <div class="info-table" style="margin-top:auto; transform: translateY(-14px);">
               <div class="info-row"><div class="info-label">DOB:</div><div class="info-value">${safe(cardDob)}</div></div>
               <div class="info-row"><div class="info-label">Employee ID:</div><div class="info-value">${safe(cardEmployeeId)}</div></div>
               <div class="info-row"><div class="info-label">Issue:</div><div class="info-value">${safe(cardIssueDate)}</div></div>
             </div>
-            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:#1d4ed8;display:flex;align-items:center;padding:0 16px;color:#fff;font-weight:800;letter-spacing:0.8px;font-size:13px;text-transform:uppercase;">
-              <div style="margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">EXPIRES: ${safe(cardExpiresDate)}</div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;padding:0 16px;color:#fff;font-weight:800;letter-spacing:0.8px;font-size:13px;text-transform:uppercase;">
+              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;">EXPIRES: ${safe(cardExpiresDate)}</div>
             </div>
-            <div class="accent-strip"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="print-page">
-      <div class="id-card">
-        <div class="scale-wrap">
-          <div class="pattern"></div>
-          <div class="wave-bg"><div class="wave wave-top"></div><div class="wave wave-bottom"></div></div>
-          <div class="card-back">
-            <div class="header">
-              <div class="logo">${logoHtml}</div>
-              <div class="hospital-name">${headerTitle}<br/>ID CARD</div>
-            </div>
-            <div class="contact-info">
-              <div class="contact-row"><div class="contact-label">Phone:</div><div class="contact-value">${safe(cardPhone)}</div></div>
-              <div class="contact-row"><div class="contact-label">Email:</div><div class="contact-value">${safe(cardEmail)}</div></div>
-              <div class="contact-row"><div class="contact-label">Address:</div><div class="contact-value address-value">${safe(cardAddress)}</div></div>
-            </div>
-            <div class="disclaimer">
-              <div class="disclaimer-title">Disclaimer:</div>
-              <div class="disclaimer-text"><div class="check-icon">✓</div><div>This ID card is the property of the company and must be returned upon request or termination of employment.</div></div>
-            </div>
-            <div class="signature-section"><div class="signature-label">Authorized Signature</div></div>
-            <div class="footer">
-              <div class="footer-text">${safe((companyName || 'company').toLowerCase().replace(/\s+/g, ''))}.com</div>
-              <div class="microtext">Keep this card safe</div>
-            </div>
-            <div class="qr-code">${qrHtml}</div>
             <div class="accent-strip"></div>
           </div>
         </div>
@@ -1160,7 +1125,7 @@ export default function UsersPage() {
               </div>
             ) : null}
 
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mt-6 grid grid-cols-1 gap-6">
               <div className="rounded-2xl border border-[#E0E7C8] p-4">
                 <div className="space-y-4">
                   <div>
@@ -1296,7 +1261,7 @@ export default function UsersPage() {
                       <div className="mx-auto mb-5 px-5 py-2 rounded-[20px] text-white text-[13px] font-bold uppercase" style={{ background: 'linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
                         {cardDepartment || 'Department'}
                       </div>
-                      <div className="w-full mt-auto">
+                      <div className="w-full mt-auto pb-[52px] -translate-y-[14px]">
                         <div className="flex border-b border-[#e5e7eb] py-3">
                           <div className="w-[40%] font-semibold text-[#0f172a] text-[12px] uppercase tracking-[0.6px]">DOB</div>
                           <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardDob || '—'}</div>
@@ -1310,78 +1275,8 @@ export default function UsersPage() {
                           <div className="w-[60%] text-[#334155] text-sm font-semibold">{cardIssueDate || '—'}</div>
                         </div>
                       </div>
-                      <div className="absolute left-0 right-0 bottom-0 h-[34px] bg-[#1d4ed8] flex items-center px-4 text-white font-extrabold tracking-[0.8px] text-[13px] uppercase">
-                        <div className="ml-auto truncate">EXPIRES: {cardExpiresDate || '—'}</div>
-                      </div>
-                      <div className="absolute left-0 right-0 bottom-0 h-[10px]" style={{ background: 'linear-gradient(90deg, #2563eb, #06b6d4, #22c55e)' }} />
-                    </div>
-                  </div>
-
-                  <div className="w-[350px] h-[550px] bg-white rounded-[22px] overflow-hidden shadow-[0_18px_55px_rgba(0,0,0,0.15)] relative border border-[#e5e7eb]">
-                    <div className="absolute inset-0 overflow-hidden">
-                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] top-[-120%] left-[-50%] opacity-10" />
-                      <div className="absolute w-[200%] h-[200%] rounded-[45%] bg-gradient-to-br from-[#3b82f6] to-[#06b6d4] bottom-[-120%] right-[-50%] opacity-15" />
-                    </div>
-                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20px 20px, rgba(2,132,199,0.35) 1px, transparent 1px)', backgroundSize: '22px 22px', mixBlendMode: 'multiply' }} />
-                    <div className="relative z-[1] p-[30px] h-full flex flex-col">
-                      <div className="flex items-center gap-3 mb-10">
-                        <div className="w-[60px] h-[60px] rounded-full flex items-center justify-center text-white text-2xl overflow-hidden shadow-[0_14px_30px_rgba(59,130,246,0.22)] border border-white/10" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), rgba(255,255,255,0.0) 55%), linear-gradient(135deg, #3b82f6, #06b6d4)' }}>
-                          {companyLogoSrc ? <img src={companyLogoSrc} alt="Logo" className="w-full h-full object-cover" /> : '🏢'}
-                        </div>
-                        <div className="text-[#0f172a] font-extrabold text-[18px] leading-[1.1] uppercase tracking-[0.6px] max-w-[235px]">
-                          {(companyName || 'Company')}
-                        </div>
-                      </div>
-                      <div className="mb-7">
-                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
-                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Phone:</div>
-                          <div className="text-[#475569] text-sm flex-1">{cardPhone || '—'}</div>
-                        </div>
-                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
-                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Email:</div>
-                          <div className="text-[#475569] text-sm flex-1">{cardEmail || '—'}</div>
-                        </div>
-                        <div className="flex items-center mb-4 pb-4 border-b-2 border-[#e5e7eb]">
-                          <div className="w-[100px] font-bold text-[#1e293b] text-sm">Address:</div>
-                          <div
-                            className="text-[#475569] text-sm flex-1"
-                            style={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflowWrap: 'anywhere',
-                              wordBreak: 'break-word',
-                              whiteSpace: 'normal',
-                            }}
-                          >
-                            {cardAddress || '—'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="p-4 rounded-[16px] mb-5 shadow-[0_12px_30px_rgba(37,99,235,0.20)]" style={{ background: 'linear-gradient(135deg, #2563eb, #06b6d4)' }}>
-                        <div className="text-white font-bold text-[16px] mb-2 uppercase">Disclaimer:</div>
-                        <div className="text-white text-[12px] leading-[1.5] flex items-start gap-2.5">
-                          <div className="w-5 h-5 bg-white rounded-full flex items-center justify-center text-[#3b82f6] font-bold flex-shrink-0">✓</div>
-                          <div>This ID card is the property of the company and must be returned upon request or termination of employment.</div>
-                        </div>
-                      </div>
-                      <div className="mt-auto text-center pt-5 border-t-2 border-[#1e293b]">
-                        <div className="font-bold text-[#1e293b] text-sm uppercase">Authorized Signature</div>
-                      </div>
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/90 flex items-center justify-between gap-2">
-                        <div className="text-[11px] text-slate-500 font-semibold tracking-[0.4px]">
-                          {(companyName || 'company').toLowerCase().replace(/\s+/g, '')}.com
-                        </div>
-                        <div className="text-[10px] text-slate-400 tracking-[0.8px] uppercase">Keep this card safe</div>
-                      </div>
-                      <div className="absolute bottom-5 right-5">
-                        <div className="w-[64px] h-[64px] rounded-[14px] bg-white shadow-[0_12px_26px_rgba(15,23,42,0.22)] border border-slate-200 p-[4px]">
-                          <div className="w-full h-full rounded-[10px] bg-[#0f172a] border border-white/10 overflow-hidden flex items-center justify-center text-white text-[10px]">
-                            {idCardQrDataUrl ? <img src={idCardQrDataUrl} alt="QR" className="w-full h-full object-cover" /> : <>▦▦▦<br />▦▦▦<br />▦▦▦</>}
-                          </div>
-                        </div>
+                      <div className="absolute left-0 right-0 bottom-0 h-[34px] bg-[#1d4ed8] flex items-center justify-center px-4 text-white font-extrabold tracking-[0.8px] text-[13px] uppercase">
+                        <div className="truncate text-center">EXPIRES: {cardExpiresDate || '—'}</div>
                       </div>
                       <div className="absolute left-0 right-0 bottom-0 h-[10px]" style={{ background: 'linear-gradient(90deg, #2563eb, #06b6d4, #22c55e)' }} />
                     </div>

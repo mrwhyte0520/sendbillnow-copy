@@ -152,7 +152,7 @@ export default function PublicIdCardPage() {
     .doctor-name { font-size: 30px; font-weight: 800; color: #0f172a; margin-bottom: 6px; text-align: center; letter-spacing: -0.5px; }
     .specialty { background: linear-gradient(135deg, #3b82f6, #06b6d4); color: white; padding: 8px 20px; border-radius: 20px; display: inline-block; font-size: 14px; font-weight: bold; text-transform: uppercase; margin: 0 auto 20px; }
 
-    .info-table { width: 100%; margin-top: auto; padding-bottom: 44px; }
+    .info-table { width: 100%; margin-top: auto; padding-bottom: 52px; }
     .info-row { display: flex; border-bottom: 1px solid #e5e7eb; padding: 12px 0; }
     .info-label { font-weight: 700; color: #0f172a; width: 40%; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
     .info-value { color: #334155; width: 60%; font-size: 14px; font-weight: 600; }
@@ -213,45 +213,14 @@ export default function PublicIdCardPage() {
             <div class="photo-container"><div class="photo">${photoHtml}</div></div>
             <div class="doctor-name">${safe(payload.fullName)}</div>
             <div class="specialty">${safe(payload.department)}</div>
-            <div class="info-table">
+            <div class="info-table" style="margin-top:auto; transform: translateY(-14px);">
               <div class="info-row"><div class="info-label">DOB:</div><div class="info-value">${safe(payload.dob)}</div></div>
               <div class="info-row"><div class="info-label">Employee ID:</div><div class="info-value">${safe(payload.employeeId)}</div></div>
               <div class="info-row"><div class="info-label">Issue:</div><div class="info-value">${safe(payload.issueDate)}</div></div>
             </div>
-            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:#1d4ed8;display:flex;align-items:center;padding:0 16px;color:#fff;font-weight:800;letter-spacing:0.8px;font-size:13px;text-transform:uppercase;">
-              <div style="margin-left:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">EXPIRES: ${safe(payload.expiresDate)}</div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:#1d4ed8;display:flex;align-items:center;justify-content:center;padding:0 16px;color:#fff;font-weight:800;letter-spacing:0.8px;font-size:13px;text-transform:uppercase;">
+              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;">EXPIRES: ${safe(payload.expiresDate)}</div>
             </div>
-            <div class="accent-strip"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="print-page">
-      <div class="id-card">
-        <div class="scale-wrap">
-          <div class="pattern"></div>
-          <div class="wave-bg"><div class="wave wave-top"></div><div class="wave wave-bottom"></div></div>
-          <div class="card-back">
-            <div class="header">
-              <div class="logo">${logoHtml}</div>
-              <div class="hospital-name">${companyName}<br/>ID CARD</div>
-            </div>
-            <div class="contact-info">
-              <div class="contact-row"><div class="contact-label">Phone:</div><div class="contact-value">${safe(payload.phone)}</div></div>
-              <div class="contact-row"><div class="contact-label">Email:</div><div class="contact-value">${safe(payload.email)}</div></div>
-              <div class="contact-row"><div class="contact-label">Address:</div><div class="contact-value address-value">${safe(payload.address)}</div></div>
-            </div>
-            <div class="disclaimer">
-              <div class="disclaimer-title">Disclaimer:</div>
-              <div class="disclaimer-text"><div class="check-icon">✓</div><div>This ID card is the property of the company and must be returned upon request or termination of employment.</div></div>
-            </div>
-            <div class="signature-section"><div class="signature-label">Authorized Signature</div></div>
-            <div class="footer">
-              <div class="footer-text">${safe((payload.companyName || 'company').toLowerCase().replace(/\s+/g, ''))}.com</div>
-              <div class="microtext">Scan to verify</div>
-            </div>
-            <div class="qr-code">${qrImg}</div>
             <div class="accent-strip"></div>
           </div>
         </div>

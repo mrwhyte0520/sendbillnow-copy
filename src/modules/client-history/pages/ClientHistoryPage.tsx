@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import InvoiceBluePreview from '../../../components/common/InvoiceBluePreview';
 import DashboardLayout from '../../../components/layout/DashboardLayout';
 import { useAuth } from '../../../hooks/useAuth';
 import { invoicesService } from '../../../services/database';
@@ -547,101 +548,25 @@ export default function ClientHistoryPage() {
 
         {selectedInvoice ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-            <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Invoice Details</p>
-                  <h3 className="mt-1 text-xl font-semibold text-slate-900">{selectedInvoice.invoiceNumber}</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedInvoice(null)}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="space-y-6 p-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Business Name</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{selectedInvoice.businessName}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Date of Service</p>
-                    <p className="mt-1 text-base font-semibold text-slate-900">{formatDate(selectedInvoice.date)}</p>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-xl border border-slate-200">
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Description</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Qty</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Price</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Discount</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
-                        {selectedInvoice.items.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-4 text-sm text-slate-900">{item.description}</td>
-                            <td className="px-4 py-4 text-right text-sm text-slate-700">{item.qty}</td>
-                            <td className="px-4 py-4 text-right text-sm text-slate-700">{currencyFormatter.format(item.price)}</td>
-                            <td className="px-4 py-4 text-right text-sm text-slate-700">{item.discount}%</td>
-                            <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900">{currencyFormatter.format(item.total)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="space-y-3 p-4 md:hidden">
-                    {selectedInvoice.items.map((item) => (
-                      <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">{item.description}</p>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <p className="text-xs text-slate-500">Qty</p>
-                            <p className="mt-1 font-medium text-slate-900">{item.qty}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500">Price</p>
-                            <p className="mt-1 font-medium text-slate-900">{currencyFormatter.format(item.price)}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500">Discount</p>
-                            <p className="mt-1 font-medium text-slate-900">{item.discount}%</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-slate-500">Total</p>
-                            <p className="mt-1 font-medium text-slate-900">{currencyFormatter.format(item.total)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Subtotal</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">{currencyFormatter.format(selectedInvoice.subtotal)}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Sales Tax</p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">{currencyFormatter.format(selectedInvoice.tax)}</p>
-                  </div>
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <p className="text-xs uppercase tracking-wide text-emerald-700">Grand Total</p>
-                    <p className="mt-1 text-lg font-semibold text-emerald-900">{currencyFormatter.format(selectedInvoice.total)}</p>
-                  </div>
-                </div>
-              </div>
+            <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto">
+              <InvoiceBluePreview
+                invoiceNumber={selectedInvoice.invoiceNumber}
+                businessName={selectedInvoice.businessName}
+                dateLabel={formatDate(selectedInvoice.date)}
+                dueDateLabel={formatDate(selectedInvoice.date)}
+                subtotal={currencyFormatter.format(selectedInvoice.subtotal)}
+                tax={currencyFormatter.format(selectedInvoice.tax)}
+                total={currencyFormatter.format(selectedInvoice.total)}
+                notes={null}
+                items={selectedInvoice.items.map((item) => ({
+                  id: item.id,
+                  description: item.description,
+                  qty: item.qty,
+                  price: item.price,
+                  total: item.total,
+                }))}
+                onClose={() => setSelectedInvoice(null)}
+              />
             </div>
           </div>
         ) : null}
