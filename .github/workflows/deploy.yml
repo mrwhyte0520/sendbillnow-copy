@@ -71,7 +71,10 @@ jobs:
             { [ -n '${{ secrets.SUPABASE_URL }}' ] && echo 'SUPABASE_URL=${{ secrets.SUPABASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
             { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && echo 'SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
             { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && echo 'SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && echo 'PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; }"
+            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && echo 'PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.RESEND_API_KEY }}' ] && echo 'RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.RESEND_FROM }}' ] && echo 'RESEND_FROM=${{ secrets.RESEND_FROM }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && echo 'RESEND_REPLY_TO=${{ secrets.RESEND_REPLY_TO }}' >> /var/www/sendbillnow.com/.env.production || true; }"
 
       - name: Install production dependencies and restart app
         run: |

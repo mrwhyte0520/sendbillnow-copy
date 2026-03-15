@@ -1236,7 +1236,9 @@ export default function ServiceDocumentsEditPage() {
       });
 
       const json = await resp.json().catch(() => null);
-      if (!resp.ok || !json?.ok) throw new Error(json?.error || 'Could not send');
+      if (!resp.ok || !json?.ok) {
+        throw new Error(json?.details || json?.error || `Could not send (HTTP ${resp.status})`);
+      }
 
       setLatestSendLink(json?.link ? String(json.link) : null);
 
