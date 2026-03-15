@@ -27,6 +27,49 @@ function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
   </div>`;
 }
 
+async function fallbackSendViaHttp({ req, toEmail, companyName, clientName, subject, html }) {
+  const baseUrl = getBaseUrl(req);
+  try {
+    const resp = await fetch(`${baseUrl}/api/send-receipt-email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        to: toEmail,
+        customerName: clientName,
+        companyName,
+        templateType: 'service-document-link',
+        subject,
+        html,
+        sale: {
+          date: new Date().toLocaleDateString(),
+          time: new Date().toLocaleTimeString(),
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          items: [],
+        },
+      }),
+    });
+
+    const json = await resp.json().catch(() => null);
+    if (!resp.ok || !json?.success) {
+      return {
+        ok: false,
+        status: resp.status || 502,
+        error: json?.error || 'Email send fallback failed',
+      };
+    }
+
+    return { ok: true, status: 200 };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 500,
+      error: error?.message || 'HTTP fallback send failed',
+    };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -184,6 +227,25 @@ export default async function handler(req, res) {
       items: [],
     },
   });
+
+  if (!emailResult.ok && (emailResult.status === 500 || !emailResult.status)) {
+    const fallbackResult = await fallbackSendViaHttp({
+      req,
+      toEmail,
+      companyName: doc.company_name,
+      clientName: doc.client_name,
+      subject,
+      html,
+    });
+    if (fallbackResult.ok) {
+      return res.status(200).json({ ok: true, token: tokenRaw, expires_at: expiresAt, link, emailed: true });
+    }
+    return res.status(fallbackResult.status || 502).json({
+      ok: false,
+      error: 'Email send failed',
+      details: fallbackResult.error || '',
+    });
+  }
 
   if (!emailResult.ok) {
     return res.status(emailResult.status || 502).json({
