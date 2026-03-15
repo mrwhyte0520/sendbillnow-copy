@@ -40,6 +40,11 @@ jobs:
         run: |
           ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p /var/www/sendbillnow.com"
           rsync -avz --delete \
+            --exclude='.env.production' \
+            --exclude='api' \
+            --exclude='server.mjs' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
             dist/ \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com
 
