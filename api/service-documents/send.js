@@ -1,7 +1,7 @@
 import { sendEmailViaResend } from '../send-receipt-email.js';
 import { getBaseUrl, getBearerToken, getSupabaseClient, readJsonBody, requireUser, resolveTenantId, randomTokenRaw, sha256Hex, recalcTotals, insertEvent } from './_shared.js';
 
-function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
+function buildEmailHtml({ companyName, clientName, docNumber, docType }) {
   const safeCompany = String(companyName || 'Send Bill Now');
   const safeClient = String(clientName || 'Client');
   const safeDoc = String(docNumber || '').trim();
@@ -17,17 +17,13 @@ function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
     </div>
     <div style="border:1px solid #e6e6e6;border-top:none;padding:20px;">
       <p style="margin:0 0 12px;color:#111;font-size:14px;">Hi ${safeClient},</p>
-      <p style="margin:0 0 16px;color:#333;font-size:14px;">Please review and sign the document using the button below.</p>
-      <div style="margin:18px 0;">
-        <a href="${link}" style="display:inline-block;background:#008000;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;">Review &amp; Sign</a>
-      </div>
-      <p style="margin:16px 0 0;color:#666;font-size:12px;">If the button does not work, open this link:</p>
-      <p style="margin:6px 0 0;color:#006600;font-size:12px;word-break:break-all;">${link}</p>
+      <p style="margin:0 0 16px;color:#333;font-size:14px;">Please find your ${safeType} attached to this email.</p>
+      <p style="margin:0 0 12px;color:#333;font-size:14px;">Thank you for your business!</p>
     </div>
   </div>`;
 }
 
-async function fallbackSendViaHttp({ req, toEmail, companyName, clientName, subject, html }) {
+async function fallbackSendViaHttp({ req, toEmail, companyName, clientName, subject, html, pdfBuffer, docNumber, subtotal, tax, total }) {
   const baseUrl = getBaseUrl(req);
   try {
     const resp = await fetch(`${baseUrl}/api/send-receipt-email`, {
@@ -37,15 +33,20 @@ async function fallbackSendViaHttp({ req, toEmail, companyName, clientName, subj
         to: toEmail,
         customerName: clientName,
         companyName,
-        templateType: 'service-document-link',
+        templateType: 'service-document-pdf',
         subject,
         html,
+        attachment: pdfBuffer ? {
+          filename: `${docNumber || 'document'}.pdf`,
+          content: pdfBuffer.toString('base64'),
+          content_type: 'application/pdf',
+        } : undefined,
         sale: {
           date: new Date().toLocaleDateString(),
           time: new Date().toLocaleTimeString(),
-          subtotal: 0,
-          tax: 0,
-          total: 0,
+          subtotal: subtotal ?? 0,
+          tax: tax ?? 0,
+          total: total ?? 0,
           items: [],
         },
       }),
@@ -205,26 +206,50 @@ export default async function handler(req, res) {
     const html = buildEmailHtml({
       companyName: doc.company_name,
       clientName: doc.client_name,
-      link,
       docNumber: doc.doc_number,
       docType: doc.doc_type,
     });
 
-    const subject = `${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'}${doc.doc_number ? ` ${doc.doc_number}` : ''} - Review & Sign`;
+    const subject = `${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'}${doc.doc_number ? ` ${doc.doc_number}` : ''}`;
+
+    let pdfBuffer = null;
+    try {
+      const pdfResp = await fetch(`${baseUrl}/api/service-documents/preview`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'authorization': `Bearer ${accessToken}`,
+          'x-preview-pdf': '1',
+        },
+        body: JSON.stringify({ documentId }),
+      });
+
+      if (pdfResp.ok) {
+        const ab = await pdfResp.arrayBuffer();
+        pdfBuffer = Buffer.from(ab);
+      }
+    } catch (error) {
+      console.error('[service-documents/send] PDF generation failed:', error);
+    }
 
     const emailResult = await sendEmailViaResend({
       toEmail,
       companyName: doc.company_name,
       customerName: doc.client_name,
-      templateType: 'service-document-link',
+      templateType: 'service-document-pdf',
       subject,
       html,
+      attachment: pdfBuffer ? {
+        filename: `${doc.doc_number || 'document'}.pdf`,
+        content: pdfBuffer.toString('base64'),
+        content_type: 'application/pdf',
+      } : undefined,
       sale: {
         date: new Date().toLocaleDateString(),
         time: new Date().toLocaleTimeString(),
-        subtotal: 0,
-        tax: 0,
-        total: 0,
+        subtotal: doc.subtotal ?? 0,
+        tax: doc.tax ?? 0,
+        total: doc.total ?? 0,
         items: [],
       },
     });
@@ -238,6 +263,11 @@ export default async function handler(req, res) {
         clientName: doc.client_name,
         subject,
         html,
+        pdfBuffer,
+        docNumber: doc.doc_number,
+        subtotal: doc.subtotal,
+        tax: doc.tax,
+        total: doc.total,
       });
     }
 
