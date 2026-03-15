@@ -45,10 +45,10 @@ import serviceDocumentsSealHandler from './api/service-documents/seal.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
   try {
-    const raw = fs.readFileSync(envPath, 'utf8');
+    const raw = fs.readFileSync(filePath, 'utf8');
     for (const line of raw.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('#')) continue;
@@ -70,6 +70,9 @@ if (fs.existsSync(envPath)) {
     }
   } catch {}
 }
+
+loadEnvFile(path.join(__dirname, '.env'));
+loadEnvFile(path.join(__dirname, '.env.production'));
 
 const app = express();
 
