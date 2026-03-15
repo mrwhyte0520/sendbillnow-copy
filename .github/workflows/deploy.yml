@@ -61,6 +61,7 @@ jobs:
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/
 
       - name: Build production env file
+        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
         run: |
           cat > .env.production <<EOF
           VITE_PUBLIC_SUPABASE_URL=${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
@@ -75,14 +76,21 @@ jobs:
           EOF
 
       - name: Validate production env
+        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
         run: |
           grep -Eq '^RESEND_API_KEY=.+$' .env.production
           grep -Eq '^RESEND_FROM=.+$' .env.production
 
       - name: Upload production env
+        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
         run: |
           rsync -avz .env.production ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/.env.production
           ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "chmod 600 /var/www/sendbillnow.com/.env.production"
+
+      - name: Skip env upload when Resend secrets are missing
+        if: ${{ secrets.RESEND_API_KEY == '' || secrets.RESEND_FROM == '' }}
+        run: |
+          echo "Skipping .env.production upload because RESEND_API_KEY or RESEND_FROM is not configured in GitHub Secrets."
 
       - name: Install production dependencies and restart app
         run: |
