@@ -22,7 +22,6 @@ export default async function handler(req, res) {
   if (!supabase) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
 
   const admin = getSupabaseAdminClient();
-  if (!admin) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
 
   const { user, error: userError } = await requireUser(supabase);
   if (userError) return res.status(401).json({ ok: false, error: userError });
@@ -93,13 +92,13 @@ export default async function handler(req, res) {
     signedSignature = { ...signature };
 
     const clientPathOrUrl = String(signature.client_signature_image || '').trim();
-    if (clientPathOrUrl && !isHttpUrl(clientPathOrUrl)) {
+    if (admin && clientPathOrUrl && !isHttpUrl(clientPathOrUrl)) {
       const signed = await admin.storage.from(sigBucket).createSignedUrl(clientPathOrUrl, 60 * 60).catch(() => null);
       if (signed?.data?.signedUrl) signedSignature.client_signature_image = String(signed.data.signedUrl);
     }
 
     const contractorPathOrUrl = String(signature.contractor_signature_image || '').trim();
-    if (contractorPathOrUrl && !isHttpUrl(contractorPathOrUrl)) {
+    if (admin && contractorPathOrUrl && !isHttpUrl(contractorPathOrUrl)) {
       const signed = await admin.storage.from(sigBucket).createSignedUrl(contractorPathOrUrl, 60 * 60).catch(() => null);
       if (signed?.data?.signedUrl) signedSignature.contractor_signature_image = String(signed.data.signedUrl);
     }
@@ -109,7 +108,7 @@ export default async function handler(req, res) {
   const sealedPdfPath = String(doc.sealed_pdf_path || '').trim();
   let sealedPdfUrl = null;
 
-  if (sealedPdfPath) {
+  if (admin && sealedPdfPath) {
     const signed = await admin.storage.from(pdfBucket).createSignedUrl(sealedPdfPath, 7 * 24 * 60 * 60).catch(() => null);
     if (signed?.data?.signedUrl) sealedPdfUrl = String(signed.data.signedUrl);
   }
