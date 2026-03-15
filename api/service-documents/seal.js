@@ -593,7 +593,7 @@ export default async function handler(req, res) {
 
   // Compute box height dynamically
   const invoiceLogoBuffer = loadInvoiceLogoBuffer();
-  const logo = invoiceLogoBuffer || String(doc.company_logo || '').trim();
+  const logo = invoiceLogoBuffer;
   const hasLogo = Boolean(logo);
   const logoWidth = 74;
   const logoHeight = 58;
