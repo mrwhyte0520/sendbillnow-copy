@@ -97,6 +97,19 @@ function parseMoneyInput(value: string | number | null | undefined) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function getApiBase() {
+  const envBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+  if (!envBase) return '';
+  if (typeof window === 'undefined') return envBase;
+
+  const currentHost = String(window.location.hostname || '').toLowerCase();
+  const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+  const isLocalEnvBase = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(envBase);
+
+  if (isLocalHost && isLocalEnvBase) return '';
+  return envBase;
+}
+
 type ServiceDocument = {
   id: string;
   doc_type: 'JOB_ESTIMATE' | 'CLASSIC_INVOICE';
@@ -375,7 +388,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const resp = await fetch(`${apiBase}/api/service-documents/get`, {
         method: 'POST',
         headers: {
@@ -801,7 +814,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const resp = await fetch(`${apiBase}/api/service-documents/contractor/apply-default`, {
         method: 'POST',
         headers: {
@@ -843,7 +856,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const signatureBase64 = canvas.toDataURL('image/png');
       const contractorName = contractorNameInput.trim();
 
@@ -881,7 +894,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
 
       // Send pre-formatted dates from the UI so PDF matches exactly
       const formattedClientSignedAt = signature?.client_signed_at
@@ -929,7 +942,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const formattedClientSignedAt = signature?.client_signed_at ? formatInSantoDomingo(signature.client_signed_at) : '';
       const formattedContractorSignedAt = signature?.contractor_signed_at ? formatInSantoDomingo(signature.contractor_signed_at) : '';
 
@@ -942,17 +955,16 @@ export default function ServiceDocumentsEditPage() {
       const headers = {
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
-        'x-preview-pdf': '1',
       };
 
-      let resp = await fetch(`${apiBase}/api/service-documents/preview`, {
+      let resp = await fetch(`${apiBase}/api/service-documents/preview?preview=1`, {
         method: 'POST',
         headers,
         body: requestBody,
       });
 
       if (!resp.ok) {
-        resp = await fetch(`${apiBase}/api/service-documents/seal`, {
+        resp = await fetch(`${apiBase}/api/service-documents/seal?preview=1`, {
           method: 'POST',
           headers,
           body: requestBody,
@@ -1030,7 +1042,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
 
       const addr = buildClientAddress({
         street: clientAddress,
@@ -1138,7 +1150,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const resp = await fetch(`${apiBase}/api/service-documents/lines/upsert`, {
         method: 'POST',
         headers: {
@@ -1202,7 +1214,7 @@ export default function ServiceDocumentsEditPage() {
   const send = async () => {
     if (!doc?.id) return;
     const toEmail = clientEmail.trim();
-    if (!toEmail && flowStatus === 'Draft') {
+    if (!toEmail) {
       toast.error('Client email is required to send');
       return;
     }
@@ -1213,7 +1225,7 @@ export default function ServiceDocumentsEditPage() {
       const token = data?.session?.access_token;
       if (!token) throw new Error('Please login again');
 
-      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const apiBase = getApiBase();
       const resp = await fetch(`${apiBase}/api/service-documents/send`, {
         method: 'POST',
         headers: {
@@ -1308,7 +1320,7 @@ export default function ServiceDocumentsEditPage() {
               }
             >
               <i className="ri-send-plane-2-line" />
-              <span>{sending ? 'Sending...' : flowStatus === 'Draft' ? 'Send' : 'Get Link'}</span>
+              <span>{sending ? 'Sending...' : 'Send'}</span>
             </button>
           </div>
         </div>
@@ -1826,9 +1838,7 @@ export default function ServiceDocumentsEditPage() {
               <div>
                 <h3 className="text-xl font-semibold text-[#2F3D2E]">Send</h3>
                 <p className="text-sm text-[#7A705A]">
-                  {flowStatus === 'Draft'
-                    ? 'Send an email to the client with a link to review & sign.'
-                    : 'Generate a new link (no email will be sent).'}
+                  {'Send an email to the client with a link to review & sign.'}
                 </p>
               </div>
               <button
@@ -1882,7 +1892,7 @@ export default function ServiceDocumentsEditPage() {
               </button>
               <button onClick={send} className={PRIMARY_BUTTON_CLASSES} disabled={sending}>
                 <i className="ri-send-plane-2-line" />
-                <span>{sending ? 'Sending...' : flowStatus === 'Draft' ? 'Send' : 'Get Link'}</span>
+                <span>{sending ? 'Sending...' : 'Send'}</span>
               </button>
             </div>
           </div>

@@ -26,6 +26,74 @@ function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
   </div>`;
 }
 
+async function sendServiceDocumentLinkEmail({ toEmail, companyName, clientName, subject, html }) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    return { ok: false, status: 500, error: 'RESEND_API_KEY is not configured' };
+  }
+
+  const resendFrom = (process.env.RESEND_FROM && String(process.env.RESEND_FROM).trim())
+    ? String(process.env.RESEND_FROM).trim()
+    : 'Send Bill Now <onboarding@resend.dev>';
+  const resendReplyTo = (process.env.RESEND_REPLY_TO && String(process.env.RESEND_REPLY_TO).trim())
+    ? String(process.env.RESEND_REPLY_TO).trim()
+    : null;
+
+  const text = [
+    String(companyName || 'Send Bill Now').trim(),
+    '',
+    `Hi ${String(clientName || 'Client').trim()},`,
+    'Please review and sign the document using the link below.',
+    '',
+  ].join('\n');
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: resendFrom,
+        to: [toEmail],
+        ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
+        subject,
+        text,
+        html,
+      }),
+    });
+
+    const responseText = await response.text().catch(() => '');
+    let responseJson = null;
+    try {
+      responseJson = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      responseJson = responseText;
+    }
+
+    if (!response.ok) {
+      const resendMessage =
+        (responseJson && typeof responseJson === 'object' && responseJson.message)
+          ? String(responseJson.message)
+          : null;
+      return {
+        ok: false,
+        status: 502,
+        error: resendMessage || 'Failed to send email via Resend',
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 500,
+      error: error?.message || 'Internal error sending email',
+    };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -76,7 +144,6 @@ export default async function handler(req, res) {
   const status = String(doc.status || '');
   const normalizedStatus = status === 'Viewed' ? 'Sent' : status;
   const explicitTo = typeof body.toEmail === 'string' ? body.toEmail.trim() : (typeof body.to === 'string' ? body.to.trim() : '');
-  const shouldEmail = normalizedStatus === 'Draft' || Boolean(explicitTo);
   if (doc.sealed_at || status === 'Sealed') {
     return res.status(400).json({ ok: false, error: 'Document is sealed' });
   }
@@ -91,7 +158,8 @@ export default async function handler(req, res) {
   }
 
   const toEmail = explicitTo || String(doc.client_email || '').trim();
-  if (shouldEmail && !toEmail) return res.status(400).json({ ok: false, error: 'Missing client email' });
+  const shouldEmail = Boolean(toEmail);
+  if (!toEmail) return res.status(400).json({ ok: false, error: 'Missing client email' });
 
   try {
     await recalcTotals({ supabase, tenantId, documentId });
@@ -167,30 +235,20 @@ export default async function handler(req, res) {
 
   const subject = `${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'}${doc.doc_number ? ` ${doc.doc_number}` : ''} - Review & Sign`;
 
-  const resp = await fetch(`${baseUrl}/api/send-receipt-email`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      to: toEmail,
-      customerName: doc.client_name,
-      companyName: doc.company_name,
-      templateType: 'service-document-link',
-      subject,
-      html,
-      sale: {
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
-        subtotal: 0,
-        tax: 0,
-        total: 0,
-        items: [],
-      },
-    }),
+  const emailResult = await sendServiceDocumentLinkEmail({
+    toEmail,
+    companyName: doc.company_name,
+    clientName: doc.client_name,
+    subject,
+    html,
   });
 
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    return res.status(502).json({ ok: false, error: 'Email send failed', details: text });
+  if (!emailResult.ok) {
+    return res.status(emailResult.status || 502).json({
+      ok: false,
+      error: 'Email send failed',
+      details: emailResult.error || '',
+    });
   }
 
   return res.status(200).json({ ok: true, token: tokenRaw, expires_at: expiresAt, link, emailed: true });

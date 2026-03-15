@@ -552,7 +552,8 @@ export default async function handler(req, res) {
   }
 
   // Right column: validity block
-  let rightY = customerY + 26;
+  const validityX = rightX + 24;
+  let rightY = customerInfoY + 12;
   if (doc.doc_type === 'JOB_ESTIMATE') {
     const validDays = (() => {
       const n = Number(doc.valid_for_days ?? 30);
@@ -562,8 +563,9 @@ export default async function handler(req, res) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(22, 163, 74);
-    pdf.text(`(Valid for ${validDays} days)`, rightX, rightY);
-    rightY += 26;
+    const validLineY = rightY;
+    const expiresLineY = validLineY + 15;
+    pdf.text(`(Valid for ${validDays} days)`, validityX, validLineY);
 
     const startRaw = doc?.created_at || null;
     const endDate = (() => {
@@ -576,12 +578,13 @@ export default async function handler(req, res) {
     pdf.setFontSize(9);
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
-    const dateColonX = rightX + 60;
-    pdf.text('EXPIRES ON', dateColonX, rightY, { align: 'right' });
-    pdf.text(':', dateColonX + 2, rightY);
+    const expiresLabelX = validityX + 16;
+    const dateColonX = expiresLabelX + 27;
+    pdf.text('EXPIRES ON', dateColonX, expiresLineY, { align: 'right' });
+    pdf.text(':', dateColonX + 2, expiresLineY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(endDate || '-', rightX + 66, rightY);
-    rightY += 12;
+    pdf.text(endDate || '-', expiresLabelX + 33, expiresLineY);
+    rightY = expiresLineY + 8;
   }
 
   pdf.setTextColor(0, 0, 0);
@@ -634,7 +637,7 @@ export default async function handler(req, res) {
 
   if (hasLogo) {
     try {
-      const logoX = companyBoxX + companyBoxW - logoWidth - 6;
+      const logoX = companyBoxX + companyBoxW - logoWidth - 48;
       const logoY = companyBoxY - 10;
       pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
     } catch {
