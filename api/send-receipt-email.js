@@ -203,6 +203,211 @@ function tuneInvoiceHtmlForEmail(html) {
   return `${overrides}${cleaned}`;
 }
 
+export async function sendEmailViaResend({
+  toEmail,
+  companyName,
+  customerName,
+  sale,
+  templateType,
+  invoiceHtml,
+  html,
+  invoiceHtmlSnake,
+  attachment,
+  subject,
+  invoiceNumber,
+  total,
+  subtotal,
+  tax,
+  items,
+  pdfBase64,
+}) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (!resendApiKey) {
+    return { ok: false, status: 500, error: 'RESEND_API_KEY is not configured' };
+  }
+
+  if (!isValidEmail(toEmail)) {
+    return { ok: false, status: 400, error: 'Valid recipient email is required' };
+  }
+
+  const derivedItems = Array.isArray(items)
+    ? items
+    : [];
+
+  const normalizedSale = (sale && typeof sale === 'object')
+    ? sale
+    : {
+        date: new Date().toLocaleDateString(),
+        time: new Date().toLocaleTimeString(),
+        subtotal: subtotal ?? total ?? 0,
+        tax: tax ?? 0,
+        total: total ?? 0,
+        items: derivedItems.map((i) => ({
+          name: i.name ?? i.description ?? 'Item',
+          quantity: i.quantity ?? 1,
+          total: i.total ?? i.amount ?? i.price ?? 0,
+        })),
+      };
+
+  if (!normalizedSale || typeof normalizedSale !== 'object') {
+    return { ok: false, status: 400, error: 'Missing sale data' };
+  }
+
+  const resendFrom = (process.env.RESEND_FROM && String(process.env.RESEND_FROM).trim())
+    ? String(process.env.RESEND_FROM).trim()
+    : 'Send Bill Now <onboarding@resend.dev>';
+  const resendReplyTo = (process.env.RESEND_REPLY_TO && String(process.env.RESEND_REPLY_TO).trim())
+    ? String(process.env.RESEND_REPLY_TO).trim()
+    : null;
+
+  const totalFormatted = formatMoney(normalizedSale.total);
+  const resolvedSubject = (typeof subject === 'string' && subject.trim())
+    ? subject.trim()
+    : `Your Receipt - $${totalFormatted}`;
+
+  const preferredHtml =
+    (typeof invoiceHtml === 'string' && invoiceHtml.trim())
+      ? invoiceHtml.trim()
+      : (typeof html === 'string' && html.trim())
+        ? html.trim()
+        : (typeof invoiceHtmlSnake === 'string' && invoiceHtmlSnake.trim())
+          ? invoiceHtmlSnake.trim()
+          : '';
+
+  const usedCustomHtml = Boolean(preferredHtml);
+  const resolvedHtml = preferredHtml
+    ? tuneInvoiceHtmlForEmail(preferredHtml)
+    : buildReceiptHtml({
+        companyName,
+        customerName,
+        sale: normalizedSale,
+        templateType,
+      });
+
+  const text = buildReceiptText({
+    companyName,
+    customerName,
+    sale: normalizedSale,
+    templateType,
+  });
+
+  const normalizedTemplateType = String(templateType || '').trim().toLowerCase();
+  const allowNoAttachment =
+    normalizedTemplateType === 'id-card' ||
+    normalizedTemplateType === 'idcard' ||
+    normalizedTemplateType === 'invoice-link' ||
+    normalizedTemplateType === 'pos-invoice-link' ||
+    normalizedTemplateType === 'service-document-link';
+
+  const attachments = [];
+  const normalizedAttachment = (attachment && typeof attachment === 'object')
+    ? attachment
+    : (typeof pdfBase64 === 'string' && pdfBase64.trim())
+      ? {
+          filename: `${invoiceNumber || 'document'}.pdf`,
+          content: pdfBase64,
+          content_type: 'application/pdf',
+        }
+      : null;
+
+  if (!normalizedAttachment && !allowNoAttachment) {
+    return { ok: false, status: 400, error: 'Missing PDF attachment' };
+  }
+
+  if (normalizedAttachment && typeof normalizedAttachment === 'object') {
+    const filename = normalizedAttachment.filename;
+    const content = normalizedAttachment.content;
+    const contentType = normalizedAttachment.contentType || normalizedAttachment.content_type;
+
+    if (typeof filename === 'string' && filename.trim() && typeof content === 'string' && content.trim()) {
+      const normalizedContent = content.trim().replace(/^data:application\/pdf;base64,/i, '');
+      let sizeBytes = 0;
+      let buf = null;
+      try {
+        buf = Buffer.from(normalizedContent, 'base64');
+        sizeBytes = buf.length;
+      } catch {
+        return { ok: false, status: 400, error: 'Invalid attachment base64' };
+      }
+
+      if (!sizeBytes) {
+        return { ok: false, status: 400, error: 'Empty attachment' };
+      }
+
+      const header = buf ? buf.subarray(0, 4).toString('utf8') : '';
+      if (header !== '%PDF') {
+        return { ok: false, status: 400, error: 'Attachment is not a valid PDF' };
+      }
+
+      console.log(`[send-receipt-email] Attachment ${filename.trim()} size=${sizeBytes} bytes contentType=${contentType || 'application/pdf'}`);
+
+      attachments.push({
+        filename: filename.trim(),
+        content: normalizedContent,
+        content_type: typeof contentType === 'string' && contentType.trim() ? contentType.trim() : 'application/pdf',
+      });
+    }
+  }
+
+  if (!allowNoAttachment && !attachments.length) {
+    return { ok: false, status: 400, error: 'Invalid PDF attachment' };
+  }
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: resendFrom,
+        to: [toEmail],
+        ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
+        subject: resolvedSubject,
+        text,
+        html: resolvedHtml,
+        ...(attachments.length ? { attachments } : {}),
+      }),
+    });
+
+    const responseText = await response.text().catch(() => '');
+    let responseJson = null;
+    try {
+      responseJson = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      responseJson = responseText;
+    }
+
+    if (!response.ok) {
+      console.error('Resend error response:', responseJson);
+      const resendMessage =
+        (responseJson && typeof responseJson === 'object' && responseJson.message)
+          ? String(responseJson.message)
+          : null;
+      return {
+        ok: false,
+        status: 502,
+        error: resendMessage || 'Failed to send email via Resend',
+      };
+    }
+
+    console.log('[send-receipt-email] Resend success:', responseJson);
+    return {
+      ok: true,
+      status: 200,
+      usedCustomHtml,
+      data: responseJson,
+      attachment: attachments.length
+        ? { filename: attachments[0].filename, contentType: attachments[0].content_type }
+        : null,
+    };
+  } catch (error) {
+    console.error('Send receipt email failed:', error);
+    return { ok: false, status: 500, error: 'Internal error sending email' };
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -221,11 +426,6 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST, OPTIONS');
     return res.status(405).json({ success: false, error: 'Method Not Allowed' });
-  }
-
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    return res.status(500).json({ success: false, error: 'RESEND_API_KEY is not configured' });
   }
 
   const body = await readJsonBody(req);
@@ -252,185 +452,34 @@ export default async function handler(req, res) {
     pdfBase64,
   } = body;
 
-  const toEmail = typeof to === 'string' ? to.trim() : '';
-  if (!isValidEmail(toEmail)) {
-    return res.status(400).json({ success: false, error: 'Valid recipient email is required' });
-  }
-
-  const derivedItems = Array.isArray(items)
-    ? items
-    : [];
-
-  const sale = (saleRaw && typeof saleRaw === 'object')
-    ? saleRaw
-    : {
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
-        subtotal: subtotal ?? total ?? 0,
-        tax: tax ?? 0,
-        total: total ?? 0,
-        items: derivedItems.map((i) => ({
-          name: i.name ?? i.description ?? 'Item',
-          quantity: i.quantity ?? 1,
-          total: i.total ?? i.amount ?? i.price ?? 0,
-        })),
-      };
-
-  if (!sale || typeof sale !== 'object') {
-    return res.status(400).json({ success: false, error: 'Missing sale data' });
-  }
-
-  const resendFrom = (process.env.RESEND_FROM && String(process.env.RESEND_FROM).trim())
-    ? String(process.env.RESEND_FROM).trim()
-    : 'Send Bill Now <onboarding@resend.dev>';
-  const resendReplyTo = (process.env.RESEND_REPLY_TO && String(process.env.RESEND_REPLY_TO).trim())
-    ? String(process.env.RESEND_REPLY_TO).trim()
-    : null;
-
-  const totalFormatted = formatMoney(sale.total);
-  const subject = (typeof subjectRaw === 'string' && subjectRaw.trim())
-    ? subjectRaw.trim()
-    : `Your Receipt - $${totalFormatted}`;
-
-  const preferredHtml =
-    (typeof invoiceHtmlRaw === 'string' && invoiceHtmlRaw.trim())
-      ? invoiceHtmlRaw.trim()
-      : (typeof htmlRaw === 'string' && htmlRaw.trim())
-        ? htmlRaw.trim()
-        : (typeof invoiceHtmlSnakeRaw === 'string' && invoiceHtmlSnakeRaw.trim())
-          ? invoiceHtmlSnakeRaw.trim()
-          : '';
-
-  const usedCustomHtml = Boolean(preferredHtml);
-  const html = preferredHtml
-    ? tuneInvoiceHtmlForEmail(preferredHtml)
-    : buildReceiptHtml({
-        companyName,
-        customerName,
-        sale,
-        templateType,
-      });
-
-  const text = buildReceiptText({
-    companyName,
+  const result = await sendEmailViaResend({
+    toEmail: typeof to === 'string' ? to.trim() : '',
     customerName,
-    sale,
+    companyName,
+    sale: saleRaw,
     templateType,
+    invoiceHtml: invoiceHtmlRaw,
+    html: htmlRaw,
+    invoiceHtmlSnake: invoiceHtmlSnakeRaw,
+    attachment: attachmentRaw,
+    subject: subjectRaw,
+    invoiceNumber,
+    total,
+    subtotal,
+    tax,
+    items,
+    pdfBase64,
   });
 
-  const normalizedTemplateType = String(templateType || '').trim().toLowerCase();
-  const allowNoAttachment =
-    normalizedTemplateType === 'id-card' ||
-    normalizedTemplateType === 'idcard' ||
-    normalizedTemplateType === 'invoice-link' ||
-    normalizedTemplateType === 'pos-invoice-link' ||
-    normalizedTemplateType === 'service-document-link';
-
-  const attachments = [];
-  const attachment = (attachmentRaw && typeof attachmentRaw === 'object')
-    ? attachmentRaw
-    : (typeof pdfBase64 === 'string' && pdfBase64.trim())
-      ? {
-          filename: `${invoiceNumber || 'document'}.pdf`,
-          content: pdfBase64,
-          content_type: 'application/pdf',
-        }
-      : null;
-
-  if (!attachment && !allowNoAttachment) {
-    return res.status(400).json({ success: false, error: 'Missing PDF attachment' });
+  if (!result.ok) {
+    return res.status(result.status || 500).json({ success: false, error: result.error || 'Email send failed' });
   }
 
-  if (attachment && typeof attachment === 'object') {
-    const filename = attachment.filename;
-    const content = attachment.content;
-    const contentType = attachment.contentType || attachment.content_type;
-
-    if (typeof filename === 'string' && filename.trim() && typeof content === 'string' && content.trim()) {
-      const normalizedContent = content.trim().replace(/^data:application\/pdf;base64,/i, '');
-      let sizeBytes = 0;
-      let buf = null;
-      try {
-        buf = Buffer.from(normalizedContent, 'base64');
-        sizeBytes = buf.length;
-      } catch {
-        return res.status(400).json({ success: false, error: 'Invalid attachment base64' });
-      }
-
-      if (!sizeBytes) {
-        return res.status(400).json({ success: false, error: 'Empty attachment' });
-      }
-
-      // Validate it's actually a PDF (starts with %PDF)
-      const header = buf ? buf.subarray(0, 4).toString('utf8') : '';
-      if (header !== '%PDF') {
-        return res.status(400).json({ success: false, error: 'Attachment is not a valid PDF' });
-      }
-
-      console.log(`[send-receipt-email] Attachment ${filename.trim()} size=${sizeBytes} bytes contentType=${contentType || 'application/pdf'}`);
-
-      attachments.push({
-        filename: filename.trim(),
-        content: normalizedContent,
-        content_type: typeof contentType === 'string' && contentType.trim() ? contentType.trim() : 'application/pdf',
-      });
-    }
-  }
-
-  if (!allowNoAttachment && !attachments.length) {
-    return res.status(400).json({ success: false, error: 'Invalid PDF attachment' });
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: [toEmail],
-        ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
-        subject,
-        text,
-        html,
-        ...(attachments.length ? { attachments } : {}),
-      }),
-    });
-
-    const responseText = await response.text().catch(() => '');
-    let responseJson = null;
-    try {
-      responseJson = responseText ? JSON.parse(responseText) : null;
-    } catch {
-      responseJson = responseText;
-    }
-
-    if (!response.ok) {
-      console.error('Resend error response:', responseJson);
-      const resendMessage =
-        (responseJson && typeof responseJson === 'object' && responseJson.message)
-          ? String(responseJson.message)
-          : null;
-      return res.status(502).json({
-        success: false,
-        error: resendMessage || 'Failed to send email via Resend',
-      });
-    }
-
-    console.log('[send-receipt-email] Resend success:', responseJson);
-    return res.status(200).json({
-      success: true,
-      version: handlerVersion,
-      usedCustomHtml,
-      data: responseJson,
-      attachment: attachments.length
-        ? { filename: attachments[0].filename, contentType: attachments[0].content_type }
-        : null,
-    });
-  } catch (error) {
-    console.error('Send receipt email failed:', error);
-    return res.status(500).json({ success: false, error: 'Internal error sending email' });
-  }
+  return res.status(200).json({
+    success: true,
+    version: handlerVersion,
+    usedCustomHtml: Boolean(result.usedCustomHtml),
+    data: result.data || null,
+    attachment: result.attachment || null,
+  });
 }

@@ -1,3 +1,4 @@
+import { sendEmailViaResend } from '../send-receipt-email.js';
 import { getBaseUrl, getBearerToken, getSupabaseClient, readJsonBody, requireUser, resolveTenantId, randomTokenRaw, sha256Hex, recalcTotals, insertEvent } from './_shared.js';
 
 function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
@@ -24,74 +25,6 @@ function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
       <p style="margin:6px 0 0;color:#006600;font-size:12px;word-break:break-all;">${link}</p>
     </div>
   </div>`;
-}
-
-async function sendServiceDocumentLinkEmail({ toEmail, companyName, clientName, subject, html }) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    return { ok: false, status: 500, error: 'RESEND_API_KEY is not configured' };
-  }
-
-  const resendFrom = (process.env.RESEND_FROM && String(process.env.RESEND_FROM).trim())
-    ? String(process.env.RESEND_FROM).trim()
-    : 'Send Bill Now <onboarding@resend.dev>';
-  const resendReplyTo = (process.env.RESEND_REPLY_TO && String(process.env.RESEND_REPLY_TO).trim())
-    ? String(process.env.RESEND_REPLY_TO).trim()
-    : null;
-
-  const text = [
-    String(companyName || 'Send Bill Now').trim(),
-    '',
-    `Hi ${String(clientName || 'Client').trim()},`,
-    'Please review and sign the document using the link below.',
-    '',
-  ].join('\n');
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: resendFrom,
-        to: [toEmail],
-        ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
-        subject,
-        text,
-        html,
-      }),
-    });
-
-    const responseText = await response.text().catch(() => '');
-    let responseJson = null;
-    try {
-      responseJson = responseText ? JSON.parse(responseText) : null;
-    } catch {
-      responseJson = responseText;
-    }
-
-    if (!response.ok) {
-      const resendMessage =
-        (responseJson && typeof responseJson === 'object' && responseJson.message)
-          ? String(responseJson.message)
-          : null;
-      return {
-        ok: false,
-        status: 502,
-        error: resendMessage || 'Failed to send email via Resend',
-      };
-    }
-
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 500,
-      error: error?.message || 'Internal error sending email',
-    };
-  }
 }
 
 export default async function handler(req, res) {
@@ -235,12 +168,21 @@ export default async function handler(req, res) {
 
   const subject = `${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'}${doc.doc_number ? ` ${doc.doc_number}` : ''} - Review & Sign`;
 
-  const emailResult = await sendServiceDocumentLinkEmail({
+  const emailResult = await sendEmailViaResend({
     toEmail,
     companyName: doc.company_name,
-    clientName: doc.client_name,
+    customerName: doc.client_name,
+    templateType: 'service-document-link',
     subject,
     html,
+    sale: {
+      date: new Date().toLocaleDateString(),
+      time: new Date().toLocaleTimeString(),
+      subtotal: 0,
+      tax: 0,
+      total: 0,
+      items: [],
+    },
   });
 
   if (!emailResult.ok) {
