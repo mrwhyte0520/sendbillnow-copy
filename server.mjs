@@ -39,6 +39,7 @@ import serviceDocumentsPublicGetHandler from './api/service-documents/public-get
 import serviceDocumentsPublicSignHandler from './api/service-documents/public-sign.js';
 import serviceDocumentsContractorApplyDefaultHandler from './api/service-documents/contractor-apply-default.js';
 import serviceDocumentsContractorSignHandler from './api/service-documents/contractor-sign.js';
+import serviceDocumentsPreviewHandler from './api/service-documents/preview.js';
 import serviceDocumentsSealHandler from './api/service-documents/seal.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -137,6 +138,7 @@ app.all('/api/service-documents/public/get', (req, res) => serviceDocumentsPubli
 app.all('/api/service-documents/public/sign', (req, res) => serviceDocumentsPublicSignHandler(req, res));
 app.all('/api/service-documents/contractor/apply-default', (req, res) => serviceDocumentsContractorApplyDefaultHandler(req, res));
 app.all('/api/service-documents/contractor/sign', (req, res) => serviceDocumentsContractorSignHandler(req, res));
+app.all('/api/service-documents/preview', (req, res) => serviceDocumentsPreviewHandler(req, res));
 app.all('/api/service-documents/seal', (req, res) => serviceDocumentsSealHandler(req, res));
 
 // Serve static frontend

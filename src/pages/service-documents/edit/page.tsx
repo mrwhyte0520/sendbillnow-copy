@@ -933,7 +933,7 @@ export default function ServiceDocumentsEditPage() {
       const formattedClientSignedAt = signature?.client_signed_at ? formatInSantoDomingo(signature.client_signed_at) : '';
       const formattedContractorSignedAt = signature?.contractor_signed_at ? formatInSantoDomingo(signature.contractor_signed_at) : '';
 
-      const resp = await fetch(`${apiBase}/api/service-documents/seal`, {
+      const resp = await fetch(`${apiBase}/api/service-documents/preview`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -941,7 +941,6 @@ export default function ServiceDocumentsEditPage() {
         },
         body: JSON.stringify({
           documentId: doc.id,
-          previewOnly: true,
           formattedClientSignedAt,
           formattedContractorSignedAt,
         }),
