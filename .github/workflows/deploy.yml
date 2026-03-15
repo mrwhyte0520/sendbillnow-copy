@@ -60,37 +60,37 @@ jobs:
             server.mjs package.json package-lock.json \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/
 
-      - name: Build production env file
-        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
+      - name: Sync production env
+        env:
+          VITE_PUBLIC_SUPABASE_URL: ${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
+          VITE_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM: ${{ secrets.RESEND_FROM }}
+          RESEND_REPLY_TO: ${{ secrets.RESEND_REPLY_TO }}
         run: |
-          cat > .env.production <<EOF
-          VITE_PUBLIC_SUPABASE_URL=${{ secrets.VITE_PUBLIC_SUPABASE_URL }}
-          VITE_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}
-          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
-          RESEND_FROM=${{ secrets.RESEND_FROM }}
-          RESEND_REPLY_TO=${{ secrets.RESEND_REPLY_TO }}
+          if [ -n "$RESEND_API_KEY" ] && [ -n "$RESEND_FROM" ]; then
+            cat > .env.production <<EOF
+          VITE_PUBLIC_SUPABASE_URL=$VITE_PUBLIC_SUPABASE_URL
+          VITE_PUBLIC_SUPABASE_ANON_KEY=$VITE_PUBLIC_SUPABASE_ANON_KEY
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+          PUBLIC_BASE_URL=$PUBLIC_BASE_URL
+          RESEND_API_KEY=$RESEND_API_KEY
+          RESEND_FROM=$RESEND_FROM
+          RESEND_REPLY_TO=$RESEND_REPLY_TO
           EOF
-
-      - name: Validate production env
-        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
-        run: |
-          grep -Eq '^RESEND_API_KEY=.+$' .env.production
-          grep -Eq '^RESEND_FROM=.+$' .env.production
-
-      - name: Upload production env
-        if: ${{ secrets.RESEND_API_KEY != '' && secrets.RESEND_FROM != '' }}
-        run: |
-          rsync -avz .env.production ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/.env.production
-          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "chmod 600 /var/www/sendbillnow.com/.env.production"
-
-      - name: Skip env upload when Resend secrets are missing
-        if: ${{ secrets.RESEND_API_KEY == '' || secrets.RESEND_FROM == '' }}
-        run: |
-          echo "Skipping .env.production upload because RESEND_API_KEY or RESEND_FROM is not configured in GitHub Secrets."
+            grep -Eq '^RESEND_API_KEY=.+$' .env.production
+            grep -Eq '^RESEND_FROM=.+$' .env.production
+            rsync -avz .env.production ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/.env.production
+            ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "chmod 600 /var/www/sendbillnow.com/.env.production"
+          else
+            echo "Skipping .env.production upload because RESEND_API_KEY or RESEND_FROM is not configured in GitHub Secrets."
+          fi
 
       - name: Install production dependencies and restart app
         run: |
