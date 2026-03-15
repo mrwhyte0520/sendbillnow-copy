@@ -63,18 +63,30 @@ jobs:
       - name: Restore production env
         run: |
           ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "\
-            rm -f /var/www/sendbillnow.com/.env.production && \
-            touch /var/www/sendbillnow.com/.env.production && \
-            chmod 600 /var/www/sendbillnow.com/.env.production && \
-            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && echo 'VITE_PUBLIC_SUPABASE_URL=${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && echo 'VITE_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.SUPABASE_URL }}' ] && echo 'SUPABASE_URL=${{ secrets.SUPABASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && echo 'SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && echo 'SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && echo 'PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.RESEND_API_KEY }}' ] && echo 'RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.RESEND_FROM }}' ] && echo 'RESEND_FROM=${{ secrets.RESEND_FROM }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
-            { [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && echo 'RESEND_REPLY_TO=${{ secrets.RESEND_REPLY_TO }}' >> /var/www/sendbillnow.com/.env.production || true; }"
+            set -e && \
+            ENV_FILE=/var/www/sendbillnow.com/.env.production && \
+            touch \$ENV_FILE && \
+            chmod 600 \$ENV_FILE && \
+            upsert_env() { \
+              key=\"\$1\"; \
+              value=\"\$2\"; \
+              file=\"\$3\"; \
+              tmp=\"\${file}.tmp\"; \
+              grep -v \"^\${key}=\" \"\$file\" > \"\$tmp\" || true; \
+              printf '%s=%s\n' \"\$key\" \"\$value\" >> \"\$tmp\"; \
+              mv \"\$tmp\" \"\$file\"; \
+            } && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && upsert_env 'VITE_PUBLIC_SUPABASE_URL' '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && upsert_env 'VITE_PUBLIC_SUPABASE_ANON_KEY' '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_URL }}' ] && upsert_env 'SUPABASE_URL' '${{ secrets.SUPABASE_URL }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && upsert_env 'SUPABASE_ANON_KEY' '${{ secrets.SUPABASE_ANON_KEY }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && upsert_env 'SUPABASE_SERVICE_ROLE_KEY' '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && upsert_env 'PUBLIC_BASE_URL' '${{ secrets.PUBLIC_BASE_URL }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_API_KEY }}' ] && upsert_env 'RESEND_API_KEY' '${{ secrets.RESEND_API_KEY }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_FROM }}' ] && upsert_env 'RESEND_FROM' '${{ secrets.RESEND_FROM }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && upsert_env 'RESEND_REPLY_TO' '${{ secrets.RESEND_REPLY_TO }}' \$ENV_FILE || true; } && \
+            grep -q '^RESEND_API_KEY=' \$ENV_FILE && \
+            grep -q '^RESEND_FROM=' \$ENV_FILE"
 
       - name: Install production dependencies and restart app
         run: |
