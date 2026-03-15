@@ -224,7 +224,6 @@ export default async function handler(req, res) {
     if (!supabase) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
 
     const admin = getSupabaseAdminClient();
-    if (!admin) return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
 
     const { user, error: userError } = await requireUser(supabase);
     if (userError) return res.status(401).json({ ok: false, error: userError });
@@ -452,6 +451,10 @@ export default async function handler(req, res) {
 
   if (!previewOnly && !doc.sealed_at && status !== 'ContractorSigned') {
     return res.status(400).json({ ok: false, error: 'Document cannot be sealed in current status' });
+  }
+
+  if (!previewOnly && !admin) {
+    return res.status(500).json({ ok: false, error: 'Server misconfiguration' });
   }
 
   const clientBuf = previewOnly || !clientSig

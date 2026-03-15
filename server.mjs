@@ -64,7 +64,12 @@ function loadEnvFile(filePath) {
         key.startsWith('STRIPE_') &&
         (!existing || !String(existing).trim() || String(existing).trim().startsWith('sksk_'));
 
-      if (!(key in process.env) || shouldOverrideStripe) {
+      const shouldLoadFromFile =
+        !(key in process.env) ||
+        !String(existing ?? '').trim() ||
+        shouldOverrideStripe;
+
+      if (shouldLoadFromFile) {
         process.env[key] = val;
       }
     }
