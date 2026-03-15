@@ -53,6 +53,10 @@ jobs:
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/api
 
           rsync -avz \
+            public/ \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/public
+
+          rsync -avz \
             server.mjs package.json package-lock.json \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/
 
