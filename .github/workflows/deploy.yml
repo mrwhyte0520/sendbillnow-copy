@@ -67,24 +67,15 @@ jobs:
             ENV_FILE=/var/www/sendbillnow.com/.env.production && \
             touch \$ENV_FILE && \
             chmod 600 \$ENV_FILE && \
-            upsert_env() { \
-              key=\"\$1\"; \
-              value=\"\$2\"; \
-              file=\"\$3\"; \
-              tmp=\"\${file}.tmp\"; \
-              grep -v \"^\${key}=\" \"\$file\" > \"\$tmp\" || true; \
-              printf '%s=%s\n' \"\$key\" \"\$value\" >> \"\$tmp\"; \
-              mv \"\$tmp\" \"\$file\"; \
-            } && \
-            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && upsert_env 'VITE_PUBLIC_SUPABASE_URL' '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && upsert_env 'VITE_PUBLIC_SUPABASE_ANON_KEY' '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.SUPABASE_URL }}' ] && upsert_env 'SUPABASE_URL' '${{ secrets.SUPABASE_URL }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && upsert_env 'SUPABASE_ANON_KEY' '${{ secrets.SUPABASE_ANON_KEY }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && upsert_env 'SUPABASE_SERVICE_ROLE_KEY' '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && upsert_env 'PUBLIC_BASE_URL' '${{ secrets.PUBLIC_BASE_URL }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.RESEND_API_KEY }}' ] && upsert_env 'RESEND_API_KEY' '${{ secrets.RESEND_API_KEY }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.RESEND_FROM }}' ] && upsert_env 'RESEND_FROM' '${{ secrets.RESEND_FROM }}' \$ENV_FILE || true; } && \
-            { [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && upsert_env 'RESEND_REPLY_TO' '${{ secrets.RESEND_REPLY_TO }}' \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && grep -v '^VITE_PUBLIC_SUPABASE_URL=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && printf '%s\n' 'VITE_PUBLIC_SUPABASE_URL=${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && grep -v '^VITE_PUBLIC_SUPABASE_ANON_KEY=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && printf '%s\n' 'VITE_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_URL }}' ] && grep -v '^SUPABASE_URL=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.SUPABASE_URL }}' ] && printf '%s\n' 'SUPABASE_URL=${{ secrets.SUPABASE_URL }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && grep -v '^SUPABASE_ANON_KEY=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && printf '%s\n' 'SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && grep -v '^SUPABASE_SERVICE_ROLE_KEY=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && printf '%s\n' 'SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && grep -v '^PUBLIC_BASE_URL=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && printf '%s\n' 'PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_API_KEY }}' ] && grep -v '^RESEND_API_KEY=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.RESEND_API_KEY }}' ] && printf '%s\n' 'RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_FROM }}' ] && grep -v '^RESEND_FROM=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.RESEND_FROM }}' ] && printf '%s\n' 'RESEND_FROM=${{ secrets.RESEND_FROM }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
+            { [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && grep -v '^RESEND_REPLY_TO=' \$ENV_FILE > \${ENV_FILE}.tmp || true; [ -n '${{ secrets.RESEND_REPLY_TO }}' ] && printf '%s\n' 'RESEND_REPLY_TO=${{ secrets.RESEND_REPLY_TO }}' >> \${ENV_FILE}.tmp || true; [ -f \${ENV_FILE}.tmp ] && mv \${ENV_FILE}.tmp \$ENV_FILE || true; } && \
             grep -q '^RESEND_API_KEY=' \$ENV_FILE && \
             grep -q '^RESEND_FROM=' \$ENV_FILE"
 
