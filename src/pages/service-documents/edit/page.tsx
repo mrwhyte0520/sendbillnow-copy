@@ -942,6 +942,7 @@ export default function ServiceDocumentsEditPage() {
       const headers = {
         'content-type': 'application/json',
         authorization: `Bearer ${token}`,
+        'x-preview-pdf': '1',
       };
 
       let resp = await fetch(`${apiBase}/api/service-documents/preview`, {

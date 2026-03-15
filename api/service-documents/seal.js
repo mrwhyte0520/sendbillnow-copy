@@ -241,7 +241,17 @@ export default async function handler(req, res) {
     if (!documentId) return res.status(400).json({ ok: false, error: 'Missing documentId' });
 
     const forceRegenerate = Boolean(body.forceRegenerate || body.force_regenerate);
-    const previewOnly = Boolean(body.previewOnly || body.preview_only);
+    const requestUrl = String(req.url || '').toLowerCase();
+    const previewHeader = String(req.headers['x-preview-pdf'] || '').trim().toLowerCase();
+    const previewOnly = Boolean(
+      body.previewOnly ||
+      body.preview_only ||
+      previewHeader === '1' ||
+      previewHeader === 'true' ||
+      requestUrl.includes('/preview') ||
+      requestUrl.includes('preview=1') ||
+      requestUrl.includes('preview=true')
+    );
 
     // Pre-formatted dates from UI (so PDF matches exactly what user sees)
     const formattedClientSignedAt = String(body.formattedClientSignedAt || '').trim();
