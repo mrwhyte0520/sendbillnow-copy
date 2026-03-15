@@ -56,6 +56,19 @@ jobs:
             server.mjs package.json package-lock.json \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/
 
+      - name: Restore production env
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "\
+            rm -f /var/www/sendbillnow.com/.env.production && \
+            touch /var/www/sendbillnow.com/.env.production && \
+            chmod 600 /var/www/sendbillnow.com/.env.production && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' ] && echo 'VITE_PUBLIC_SUPABASE_URL=${{ secrets.VITE_PUBLIC_SUPABASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' ] && echo 'VITE_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.VITE_PUBLIC_SUPABASE_ANON_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.SUPABASE_URL }}' ] && echo 'SUPABASE_URL=${{ secrets.SUPABASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.SUPABASE_ANON_KEY }}' ] && echo 'SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' ] && echo 'SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}' >> /var/www/sendbillnow.com/.env.production || true; } && \
+            { [ -n '${{ secrets.PUBLIC_BASE_URL }}' ] && echo 'PUBLIC_BASE_URL=${{ secrets.PUBLIC_BASE_URL }}' >> /var/www/sendbillnow.com/.env.production || true; }"
+
       - name: Install production dependencies and restart app
         run: |
           ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "\
