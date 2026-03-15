@@ -38,9 +38,26 @@ jobs:
 
       - name: Deploy to EC2
         run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "mkdir -p /var/www/sendbillnow.com"
           rsync -avz --delete \
             dist/ \
             ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com
+
+          rsync -avz \
+            api/ \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/api
+
+          rsync -avz \
+            server.mjs package.json package-lock.json \
+            ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }}:/var/www/sendbillnow.com/
+
+      - name: Install production dependencies and restart app
+        run: |
+          ssh ${{ secrets.EC2_USERNAME }}@${{ secrets.EC2_HOST }} "\
+            cd /var/www/sendbillnow.com && \
+            npm ci --omit=dev && \
+            (pm2 restart sendbillnow --update-env || pm2 restart wordnoticenter --update-env || pm2 start server.mjs --name sendbillnow) && \
+            pm2 save"
 
       - name: Reload Nginx
         run: |
