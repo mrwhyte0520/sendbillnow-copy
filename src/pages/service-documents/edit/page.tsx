@@ -282,6 +282,7 @@ export default function ServiceDocumentsEditPage() {
   const [sending, setSending] = useState(false);
   const [applyingDefaultSig, setApplyingDefaultSig] = useState(false);
   const [sealing, setSealing] = useState(false);
+  const [previewingPdf, setPreviewingPdf] = useState(false);
 
   const [doc, setDoc] = useState<ServiceDocument | null>(null);
   const [lines, setLines] = useState<ServiceLine[]>([]);
@@ -920,6 +921,53 @@ export default function ServiceDocumentsEditPage() {
     }
   };
 
+  const previewPdf = async () => {
+    if (!doc?.id) return;
+    setPreviewingPdf(true);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data?.session?.access_token;
+      if (!token) throw new Error('Please login again');
+
+      const apiBase = import.meta.env.VITE_API_BASE_URL?.trim() || '';
+      const formattedClientSignedAt = signature?.client_signed_at ? formatInSantoDomingo(signature.client_signed_at) : '';
+      const formattedContractorSignedAt = signature?.contractor_signed_at ? formatInSantoDomingo(signature.contractor_signed_at) : '';
+
+      const resp = await fetch(`${apiBase}/api/service-documents/seal`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          documentId: doc.id,
+          previewOnly: true,
+          formattedClientSignedAt,
+          formattedContractorSignedAt,
+        }),
+      });
+
+      if (!resp.ok) {
+        const json = await resp.json().catch(() => null);
+        throw new Error(parseErrorMessage(json));
+      }
+
+      const blob = await resp.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${doc.doc_number || 'service-document'}-preview.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not generate preview PDF');
+    } finally {
+      setPreviewingPdf(false);
+    }
+  };
+
   const addLine = () => {
     setLines((prev) => {
       const nextPos = prev.length ? Math.max(...prev.map((x) => Number(x.position || 0))) + 1 : 0;
@@ -1355,6 +1403,14 @@ export default function ServiceDocumentsEditPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={previewPdf}
+                    className={withDisabledStyle(TERTIARY_BUTTON_CLASSES, previewingPdf)}
+                    disabled={previewingPdf}
+                  >
+                    <i className="ri-download-2-line" />
+                    <span>{previewingPdf ? 'Generating PDF...' : 'Preview PDF'}</span>
+                  </button>
                   {sealedPdfUrl ? (
                     <a
                       href={sealedPdfUrl}

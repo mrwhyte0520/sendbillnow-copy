@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { jsPDF as JsPDFNamed } from 'jspdf';
 
 import {
@@ -14,6 +17,9 @@ import {
 } from './_shared.js';
 
 const BLUE = '#001B9E';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const INVOICE_LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'logo-invoice.png');
 
 function inferImageType(pathOrUrl) {
   const raw = String(pathOrUrl || '').toLowerCase();
@@ -56,6 +62,15 @@ async function fetchPdfBuffer({ admin, bucket, path }) {
   if (!dl.data) return null;
   const ab = await dl.data.arrayBuffer();
   return Buffer.from(ab);
+}
+
+function loadInvoiceLogoBuffer() {
+  try {
+    if (!fs.existsSync(INVOICE_LOGO_PATH)) return null;
+    return fs.readFileSync(INVOICE_LOGO_PATH);
+  } catch {
+    return null;
+  }
 }
 
 function buildEmailHtml({ companyName, clientName, docType, docNumber, sealedPdfUrl }) {
@@ -226,6 +241,7 @@ export default async function handler(req, res) {
     if (!documentId) return res.status(400).json({ ok: false, error: 'Missing documentId' });
 
     const forceRegenerate = Boolean(body.forceRegenerate || body.force_regenerate);
+    const previewOnly = Boolean(body.previewOnly || body.preview_only);
 
     // Pre-formatted dates from UI (so PDF matches exactly what user sees)
     const formattedClientSignedAt = String(body.formattedClientSignedAt || '').trim();
@@ -296,7 +312,7 @@ export default async function handler(req, res) {
   const nowIso = new Date().toISOString();
 
   // If already sealed and we have a PDF, don't regenerate it (unless explicitly requested).
-  if (doc.sealed_at && currentPdfPath && !forceRegenerate) {
+  if (!previewOnly && doc.sealed_at && currentPdfPath && !forceRegenerate) {
     const signedPdf = await admin.storage.from(pdfBucket).createSignedUrl(currentPdfPath, 7 * 24 * 60 * 60).catch(() => null);
     const sealedPdfUrl = signedPdf?.data?.signedUrl ? String(signedPdf.data.signedUrl) : null;
 
@@ -412,20 +428,28 @@ export default async function handler(req, res) {
     });
   }
 
-  if (!clientSig || !contractorSig) {
+  if (!previewOnly && !clientSig && !contractorSig) {
+    return res.status(400).json({ ok: false, error: 'Add at least one signature or use preview mode' });
+  }
+
+  if (!previewOnly && (!clientSig || !contractorSig)) {
     return res.status(400).json({ ok: false, error: 'Both client and contractor signatures are required' });
   }
 
-  if (!doc.client_signed_at || !doc.contractor_signed_at) {
+  if (!previewOnly && (!doc.client_signed_at || !doc.contractor_signed_at)) {
     return res.status(400).json({ ok: false, error: 'Document must be signed by both parties before sealing' });
   }
 
-  if (!doc.sealed_at && status !== 'ContractorSigned') {
+  if (!previewOnly && !doc.sealed_at && status !== 'ContractorSigned') {
     return res.status(400).json({ ok: false, error: 'Document cannot be sealed in current status' });
   }
 
-  const clientBuf = await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: clientSig });
-  const contractorBuf = await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: contractorSig });
+  const clientBuf = previewOnly || !clientSig
+    ? null
+    : await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: clientSig });
+  const contractorBuf = previewOnly || !contractorSig
+    ? null
+    : await fetchSignatureBuffer({ admin, bucket: 'service-doc-signatures', pathOrUrl: contractorSig });
 
   const jsPDF = typeof JsPDFNamed === 'function' ? JsPDFNamed : null;
   if (!jsPDF) {
@@ -514,8 +538,8 @@ export default async function handler(req, res) {
     customerInfoY += 12;
   }
 
-  // Right column: move validity tag to the old address position + add expiration date
-  let rightY = customerY;
+  // Right column: validity block
+  let rightY = customerY + 26;
   if (doc.doc_type === 'JOB_ESTIMATE') {
     const validDays = (() => {
       const n = Number(doc.valid_for_days ?? 30);
@@ -526,7 +550,7 @@ export default async function handler(req, res) {
     pdf.setFontSize(14);
     pdf.setTextColor(22, 163, 74);
     pdf.text(`(Valid for ${validDays} days)`, rightX, rightY);
-    rightY += 22;
+    rightY += 26;
 
     const startRaw = doc?.created_at || null;
     const endDate = (() => {
@@ -550,14 +574,16 @@ export default async function handler(req, res) {
   pdf.setTextColor(0, 0, 0);
   customerInfoY = Math.max(customerInfoY, rightY);
 
-  // Company box (right) — centered logo + centered text
+  // Company box (right)
   const companyBoxX = pageWidth - marginX - companyBoxW;
-  const companyBoxY = 52;
+  const companyBoxY = 34;
 
   // Compute box height dynamically
-  const logo = String(doc.company_logo || '').trim();
+  const invoiceLogoBuffer = loadInvoiceLogoBuffer();
+  const logo = invoiceLogoBuffer || String(doc.company_logo || '').trim();
   const hasLogo = Boolean(logo);
-  const logoSquare = 44; // small square for logo
+  const logoWidth = 74;
+  const logoHeight = 58;
 
   // Company address formatting (street on one line, city/state/zip on the next)
   const rawCompanyAddr = String(companyAddressForPdf || '').replace(/\r\n/g, '\n');
@@ -585,22 +611,21 @@ export default async function handler(req, res) {
     doc.company_email ? safeText(doc.company_email) : '',
     companyWebsiteForPdf ? safeText(companyWebsiteForPdf) : '',
   ].filter(Boolean);
-  const companyBoxH = (hasLogo ? logoSquare + 10 : 0) + companyLines.length * 12 + 16;
+  const companyBoxH = (hasLogo ? logoHeight + 10 : 0) + companyLines.length * 12 + 16;
 
   pdf.setFillColor(255, 255, 255);
   pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'F');
 
   const centerX = companyBoxX + companyBoxW / 2;
-  let companyTextY = companyBoxY + 14;
+  let companyTextY = customerY + 2;
 
   if (hasLogo) {
     try {
-      const logoX = centerX - logoSquare / 2;
-      const logoY = companyBoxY + 6;
-      pdf.addImage(logo, 'PNG', logoX + 3, logoY + 3, logoSquare - 6, logoSquare - 6);
-      companyTextY = logoY + logoSquare + 8;
+      const logoX = companyBoxX + companyBoxW - logoWidth - 6;
+      const logoY = companyBoxY - 10;
+      pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
     } catch {
-      companyTextY = companyBoxY + 14;
+      companyTextY = customerY + 2;
     }
   }
 
@@ -988,6 +1013,12 @@ export default async function handler(req, res) {
 
   const pdfAb = pdf.output('arraybuffer');
   const pdfBuf = Buffer.from(pdfAb);
+
+  if (previewOnly) {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${doc.doc_number || 'service-document'}-preview.pdf"`);
+    return res.status(200).send(pdfBuf);
+  }
 
   const upload = await admin.storage.from(pdfBucket).upload(defaultPdfPath, pdfBuf, {
     contentType: 'application/pdf',
