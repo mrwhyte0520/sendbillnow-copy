@@ -1,11 +1,12 @@
 import { sendEmailViaResend } from '../send-receipt-email.js';
 import { getBaseUrl, getBearerToken, getSupabaseClient, readJsonBody, requireUser, resolveTenantId, randomTokenRaw, sha256Hex, recalcTotals, insertEvent } from './_shared.js';
 
-function buildEmailHtml({ companyName, clientName, docNumber, docType }) {
+function buildEmailHtml({ companyName, clientName, link, docNumber, docType }) {
   const safeCompany = String(companyName || 'Send Bill Now');
   const safeClient = String(clientName || 'Client');
   const safeDoc = String(docNumber || '').trim();
   const safeType = docType === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice';
+  const safeLink = String(link || '').trim();
 
   const title = safeDoc ? `${safeType} ${safeDoc}` : safeType;
 
@@ -17,8 +18,13 @@ function buildEmailHtml({ companyName, clientName, docNumber, docType }) {
     </div>
     <div style="border:1px solid #e6e6e6;border-top:none;padding:20px;">
       <p style="margin:0 0 12px;color:#111;font-size:14px;">Hi ${safeClient},</p>
-      <p style="margin:0 0 16px;color:#333;font-size:14px;">Please find your ${safeType} attached to this email.</p>
-      <p style="margin:0 0 12px;color:#333;font-size:14px;">Thank you for your business!</p>
+      <p style="margin:0 0 12px;color:#333;font-size:14px;">Please find your ${safeType} attached to this email.</p>
+      <p style="margin:0 0 16px;color:#333;font-size:14px;">To sign this document, use the button below:</p>
+      <div style="margin:18px 0;">
+        <a href="${safeLink}" style="display:inline-block;background:#008000;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;">Review &amp; Sign</a>
+      </div>
+      <p style="margin:16px 0 0;color:#666;font-size:12px;">If the button does not work, open this link:</p>
+      <p style="margin:6px 0 0;color:#006600;font-size:12px;word-break:break-all;">${safeLink}</p>
     </div>
   </div>`;
 }
@@ -206,6 +212,7 @@ export default async function handler(req, res) {
     const html = buildEmailHtml({
       companyName: doc.company_name,
       clientName: doc.client_name,
+      link,
       docNumber: doc.doc_number,
       docType: doc.doc_type,
     });
