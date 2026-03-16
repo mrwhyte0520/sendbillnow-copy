@@ -219,6 +219,8 @@ export default async function handler(req, res) {
 
     const subject = `${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'}${doc.doc_number ? ` ${doc.doc_number}` : ''}`;
 
+    const text = `Hi ${String(doc.client_name || 'Client')},\n\nPlease find your ${doc.doc_type === 'JOB_ESTIMATE' ? 'Job Estimate' : 'Invoice'} attached to this email.\n\nTo review and sign, open this link:\n${link}\n`;
+
     let pdfBuffer = null;
     try {
       const pdfResp = await fetch(`${baseUrl}/api/service-documents/preview`, {
@@ -246,6 +248,7 @@ export default async function handler(req, res) {
       templateType: 'service-document-pdf',
       subject,
       html,
+      text,
       attachment: pdfBuffer ? {
         filename: `${doc.doc_number || 'document'}.pdf`,
         content: pdfBuffer.toString('base64'),

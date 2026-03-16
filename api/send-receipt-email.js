@@ -211,6 +211,7 @@ export async function sendEmailViaResend({
   templateType,
   invoiceHtml,
   html,
+  text,
   invoiceHtmlSnake,
   attachment,
   subject,
@@ -284,12 +285,14 @@ export async function sendEmailViaResend({
         templateType,
       });
 
-  const text = buildReceiptText({
-    companyName,
-    customerName,
-    sale: normalizedSale,
-    templateType,
-  });
+  const resolvedText = (typeof text === 'string' && text.trim())
+    ? text.trim()
+    : buildReceiptText({
+        companyName,
+        customerName,
+        sale: normalizedSale,
+        templateType,
+      });
 
   const normalizedTemplateType = String(templateType || '').trim().toLowerCase();
   const allowNoAttachment =
@@ -365,7 +368,7 @@ export async function sendEmailViaResend({
         to: [toEmail],
         ...(resendReplyTo ? { reply_to: resendReplyTo } : {}),
         subject: resolvedSubject,
-        text,
+        text: resolvedText,
         html: resolvedHtml,
         ...(attachments.length ? { attachments } : {}),
       }),
