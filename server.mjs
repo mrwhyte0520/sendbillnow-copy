@@ -37,6 +37,7 @@ import serviceDocumentsSendHandler from './api/service-documents/send.js';
 import serviceDocumentsGetHandler from './api/service-documents/get.js';
 import serviceDocumentsPublicGetHandler from './api/service-documents/public-get.js';
 import serviceDocumentsPublicSignHandler from './api/service-documents/public-sign.js';
+import serviceDocumentsSendSealedHandler from './api/service-documents/send-sealed.js';
 import serviceDocumentsContractorApplyDefaultHandler from './api/service-documents/contractor-apply-default.js';
 import serviceDocumentsContractorSignHandler from './api/service-documents/contractor-sign.js';
 import serviceDocumentsPreviewHandler from './api/service-documents/preview.js';
@@ -141,6 +142,7 @@ app.all('/api/service-documents/update', (req, res) => serviceDocumentsUpdateHan
 app.all('/api/service-documents/lines/upsert', (req, res) => serviceDocumentsLinesUpsertHandler(req, res));
 app.all('/api/service-documents/recalculate', (req, res) => serviceDocumentsRecalculateHandler(req, res));
 app.all('/api/service-documents/send', (req, res) => serviceDocumentsSendHandler(req, res));
+app.all('/api/service-documents/send-sealed', (req, res) => serviceDocumentsSendSealedHandler(req, res));
 app.all('/api/service-documents/get', (req, res) => serviceDocumentsGetHandler(req, res));
 app.all('/api/service-documents/public/get', (req, res) => serviceDocumentsPublicGetHandler(req, res));
 app.all('/api/service-documents/public/sign', (req, res) => serviceDocumentsPublicSignHandler(req, res));

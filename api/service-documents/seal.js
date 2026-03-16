@@ -240,6 +240,7 @@ export default async function handler(req, res) {
     if (!documentId) return res.status(400).json({ ok: false, error: 'Missing documentId' });
 
     const forceRegenerate = Boolean(body.forceRegenerate || body.force_regenerate);
+    const skipEmail = Boolean(body.skipEmail || body.skip_email);
     const requestUrl = String(req.url || '').toLowerCase();
     const previewHeader = String(req.headers['x-preview-pdf'] || '').trim().toLowerCase();
     const previewOnly = Boolean(
@@ -327,7 +328,7 @@ export default async function handler(req, res) {
 
     // Email may not have been sent if previous attempt failed.
     const clientEmail = String(doc.client_email || '').trim();
-    if (!doc.sealed_email_sent_at && isValidEmail(clientEmail)) {
+    if (!skipEmail && !doc.sealed_email_sent_at && isValidEmail(clientEmail)) {
       const claimIso = new Date().toISOString();
       const { data: claim } = await supabase
         .from('service_documents')
@@ -1083,7 +1084,7 @@ export default async function handler(req, res) {
   const alreadySealed = Boolean(doc.sealed_at || latest?.sealed_at);
 
   const clientEmail = String(doc.client_email || '').trim();
-  if (!latest?.sealed_email_sent_at && isValidEmail(clientEmail)) {
+  if (!skipEmail && !latest?.sealed_email_sent_at && isValidEmail(clientEmail)) {
     const claimIso = new Date().toISOString();
     const { data: claim } = await supabase
       .from('service_documents')
