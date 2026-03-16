@@ -243,24 +243,29 @@ export default function ServiceDocumentsReviewPage() {
     return () => window.removeEventListener('resize', onResize);
   }, [configureCanvas]);
 
-  const hasClientSignatureEvidence = useMemo(() => {
-    return Boolean(doc?.client_signed_at || signature?.client_signature_image || localSignaturePreview);
-  }, [doc?.client_signed_at, signature?.client_signature_image, localSignaturePreview]);
+  const hasClientSignedAt = useMemo(() => {
+    return Boolean(doc?.client_signed_at);
+  }, [doc?.client_signed_at]);
+
+  const hasClientSignaturePreview = useMemo(() => {
+    return Boolean(signature?.client_signature_image || localSignaturePreview);
+  }, [signature?.client_signature_image, localSignaturePreview]);
 
   const canSign = useMemo(() => {
     if (!doc) return false;
     const st = String(doc.status || '');
     if (st === 'Sealed' || st === 'Voided' || st === 'Expired') return false;
-    if (st === 'ClientSigned' && hasClientSignatureEvidence) return false;
-    return !hasClientSignatureEvidence;
-  }, [doc, hasClientSignatureEvidence]);
+    if (st === 'ClientSigned' || st === 'ContractorSigned') return false;
+    if (hasClientSignedAt) return false;
+    return true;
+  }, [doc, hasClientSignedAt]);
 
   const isSigned = useMemo(() => {
     if (!doc) return false;
     const st = String(doc.status || '');
-    if (st === 'ClientSigned') return hasClientSignatureEvidence;
-    return Boolean(signedOk || doc.client_signed_at);
-  }, [doc, signedOk, hasClientSignatureEvidence]);
+    if (st === 'ClientSigned' || st === 'ContractorSigned') return Boolean(hasClientSignedAt || hasClientSignaturePreview);
+    return Boolean(signedOk || hasClientSignedAt);
+  }, [doc, signedOk, hasClientSignedAt, hasClientSignaturePreview]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
