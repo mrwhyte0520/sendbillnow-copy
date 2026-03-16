@@ -138,8 +138,11 @@ export default async function handler(req, res) {
   if (docError) return res.status(500).json({ ok: false, error: docError.message || 'Could not load document' });
   if (!doc?.id) return res.status(404).json({ ok: false, error: 'Document not found' });
 
-  const status = String(doc.status || '');
-  if (doc.client_signed_at || status === 'ClientSigned' || status === 'ContractorSigned' || status === 'Sealed' || status === 'Voided' || status === 'Expired') {
+  if (doc.sealed_at || doc.voided_at || doc.expired_at) {
+    return res.status(400).json({ ok: false, error: 'Document cannot be signed' });
+  }
+
+  if (doc.client_signed_at || doc.contractor_signed_at) {
     return res.status(400).json({ ok: false, error: 'Document cannot be signed' });
   }
 

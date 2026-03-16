@@ -255,7 +255,6 @@ export default function ServiceDocumentsReviewPage() {
     if (!doc) return false;
     const st = String(doc.status || '');
     if (st === 'Sealed' || st === 'Voided' || st === 'Expired') return false;
-    if (st === 'ClientSigned' || st === 'ContractorSigned') return false;
     if (hasClientSignedAt) return false;
     return true;
   }, [doc, hasClientSignedAt]);
@@ -574,7 +573,7 @@ export default function ServiceDocumentsReviewPage() {
 
                     {!canSign ? (
                       <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700">
-                        This document cannot be signed in its current state.
+                        This document cannot be signed in its current state. Status: {String(doc.status || '')}
                       </div>
                     ) : null}
                   </div>
