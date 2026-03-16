@@ -28,7 +28,19 @@ export async function readJsonBody(req) {
 export function getBaseUrl(req) {
   const env = process.env.PUBLIC_BASE_URL;
   if (env && String(env).trim()) {
-    return String(env).trim().replace(/\/$/, '');
+    const trimmed = String(env).trim().replace(/\/$/, '');
+    try {
+      const u = new URL(trimmed);
+      const host = String(u.hostname || '').toLowerCase();
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return trimmed;
+      }
+    } catch {
+      const lower = trimmed.toLowerCase();
+      if (!lower.includes('localhost') && !lower.includes('127.0.0.1')) {
+        return trimmed;
+      }
+    }
   }
 
   const proto = req.headers['x-forwarded-proto'] || 'http';
