@@ -12,7 +12,10 @@ function normalizeRecipient(phoneNumber) {
 
 export async function sendInvoiceSMS({ phoneNumber, templateId, dynamicParams }) {
   try {
-    if (!process.env.BREVO_API_KEY) return;
+    if (process.env.NODE_ENV !== 'production' || !process.env.BREVO_API_KEY) {
+      console.log('SMS Skip: Modo desarrollo o falta API Key');
+      return;
+    }
 
     const apiKey = process.env.BREVO_API_KEY;
     const sender = String(process.env.BREVO_SMS_SENDER || 'SendBillNow');
