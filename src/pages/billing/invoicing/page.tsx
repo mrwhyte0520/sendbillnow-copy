@@ -57,6 +57,8 @@ import { addPdfBrandedHeader, getPdfTableStyles } from '../../../utils/exportImp
 
 import { useAuth } from '../../../hooks/useAuth';
 
+import { supabase } from '../../../lib/supabase';
+
 
 
 import { usePlanPermissions } from '../../../hooks/usePlanPermissions';
@@ -5894,6 +5896,38 @@ export default function InvoicingPage() {
 
 
       const created = await invoicesService.create(user.id, invoicePayload, linesPayload);
+
+      try {
+        const createdInvoice = (created as any)?.invoice as any;
+        const invoiceId = createdInvoice?.id ? String(createdInvoice.id) : '';
+        const customerPhone = String(newInvoiceCustomerPhone || '').trim();
+
+        const tplId = Number(import.meta.env.VITE_BREVO_INVOICE_SMS_TEMPLATE_ID || 0);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = String(sessionData?.session?.access_token || '');
+
+        if (invoiceId && customerPhone && tplId > 0 && accessToken) {
+          await fetch('/api/invoices/send-sms', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              invoiceId,
+              phoneNumber: customerPhone,
+              templateId: tplId,
+              dynamicParams: {
+                customerName: String(newInvoiceCustomerSearch || '').trim(),
+                total: Number(total) || 0,
+                invoiceNumber: String(createdInvoice?.invoice_number || ''),
+              },
+            }),
+          }).catch(() => null);
+        }
+      } catch {
+        // ignore SMS failures
+      }
 
 
 

@@ -27,6 +27,7 @@ import productsHandler from './api/products.js';
 import productByIdHandler from './api/product-by-id.js';
 import suppliersListHandler from './api/suppliers-list.js';
 import invoicesListHandler from './api/invoices-list.js';
+import invoicesSendSmsHandler from './api/invoices-send-sms.js';
 import clientsHandler from './api/clients.js';
 
 import serviceDocumentsCreateHandler from './api/service-documents/create.js';
@@ -132,6 +133,7 @@ app.all('/api/products', (req, res) => productsHandler(req, res));
 app.all('/api/products/:id', (req, res) => productByIdHandler(req, res));
 app.all('/api/suppliers', (req, res) => suppliersListHandler(req, res));
 app.all('/api/invoices', (req, res) => invoicesListHandler(req, res));
+app.all('/api/invoices/send-sms', (req, res) => invoicesSendSmsHandler(req, res));
 app.all('/api/clients', (req, res) => clientsHandler(req, res));
 app.all('/api/suppliers/search', (req, res) => supplierSearchHandler(req, res));
 app.all('/api/purchase-orders/create-from-quote', (req, res) => createPurchaseOrderFromQuoteHandler(req, res));
