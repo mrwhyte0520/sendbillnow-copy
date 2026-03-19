@@ -1,5 +1,3 @@
-import SibApiV3Sdk from 'sib-api-v3-sdk';
-
 function normalizeRecipient(phoneNumber) {
   let recipient = String(phoneNumber || '').trim();
   if (!recipient) return '';
@@ -10,50 +8,44 @@ function normalizeRecipient(phoneNumber) {
   return recipient;
 }
 
-export async function sendInvoiceSMS({ phoneNumber, templateId, dynamicParams }) {
+export async function sendInvoiceSMS({ phoneNumber, customerName, invoiceNumber, total }) {
+  // SKIP TOTAL EN LOCALHOST O SIN KEY
+  if (process.env.NODE_ENV !== 'production' || !process.env.BREVO_API_KEY) {
+    console.log('SMS Skip: Modo desarrollo o falta BREVO_API_KEY');
+    return;
+  }
+
+  console.log('--- INTENTO DE SMS BREVO ---');
+
   try {
-    if (process.env.NODE_ENV !== 'production' || !process.env.BREVO_API_KEY) {
-      console.log('SMS Skip: Modo desarrollo o falta API Key');
-      return;
-    }
+    const Brevo = await import('@getbrevo/brevo');
+    const { TransactionalSMSApi, TransactionalSMSApiApiKeys } = Brevo;
 
-    console.log('--- INTENTO DE SMS ---');
+    const apiInstance = new TransactionalSMSApi();
+    apiInstance.setApiKey(TransactionalSMSApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 
-    const apiKey = process.env.BREVO_API_KEY;
-    const sender = String(process.env.BREVO_SMS_SENDER || 'SendBillNow');
-
-    // TEST MODE (temporary): always send to the owner's phone for activation tests.
-    // IMPORTANT: This intentionally ignores the DB/params phoneNumber.
+    // HARD CODE TEMPORAL PARA PRUEBA (quitar después)
     const recipient = normalizeRecipient('+19733427507');
-    if (!recipient) return;
 
-    const params = (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {};
-    const customerName = String(params.customerName || '').trim();
-    const invoiceNumber = String(params.invoiceNumber || '').trim();
-    const total = String(params.total ?? '').trim();
-    const content = `PRUEBA DE SISTEMA: Hola ${customerName}, tu factura ${invoiceNumber} por un monto de ${total} ya está disponible en SendBillNow.`;
+    const safeCustomerName = String(customerName || 'Cliente');
+    const safeInvoiceNumber = String(invoiceNumber || '').trim();
+    const safeTotal = total === null || total === undefined ? '' : String(total);
 
-    SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
-    const apiInstance = new SibApiV3Sdk.TransactionalSMSApi();
-
-    const payload = {
-      type: 'transactional',
-      sender: sender.substring(0, 11),
+    const sendParams = {
+      sender: String(process.env.BREVO_SMS_SENDER || 'BillNow'),
       recipient,
-      content,
+      content: `PRUEBA DE SISTEMA: Hola ${safeCustomerName}, tu factura ${safeInvoiceNumber} por ${safeTotal} ya está disponible en SendBillNow.`,
+      type: 'transactional',
     };
 
-    const result = await apiInstance.sendTransacSms(payload);
-    console.log('--- SMS ENVIADO CON ÉXITO ---', result);
+    const data = await apiInstance.sendTransacSms(sendParams);
+    console.log('--- SMS ENVIADO CON ÉXITO ---', data);
   } catch (err) {
-    const message = err?.response?.body?.message || err?.message || 'Brevo SMS failed';
-    const code = err?.response?.body?.code || err?.code || null;
-
-    console.error('[smsService.sendInvoiceSMS] error:', {
-      code,
-      message,
-      details: err?.response?.body || null,
-      status: err?.response?.status || err?.status || null,
+    console.error('--- ERROR SMS BREVO ---', {
+      message: err?.message,
+      code: err?.code || err?.status,
+      details: err?.response?.body || err,
     });
+    // NUNCA hacer throw
   }
 }

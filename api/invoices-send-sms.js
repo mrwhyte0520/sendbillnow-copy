@@ -59,13 +59,12 @@ export default async function handler(req, res) {
 
   // Fire-and-forget: never block the caller.
   try {
+    const dp = (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : null;
     void sendInvoiceSMS({
       phoneNumber,
-      dynamicParams: (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {
-        customerName: customer?.name || '',
-        invoiceNumber: inv.invoice_number || '',
-        total: inv.total_amount || 0,
-      },
+      customerName: (dp && typeof dp.customerName === 'string') ? dp.customerName : (customer?.name || ''),
+      invoiceNumber: (dp && (typeof dp.invoiceNumber === 'string' || typeof dp.invoiceNumber === 'number')) ? dp.invoiceNumber : (inv.invoice_number || ''),
+      total: (dp && (typeof dp.total === 'string' || typeof dp.total === 'number')) ? dp.total : (inv.total_amount || 0),
     });
   } catch (e) {
     // Even if something goes wrong synchronously, never fail the request.
