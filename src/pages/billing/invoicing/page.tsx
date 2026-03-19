@@ -5905,7 +5905,7 @@ export default function InvoicingPage() {
         const accessToken = String(sessionData?.session?.access_token || '');
 
         if (invoiceId && customerPhone && accessToken) {
-          await fetch('/api/invoices/send-sms', {
+          void fetch('/api/invoices/send-sms', {
             method: 'POST',
             headers: {
               'content-type': 'application/json',

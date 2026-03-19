@@ -18,54 +18,53 @@ export async function sendInvoiceSMS({ phoneNumber, templateId, dynamicParams })
   // IMPORTANT: This intentionally ignores the DB/params phoneNumber.
   const recipient = normalizeRecipient('+18093921464');
 
-  if (!apiKey || !String(apiKey).trim()) {
-    console.warn('[smsService.sendInvoiceSMS] BREVO_API_KEY not configured – SMS not sent');
-    return { ok: false, sent: false, error: 'BREVO_API_KEY not configured' };
-  }
-
-  if (!recipient) {
-    return { ok: false, sent: false, error: 'Missing phoneNumber' };
-  }
-
   const params = (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {};
   const customerName = String(params.customerName || '').trim();
   const invoiceNumber = String(params.invoiceNumber || '').trim();
   const total = String(params.total ?? '').trim();
   const content = `PRUEBA DE SISTEMA: Hola ${customerName}, tu factura ${invoiceNumber} por un monto de ${total} ya está disponible en SendBillNow.`;
 
-  try {
-    SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
+  console.log('--- INICIANDO ENVÍO SMS BREVO ---');
 
-    const apiInstance = new SibApiV3Sdk.TransactionalSMSApi();
+  // IMPORTANT: This function must be non-blocking and non-fatal.
+  // We always return true and never throw.
+  (async () => {
+    try {
+      if (!apiKey || !String(apiKey).trim()) {
+        console.error('[smsService.sendInvoiceSMS] BREVO_API_KEY not configured – SMS not sent');
+        return;
+      }
+      if (!recipient) {
+        console.error('[smsService.sendInvoiceSMS] Missing recipient phone');
+        return;
+      }
 
-    const payload = {
-      type: 'transactional',
-      sender: sender.substring(0, 11),
-      recipient,
-      content,
-    };
+      SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
 
-    const result = await apiInstance.sendTransacSms(payload);
+      const apiInstance = new SibApiV3Sdk.TransactionalSMSApi();
 
-    const messageId = result?.messageId || result?.reference || result?.id || null;
-    console.log('[smsService.sendInvoiceSMS] SMS sent OK. messageId=', messageId, 'result=', result);
-    return { ok: true, sent: true, result, messageId };
-  } catch (err) {
-    const message = err?.response?.body?.message || err?.message || 'Brevo SMS failed';
-    const code = err?.response?.body?.code || err?.code || null;
+      const payload = {
+        type: 'transactional',
+        sender: sender.substring(0, 11),
+        recipient,
+        content,
+      };
 
-    console.error('[smsService.sendInvoiceSMS] error:', {
-      code,
-      message,
-      details: err?.response?.body || null,
-      status: err?.response?.status || err?.status || null,
-    });
+      const result = await apiInstance.sendTransacSms(payload);
 
-    return {
-      ok: false,
-      sent: false,
-      error: String(message),
-      code: code ? String(code) : null,
-    };
-  }
+      console.log('--- SMS ENVIADO CON ÉXITO ---', result);
+    } catch (err) {
+      const message = err?.response?.body?.message || err?.message || 'Brevo SMS failed';
+      const code = err?.response?.body?.code || err?.code || null;
+
+      console.error('[smsService.sendInvoiceSMS] error:', {
+        code,
+        message,
+        details: err?.response?.body || null,
+        status: err?.response?.status || err?.status || null,
+      });
+    }
+  })();
+
+  return true;
 }

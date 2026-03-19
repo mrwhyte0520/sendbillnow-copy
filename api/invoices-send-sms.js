@@ -57,25 +57,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: 'Customer phone number not found' });
   }
 
-  // Robust: SMS failures never crash the server; we return ok=false with details.
-  const smsResult = await sendInvoiceSMS({
-    phoneNumber,
-    dynamicParams: (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {
-      customerName: customer?.name || '',
-      invoiceNumber: inv.invoice_number || '',
-      total: inv.total_amount || 0,
-    },
-  });
-
-  if (!smsResult.ok) {
-    // Return 200 so invoice flow can treat this as non-fatal (client decides), but mark ok=false.
-    return res.status(200).json({ ok: false, sent: false, error: smsResult.error || 'SMS failed', code: smsResult.code || null });
+  // Fire-and-forget: never block the caller.
+  try {
+    void sendInvoiceSMS({
+      phoneNumber,
+      dynamicParams: (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {
+        customerName: customer?.name || '',
+        invoiceNumber: inv.invoice_number || '',
+        total: inv.total_amount || 0,
+      },
+    });
+  } catch (e) {
+    // Even if something goes wrong synchronously, never fail the request.
+    console.error('[invoices-send-sms] enqueue error:', e);
   }
 
-  return res.status(200).json({
-    ok: true,
-    sent: true,
-    messageId: smsResult.messageId || null,
-    result: smsResult.result || null,
-  });
+  return res.status(200).json({ ok: true, queued: true });
 }
