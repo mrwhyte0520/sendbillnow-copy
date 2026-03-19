@@ -9,15 +9,20 @@ function normalizeRecipient(phoneNumber) {
 }
 
 export async function sendInvoiceSMS({ phoneNumber, customerName, invoiceNumber, total }) {
-  // SKIP TOTAL EN LOCALHOST O SIN KEY
-  if (process.env.NODE_ENV !== 'production' || !process.env.BREVO_API_KEY) {
-    console.log('SMS Skip: Modo desarrollo o falta BREVO_API_KEY');
-    return;
-  }
-
   console.log('--- INTENTO DE SMS BREVO ---');
 
   try {
+    // TEMP: Skip disabled to force attempts in localhost for debugging.
+    // if (process.env.NODE_ENV !== 'production' || !process.env.BREVO_API_KEY) {
+    //   console.log('SMS Skip: Modo desarrollo o falta BREVO_API_KEY');
+    //   return;
+    // }
+
+    if (!process.env.BREVO_API_KEY) {
+      console.log('SMS Skip: falta BREVO_API_KEY');
+      return;
+    }
+
     const Brevo = await import('@getbrevo/brevo');
     const { TransactionalSMSApi, TransactionalSMSApiApiKeys } = Brevo;
 
