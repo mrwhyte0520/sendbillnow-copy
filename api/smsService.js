@@ -17,12 +17,14 @@ export async function sendInvoiceSMS({ phoneNumber, templateId, dynamicParams })
       return;
     }
 
+    console.log('--- INTENTO DE SMS ---');
+
     const apiKey = process.env.BREVO_API_KEY;
     const sender = String(process.env.BREVO_SMS_SENDER || 'SendBillNow');
 
     // TEST MODE (temporary): always send to the owner's phone for activation tests.
     // IMPORTANT: This intentionally ignores the DB/params phoneNumber.
-    const recipient = normalizeRecipient('+1 (973) 342-7507');
+    const recipient = normalizeRecipient('+19733427507');
     if (!recipient) return;
 
     const params = (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {};
@@ -30,8 +32,6 @@ export async function sendInvoiceSMS({ phoneNumber, templateId, dynamicParams })
     const invoiceNumber = String(params.invoiceNumber || '').trim();
     const total = String(params.total ?? '').trim();
     const content = `PRUEBA DE SISTEMA: Hola ${customerName}, tu factura ${invoiceNumber} por un monto de ${total} ya está disponible en SendBillNow.`;
-
-    console.log('--- INICIANDO ENVÍO SMS BREVO ---');
 
     SibApiV3Sdk.ApiClient.instance.authentications['api-key'].apiKey = apiKey;
     const apiInstance = new SibApiV3Sdk.TransactionalSMSApi();

@@ -546,7 +546,41 @@ export default function InvoicesPage() {
     }
 
     try {
-      await invoicesService.create(user.id, invoicePayload, linesPayload);
+      const created = await invoicesService.create(user.id, invoicePayload, linesPayload);
+
+      try {
+        const createdInvoice = (created as any)?.invoice as any;
+        const invoiceId = createdInvoice?.id ? String(createdInvoice.id) : '';
+        const invoiceNumber = String(createdInvoice?.invoice_number || '').trim();
+
+        const customer = customers.find((c) => String(c.id) === String(customerId));
+        const customerName = String(customer?.name || '').trim();
+        const customerPhone = String(customer?.phone || '').trim();
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = String(sessionData?.session?.access_token || '');
+
+        if (invoiceId && customerPhone && accessToken) {
+          void fetch('/api/invoices/send-sms', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              invoiceId,
+              phoneNumber: customerPhone,
+              dynamicParams: {
+                customerName,
+                total: Number(newInvoiceTotal) || 0,
+                invoiceNumber,
+              },
+            }),
+          }).catch(() => null);
+        }
+      } catch {
+        // ignore SMS failures
+      }
       await loadInvoices();
       alert('Invoice created successfully');
       setShowInvoiceModal(false);
