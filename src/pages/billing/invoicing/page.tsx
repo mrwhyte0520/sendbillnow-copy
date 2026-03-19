@@ -5901,12 +5901,10 @@ export default function InvoicingPage() {
         const createdInvoice = (created as any)?.invoice as any;
         const invoiceId = createdInvoice?.id ? String(createdInvoice.id) : '';
         const customerPhone = String(newInvoiceCustomerPhone || '').trim();
-
-        const tplId = Number(import.meta.env.VITE_BREVO_INVOICE_SMS_TEMPLATE_ID || 0);
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = String(sessionData?.session?.access_token || '');
 
-        if (invoiceId && customerPhone && tplId > 0 && accessToken) {
+        if (invoiceId && customerPhone && accessToken) {
           await fetch('/api/invoices/send-sms', {
             method: 'POST',
             headers: {
@@ -5916,7 +5914,6 @@ export default function InvoicingPage() {
             body: JSON.stringify({
               invoiceId,
               phoneNumber: customerPhone,
-              templateId: tplId,
               dynamicParams: {
                 customerName: String(newInvoiceCustomerSearch || '').trim(),
                 total: Number(total) || 0,

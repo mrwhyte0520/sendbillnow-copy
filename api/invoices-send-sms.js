@@ -34,14 +34,10 @@ export default async function handler(req, res) {
   }
 
   const invoiceId = String(body.invoiceId || body.invoice_id || '').trim();
-  const templateId = body.templateId;
   const dynamicParams = body.dynamicParams;
   const phoneOverride = typeof body.phoneNumber === 'string' ? body.phoneNumber.trim() : '';
 
   if (!invoiceId) return res.status(400).json({ ok: false, error: 'Missing invoiceId' });
-  if (templateId === undefined || templateId === null || String(templateId).trim() === '') {
-    return res.status(400).json({ ok: false, error: 'Missing templateId' });
-  }
 
   // Load invoice and customer phone. (best-effort) — do not fail if customer join changes.
   const { data: inv, error: invErr } = await supabase
@@ -64,7 +60,6 @@ export default async function handler(req, res) {
   // Robust: SMS failures never crash the server; we return ok=false with details.
   const smsResult = await sendInvoiceSMS({
     phoneNumber,
-    templateId,
     dynamicParams: (dynamicParams && typeof dynamicParams === 'object') ? dynamicParams : {
       customerName: customer?.name || '',
       invoiceNumber: inv.invoice_number || '',
@@ -77,5 +72,10 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: false, sent: false, error: smsResult.error || 'SMS failed', code: smsResult.code || null });
   }
 
-  return res.status(200).json({ ok: true, sent: true, result: smsResult.result || null });
+  return res.status(200).json({
+    ok: true,
+    sent: true,
+    messageId: smsResult.messageId || null,
+    result: smsResult.result || null,
+  });
 }
