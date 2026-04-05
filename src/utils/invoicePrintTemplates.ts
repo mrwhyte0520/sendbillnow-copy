@@ -96,6 +96,14 @@ export type InvoiceTemplateType =
 
 
 
+  | 'final-invoice'
+
+
+
+  | 'finalStyledInvoice'
+
+
+
   | 'rent-receipt'
 
 
@@ -108,9 +116,15 @@ export type InvoiceTemplateType =
 
 
 
+  | 'final-quote'
+
+
+
+  | 'finalStyledQuote'
+
+
+
   | 'service-hours';
-
-
 
 
 
@@ -1029,818 +1043,237 @@ interface InvoiceData {
 
 
 function generateClassicInvoiceTemplate(
-
-
-
-
-
-
-
   invoice: InvoiceData,
-
-
-
-
-
-
-
   customer: CustomerData,
-
-
-
-
-
-
-
   company: CompanyData
-
-
-
-
-
-
-
 ): string {
-
-
-
-
-
-
-
   const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)) : '';
-
-
-
-
-
-
-
   const classicDiscountType = (invoice as any).discount_type as 'percentage' | 'fixed' | undefined;
-
-
-
   const classicDiscountValue = Number((invoice as any).discount_value ?? 0) || 0;
-
-
-
   const classicDiscountAmount = Number((invoice as any).total_discount ?? 0) || 0;
-
-
-
   const classicDiscountLabel = classicDiscountType === 'percentage' ? `${classicDiscountValue}%` : '';
-
   const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
-
-
-
   const classicAccountNumber = (() => {
-
-    const raw =
-      (invoice as any)?.accountNumber ??
-      (invoice as any)?.account_number ??
-      (customer as any)?.accountNumber ??
-      (customer as any)?.account_number ??
-      (customer as any)?.account ??
-      (customer as any)?.accountNo;
-
+    const raw = (invoice as any)?.accountNumber ?? (invoice as any)?.account_number ?? (customer as any)?.accountNumber ?? (customer as any)?.account_number ?? (customer as any)?.account ?? (customer as any)?.accountNo;
     const s = raw === null || raw === undefined ? '' : String(raw).trim();
-
     return s;
-
   })();
-
-
-
   const customerAddr = (() => {
-
     const raw = customer.address ? String(customer.address) : '';
-
     if (!raw) return { street: '', city: '', state: '', zip: '' };
-
-
-
     const parsed = parseAddress(raw);
-
     const onlyStreet = Boolean(parsed.street) && !parsed.city && !parsed.state && !parsed.zip;
-
     if (onlyStreet && raw.includes(',')) {
-
-      const parts = raw
-
-        .split(',')
-
-        .map((p) => p.trim())
-
-        .filter(Boolean);
-
-      return {
-
-        street: parts[0] || parsed.street || '',
-
-        city: parts[1] || '',
-
-        state: parts[2] || '',
-
-        zip: parts[3] || '',
-
-      };
-
+      const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
+      return { street: parts[0] || parsed.street || '', city: parts[1] || '', state: parts[2] || '', zip: parts[3] || '' };
     }
-
-
-
     return parsed;
-
   })();
-
-
-
-  const customerAddressHtml = customer.address
-
-    ? (() => {
-
-        const line1 = customerAddr.street ? `<div>${escapeHtml(customerAddr.street)}</div>` : '';
-
-        const city = String(customerAddr.city || '').trim();
-
-        const state = String(customerAddr.state || '').trim();
-
-        const zip = String(customerAddr.zip || '').trim();
-
-        const tail = [state, zip].filter(Boolean).join(' ');
-
-        const line2Text = [city, tail].filter(Boolean).join(city && tail ? ', ' : '');
-
-        const line2 = line2Text ? `<div>${escapeHtml(line2Text)}</div>` : '';
-
-        return `${line1}${line2}`;
-
-      })()
-
-    : '';
-
-
-
-
-
-
-
-  const rows = (invoice.items || [])
-
-
-
-    .map(
-
-
-
-      (item) => `
-
-
-
-        <tr>
-
-
-
-          <td style="padding:8px 10px;border:1px solid ${BLUE};">${escapeHtml(String(item.description || ''))}</td>
-
-
-
-          <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:center;">${item.quantity}</td>
-
-
-
-          <td style="padding:8px 10px;border:1px solid ${BLUE};text-align:right;">${formatAmount(item.total)}</td>
-
-
-
-        </tr>
-
-
-
-      `.trim()
-
-
-
-    )
-
-
-
-    .join('');
-
-
-
-
-
-
-
+  const companyAddrLines = companyAddressLines(company);
+  const shipToAddrLine = escapeHtml(customerAddr.street || '');
+  const shipToCityStateZip = escapeHtml((() => { const c=String(customerAddr.city||'').trim(); const s=String(customerAddr.state||'').trim(); const z=String(customerAddr.zip||'').trim(); const t=[s,z].filter(Boolean).join(' '); return [c,t].filter(Boolean).join(c&&t?', ':''); })());
+  const shipMethodText = escapeHtml(String((invoice as any)?.shipMethod ?? (invoice as any)?.shippingMethod ?? (invoice as any)?.ship_method ?? '').trim());
+  const paymentMethodRaw = String(
+    (invoice as any)?.paymentMethod ??
+      (invoice as any)?.payment_method ??
+      (invoice as any)?.paymentType ??
+      (invoice as any)?.payment_type ??
+      (invoice as any)?.tenderType ??
+      (invoice as any)?.tender_type ??
+      ''
+  ).trim();
+  const paymentMethodText = escapeHtml((() => {
+    if (!paymentMethodRaw) return 'N/A';
+    const k = paymentMethodRaw.toLowerCase();
+    if (k === 'cash') return 'Cash';
+    if (k === 'card') return 'Card';
+    if (k === 'transfer') return 'Transfer';
+    return paymentMethodRaw;
+  })());
+  const b = 'border:1px solid #6b7ba4';
+  const newItemRows = (invoice.items||[]).map((item,idx)=>{
+    return '<tr><td style="'+b+';padding:7px 8px;text-align:center;">'+(idx+1)+'</td><td style="'+b+';padding:7px 8px;">'+escapeHtml(String(item.description||''))+'</td><td style="'+b+';padding:7px 8px;text-align:center;">'+item.quantity+'</td><td style="'+b+';padding:7px 8px;text-align:right;">'+formatAmount(item.price)+'</td><td style="'+b+';padding:7px 8px;text-align:right;">'+formatAmount(item.total)+'</td></tr>';
+  }).join('')||('<tr><td style="'+b+';height:36px;padding:7px 8px;">&nbsp;</td><td style="'+b+';height:36px;padding:7px 8px;">&nbsp;</td><td style="'+b+';height:36px;padding:7px 8px;">&nbsp;</td><td style="'+b+';height:36px;padding:7px 8px;">&nbsp;</td><td style="'+b+';height:36px;padding:7px 8px;">&nbsp;</td></tr>').repeat(4);
   const footerLinksParts: string[] = [];
-
-
-
   if (company.facebook) footerLinksParts.push('Facebook');
-
-
-
   if (company.instagram) footerLinksParts.push('Instagram');
-
-
-
   if (company.twitter) footerLinksParts.push('X');
-
-
-
   if (company.linkedin) footerLinksParts.push('LinkedIn');
-
-
-
   if (company.youtube) footerLinksParts.push('YouTube');
-
-
-
   if (company.tiktok) footerLinksParts.push('TikTok');
-
-
-
   if (company.whatsapp) footerLinksParts.push(`WhatsApp: ${escapeHtml(company.whatsapp)}`);
-
-
-
   const footerLinksText = footerLinksParts.join(' | ');
 
-
-
-
-
-
-
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Invoice ${invoice.invoiceNumber}</title>
-
-
-
 <style>
-
-
-
 *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-
-
-
-@page{margin:12mm;}
-
-
-
-body{font-family:Arial, sans-serif;background:#fff;color:#000;}
-
-
-
-.invoice{max-width:900px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:200px;}
-
-
-
-.invoice::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:
-
-  radial-gradient(520px 220px at 20% 18%, rgba(0,27,158,0.10), transparent 60%),
-
-  radial-gradient(420px 200px at 85% 28%, rgba(22,163,74,0.08), transparent 60%);
-
-}
-
-
-
-.invoice::after{content:'';position:absolute;left:-40px;top:120px;width:260px;height:260px;border-radius:999px;pointer-events:none;z-index:0;background:linear-gradient(135deg, rgba(0,27,158,0.10), rgba(0,27,158,0));filter:blur(0px);}
-
-
-
-.invoice > *{position:relative;z-index:1;}
-
-
-
-.top{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 10px 0 10px;}
-
-
-
-.logo{width:170px;height:95px;border:none;display:flex;align-items:center;justify-content:center;font-weight:700;}
-
-
-
-.logo img{max-width:170px;max-height:95px;object-fit:contain;}
-
-
-
-.company{font-size:12px;line-height:1.4;text-align:right;}
-
-
-
-.company .companyName{font-weight:800;font-size:16px;}
-
-
-
-.title{margin-top:8px;text-align:center;font-size:44px;font-weight:800;text-decoration:underline;letter-spacing:1px;color:${BLUE};}
-
-
-
-.powered a{color:inherit;text-decoration:underline;}
-
-
-
-.footer a{color:inherit;text-decoration:underline;}
-
-
-
-.footerBlue a{color:#fff !important;text-decoration:underline;}
-
-
-
-.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;padding:0 10px;font-size:12px;align-items:start;}
-
-
-
-.meta .billTo{justify-self:start;line-height:1.35;}
-
-
-
-.meta .invoiceInfo{justify-self:end;text-align:right;line-height:1.35;}
-
-
-
-.meta .box{min-height:40px;}
-
-
-
-.meta .label{font-weight:800;color:#111;margin-bottom:4px;text-transform:uppercase;font-size:10px;letter-spacing:0.4px;}
-
-
-
-.meta .row{margin:2px 0;font-size:11px;}
-
-
-
-.meta .row .label{margin-bottom:0;text-transform:none;font-size:11px;letter-spacing:0;}
-
-
-
-.meta .row .label{display:inline-block;min-width:88px;}
-
-
-
-.meta .billTo .customerName{font-weight:900;font-size:14px;color:#111;}
-
-
-
-.meta .invoiceInfo .row.invoiceTotalRow{margin-top:6px;font-size:13px;}
-
-.meta .invoiceInfo .row.invoiceTotalRow .label{font-weight:900;color:${BLUE};}
-
-.meta .invoiceInfo .row.invoiceTotalRow .value{font-size:14px;font-weight:900;color:#16a34a;}
-
-
-
-.metaDivider{height:2px;background:${BLUE} !important;margin:10px 10px 6px 10px;}
-
-
-
-.table-wrap{margin-top:22px;padding:0 10px;}
-
-
-
-table{width:100%;border-collapse:collapse;}
-
-
-
-th{border:2px solid ${BLUE};padding:8px 10px;text-align:left;font-size:12px;background-color:${BLUE} !important;color:#fff !important;}
-
-
-
-th:nth-child(2){text-align:center;width:80px;}
-
-
-
-th:nth-child(3){text-align:right;width:140px;}
-
-
-
-td{font-size:12px;padding:8px 10px;border-left:1px solid ${BLUE};border-right:1px solid ${BLUE};}
-
-
-
-tbody tr{border-bottom:1px solid ${BLUE};}
-
-
-
-tbody tr:nth-child(even){background:#f9fafb;}
-
-
-
-.bottom{display:grid;grid-template-columns:1.2fr 0.8fr;gap:18px;margin-top:28px;padding:0 10px;}
-
-
-
-.notes{border:2px solid ${BLUE};min-height:180px;padding:10px;}
-
-
-
-.notes .label{font-weight:700;margin-bottom:6px;background-color:${BLUE} !important;color:#fff !important;padding:6px 8px;margin:-10px -10px 8px -10px;}
-
-
-
-.totals{font-size:12px;line-height:1.9;padding-top:6px;}
-
-
-
-.totals .row{display:flex;justify-content:space-between;gap:12px;}
-
-
-
-.totals .grandTotalBox{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-top:6px;border:2px solid ${BLUE};border-radius:6px;padding:6px 10px;background:${BLUE} !important;}
-
-
-
-.totals .grandTotalBox .label{font-weight:900;color:#fff !important;}
-
-
-
-.totals .grandTotalBox .value{color:#16a34a;font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;}
-
-
-
-.totals .row span:last-child{font-variant-numeric:tabular-nums;}
-
-
-
-.footer{margin-top:26px;text-align:center;font-size:12px;padding-bottom:16px;}
-
-
-
-.footerBottom{position:absolute;left:10px;right:10px;bottom:0;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:transparent;box-shadow:none;}
-
-
-
-.footerThanks{background:transparent;color:#0f172a;text-align:center;padding:16px 14px;border:none;}
-
-
-
-.footerThanks .thanks{font-weight:700;font-size:12px;margin-bottom:6px;}
-
-
-
-.footerThanks .links{font-size:10px;color:#0f172a;opacity:0.9;}
-
-
-
-.footerPoweredBar{background-color:${BLUE} !important;color:#fff !important;padding:6px 14px 16px 14px;text-align:center;font-size:12px;letter-spacing:0.2px;line-height:1.15;}
-
-
-
-.footerPoweredBar a{color:#fff !important;text-decoration:underline;}
-
-
-
+@page{margin:10mm;}
+body{font-family:Arial,sans-serif;background:#fff;color:#111;}
+.invoice{max-width:860px;margin:0 auto;background:#fff;min-height:100vh;position:relative;padding-bottom:80px;}
+.topGrid{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:14px 14px 0 14px;align-items:start;}
+.logoBlock{display:flex;flex-direction:column;gap:0;}
+.logoBox{width:160px;height:88px;display:flex;align-items:center;justify-content:center;}
+.logoBox img{max-width:160px;max-height:88px;object-fit:contain;}
+.companyBlock{margin-top:8px;font-size:10.5px;line-height:1.5;}.cName{font-weight:800;font-size:13px;color:#1a2a60;}.cLine{color:#3a4a70;}
+.invoiceBlock{display:flex;flex-direction:column;align-items:flex-end;text-align:right;}
+.invTitle{font-size:46px;font-weight:900;color:#001B9E;text-decoration:underline;letter-spacing:2px;line-height:1;}
+.invMeta{margin-top:6px;font-size:11px;line-height:1.7;color:#111;}
+.mRow{display:flex;justify-content:flex-end;align-items:baseline;gap:4px;}
+.mLabel{font-weight:700;text-transform:uppercase;white-space:nowrap;font-size:10.5px;}
+.mUnder{flex:1;max-width:110px;border-bottom:none;margin:0 4px;height:1px;}
+.mVal{white-space:nowrap;min-width:60px;text-align:right;font-size:10.5px;}
+.rule{height:2px;background:#001B9E;margin:10px 14px 0 14px;}
+.midSection{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:8px 14px 0 14px;}
+.midLeft{padding-right:10px;border-right:1px solid #bbb;}
+.midRight{padding-left:14px;}
+.midLabel{font-weight:800;font-size:11px;text-transform:uppercase;margin-bottom:6px;}
+.midLeft .midLabel{color:#111;}
+.midRight .midLabel{color:#16a34a;}
+.midRow{display:flex;align-items:baseline;gap:4px;margin-bottom:4px;font-size:10.5px;}
+.rLabel{font-weight:700;white-space:nowrap;}
+.rLine{flex:1;border-bottom:none;margin:0 4px;height:1px;}
+.rVal{white-space:nowrap;}
+.custNameRow{background:#dce8f0;padding:4px 6px;font-weight:700;color:#1a6b47;font-size:11px;margin-top:2px;}
+.shipLines{font-size:10.5px;line-height:1.6;}
+.rule2{height:1px;background:#bbb;margin:8px 14px 0 14px;}
+.secRow{display:grid;grid-template-columns:repeat(5,1fr);background:#163977;color:#fff;font-size:9.5px;font-weight:700;text-transform:uppercase;padding:5px 14px;}
+.secValRow{display:grid;grid-template-columns:repeat(5,1fr);padding:4px 14px;border-bottom:1px solid #e0e0e0;font-size:10.5px;}
+.secCell{padding:2px 4px;}
+.tableWrap{padding:0 14px;margin-top:0;}
+table.iTable{width:100%;border-collapse:collapse;}
+table.iTable thead tr th{background:#1a6b47 !important;color:#fff !important;padding:7px 8px;font-size:10.5px;font-weight:700;text-transform:uppercase;border:1px solid #4a9e70;}
+table.iTable th:nth-child(1){width:40px;text-align:center;}
+table.iTable th:nth-child(2){text-align:left;}
+table.iTable th:nth-child(3){width:52px;text-align:center;}
+table.iTable th:nth-child(4),table.iTable th:nth-child(5){width:110px;text-align:right;}
+table.iTable td{font-size:10.5px;padding:7px 8px;border:1px solid #6b7ba4;}
+table.iTable tbody tr:nth-child(even){background:#f4f6fb;}
+.bottomGrid{display:grid;grid-template-columns:1.2fr 0.9fr;gap:14px;margin-top:10px;padding:0 14px;}
+.notesBox{border:1px solid #001B9E;min-height:120px;padding:0;}
+.notesLabel{font-weight:700;font-size:11px;background:#001B9E !important;color:#fff !important;padding:5px 8px;}
+.notesBody{padding:8px;font-size:10.5px;white-space:pre-wrap;min-height:88px;}
+.totalsBox{font-size:11px;padding-top:4px;}
+.tRow{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:4px;}
+.tLabel{font-weight:700;text-transform:uppercase;font-size:10.5px;}
+.tUnder{flex:1;border-bottom:none;margin:0 4px;}
+.tAmt{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.grandRow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;background:#001B9E !important;color:#fff !important;padding:5px 8px;border-radius:4px;margin-top:4px;}
+.grandRow .tLabel{font-weight:900;color:#fff !important;font-size:11px;}
+.grandRow .tAmt{font-weight:900;color:#4ade80;font-size:13px;font-variant-numeric:tabular-nums;}
+.transRow{display:grid;grid-template-columns:repeat(4,1fr);background:#e8ecf5;padding:5px 14px;margin-top:10px;font-size:10px;}
+.tCell{padding:2px 6px;border-right:1px solid #b0b8d0;}
+.tCell:last-child{border-right:none;}
+.tcLabel{font-weight:700;text-transform:uppercase;font-size:9px;display:block;}
+.footerThanks{text-align:center;margin-top:12px;font-size:12px;font-weight:700;color:#111;letter-spacing:0.5px;padding:4px;}
+.footerBars{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;}
+.barGreen{height:10px;background:#22c55e !important;}
+.barBlue{height:20px;background:#001B9E !important;color:#fff;text-align:center;font-size:10px;padding-top:3px;line-height:14px;}
+.barBlue a{color:#fff !important;text-decoration:underline;}
 </style>
-
-
-
 </head><body>
-
-
-
   <div class="invoice">
-
-
-
-    <div class="top">
-
-
-
-      <div class="logo">${company.logo ? `<img src="${company.logo}" alt="${escapeHtml(company.name || 'Company')}"/>` : 'LOGO'}</div>
-
-
-
-      <div class="company">
-
-
-
-        <div class="companyName">${escapeHtml(company.name || 'COMPANY NAME')}</div>
-
-
-
-        ${(() => {
-
-          const lines = companyAddressLines(company);
-
-          return `${lines.line1 ? `<div>${escapeHtml(lines.line1)}</div>` : ''}${lines.line2 ? `<div>${escapeHtml(lines.line2)}</div>` : ''}`;
-
-        })()}
-
-
-
-        ${company.phone ? `<div>${escapeHtml(company.phone)}</div>` : ''}
-
-
-
-        ${company.email ? `<div>${escapeHtml(company.email)}</div>` : ''}
-
-
-
-        ${company.website ? `<div>${escapeHtml(company.website)}</div>` : ''}
-
-
-
+    <div class="topGrid">
+      <div class="logoBlock">
+        <div class="logoBox">${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="${escapeHtml(company.name||'Company')}"/>` : 'LOGO'}</div>
+        <div class="companyBlock">
+          <div class="cName">${escapeHtml(company.name||'COMPANY NAME')}</div>
+          ${companyAddrLines.line1 ? `<div class="cLine">${escapeHtml(companyAddrLines.line1)}</div>` : ''}
+          ${companyAddrLines.line2 ? `<div class="cLine">${escapeHtml(companyAddrLines.line2)}</div>` : ''}
+          ${company.phone ? `<div class="cLine">Phone: ${escapeHtml(company.phone)}</div>` : ''}
+          ${company.email ? `<div class="cLine">Email: ${escapeHtml(company.email)}</div>` : ''}
+        </div>
       </div>
-
-
-
+      <div class="invoiceBlock">
+        <div class="invTitle">INVOICE</div>
+        <div class="invMeta">
+          ${classicAccountNumber ? `<div class="mRow"><span class="mLabel">Acct. #:</span><span class="mUnder"></span><span class="mVal" id="sb_acct">${escapeHtml(classicAccountNumber)}</span></div>` : ''}
+          <div class="mRow"><span class="mLabel">Invoice #:</span><span class="mUnder"></span><span class="mVal">${escapeHtml(invoice.invoiceNumber)}</span></div>
+          <div class="mRow"><span class="mLabel">Invoice Date:</span><span class="mUnder"></span><span class="mVal" id="sb_print_date">${escapeHtml(dateText)}</span></div>
+          <div class="mRow"><span class="mLabel">Time:</span><span class="mUnder"></span><span class="mVal" id="sb_print_time">${escapeHtml(timeText)}</span></div>
+          <div class="mRow"><span class="mLabel">Invoice Costs: $</span><span class="mUnder"></span><span class="mVal">${formatAmount(invoice.amount)}</span></div>
+        </div>
+      </div>
     </div>
-
-
-
-
-
-
-
-    <div class="title">INVOICE</div>
-
-
-
-
-
-
-
-    <div class="meta">
-
-
-
-      <div class="box billTo">
-
-
-
-        <div class="label">Bill To:</div>
-
-
-
-        <div class="customerName">${escapeHtml(customer.name || 'Customer')}</div>
-
-
-
-        ${customerAddressHtml}
-
-
-
-        ${customer.phone ? `<div>${escapeHtml(customer.phone)}</div>` : ''}
-
-
-
-        ${customer.email ? `<div>${escapeHtml(customer.email)}</div>` : ''}
-
-
-
+    <div class="rule"></div>
+    <div class="midSection">
+      <div class="midLeft">
+        <div class="midLabel">Sold To:</div>
+        <div class="midRow"><span class="rLabel">Customer ID:</span><span class="rLine"></span><span class="rVal">${escapeHtml(classicAccountNumber)}</span></div>
+        <div class="custNameRow">Customer Name: ${escapeHtml(customer.name||'')}</div>
+        ${customer.phone ? `<div class="midRow" style="margin-top:4px;"><span class="rLabel">Phone:</span><span class="rLine"></span><span class="rVal">${escapeHtml(customer.phone)}</span></div>` : ''}
+        ${customer.email ? `<div class="midRow"><span class="rLabel">Email:</span><span class="rLine"></span><span class="rVal">${escapeHtml(customer.email)}</span></div>` : ''}
       </div>
-
-
-
-      <div class="box invoiceInfo">
-
-
-
-        ${classicAccountNumber ? `<div class="row"><span class="label">Account #:</span> ${escapeHtml(classicAccountNumber)}</div>` : ''}
-
-
-
-        <div class="row"><span class="label">Invoice #:</span> ${escapeHtml(invoice.invoiceNumber)}</div>
-
-
-
-        <div class="row"><span class="label">Invoice Date:</span> <span id="sb_print_date">${escapeHtml(dateText)}</span></div>
-
-
-
-        <div class="row"><span class="label">Time:</span> <span id="sb_print_time">${escapeHtml(timeText)}</span></div>
-
-
-
-        ${invoice.createdBy
-
-          ? `<div class="row"><span class="label">Created By:</span> ${escapeHtml(invoice.createdBy)}</div>`
-
-          : ''}
-
-
-
-        <div class="row invoiceTotalRow"><span class="label">Invoice Total:</span> <span class="value">${formatAmount(invoice.amount)}</span></div>
-
-
-
+      <div class="midRight">
+        <div class="midLabel">Ship To:</div>
+        <div class="shipLines">
+          <div>${escapeHtml(customer.name||'')}</div>
+          ${shipToAddrLine ? `<div>${shipToAddrLine}</div>` : ''}
+          ${shipToCityStateZip ? `<div>${shipToCityStateZip}</div>` : ''}
+        </div>
       </div>
-
-
-
     </div>
-
-
-
-
-
-
-
-    <div class="metaDivider"></div>
-
-
-
-
-
-
-
-    <div class="table-wrap">
-
-
-
-      <table>
-
-
-
-        <thead>
-
-
-
-          <tr>
-
-
-
-            <th>Description of Service</th>
-
-
-
-            <th>Qty</th>
-
-
-
-            <th>Amount</th>
-
-
-
-          </tr>
-
-
-
-        </thead>
-
-
-
-        <tbody>
-
-
-
-          ${rows || `<tr><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td><td style="padding:10px;border:1px solid ${BLUE};">&nbsp;</td></tr>`}
-
-
-
-        </tbody>
-
-
-
+    <div class="rule2"></div>
+    <div class="secRow">
+      <div class="secCell">Ship Method</div>
+      <div class="secCell">Invoiced By:</div>
+      <div class="secCell">P.O.#:</div>
+      <div class="secCell">Dept.</div>
+      <div class="secCell">Pymt Method</div>
+    </div>
+    <div class="secValRow">
+      <div class="secCell">${shipMethodText || '&nbsp;'}</div>
+      <div class="secCell">${escapeHtml(invoice.createdBy||'')}</div>
+      <div class="secCell">&nbsp;</div>
+      <div class="secCell">&nbsp;</div>
+      <div class="secCell">${paymentMethodText}</div>
+    </div>
+    <div class="tableWrap">
+      <table class="iTable">
+        <thead><tr><th>ID</th><th>Description</th><th>Qty</th><th>Original Price</th><th>Current Price</th></tr></thead>
+        <tbody>${newItemRows}</tbody>
       </table>
-
-
-
     </div>
-
-
-
-
-
-
-
-    <div class="bottom">
-
-
-
-      <div class="notes">
-
-
-
-        <div class="label">Notes:</div>
-
-
-
-        <div style="white-space:pre-wrap;">${notesHtml}</div>
-
-
-
+    <div class="bottomGrid">
+      <div class="notesBox">
+        <div class="notesLabel">Notes:</div>
+        <div class="notesBody">${notesHtml}</div>
       </div>
-
-
-
-      <div class="totals">
-
-
-
-        <div class="row"><span>Subtotal:</span><span>${formatAmount(invoice.subtotal)}</span></div>
-
-
-
-        <div class="row"><span>Discount${classicDiscountLabel ? ` (${escapeHtml(classicDiscountLabel)})` : ''}:</span><span>(-) ${formatAmount(classicDiscountAmount)}</span></div>
-
-
-
-        <div class="row"><span>Sales Tax:</span><span>${formatAmount(invoice.tax)}</span></div>
-
-
-
-        <div class="grandTotalBox"><span class="label">Grand Total:</span><span class="value">${formatAmount(invoice.amount)}</span></div>
-
-
-
+      <div class="totalsBox">
+        <div class="tRow"><span class="tLabel">Sub Total:</span><span class="tUnder"></span><span class="tAmt">${formatAmount(invoice.subtotal)}</span></div>
+        <div class="tRow"><span class="tLabel">Shipping:</span><span class="tUnder"></span><span class="tAmt">${formatAmount(0)}</span></div>
+        <div class="tRow"><span class="tLabel">Sales Taxes:</span><span class="tUnder"></span><span class="tAmt">${formatAmount(invoice.tax)}</span></div>
+        ${classicDiscountAmount > 0 ? `<div class="tRow"><span class="tLabel">Discount${classicDiscountLabel ? ` (${escapeHtml(classicDiscountLabel)})` : ''}:</span><span class="tUnder"></span><span class="tAmt">(-) ${formatAmount(classicDiscountAmount)}</span></div>` : ''}
+        <div class="grandRow"><span class="tLabel">Grand Total:</span><span class="tAmt">${formatAmount(invoice.amount)}</span></div>
       </div>
-
-
-
     </div>
-
-
-
-
-
-
-
-    <div class="footerBottom">
-
-
-
-      <div class="footerThanks">
-
-
-
-        <div class="thanks">Thank you for your purchase.</div>
-
-
-
-        ${footerLinksText ? `<div class="links">${footerLinksText}</div>` : ''}
-
-
-
-      </div>
-
-
-
-      <div class="footerPoweredBar">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
-
-
-
+    <div class="transRow">
+      <div class="tCell"><span class="tcLabel">Trans ID:</span>&nbsp;</div>
+      <div class="tCell"><span class="tcLabel">Store:</span>&nbsp;</div>
+      <div class="tCell"><span class="tcLabel">Register:</span>&nbsp;</div>
+      <div class="tCell"><span class="tcLabel">Cashier:</span>${escapeHtml(invoice.createdBy||'')}</div>
     </div>
-
-
-
+    <div class="footerThanks">THANK YOU FOR SHOPPING WITH US!</div>
+    <div class="footerBars">
+      ${footerLinksText ? `<div style="text-align:center;font-size:10px;padding:3px;">${footerLinksText}</div>` : ''}
+      <div class="barGreen"></div>
+      <div class="barBlue">Powered by: <a href="https://sendbillnow.com" target="_blank" rel="noopener noreferrer">sendbillnow.com</a></div>
+    </div>
   </div>
-
-
-
-
-
-
-
 <script>(function(){
-
   const setNow=function(){
-
     const d=new Date();
-
     const date=d.toLocaleDateString();
-
     const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
     const dateEl=document.getElementById('sb_print_date');
-
     if(dateEl) dateEl.textContent=date;
-
     const timeEl=document.getElementById('sb_print_time');
-
     if(timeEl) timeEl.textContent=time;
-
   };
-
   window.onbeforeprint=setNow;
-
   window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
-
 })();</script>
-
-
-
-
-
-
-
 </body></html>`;
-
-
-
 }
-
-
-
-
-
-
 
 function generateCashReceiptTemplate(
 
@@ -5832,7 +5265,7 @@ export function generateInvoiceHtml(
 
 
 
-  const docTitle = templateType === 'quotation' ? 'ESTIMATED COST' : templateType === 'rent-receipt' ? 'RENT RECEIPT' : 'INVOICE';
+  const docTitle = templateType === 'quotation' || templateType === 'final-quote' || templateType === 'finalStyledQuote' ? 'ESTIMATED COST' : templateType === 'rent-receipt' ? 'RENT RECEIPT' : 'INVOICE';
 
 
 
@@ -5881,21 +5314,11 @@ export function generateInvoiceHtml(
 
 
   } else if (templateType === 'classic') {
-
-
-
-
-
-
-
     return generateClassicInvoiceTemplate(invoice, customer, company);
-
-
-
-
-
-
-
+  } else if (templateType === 'final-invoice') {
+    return generateFinalInvoiceTemplate(invoice, customer, company);
+  } else if (templateType === 'finalStyledInvoice') {
+    return generateFinalStyledInvoiceTemplate(invoice, customer, company);
   } else if (templateType === 'corporate') {
 
 
@@ -5961,21 +5384,11 @@ export function generateInvoiceHtml(
 
 
   } else if (templateType === 'cash-receipt') {
-
-
-
-
-
-
-
     return generateCashReceiptTemplate(invoice, customer, company);
-
-
-
-
-
-
-
+  } else if (templateType === 'final-quote') {
+    return generateFinalQuoteTemplate(invoice, customer, company);
+  } else if (templateType === 'finalStyledQuote') {
+    return generateFinalStyledQuoteTemplate(invoice, customer, company);
   } else if (templateType === 'service-hours') {
 
 
@@ -9701,6 +9114,376 @@ th:nth-child(3),th:nth-child(4){text-align:right;}
 
 
 
+
+
+function generateFinalInvoiceTemplate(
+  invoice: InvoiceData,
+  customer: CustomerData,
+  company: CompanyData
+): string {
+  return generateClassicInvoiceTemplate(invoice, customer, company)
+    .replace(/<title>Invoice /, '<title>Final Invoice ')
+    .replace(/<div class="title">INVOICE<\/div>/, '<div class="title">INVOICE</div>')
+    .replace(/Thank you for your purchase\./g, 'Thank you for your purchase.');
+}
+
+function generateFinalStyledInvoiceTemplate(
+  invoice: InvoiceData,
+  customer: CustomerData,
+  company: CompanyData
+): string {
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)).replace(/\n/g, '<br/>') : '&nbsp;';
+  const companyLines = companyAddressLines(company);
+  const customerLines = customerAddressLines(customer);
+  const accountNumber = (() => {
+    const raw =
+      (invoice as any)?.accountNumber ??
+      (invoice as any)?.account_number ??
+      (customer as any)?.accountNumber ??
+      (customer as any)?.account_number ??
+      (customer as any)?.account ??
+      (customer as any)?.accountNo;
+    return raw === null || raw === undefined ? '' : String(raw).trim();
+  })();
+  const subtotal = Number((invoice as any).subtotal ?? (invoice as any).subTotal ?? 0) || 0;
+  const discountAmount = Number((invoice as any).total_discount ?? (invoice as any).discountAmount ?? 0) || 0;
+  const taxAmount = Number((invoice as any).tax ?? (invoice as any).taxAmount ?? (invoice as any).salesTax ?? 0) || 0;
+  const totalAmount = Number((invoice as any).amount ?? subtotal - discountAmount + taxAmount) || 0;
+  const logoHtml = company.logo
+    ? `<img src="${escapeHtml(String(company.logo))}" alt="${escapeHtml(company.name || 'Company')}" style="max-width:160px;max-height:78px;object-fit:contain;display:block;"/>`
+    : `<img src="/logo-invoice.png" alt="${escapeHtml(company.name || 'Company')}" style="max-width:160px;max-height:78px;object-fit:contain;display:block;"/>`;
+  const rows = (Array.isArray(invoice.items) ? invoice.items : [])
+    .map((item: any) => {
+      const qty = Number(item?.quantity ?? 0) || 0;
+      const amount = Number(item?.total ?? item?.amount ?? qty * (Number(item?.price ?? 0) || 0)) || 0;
+      return `
+        <tr>
+          <td style="padding:10px 12px;border:1px solid #9db3df;height:38px;color:#173b8f;">${escapeHtml(String(item?.description || ''))}</td>
+          <td style="padding:10px 8px;border:1px solid #9db3df;height:38px;text-align:center;color:#173b8f;">${qty ? escapeHtml(String(qty)) : ''}</td>
+          <td style="padding:10px 12px;border:1px solid #9db3df;height:38px;text-align:right;color:#173b8f;">${escapeHtml(formatAmount(amount))}</td>
+        </tr>`;
+    })
+    .join('');
+  const fillerRows = rows || Array.from({ length: 4 }).map(() => `
+        <tr>
+          <td style="padding:10px 12px;border:1px solid #9db3df;height:38px;">&nbsp;</td>
+          <td style="padding:10px 8px;border:1px solid #9db3df;height:38px;">&nbsp;</td>
+          <td style="padding:10px 12px;border:1px solid #9db3df;height:38px;">&nbsp;</td>
+        </tr>`).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Final Invoice ${escapeHtml(String(invoice.invoiceNumber || ''))}</title>
+<style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+body{margin:0;background:#fff;color:#173b8f;font-family:Arial,Helvetica,sans-serif;}
+.page{width:816px;min-height:1056px;margin:0 auto;padding:38px 30px 0;background:#fff;position:relative;}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+.company{text-align:right;color:#35579e;line-height:1.25;max-width:430px;}
+.company .name{font-size:28px;font-weight:800;color:#133e95;margin-bottom:8px;}
+.company .line{font-size:16px;font-weight:600;}
+.title{margin:32px 0 12px;text-align:center;font-size:42px;font-weight:900;color:#123f95;letter-spacing:.5px;}
+.rule{border-top:2px solid #b5c5ea;margin:0 0 16px;}
+.info{display:grid;grid-template-columns:1fr 0.96fr;gap:26px;align-items:stretch;}
+.leftBox{padding:8px 18px 8px 0;border-right:2px solid #d6dcef;min-height:200px;}
+.rightBox{padding:8px 0 8px 10px;min-height:200px;}
+.labelTitle{font-size:18px;font-weight:800;color:#123f95;margin-bottom:16px;}
+.billLine,.metaLine{font-size:16px;line-height:1.9;color:#35579e;border-bottom:2px solid #d6dcef;min-height:30px;}
+.metaLabel{font-weight:700;color:#35579e;display:inline-block;min-width:130px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+thead th{background:#0d3b97;color:#fff;font-size:17px;font-weight:700;padding:11px 12px;border:1px solid #5878bc;text-align:left;}
+thead th:nth-child(2){width:12%;text-align:center;}
+thead th:nth-child(3){width:33%;text-align:right;}
+.bottom{display:grid;grid-template-columns:1.6fr .95fr;gap:22px;margin-top:16px;align-items:start;}
+.notesWrap{border:2px solid #6a8ed2;min-height:190px;}
+.notesHead{background:#0d3b97;color:#fff;font-size:17px;font-weight:700;padding:8px 14px;}
+.notesBody{padding:12px 14px;font-size:15px;color:#173b8f;line-height:1.5;min-height:136px;}
+.summary{padding-top:6px;color:#35579e;}
+.sumRow{display:flex;justify-content:space-between;gap:12px;font-size:16px;font-weight:700;padding:6px 0;border-bottom:2px solid #d6dcef;}
+.sumRow.total{margin-top:16px;padding-top:14px;font-size:18px;color:#1a336f;border-bottom:none;}
+.sumValue{min-width:130px;text-align:right;}
+.grandBox{margin-top:8px;border-bottom:3px solid #76d69b;padding-bottom:6px;min-height:30px;text-align:right;}
+.footerText{margin:108px 0 20px;text-align:center;color:#143f95;font-size:22px;font-weight:800;}
+.footerBar{margin:0 -30px;background:#0d3b97;color:#fff;text-align:center;padding:10px 18px 12px;font-size:14px;font-weight:700;}
+.footerBar span{font-size:15px;font-weight:900;}
+</style></head><body><div class="page">
+  <div class="top">
+    <div>${logoHtml}</div>
+    <div class="company">
+      <div class="name">${escapeHtml(company.name || '')}</div>
+      ${companyLines.line1 ? `<div class="line">${escapeHtml(companyLines.line1)}</div>` : ''}
+      ${companyLines.line2 ? `<div class="line">${escapeHtml(companyLines.line2)}</div>` : ''}
+      <div class="line">Phone: ${company.phone ? escapeHtml(String(company.phone)) : '_______'}</div>
+      <div class="line">Email: ${company.email ? escapeHtml(String(company.email)) : '_______'}</div>
+    </div>
+  </div>
+  <div class="title">INVOICE</div>
+  <div class="rule"></div>
+  <div class="info">
+    <div class="leftBox">
+      <div class="labelTitle">BILL TO:</div>
+      <div class="billLine">${customerLines.line1 ? escapeHtml(customerLines.line1) : escapeHtml(String(customer.name || ''))}</div>
+      <div class="billLine">${customerLines.line1 ? `Date: ${escapeHtml(dateText)}` : customerLines.line2 ? escapeHtml(customerLines.line2) : '&nbsp;'}</div>
+      <div class="billLine">${customerLines.line1 ? (customerLines.line2 ? escapeHtml(customerLines.line2) : '&nbsp;') : '&nbsp;'}</div>
+    </div>
+    <div class="rightBox">
+      <div class="metaLine"><span class="metaLabel">Account #:</span> ${escapeHtml(accountNumber)}</div>
+      <div class="metaLine"><span class="metaLabel">Invoice #:</span> ${escapeHtml(String(invoice.invoiceNumber || ''))}</div>
+      <div class="metaLine"><span class="metaLabel">Invoice Date:</span> <span id="sb_print_date">${escapeHtml(dateText)}</span></div>
+      <div class="metaLine"><span class="metaLabel">Time:</span> <span id="sb_print_time">${escapeHtml(timeText)}</span></div>
+    </div>
+  </div>
+  <div class="rule" style="margin-top:14px;"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>Description of Service</th>
+        <th>Qty</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>${fillerRows}</tbody>
+  </table>
+  <div class="bottom">
+    <div class="notesWrap">
+      <div class="notesHead">NOTES:</div>
+      <div class="notesBody">${notesHtml}</div>
+    </div>
+    <div class="summary">
+      <div class="sumRow"><span>SUBTOTAL:</span><span class="sumValue">${escapeHtml(formatAmount(subtotal))}</span></div>
+      <div class="sumRow"><span>DISCOUNT:</span><span class="sumValue">${escapeHtml(formatAmount(discountAmount))}</span></div>
+      <div class="sumRow"><span>SALES TAX:</span><span class="sumValue">${escapeHtml(formatAmount(taxAmount))}</span></div>
+      <div class="sumRow total"><span>GRAND TOTAL:</span><span class="sumValue grandBox">${escapeHtml(formatAmount(totalAmount))}</span></div>
+    </div>
+  </div>
+  <div class="footerText">Thank you for your purchase.</div>
+  <div class="footerBar">Powered by <span>seeditinow.com</span></div>
+</div>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
+</body></html>`;
+}
+
+function generateFinalQuoteTemplate(
+  invoice: InvoiceData,
+  customer: CustomerData,
+  company: CompanyData
+): string {
+  return generateQuotationTemplate(invoice, customer, company)
+    .replace(/<title>Estimate /, '<title>Final Quote ')
+    .replace(/Thank you for your purchase\./g, 'We look forward to your business!');
+}
+
+function generateFinalStyledQuoteTemplate(
+  invoice: InvoiceData,
+  customer: CustomerData,
+  company: CompanyData
+): string {
+  const { dateText, timeText } = resolveInvoiceDateTimeText(invoice as any);
+  const notesHtml = invoice.notes ? escapeHtml(String(invoice.notes)).replace(/\n/g, '<br/>') : '&nbsp;';
+  const quoteNumber = escapeHtml(String((invoice as any).quoteNumber ?? invoice.invoiceNumber ?? ''));
+  const accountNumber = (() => {
+    const raw =
+      (invoice as any)?.accountNumber ??
+      (invoice as any)?.account_number ??
+      (customer as any)?.accountNumber ??
+      (customer as any)?.account_number ??
+      (customer as any)?.account ??
+      (customer as any)?.accountNo;
+    return raw === null || raw === undefined ? '' : escapeHtml(String(raw).trim());
+  })();
+  const customerName = escapeHtml(String(customer.name || ''));
+  const customerId = (() => {
+    const raw = (customer as any)?.customerId ?? (customer as any)?.id ?? (invoice as any)?.customerId ?? '';
+    return escapeHtml(String(raw || ''));
+  })();
+  const shipAddr = parseAddress(String(customer.address || ''));
+  const city = escapeHtml(String(shipAddr.city || ''));
+  const state = escapeHtml(String(shipAddr.state || ''));
+  const zip = escapeHtml(String(shipAddr.zip || ''));
+  const shippingMethod = escapeHtml(String((invoice as any)?.shippingMethod ?? (invoice as any)?.shipping_method ?? ''));
+  const poNumber = escapeHtml(String((invoice as any)?.poNumber ?? (invoice as any)?.po_number ?? ''));
+  const department = escapeHtml(String((invoice as any)?.department ?? (invoice as any)?.dept ?? ''));
+  const method = escapeHtml(String((invoice as any)?.method ?? (invoice as any)?.deliveryMethod ?? ''));
+  const subtotal = Number((invoice as any).subtotal ?? (invoice as any).subTotal ?? 0) || 0;
+  const shipping = Number((invoice as any).shipping ?? (invoice as any).shippingAmount ?? 0) || 0;
+  const taxAmount = Number((invoice as any).tax ?? (invoice as any).taxAmount ?? (invoice as any).salesTax ?? 0) || 0;
+  const totalAmount = Number((invoice as any).amount ?? subtotal + shipping + taxAmount) || 0;
+  const quoteCost = escapeHtml(formatAmount(totalAmount));
+  const logoHtml = company.logo
+    ? `<img src="${escapeHtml(String(company.logo))}" alt="${escapeHtml(company.name || 'Company')}" style="max-width:180px;max-height:86px;object-fit:contain;display:block;"/>`
+    : `<img src="/logo-invoice.png" alt="${escapeHtml(company.name || 'Company')}" style="max-width:180px;max-height:86px;object-fit:contain;display:block;"/>`;
+  const rows = (Array.isArray(invoice.items) ? invoice.items : [])
+    .map((item: any, index: number) => {
+      const qty = Number(item?.quantity ?? 0) || 0;
+      const originalPrice = Number(item?.price ?? item?.rate ?? 0) || 0;
+      return `
+        <tr>
+          <td style="padding:9px 8px;border:1px solid #9aa6b8;height:34px;text-align:center;color:#394554;">${escapeHtml(String(item?.id ?? index + 1))}</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;color:#394554;">${escapeHtml(String(item?.description || ''))}</td>
+          <td style="padding:9px 8px;border:1px solid #9aa6b8;height:34px;text-align:center;color:#394554;">${qty ? escapeHtml(String(qty)) : ''}</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;text-align:right;color:#394554;">${escapeHtml(formatAmount(originalPrice))}</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;text-align:right;color:#173b8f;">${escapeHtml(formatAmount(Number(item?.total ?? qty * originalPrice) || 0))}</td>
+        </tr>`;
+    })
+    .join('');
+  const tableRows = rows || Array.from({ length: 4 }).map(() => `
+        <tr>
+          <td style="padding:9px 8px;border:1px solid #9aa6b8;height:34px;">&nbsp;</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;">&nbsp;</td>
+          <td style="padding:9px 8px;border:1px solid #9aa6b8;height:34px;">&nbsp;</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;">&nbsp;</td>
+          <td style="padding:9px 10px;border:1px solid #9aa6b8;height:34px;">&nbsp;</td>
+        </tr>`).join('');
+  const expiresOn = (() => {
+    const dueRaw = (invoice as any)?.dueDate ?? (invoice as any)?.expiryDate ?? (invoice as any)?.expiresOn;
+    if (dueRaw) {
+      try { return escapeHtml(formatDate(String(dueRaw))); } catch {}
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return escapeHtml(d.toLocaleDateString());
+  })();
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Final Quote ${quoteNumber}</title>
+<style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+body{margin:0;background:#fff;color:#173b8f;font-family:Arial,Helvetica,sans-serif;}
+.page{width:816px;min-height:1056px;margin:0 auto;padding:36px 30px 0;background:#fff;}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;}
+.topLeft{display:flex;align-items:flex-start;gap:18px;flex:1;}
+.valid{font-size:18px;font-weight:800;color:#1c9a59;margin:10px 0 4px;}
+.expires{font-size:16px;font-weight:800;color:#222;}
+.expiresLine{margin-top:8px;border-bottom:2px solid #8dd7a6;width:270px;}
+.topRight{width:260px;color:#222;}
+.quoteTitle{font-size:28px;font-weight:900;color:#111;margin:6px 0 16px;}
+.metaRow{font-size:16px;font-weight:800;line-height:1.85;border-bottom:2px solid #d0d4da;display:flex;justify-content:space-between;gap:12px;}
+.mainRule{border-top:2px solid #9fd2aa;margin:18px 0 14px;}
+.twoCol{display:grid;grid-template-columns:1fr .64fr;gap:24px;align-items:stretch;}
+.leftCol{padding-right:14px;border-right:2px solid #d7dbe2;min-height:132px;}
+.rightCol{padding-left:8px;min-height:132px;}
+.sectionTitle{font-size:19px;font-weight:900;color:#133f95;margin:8px 0 12px;}
+.highlight{background:#e7f1fb;color:#2a5a44;padding:4px 8px;font-size:16px;font-weight:800;margin-bottom:8px;display:block;}
+.fieldRow{font-size:16px;font-weight:800;line-height:1.85;color:#333;}
+.fieldLine{display:inline-block;border-bottom:2px solid #d0d4da;min-width:170px;min-height:18px;vertical-align:middle;padding-left:8px;}
+.greenHead{display:grid;grid-template-columns:1.45fr 1.3fr .78fr .72fr .75fr;background:#16834f;color:#fff;font-size:17px;font-weight:800;margin-top:18px;border:1px solid #2f7655;border-bottom:none;}
+.greenHead div{padding:10px 12px;border-right:1px solid rgba(255,255,255,.25);text-align:center;}
+.greenHead div:last-child{border-right:none;}
+table{width:100%;border-collapse:collapse;}
+thead th{font-size:15px;color:#394554;font-weight:800;padding:10px 8px;border:1px solid #9aa6b8;text-align:left;}
+thead th:nth-child(1), thead th:nth-child(3){text-align:center;}
+thead th:nth-child(4), thead th:nth-child(5){text-align:right;}
+.bottom{display:grid;grid-template-columns:1.35fr .9fr;gap:22px;margin-top:22px;align-items:start;}
+.notes{border:2px solid #c7cbd4;min-height:146px;}
+.notesTitle{padding:10px 12px 0;color:#153f95;font-size:17px;font-weight:900;}
+.notesBody{padding:8px 12px 12px;color:#173b8f;font-size:15px;line-height:1.5;min-height:102px;}
+.totals{padding-top:4px;}
+.totalRow{display:flex;justify-content:space-between;gap:12px;font-size:16px;font-weight:800;color:#333;padding:5px 0;}
+.totalValue{min-width:130px;text-align:right;border-bottom:2px solid #d0d4da;padding-bottom:2px;}
+.grand .totalValue{border-bottom:2px solid #8dd7a6;}
+.footerText{margin:138px 0 28px;text-align:center;color:#143f95;font-size:22px;font-weight:900;}
+.footerBar{height:18px;background:#0d3b97;margin:0 -30px;}
+</style></head><body><div class="page">
+  <div class="top">
+    <div class="topLeft">
+      <div>${logoHtml}</div>
+      <div>
+        <div class="valid">(Valid for 30 days)</div>
+        <div class="expires">EXPIRES ON: ${expiresOn}</div>
+        <div class="expiresLine"></div>
+      </div>
+    </div>
+    <div class="topRight">
+      <div class="quoteTitle">QUOTE</div>
+      <div class="metaRow"><span>ACCT. #:</span><span>${accountNumber}</span></div>
+      <div class="metaRow"><span>QUOTE #:</span><span>${quoteNumber}</span></div>
+      <div class="metaRow"><span>QUOTE DATE:</span><span id="sb_print_date">${escapeHtml(dateText)}</span></div>
+      <div class="metaRow"><span>TIME:</span><span id="sb_print_time">${escapeHtml(timeText)}</span></div>
+      <div class="metaRow"><span>QUOTE COSTS: $</span><span>${quoteCost}</span></div>
+    </div>
+  </div>
+  <div class="mainRule"></div>
+  <div class="twoCol">
+    <div class="leftCol">
+      <div class="sectionTitle">QUOTE FOR:</div>
+      <span class="highlight">CUSTOMER NAME: ${customerName}</span>
+      <div class="fieldRow">CUSTOMER ID: ${customerId}</div>
+    </div>
+    <div class="rightCol">
+      <div class="sectionTitle" style="color:#1c8e54;">SHIP TO:</div>
+      <div class="fieldRow">CITY: <span class="fieldLine">${city}</span></div>
+      <div class="fieldRow">STATE: <span class="fieldLine">${state}</span></div>
+      <div class="fieldRow">ZIP CODE: <span class="fieldLine">${zip}</span></div>
+    </div>
+  </div>
+  <div class="mainRule" style="margin-top:10px;"></div>
+  <div class="greenHead">
+    <div>SHIPPING METHOD</div>
+    <div>TERMS: 30 DAYS</div>
+    <div>PO#:</div>
+    <div>DEPT.</div>
+    <div>METHOD</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1.45fr 1.3fr .78fr .72fr .75fr;border:1px solid #2f7655;border-top:none;margin-bottom:0;font-size:15px;font-weight:700;color:#2b3d2f;">
+    <div style="padding:6px 10px;border-right:1px solid #9aa6b8;min-height:20px;">${shippingMethod}</div>
+    <div style="padding:6px 10px;border-right:1px solid #9aa6b8;min-height:20px;">30 DAYS</div>
+    <div style="padding:6px 10px;border-right:1px solid #9aa6b8;min-height:20px;">${poNumber}</div>
+    <div style="padding:6px 10px;border-right:1px solid #9aa6b8;min-height:20px;">${department}</div>
+    <div style="padding:6px 10px;min-height:20px;">${method}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%;">ID</th>
+        <th style="width:45%;">DESCRIPTION</th>
+        <th style="width:12%;">QTY</th>
+        <th style="width:18%;">ORIGINAL PRICE</th>
+        <th style="width:17%;">CURRENT PRICE</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>
+  <div class="bottom">
+    <div class="notes">
+      <div class="notesTitle">NOTES:</div>
+      <div class="notesBody">${notesHtml}</div>
+    </div>
+    <div class="totals">
+      <div class="totalRow"><span>SUBTOTAL:</span><span class="totalValue">${escapeHtml(formatAmount(subtotal))}</span></div>
+      <div class="totalRow"><span>SHIPPING:</span><span class="totalValue">${escapeHtml(formatAmount(shipping))}</span></div>
+      <div class="totalRow"><span>SALES TAX:</span><span class="totalValue">${escapeHtml(formatAmount(taxAmount))}</span></div>
+      <div class="totalRow grand" style="padding-top:10px;"><span>GRAND TOTAL:</span><span class="totalValue">${escapeHtml(formatAmount(totalAmount))}</span></div>
+    </div>
+  </div>
+  <div class="footerText">We look forward to your business!</div>
+  <div class="footerBar"></div>
+</div>
+<script>(function(){
+  const setNow=function(){
+    const d=new Date();
+    const date=d.toLocaleDateString();
+    const time=d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateEl=document.getElementById('sb_print_date');
+    if(dateEl) dateEl.textContent=date;
+    const timeEl=document.getElementById('sb_print_time');
+    if(timeEl) timeEl.textContent=time;
+  };
+  window.onbeforeprint=setNow;
+  window.onload=function(){ setNow(); window.print(); setTimeout(()=>window.close(),1000); };
+})();</script>
+</body></html>`;
+}
+
 export function printInvoice(
 
 
@@ -9822,6 +9605,15 @@ export function printInvoice(
 
 
 }
+
+
+
+
+
+
+
+
+
 
 
 

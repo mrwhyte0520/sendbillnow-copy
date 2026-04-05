@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
   const { data: company } = await supabase
     .from('company_info')
-    .select('name, ruc, phone, email, address, city, state, zip, logo, currency, terms_and_conditions, default_tax_rate')
+    .select('name, rnc, phone, email, address, city, state, zip, logo, currency, terms_and_conditions, default_tax_rate')
     .eq('user_id', tenantId)
     .limit(1)
     .maybeSingle();
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
     account_number: effectiveAccountNumber || null,
     valid_for_days: validForDays,
     company_name: company?.name ?? null,
-    company_rnc: company?.ruc ?? null,
+    company_rnc: company?.rnc ?? null,
     company_phone: company?.phone ?? null,
     company_email: company?.email ?? null,
     company_address: companyAddressSnapshot,

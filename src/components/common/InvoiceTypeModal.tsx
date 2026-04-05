@@ -41,6 +41,8 @@ export default function InvoiceTypeModal({
     contractorDate: '',
   });
 
+  const previewLogo = '/logo-invoice.png';
+
   useEffect(() => {
     if (!isOpen) return;
     if (documentType === 'quote' || documentType === 'supplier_invoice') {
@@ -175,6 +177,83 @@ export default function InvoiceTypeModal({
       ),
     },
     {
+      id: 'finalStyledQuote' as InvoiceTemplateType,
+      name: documentType === 'supplier_invoice' ? 'Final Purchase Order' : 'Final Quote',
+      description: documentType === 'supplier_invoice'
+        ? 'Blue and green final purchase order style'
+        : 'Blue and green final quote style',
+      icon: 'ri-file-copy-line',
+      preview: (
+        <div className="bg-white border border-gray-200 rounded p-2 text-[4.5px] leading-tight text-[#173b8f]">
+          <div className="flex justify-between items-start gap-2 mb-2">
+            <div className="flex items-start gap-1.5">
+              <div className="w-12 h-8 flex items-center justify-center overflow-hidden">
+                <img src={previewLogo} alt="Quote logo" className="max-w-full max-h-full object-contain" />
+              </div>
+              <div className="pt-0.5">
+                <div className="text-[#179a55] font-bold text-[5px]">(Valid for 30 days)</div>
+                <div className="text-[#1f2937] font-bold text-[4.5px]">EXPIRES ON: MM/DD/YYYY</div>
+                <div className="mt-0.5 w-20 border-b border-[#79d1a0]"></div>
+              </div>
+            </div>
+            <div className="w-20 text-left font-bold text-[4.5px]">
+              <div className="text-[7px] mb-1" style={{ color: BRAND_BLUE }}>
+                {documentType === 'supplier_invoice' ? 'PURCHASE ORDER' : 'QUOTE'}
+              </div>
+              <div>ACCT. #:</div>
+              <div>QUOTE #:</div>
+              <div>QUOTE DATE:</div>
+              <div>TIME:</div>
+              <div>QUOTE COSTS: $</div>
+            </div>
+          </div>
+          <div className="border-t border-[#9bb3df] mb-2"></div>
+          <div className="grid grid-cols-2 gap-2 mb-2 font-bold text-[4.5px]">
+            <div className="border-r border-[#cbd5e1] pr-2">
+              <div className="mb-1" style={{ color: BRAND_BLUE }}>QUOTE FOR:</div>
+              <div className="bg-[#e8f0fb] px-1 py-0.5 mb-1">CUSTOMER NAME:</div>
+              <div>CUSTOMER ID:</div>
+            </div>
+            <div className="pl-1">
+              <div className="mb-1" style={{ color: BRAND_BLUE }}>SHIP TO:</div>
+              <div>CITY:</div>
+              <div>STATE:</div>
+              <div>ZIP CODE:</div>
+            </div>
+          </div>
+          <div className="border-t border-[#9bb3df] mb-2"></div>
+          <div className="grid grid-cols-5 border border-[#173b8f] border-b-0 text-white text-[4px] font-bold" style={{ backgroundColor: BRAND_BLUE }}>
+            <div className="p-1">SHIPPING METHOD</div>
+            <div className="p-1">TERMS: 30 DAYS</div>
+            <div className="p-1">PO#:</div>
+            <div className="p-1">DEPT.</div>
+            <div className="p-1">METHOD</div>
+          </div>
+          <div className="border border-[#9bb3df] mb-2">
+            <div className="grid grid-cols-[0.4fr_2.3fr_0.7fr_1fr_1fr] text-[4px] font-bold border-b border-[#9bb3df] text-[#334155]">
+              <div className="border-r border-[#9bb3df] p-1">ID</div>
+              <div className="border-r border-[#9bb3df] p-1">DESCRIPTION</div>
+              <div className="border-r border-[#9bb3df] p-1">QTY</div>
+              <div className="border-r border-[#9bb3df] p-1">ORIGINAL PRICE</div>
+              <div className="p-1 text-[#173b8f]">CURRENT PRICE</div>
+            </div>
+            <div className="h-8"></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 items-start text-[4.5px] font-bold">
+            <div className="border border-[#7f97ca] h-12 overflow-hidden bg-white">
+              <div className="text-white px-1 py-0.5" style={{ backgroundColor: BRAND_BLUE }}>NOTES:</div>
+            </div>
+            <div className="space-y-1 pt-1">
+              <div>SUBTOTAL:</div>
+              <div>SHIPPING:</div>
+              <div>SALES TAX:</div>
+              <div className="pt-1 border-b border-[#79d1a0]">GRAND TOTAL:</div>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: 'corporate' as InvoiceTemplateType,
       name: 'Corporate Invoice',
       description: 'Professional format with header banner, Bill To/Ship To and Balance Due',
@@ -263,42 +342,131 @@ export default function InvoiceTypeModal({
     {
       id: 'classic' as InvoiceTemplateType,
       name: 'Classic Invoice',
-      description: 'Classic layout with big INVOICE title and notes box',
+      description: 'Final invoice layout with sold-to/ship-to, pricing table and totals',
       icon: 'ri-file-paper-2-line',
       preview: (
-        <div className="bg-white border border-gray-200 rounded p-2 text-[6px] leading-tight">
-          <div className="flex justify-between mb-1">
-            <div className="border border-gray-300 p-1 text-[5px] font-semibold">LOGO</div>
+        <div className="bg-white border border-gray-200 rounded p-2 text-[4.8px] leading-tight text-[#0f234a]">
+          <div className="grid grid-cols-2 gap-2 items-start mb-1">
+            <div>
+              <div className="font-extrabold text-[7px]" style={{ color: BRAND_BLUE }}>LOGO</div>
+              <div className="mt-1">Business Name</div>
+              <div>Add</div>
+              <div>City, State Zip Code</div>
+              <div className="mt-1">Phone:</div>
+              <div>Email:</div>
+            </div>
             <div className="text-right">
-              <div className="font-semibold">COMPANY</div>
-              <div className="text-[5px]">Address • Phone</div>
+              <div className="font-extrabold text-[8px]" style={{ color: BRAND_BLUE }}>INVOICE</div>
+              <div className="mt-1">ACCT. #:</div>
+              <div>INVOICE #:</div>
+              <div>INVOICE DATE:</div>
+              <div>TIME:</div>
+              <div>INVOICE COSTS:</div>
             </div>
           </div>
-          <div className="text-center font-extrabold text-[10px] underline" style={{ color: BRAND_BLUE }}>INVOICE</div>
-          <div className="grid grid-cols-2 gap-2 mt-1 text-[5px]">
+          <div className="border-t border-[#cbd5e1] my-1"></div>
+          <div className="grid grid-cols-2 gap-2 text-[5px] font-semibold mb-1">
             <div>
-              <div className="font-semibold">Bill To</div>
-              <div className="h-2"></div>
+              <div>SOLD TO:</div>
+              <div>CUSTOMER ID:</div>
+              <div>CUSTOMER NAME:</div>
             </div>
             <div>
-              <div className="font-semibold">Invoice #</div>
-              <div className="h-2"></div>
+              <div>SHIP TO:</div>
+              <div>Name</div>
+              <div>Add</div>
+              <div>City, State Zip Code</div>
             </div>
           </div>
-          <div className="border border-gray-200 rounded p-1 mt-1">
-            <div className="grid grid-cols-4 gap-1 text-[5px] font-semibold border-b border-gray-100 pb-0.5">
-              <span>Description</span>
-              <span>Qty</span>
-              <span>Amount</span>
-              <span></span>
-            </div>
-            <div className="h-2"></div>
+          <div className="grid grid-cols-5 border border-[#94a3b8] text-[4.2px] font-bold mb-1">
+            <span className="p-0.5">SHIP METHOD</span>
+            <span className="p-0.5">INVOICED BY:</span>
+            <span className="p-0.5">PO#:</span>
+            <span className="p-0.5">DEPT.</span>
+            <span className="p-0.5">PYMT METHOD</span>
           </div>
-          <div className="grid grid-cols-2 gap-1 mt-1">
-            <div className="border border-gray-200 rounded p-1 text-[5px]">Notes</div>
-            <div className="text-right text-[5px]">
-              <div>Subtotal: ___</div>
-              <div>Total: ___</div>
+          <div className="border border-[#94a3b8] overflow-hidden mb-1">
+            <div className="grid grid-cols-[0.35fr_2fr_0.55fr_1fr_1fr] text-[4.2px] font-bold text-white" style={{ backgroundColor: '#205f4d' }}>
+              <span className="p-0.5">ID</span>
+              <span className="p-0.5">DESCRIPTION</span>
+              <span className="p-0.5">QTY</span>
+              <span className="p-0.5">ORIGINAL PRICE</span>
+              <span className="p-0.5">CURRENT PRICE</span>
+            </div>
+            <div className="h-5"></div>
+          </div>
+          <div className="grid grid-cols-2 gap-1 text-[5px] font-semibold">
+            <div className="border border-[#94a3b8] h-6">
+              <div className="text-white px-1 py-0.5" style={{ backgroundColor: BRAND_BLUE }}>NOTES:</div>
+            </div>
+            <div>
+              <div>SUB TOTAL:</div>
+              <div>SHIPPING:</div>
+              <div>SALES TAXES:</div>
+              <div>GRAND TOTAL:</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 border border-[#94a3b8] mt-1 text-[4.6px] font-semibold">
+            <span className="p-0.5">TRANS ID:</span>
+            <span className="p-0.5">STORE:</span>
+            <span className="p-0.5">REGISTER:</span>
+            <span className="p-0.5">CASHIER:</span>
+          </div>
+          <div className="mt-1 text-center text-[5.3px] font-bold">THANK YOU FOR SHOPPING WITH US!</div>
+        </div>
+      ),
+    },
+    {
+      id: 'finalStyledInvoice' as InvoiceTemplateType,
+      name: 'Final Invoice',
+      description: 'Blue and green final invoice style',
+      icon: 'ri-file-copy-line',
+      preview: (
+        <div className="bg-white border border-gray-200 rounded p-2 text-[4.5px] leading-tight text-[#173b8f]">
+          <div className="flex justify-between items-start gap-2 mb-2">
+            <div className="w-12 h-8 flex items-center justify-center overflow-hidden">
+              <img src={previewLogo} alt="Invoice logo" className="max-w-full max-h-full object-contain" />
+            </div>
+            <div className="text-right text-[4.5px] font-bold flex-1">
+              <div className="text-[7px] mb-0.5">COMPANY INFO</div>
+              <div>Address</div>
+              <div>Phone:</div>
+              <div>Email:</div>
+            </div>
+          </div>
+          <div className="text-center text-[8px] font-extrabold mb-2" style={{ color: BRAND_BLUE }}>INVOICE</div>
+          <div className="border-t border-[#9bb3df] mb-2"></div>
+          <div className="grid grid-cols-2 gap-2 mb-2 text-[4.5px] font-bold">
+            <div className="border-r border-[#cbd5e1] pr-2">
+              <div className="mb-1">BILL TO:</div>
+              <div className="font-normal">Address</div>
+              <div className="font-normal">City, State ZIP</div>
+            </div>
+            <div className="pl-1">
+              <div>Account #:</div>
+              <div>Invoice #:</div>
+              <div>Invoice Date: MM/DD/YYYY</div>
+              <div>Time: HH:MM AM/PM</div>
+            </div>
+          </div>
+          <div className="border-t border-[#9bb3df] mb-2"></div>
+          <div className="border border-[#9bb3df] overflow-hidden mb-2">
+            <div className="grid grid-cols-[2.3fr_0.5fr_1.4fr] text-[4.5px] font-bold text-white" style={{ backgroundColor: BRAND_BLUE }}>
+              <div className="border-r border-[#5878bc] p-1">Description of Service</div>
+              <div className="border-r border-[#5878bc] p-1 text-center">Qty</div>
+              <div className="p-1 text-right">Amount</div>
+            </div>
+            <div className="h-8 bg-white"></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 items-start text-[4.5px] font-bold">
+            <div className="border border-[#7f97ca] h-12 overflow-hidden bg-white">
+              <div className="text-white px-1 py-0.5" style={{ backgroundColor: BRAND_BLUE }}>NOTES:</div>
+            </div>
+            <div className="space-y-1 pt-1">
+              <div>SUBTOTAL:</div>
+              <div>DISCOUNT:</div>
+              <div>SALES TAX:</div>
+              <div className="pt-1 border-b border-[#79d1a0]">GRAND TOTAL:</div>
             </div>
           </div>
         </div>
@@ -485,7 +653,8 @@ export default function InvoiceTypeModal({
   const visibleTemplates = useMemo(() => {
     let next = templates;
     if (allowedTypes?.length) {
-      next = next.filter((t) => allowedTypes.includes(t.id));
+      const allowedSet = new Set<InvoiceTemplateType>(allowedTypes);
+      next = next.filter((t) => allowedSet.has(t.id));
     }
     if (hiddenTypes?.length) {
       next = next.filter((t) => !hiddenTypes.includes(t.id));

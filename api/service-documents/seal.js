@@ -19,7 +19,8 @@ import {
 const BLUE = '#001B9E';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const INVOICE_LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'logo-invoice.png');
+const PRIMARY_LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'logo-invoice.png');
+const LEGACY_LOGO_PATH = path.join(__dirname, '..', '..', 'public', 'logo.png');
 
 function inferImageType(pathOrUrl) {
   const raw = String(pathOrUrl || '').toLowerCase();
@@ -60,14 +61,37 @@ async function fetchPdfBuffer({ admin, bucket, path }) {
   const dl = await admin.storage.from(bucket).download(raw);
   if (dl.error) throw new Error(dl.error.message || 'Could not download PDF');
   if (!dl.data) return null;
+
   const ab = await dl.data.arrayBuffer();
   return Buffer.from(ab);
 }
 
-function loadInvoiceLogoBuffer() {
+function readNonEmptyFile(filePath) {
   try {
-    if (!fs.existsSync(INVOICE_LOGO_PATH)) return null;
-    return fs.readFileSync(INVOICE_LOGO_PATH);
+    if (!fs.existsSync(filePath)) return null;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile() || stat.size <= 0) return null;
+    const buf = fs.readFileSync(filePath);
+    return buf.length ? buf : null;
+  } catch {
+    return null;
+  }
+}
+
+function toImageDataUrl(buf, format) {
+  if (!buf?.length) return null;
+  const normalized = String(format || 'PNG').toUpperCase();
+  const mime = normalized === 'JPEG' ? 'image/jpeg' : normalized === 'WEBP' ? 'image/webp' : 'image/png';
+  return `data:${mime};base64,${buf.toString('base64')}`;
+}
+
+function loadInvoiceLogoDataUrl() {
+  try {
+    const primary = readNonEmptyFile(PRIMARY_LOGO_PATH);
+    if (primary) return toImageDataUrl(primary, 'PNG');
+    const legacy = readNonEmptyFile(LEGACY_LOGO_PATH);
+    if (legacy) return toImageDataUrl(legacy, 'PNG');
+    return null;
   } catch {
     return null;
   }
@@ -476,247 +500,71 @@ export default async function handler(req, res) {
   const marginX = 40;
   const contentW = pageWidth - marginX * 2;
 
-  const docLabel = doc.doc_type === 'JOB_ESTIMATE' ? 'JOB ESTIMATE' : 'INVOICE';
-  const docNumber = safeText(doc.doc_number);
-  const estimateNo = docNumber || String(documentId).slice(0, 8);
-
-  // Title
-  pdf.setTextColor(0, 27, 158);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(30);
-  pdf.text(docLabel, marginX, 56);
-
-  // Company box width (defined early so customer text can respect it)
-  const companyBoxW = 170;
-
-  // Parse address into components
-  const rawAddr = String(doc.client_address || '').replace(/\r\n/g, '\n');
-  const addrLines = rawAddr.split('\n').map(l => l.trim()).filter(Boolean);
-  const addrStreet = addrLines[0] || '';
-  const addrSecond = addrLines.slice(1).join(' ').trim();
-  const addrSegs = addrSecond.split(',').map(x => x.trim()).filter(Boolean);
-  const addrCity = addrSegs[0] || '';
-  const addrRest = addrSegs.slice(1).join(' ').trim();
-  const addrTokens = addrRest.split(/\s+/).filter(Boolean);
-  const zipStartIdx = addrTokens.findIndex((t) => /\d/.test(t));
-  const addrState = (zipStartIdx === -1 ? addrTokens : addrTokens.slice(0, zipStartIdx)).join(' ').trim();
-  const addrZip = (zipStartIdx === -1 ? '' : addrTokens.slice(zipStartIdx).join(' ')).trim();
-
-  // Customer block (left column: Name/Email/Phone, right column: Address)
-  const customerColsW = pageWidth - marginX - companyBoxW - marginX - 20;
-  const customerColGap = 18;
-  const leftColW = customerColsW * 0.43;
-  const maxCustTextW = customerColsW - leftColW - customerColGap; // right column width
-  const customerY = 78;
-  const leftX = marginX;
-  const rightX = marginX + leftColW + customerColGap;
-
-  // Left column: Name, Address, Phone, Email
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(0, 0, 0);
-  pdf.text('CUSTOMER:', leftX, customerY);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(safeText(doc.client_name).substring(0, 40), leftX + 66, customerY);
-
-  pdf.setFontSize(9);
-  let customerInfoY = customerY + 14;
-
-  // Address (2 lines)
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('ADDRESS:', leftX, customerInfoY);
-  pdf.setFont('helvetica', 'normal');
-  const addrValueXLeft = leftX + 50;
-  const addrLeftMaxW = leftColW - (addrValueXLeft - leftX) - 6;
-  pdf.text(truncateToWidth(pdf, addrStreet || '-', addrLeftMaxW), addrValueXLeft, customerInfoY);
-  customerInfoY += 12;
-
-  const addrTail = [addrState, addrZip].filter(Boolean).join(' ').trim();
-  const addrLine2 = [addrCity, addrTail].filter(Boolean).join(addrCity && addrTail ? ', ' : '');
-  pdf.text(truncateToWidth(pdf, addrLine2 || '-', leftColW - 6), leftX, customerInfoY);
-  customerInfoY += 12;
-
-  if (doc.client_phone) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('PHONE:', leftX, customerInfoY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_phone).substring(0, 35), leftX + 36, customerInfoY);
-    customerInfoY += 12;
-  }
-
-  if (doc.client_email) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('EMAIL:', leftX, customerInfoY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(safeText(doc.client_email).substring(0, 35), leftX + 32, customerInfoY);
-    customerInfoY += 12;
-  }
-
-  // Right column: validity block
-  const validityX = rightX + 24;
-  let rightY = customerInfoY + 12;
-  if (doc.doc_type === 'JOB_ESTIMATE') {
-    const validDays = (() => {
-      const n = Number(doc.valid_for_days ?? 30);
-      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
-    })();
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(22, 163, 74);
-    const validLineY = rightY;
-    const expiresLineY = validLineY + 15;
-    pdf.text(`(Valid for ${validDays} days)`, validityX, validLineY);
-
-    const startRaw = doc?.created_at || null;
-    const endDate = (() => {
-      const d = parseTimestampUtc(startRaw);
-      if (!d) return '';
-      const plus = new Date(d.getTime() + validDays * 24 * 60 * 60 * 1000);
-      return formatDateOnlyUtcMinus4(plus.toISOString());
-    })();
-
-    pdf.setFontSize(9);
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'bold');
-    const expiresLabelX = validityX + 16;
-    const dateColonX = expiresLabelX + 27;
-    pdf.text('EXPIRES ON', dateColonX, expiresLineY, { align: 'right' });
-    pdf.text(':', dateColonX + 2, expiresLineY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(endDate || '-', expiresLabelX + 33, expiresLineY);
-    rightY = expiresLineY + 8;
-  }
-
-  pdf.setTextColor(0, 0, 0);
-  customerInfoY = Math.max(customerInfoY, rightY);
-
-  // Company box (right)
-  const companyBoxX = pageWidth - marginX - companyBoxW;
-  const companyBoxY = 34;
-
-  // Compute box height dynamically
-  const invoiceLogoBuffer = loadInvoiceLogoBuffer();
-  const logo = invoiceLogoBuffer;
-  const hasLogo = Boolean(logo);
-  const logoWidth = 74;
-  const logoHeight = 58;
-
-  // Company address formatting (street on one line, city/state/zip on the next)
-  const rawCompanyAddr = String(companyAddressForPdf || '').replace(/\r\n/g, '\n');
-  const companyAddrLines = rawCompanyAddr.split('\n').map((l) => l.trim()).filter(Boolean);
-  const companyStreet = companyAddrLines[0] || '';
-  const companySecondLine = companyAddrLines.slice(1).join(' ').trim();
-  const companySegs = companySecondLine.split(',').map((x) => x.trim()).filter(Boolean);
-  const companyCity = companySegs[0] || '';
-  const companyRest = companySegs.slice(1).join(' ').trim();
-  const companyTokens = companyRest.split(/\s+/).filter(Boolean);
-  const companyState = companyTokens[0] || '';
-  const companyZip = companyTokens.slice(1).join(' ').trim();
-
-  const companyAddrLine1 = companyStreet;
-  const companyTail = [companyState, companyZip].filter(Boolean).join(' ');
-  const companyAddrLine2 = [companyCity, companyTail].filter(Boolean).join(companyCity && companyTail ? ', ' : '');
-
-  const companyWebsiteForPdf = String(doc.company_website || '').trim() || liveWebsite;
-
-  const companyLines = [
-    safeText(doc.company_name || 'COMPANY'),
-    companyAddrLine1 ? safeText(companyAddrLine1) : '',
-    companyAddrLine2 ? safeText(companyAddrLine2) : '',
-    doc.company_phone ? safeText(doc.company_phone) : '',
-    doc.company_email ? safeText(doc.company_email) : '',
-    companyWebsiteForPdf ? safeText(companyWebsiteForPdf) : '',
-  ].filter(Boolean);
-  const companyBoxH = (hasLogo ? logoHeight + 10 : 0) + companyLines.length * 12 + 16;
-
-  pdf.setFillColor(255, 255, 255);
-  pdf.rect(companyBoxX, companyBoxY, companyBoxW, companyBoxH, 'F');
-
-  const centerX = companyBoxX + companyBoxW / 2;
-  let companyTextY = customerY + 2;
-
-  if (hasLogo) {
-    try {
-      const logoX = companyBoxX + companyBoxW - logoWidth - 48;
-      const logoY = companyBoxY - 10;
-      pdf.addImage(logo, 'PNG', logoX, logoY, logoWidth, logoHeight);
-    } catch {
-      companyTextY = customerY + 2;
-    }
-  }
-
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(13);
-  pdf.setTextColor(0, 27, 158);
-  pdf.text(companyLines[0], centerX, companyTextY, { align: 'center' });
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  let cY = companyTextY + 12;
-  for (let ci = 1; ci < companyLines.length; ci++) {
-    pdf.text(companyLines[ci], centerX, cY, { align: 'center' });
-    cY += 10;
-  }
-
-  // Divider line — positioned below both customer info and company box
-  const companyBoxBottom = companyBoxY + companyBoxH;
-  const dividerY = Math.max(customerInfoY + 10, companyBoxBottom + 10);
-  pdf.setDrawColor(0, 27, 158);
-  pdf.setLineWidth(2);
-  pdf.line(marginX, dividerY, pageWidth - marginX, dividerY);
-
-  // Info grid
-  const infoY = dividerY + 18;
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFontSize(10);
-  const colW = contentW / 3;
+  const isQuote = doc.doc_type === 'JOB_ESTIMATE';
+  const docLabel = isQuote ? 'QUOTE' : 'INVOICE';
+  const docNumber = safeText(doc.doc_number || String(documentId).slice(0, 8));
   const dateStr = doc?.created_at ? formatDateOnlyUtcMinus4(doc.created_at) : formatDateOnlyUtcMinus4(new Date().toISOString());
-  pdf.setFont('helvetica', 'bold');
-  const pad = 6;
-  const l1a = 'ESTIMATE #:';
-  const l1b = 'ESTIMATE DATE:';
-  const l1c = 'CREATED BY:';
-  pdf.text(l1a, marginX, infoY);
-  pdf.text(l1b, marginX + colW, infoY);
-  pdf.text(l1c, marginX + colW * 2, infoY);
-  const createdBy = safeText(signature?.contractor_name || '').slice(0, 26);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(estimateNo, marginX + pdf.getTextWidth(l1a) + pad, infoY);
-  pdf.text(dateStr, marginX + colW + pdf.getTextWidth(l1b) + pad, infoY);
-  pdf.text(createdBy, marginX + colW * 2 + pdf.getTextWidth(l1c) + pad, infoY);
+  const timeStr = (() => {
+    const d = parseTimestampUtc(doc?.created_at || '') || new Date();
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  })();
+  const validDays = (() => {
+    const n = Number(doc.valid_for_days ?? 30);
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30;
+  })();
 
-  const infoY2 = infoY + 16;
-  pdf.setFont('helvetica', 'bold');
-  const l2a = 'Account #:';
-  const l2b = 'MATERIAL COST:';
-  const l2c = 'ESTIMATED COST:';
-  pdf.text(l2a, marginX, infoY2);
-  pdf.text(l2b, marginX + colW, infoY2);
-  pdf.setTextColor(0, 27, 158);
-  pdf.text(l2c, marginX + colW * 2, infoY2);
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'normal');
-  const acctText = safeText(doc.account_number || '').trim();
-  pdf.text(acctText || 'N/A', marginX + pdf.getTextWidth(l2a) + pad, infoY2);
-  const materialCostVal = Number(doc.material_cost ?? 0);
-  pdf.text(materialCostVal > 0 ? moneyWithCurrency(materialCostVal, doc.currency) : '', marginX + colW + pdf.getTextWidth(l2b) + pad, infoY2);
-  const estimatedCostVal = Number(doc.total ?? 0);
+  const rawAddr = String(doc.client_address || '').replace(/\r\n/g, '\n');
+  const addrLines = rawAddr.split('\n').map((l) => l.trim()).filter(Boolean);
+  const addrLine1 = addrLines[0] || '';
+  const addrLine2 = addrLines.slice(1).join(' ') || '';
+  const addrCityStateZipRaw = addrLines.length > 1 ? addrLines[addrLines.length - 1] : addrLine1;
+  const structuredShip = {
+    city: safeText(doc.client_city || doc.clientCity || ''),
+    state: safeText(doc.client_state || doc.clientState || ''),
+    zip: safeText(doc.client_zip || doc.clientZip || doc.client_postal_code || doc.clientPostalCode || ''),
+  };
+  const parseCombinedShipLocation = (input) => {
+    const combined = safeText(String(input || '')).replace(/\s+/g, ' ').trim();
+    if (!combined) return { city: '', state: '', zip: '' };
 
-  // Estimated cost: inline next to label, green
-  const estimatedCostText = estimatedCostVal > 0 ? moneyWithCurrency(estimatedCostVal, doc.currency) : '';
-  if (estimatedCostText) {
-    const estimatedValueX = marginX + colW * 2 + pdf.getTextWidth(l2c) + pad;
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(22, 163, 74);
-    pdf.text(estimatedCostText, estimatedValueX, infoY2);
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-  }
+    const zipRegex = /(\d{4,10}(?:-\d{2,6})?)\s*$/;
+    const firstCommaIdx = combined.indexOf(',');
+    if (firstCommaIdx > 0) {
+      const city = safeText(combined.slice(0, firstCommaIdx).trim());
+      const right = safeText(combined.slice(firstCommaIdx + 1).trim());
+      if (city && right) {
+        const zipMatch = right.match(zipRegex);
+        if (zipMatch && typeof zipMatch.index === 'number') {
+          const zip = safeText(zipMatch[1] || '');
+          const state = safeText(right.slice(0, zipMatch.index).replace(/,\s*$/, '').trim());
+          if (city && state && zip) {
+            return { city, state, zip };
+          }
+        }
+      }
+    }
 
-  const linesY = infoY2 + 30;
+    return { city: combined, state: '', zip: '' };
+  };
+  const parsedShip = (() => {
+    const hasStructured = !!(structuredShip.city || structuredShip.state || structuredShip.zip);
+    const cityLooksCombined = /,/.test(structuredShip.city) || /(\d{4,10}(?:-\d{2,6})?)\s*$/.test(structuredShip.city);
+    const structuredLooksPolluted = !!structuredShip.city && !structuredShip.state && !structuredShip.zip && cityLooksCombined;
 
+    if (structuredLooksPolluted) {
+      return parseCombinedShipLocation(structuredShip.city);
+    }
+
+    if (hasStructured) {
+      return structuredShip;
+    }
+    return parseCombinedShipLocation(addrCityStateZipRaw);
+  })();
+  const shipCity = parsedShip.city;
+  const shipState = parsedShip.state;
+  const shipZip = parsedShip.zip;
+
+  const invoiceLogoDataUrl = loadInvoiceLogoDataUrl();
   const { data: lines } = await supabase
     .from('service_document_lines')
     .select('position, description, quantity, unit_price, line_total, taxable')
@@ -726,80 +574,12 @@ export default async function handler(req, res) {
 
   const safeLines = Array.isArray(lines) ? lines : [];
 
-  const rows = safeLines.map((l) => [
-    String(l?.description ?? ''),
-    String(Number(l?.quantity ?? 0)),
-    moneyWithCurrency(l?.unit_price, doc.currency),
-    moneyWithCurrency(l?.line_total, doc.currency),
-  ]);
-
   const { data: companyInfoAll } = await supabase
     .from('company_info')
     .select('*')
     .eq('user_id', tenantId)
     .limit(1)
     .maybeSingle();
-
-  // ── Manual table drawing (matches Job Estimate HTML template) ──
-  const tblX = marginX;
-  const tblW = contentW;
-  const colWidths = [tblW - 190, 50, 70, 70]; // Description, Qty, Price, Amount
-  const headerH = 26;
-  const rowH = 22;
-  const headers = ['Description', 'Qty', 'Price', 'Amount'];
-  const headerAligns = ['left', 'center', 'right', 'right'];
-
-  // Header row (blue fill, white text)
-  pdf.setFillColor(0, 27, 158);
-  pdf.rect(tblX, linesY, tblW, headerH, 'F');
-  pdf.setDrawColor(0, 27, 158);
-  pdf.setLineWidth(1);
-  pdf.rect(tblX, linesY, tblW, headerH, 'S');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  let hColX = tblX;
-  for (let ci = 0; ci < headers.length; ci++) {
-    const cw = colWidths[ci];
-    const align = headerAligns[ci];
-    const tx = align === 'right' ? hColX + cw - 8 : align === 'center' ? hColX + cw / 2 : hColX + 8;
-    const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
-    pdf.text(headers[ci], tx, linesY + 17, opts);
-    if (ci < headers.length - 1) pdf.line(hColX + cw, linesY, hColX + cw, linesY + headerH);
-    hColX += cw;
-  }
-
-  // Data rows
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  let dataY = linesY + headerH;
-  for (const r of rows) {
-    pdf.setDrawColor(0, 27, 158);
-    pdf.setLineWidth(1);
-    pdf.rect(tblX, dataY, tblW, rowH, 'S');
-    let dColX = tblX;
-    for (let ci = 0; ci < r.length; ci++) {
-      const cw = colWidths[ci];
-      const align = headerAligns[ci];
-      const tx = align === 'right' ? dColX + cw - 8 : align === 'center' ? dColX + cw / 2 : dColX + 8;
-      const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
-      const rawText = String(r[ci]);
-      const cellText = ci === 0 ? truncateToWidth(pdf, rawText, cw - 16) : rawText;
-      pdf.text(cellText, tx, dataY + 15, opts);
-      if (ci < r.length - 1) pdf.line(dColX + cw, dataY, dColX + cw, dataY + rowH);
-      dColX += cw;
-    }
-    dataY += rowH;
-  }
-  // If no rows, draw one empty row
-  if (rows.length === 0) {
-    pdf.setDrawColor(0, 27, 158);
-    pdf.setLineWidth(1);
-    pdf.rect(tblX, dataY, tblW, rowH, 'S');
-    dataY += rowH;
-  }
-  const afterTableY = dataY + 16;
 
   const safeRate = normalizeTaxRate(doc?.tax_rate);
   const computedSubtotal = safeLines.reduce((sum, l) => sum + normalizeMoney(l?.line_total), 0);
@@ -812,220 +592,495 @@ export default async function handler(req, res) {
   const taxValue = round2(computedTaxableSubtotal * safeRate);
   const totalValue = round2(subtotalValue + taxValue);
 
-  // Below section: Payment Terms + Totals
-  const belowY = afterTableY + 18;
-  const boxGap = 16;
-  const leftBoxW = contentW * 0.58;
-  const rightBoxW = contentW - leftBoxW - boxGap;
-  const leftBoxX = marginX;
-  const rightBoxX = marginX + leftBoxW + boxGap;
-  const boxH = 95;
+  if (isQuote) {
+    const companyName = truncateToWidth(
+      pdf,
+      safeText(doc.company_name || companyInfoAll?.name || companyInfoAll?.company_name || 'COMPANY NAME'),
+      250
+    );
+    const companyAddressRaw = String(doc.company_address || companyInfoAll?.address || companyInfoAll?.company_address || '').replace(/\r\n/g, '\n');
+    const companyAddressLines = companyAddressRaw.split('\n').map((line) => safeText(line)).filter(Boolean);
+    const companyLine1 = truncateToWidth(pdf, companyAddressLines[0] || '', 220);
+    const companyLine2 = truncateToWidth(pdf, companyAddressLines[1] || companyAddressLines.slice(1).join(' '), 220);
+    const companyPhone = truncateToWidth(
+      pdf,
+      safeText(doc.company_phone || companyInfoAll?.phone || companyInfoAll?.company_phone || companyInfoAll?.contact_phone || ''),
+      140
+    );
+    const companyEmail = truncateToWidth(
+      pdf,
+      safeText(doc.company_email || companyInfoAll?.email || companyInfoAll?.company_email || companyInfoAll?.contact_email || ''),
+      140
+    );
+    const expiresAt = new Date(Date.now() + validDays * 24 * 60 * 60 * 1000);
+    const expiresOn = formatDateOnlyUtcMinus4(expiresAt.toISOString()) || dateStr;
+    const topRightX = 418;
+    const lineEndX = pageWidth - marginX;
+    const sectionLineColor = [159, 202, 179];
 
-  // Payment terms box
-  pdf.setDrawColor(0, 27, 158);
-  pdf.setLineWidth(2);
-  pdf.rect(leftBoxX, belowY, leftBoxW, boxH);
-  pdf.setFillColor(0, 27, 158);
-  pdf.rect(leftBoxX, belowY, leftBoxW, 20, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.text('Payment Terms:', leftBoxX + 8, belowY + 14);
-
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  const defaultJobEstimateTerms =
-    '-20% Due Upon Contract Signing\n-40% Due at Product Midpoint (Date)\n-20% Due to Close to Completion (Date)\n-10% Upon Final Inspection and Approval';
-  const paymentTermsText = safeText(doc.terms_snapshot) || defaultJobEstimateTerms;
-  const paymentLines = splitText(pdf, paymentTermsText.replace(/\\n/g, '\n'), leftBoxW - 16);
-  let payY = belowY + 34;
-  for (const line of paymentLines) {
-    pdf.text(String(line), leftBoxX + 8, payY);
-    payY += 12;
-    if (payY > belowY + boxH - 8) break;
-  }
-
-  // Totals box (right)
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(11);
-  const t1 = `Subtotal:`;
-  const t2 = `Sales Tax:`;
-  const t2b = `Material Cost:`;
-  const t3 = `Grand Total:`;
-  const valX = rightBoxX + rightBoxW;
-  const materialCostValue = Number(doc?.material_cost ?? 0);
-  const grandTotalValue = Number(subtotalValue) + Number(taxValue) + (Number.isFinite(materialCostValue) ? materialCostValue : 0);
-  let tY = belowY + 30;
-  pdf.text(t1, rightBoxX, tY);
-  pdf.text(moneyWithCurrency(subtotalValue, doc.currency), valX, tY, { align: 'right' });
-  tY += 18;
-  pdf.text(t2, rightBoxX, tY);
-  pdf.text(moneyWithCurrency(taxValue, doc.currency), valX, tY, { align: 'right' });
-  tY += 18;
-  pdf.text(t2b, rightBoxX, tY);
-  pdf.text(moneyWithCurrency(materialCostValue, doc.currency), valX, tY, { align: 'right' });
-  tY += 22;
-  pdf.setDrawColor(0, 27, 158);
-  pdf.setLineWidth(2);
-  pdf.line(rightBoxX, tY, valX, tY);
-  tY += 18;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(t3, rightBoxX, tY);
-  pdf.text(moneyWithCurrency(grandTotalValue, doc.currency), valX, tY, { align: 'right' });
-
-  // Terms and conditions box
-  const termsBoxY = belowY + boxH + 16;
-  const termsBoxH = 60;
-  pdf.setDrawColor(0, 27, 158);
-  pdf.setLineWidth(2);
-  pdf.rect(marginX, termsBoxY, contentW, termsBoxH);
-  pdf.setFillColor(0, 27, 158);
-  pdf.rect(marginX, termsBoxY, contentW, 20, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.text('Terms and Conditions:', marginX + 8, termsBoxY + 14);
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  const termsText = safeText(companyInfoAll?.terms_and_conditions);
-  if (!termsText) {
-    const fallbackTerms = 'This project estimate is based on information and requirements provided by the client and is not guaranteed. Actual cost and terms may change once all project elements are discussed, negotiated and finalized.';
-    const termsLines = splitText(pdf, fallbackTerms.replace(/\\n/g, '\n'), contentW - 16);
-    let termsY = termsBoxY + 34;
-    for (const line of termsLines) {
-      pdf.text(String(line), marginX + 8, termsY);
-      termsY += 12;
-      if (termsY > termsBoxY + termsBoxH - 8) break;
+    if (invoiceLogoDataUrl) {
+      try {
+        pdf.addImage(invoiceLogoDataUrl, 'PNG', 42, 34, 124, 68);
+      } catch {}
     }
-  } else {
-    const termsLines = splitText(pdf, termsText.replace(/\\n/g, '\n'), contentW - 16);
-    let termsY = termsBoxY + 34;
-    for (const line of termsLines) {
-      pdf.text(String(line), marginX + 8, termsY);
-      termsY += 12;
-      if (termsY > termsBoxY + termsBoxH - 8) break;
+
+    // Expires On drawn centered below company block (see below near divider)
+
+    pdf.setTextColor(17, 17, 17);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(22);
+    pdf.text('QUOTE', topRightX, 60);
+
+    const drawMetaRow = (label, value, y) => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(17, 17, 17);
+      pdf.text(label, topRightX, y);
+      const labelWidth = pdf.getTextWidth(label);
+      const valueText = safeText(value || '');
+      const valueWidth = valueText ? pdf.getTextWidth(valueText) : 0;
+      const lineStart = topRightX + labelWidth + 8;
+      const textX = lineEndX - valueWidth;
+      if (valueText) pdf.text(valueText, textX, y);
+      pdf.setDrawColor(150, 150, 150);
+      pdf.line(lineStart, y + 3, valueText ? textX - 6 : lineEndX, y + 3);
+    };
+
+    drawMetaRow('ACCT. #:', safeText(doc.account_number || ''), 92);
+    drawMetaRow('QUOTE #:', docNumber, 114);
+    drawMetaRow('QUOTE DATE:', dateStr, 136);
+    drawMetaRow('TIME:', timeStr, 158);
+    drawMetaRow('QUOTE COSTS: $', safeMoney(totalValue), 180);
+
+    pdf.setTextColor(22, 57, 119);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(17);
+    pdf.text(companyName, marginX + 18, 126);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+    pdf.setTextColor(33, 46, 71);
+    if (companyLine1) pdf.text(companyLine1, marginX + 50, 150);
+    if (companyLine2) pdf.text(companyLine2, marginX + 50, 170);
+    pdf.text('Phone:', marginX + 50, 192);
+    pdf.text('Email:', marginX + 50, 214);
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(marginX + 95, 189, marginX + 245, 189);
+    pdf.line(marginX + 92, 211, marginX + 245, 211);
+    if (companyPhone) pdf.text(companyPhone, marginX + 99, 192);
+    if (companyEmail) pdf.text(companyEmail, marginX + 96, 214);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(23, 133, 78);
+    pdf.text(`Expires On: ${expiresOn}`, pageWidth / 2, 222, { align: 'center' });
+    pdf.setDrawColor(...sectionLineColor);
+    pdf.setLineWidth(1);
+    pdf.line(marginX, 232, pageWidth - marginX, 232);
+
+    pdf.setTextColor(17, 17, 17);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.text('QUOTE FOR:', marginX + 4, 270);
+    pdf.setTextColor(23, 133, 78);
+    pdf.text('SHIP TO:', 415, 270);
+
+    pdf.setFillColor(232, 241, 247);
+    pdf.rect(marginX + 6, 286, 326, 20, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(23, 97, 63);
+    pdf.setFontSize(12.5);
+    pdf.text(`CUSTOMER NAME: ${truncateToWidth(pdf, safeText(doc.client_name || ''), 222)}`, marginX + 14, 300);
+
+    pdf.setTextColor(17, 17, 17);
+    pdf.setFontSize(12.5);
+    pdf.text('CUSTOMER ID:', marginX + 14, 325);
+    const customerIdText = truncateToWidth(pdf, safeText(doc.account_number || ''), 204);
+    if (customerIdText) pdf.text(customerIdText, marginX + 128, 325);
+
+    const drawShipLine = (label, value, y) => {
+      const shipLabelX = 400;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12.5);
+      pdf.setTextColor(17, 17, 17);
+      pdf.text(label, shipLabelX, y);
+      const labelWidth = pdf.getTextWidth(label);
+      const textValue = safeText(value || '');
+      const lineStart = shipLabelX + labelWidth + 6;
+      const endX = pageWidth - marginX;
+      const textX = lineStart + 4;
+      const valueLines = textValue ? splitText(pdf, textValue, Math.max(30, endX - textX - 4)) : [];
+      let textY = y;
+      if (valueLines.length) {
+        for (const line of valueLines) {
+          pdf.text(String(line), textX, textY);
+          textY += 11;
+        }
+      }
+      pdf.setDrawColor(150, 150, 150);
+      const lineY = (valueLines.length ? textY : y + 3) + 1;
+      pdf.line(lineStart, lineY, endX, lineY);
+      return lineY + 10;
+    };
+
+    let shipY = 296;
+    shipY = drawShipLine('CITY:', shipCity, shipY);
+    shipY = drawShipLine('STATE:', shipState, shipY);
+    shipY = drawShipLine('ZIP CODE:', shipZip, shipY);
+
+    const shipBlockBottomY = Math.max(340, shipY - 8);
+
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(1);
+    pdf.line(376, 252, 376, shipBlockBottomY);
+
+    pdf.setDrawColor(...sectionLineColor);
+    pdf.setLineWidth(1);
+    const sectionDividerY = shipBlockBottomY + 8;
+    pdf.line(marginX, sectionDividerY, pageWidth - marginX, sectionDividerY);
+
+    const secRowY = sectionDividerY + 5;
+    const secRowH = 24;
+    const secCols = ['SHIP VIA', 'QUOTED BY:', 'P.O.#:', 'DEPT.', 'PYMT METHOD'];
+    const secColW = contentW / 5;
+    pdf.setFillColor(22, 57, 121);
+    pdf.rect(marginX, secRowY, contentW, secRowH, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    for (let si = 0; si < secCols.length; si++) {
+      pdf.text(secCols[si], marginX + si * secColW + secColW / 2, secRowY + 15, { align: 'center' });
     }
-  }
+    const valRowY = secRowY + secRowH;
+    const valRowH = 20;
+    pdf.setDrawColor(180, 180, 180);
+    pdf.rect(marginX, valRowY, contentW, valRowH, 'S');
+    for (let si = 1; si < secCols.length; si++) {
+      pdf.line(marginX + si * secColW, valRowY, marginX + si * secColW, valRowY + valRowH);
+    }
+    const tableX = marginX;
+    const tableY = valRowY + valRowH + 2;
+    const tableW = contentW;
+    const colWidths = [44, 212, 56, 110, 110];
+    const headerH = 28;
+    const rowH = 26;
+    const headers = ['ID', 'DESCRIPTION', 'QTY', 'ORIGINAL PRICE', 'CURRENT PRICE'];
+    const aligns = ['center', 'left', 'center', 'right', 'right'];
 
-  // Signature blocks (simple lines like Job Estimate template)
-  const sigTopY = Math.min(termsBoxY + termsBoxH + 30, pageHeight - 200);
-  const sigColW = (contentW - 50) / 2;
-  const sigLeftX = marginX;
-  const sigRightX = marginX + sigColW + 50;
+    pdf.setFillColor(21, 103, 71);
+    pdf.setDrawColor(43, 95, 67);
+    pdf.setLineWidth(1);
+    pdf.rect(tableX, tableY, tableW, headerH, 'FD');
+    let headerX = tableX;
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    for (let i = 0; i < headers.length; i += 1) {
+      const cw = colWidths[i];
+      const align = aligns[i];
+      const tx = align === 'right' ? headerX + cw - 8 : align === 'center' ? headerX + cw / 2 : headerX + 8;
+      pdf.text(headers[i], tx, tableY + 19, align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {});
+      if (i < headers.length - 1) {
+        pdf.setDrawColor(72, 120, 92);
+        pdf.line(headerX + cw, tableY, headerX + cw, tableY + headerH);
+      }
+      headerX += cw;
+    }
 
-  const clientNameText = safeText(signature?.client_name || doc.client_name || '');
-  const contractorNameText = safeText(signature?.contractor_name || '');
+    const quoteRows = safeLines.map((line, index) => {
+      const qty = Number(line?.quantity ?? 0) || 0;
+      const unitP = Number(line?.unit_price ?? 0) || 0;
+      const lineTotal = Number(line?.line_total ?? line?.total ?? (qty * unitP)) || 0;
+      return [
+        String(index + 1),
+        safeText(line?.description || ''),
+        String(qty || ''),
+        moneyWithCurrency(unitP, doc.currency),
+        moneyWithCurrency(lineTotal, doc.currency),
+      ];
+    });
 
-  // Use pre-formatted dates from UI if provided, otherwise fallback to formatSignedAt
-  const clientDateText = formattedClientSignedAt || formatSignedAt(signature?.client_signed_at);
-  const contractorDateText = formattedContractorSignedAt || formatSignedAt(signature?.contractor_signed_at);
-
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(12);
-  pdf.text('CLIENT', sigLeftX, sigTopY);
-  pdf.text('CONTRACTOR', sigRightX, sigTopY);
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.5);
-
-  const labelW = 65;
-  const lineEnd = sigColW;
-  const fieldGap = 36;
-  const nameFieldY = sigTopY + 28;
-  const sigFieldY = nameFieldY + fieldGap;
-  const dateFieldY = sigFieldY + fieldGap;
-
-  // Helper: draw label + underline
-  function drawSigField(baseX, fieldY, label) {
-    pdf.text(label, baseX, fieldY);
-    pdf.line(baseX + labelW, fieldY + 2, baseX + lineEnd, fieldY + 2);
-  }
-
-  // Left (Client)
-  drawSigField(sigLeftX, nameFieldY, 'Name:');
-  drawSigField(sigLeftX, sigFieldY, 'Signature:');
-  drawSigField(sigLeftX, dateFieldY, 'Date:');
-
-  // Right (Contractor)
-  drawSigField(sigRightX, nameFieldY, 'Name:');
-  drawSigField(sigRightX, sigFieldY, 'Signature:');
-  drawSigField(sigRightX, dateFieldY, 'Date:');
-
-  // Fill in name/date text
-  pdf.text(clientNameText, sigLeftX + labelW, nameFieldY);
-  pdf.text(clientDateText, sigLeftX + labelW, dateFieldY);
-  pdf.text(contractorNameText, sigRightX + labelW, nameFieldY);
-  pdf.text(contractorDateText, sigRightX + labelW, dateFieldY);
-
-  // Place signature images above signature line
-  const clientType = inferImageType(clientSig);
-  const contractorType = inferImageType(contractorSig);
-  const sigImgW = lineEnd - labelW - 10;
-  const sigImgH = 28;
-
-  if (clientBuf?.length) {
-    const dataUri = `data:${clientType.mime};base64,${clientBuf.toString('base64')}`;
-    try {
-      pdf.addImage(dataUri, clientType.format, sigLeftX + labelW, sigFieldY - sigImgH - 2, sigImgW, sigImgH);
-    } catch {}
-  }
-
-  if (contractorBuf?.length) {
-    const dataUri = `data:${contractorType.mime};base64,${contractorBuf.toString('base64')}`;
-    try {
-      pdf.addImage(dataUri, contractorType.format, sigRightX + labelW, sigFieldY - sigImgH - 2, sigImgW, sigImgH);
-    } catch {}
-  }
-
-  // Footer
-  const footerParts = [];
-  if (companyInfoAll?.facebook) footerParts.push('Facebook');
-  if (companyInfoAll?.instagram) footerParts.push('Instagram');
-  if (companyInfoAll?.twitter) footerParts.push('X');
-  if (companyInfoAll?.linkedin) footerParts.push('LinkedIn');
-  if (companyInfoAll?.youtube) footerParts.push('YouTube');
-  if (companyInfoAll?.tiktok) footerParts.push('TikTok');
-  if (companyInfoAll?.whatsapp) footerParts.push(`WhatsApp: ${safeText(companyInfoAll.whatsapp)}`);
-  const footerLinksText = footerParts.filter(Boolean).join(' | ');
-
-  const poweredText = 'Powered by: sendbillnow.com';
-  const poweredUrl = 'https://sendbillnow.com';
-  const poweredH = 18;
-  const thanksH = footerLinksText ? 42 : 30;
-  const footerH = thanksH + poweredH;
-  const footerY = pageHeight - 26 - footerH;
-
-  // Thanks / social links panel (blend into page background; no box/border)
-
-  pdf.setTextColor(15, 23, 42);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.text('Thank you for your purchase.', marginX + contentW / 2, footerY + 18, { align: 'center' });
-
-  if (footerLinksText) {
+    let dataY = tableY + headerH;
+    pdf.setTextColor(17, 17, 17);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
-    pdf.text(footerLinksText, marginX + contentW / 2, footerY + 34, { align: 'center' });
-  }
+    for (let rowIndex = 0; rowIndex < quoteRows.length; rowIndex += 1) {
+      const row = quoteRows[rowIndex];
+      pdf.setDrawColor(180, 180, 180);
+      pdf.rect(tableX, dataY, tableW, rowH, 'S');
+      let cellX = tableX;
+      for (let ci = 0; ci < row.length; ci += 1) {
+        const cw = colWidths[ci];
+        const align = aligns[ci];
+        const raw = String(row[ci] || '');
+        const txt = ci === 1 ? truncateToWidth(pdf, raw, cw - 12) : raw;
+        const tx = align === 'right' ? cellX + cw - 8 : align === 'center' ? cellX + cw / 2 : cellX + 8;
+        pdf.text(txt, tx, dataY + 18, align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {});
+        if (ci < row.length - 1) pdf.line(cellX + cw, dataY, cellX + cw, dataY + rowH);
+        cellX += cw;
+      }
+      dataY += rowH;
+    }
+    while ((dataY - (tableY + headerH)) / rowH < 4) {
+      pdf.setDrawColor(180, 180, 180);
+      pdf.rect(tableX, dataY, tableW, rowH, 'S');
+      let cellX = tableX;
+      for (let ci = 0; ci < colWidths.length - 1; ci += 1) {
+        cellX += colWidths[ci];
+        pdf.line(cellX, dataY, cellX, dataY + rowH);
+      }
+      dataY += rowH;
+    }
 
-  // Powered-by bar (blue background, white text)
-  const poweredY = footerY + thanksH;
-  pdf.setFillColor(0, 27, 158);
-  pdf.rect(marginX, poweredY, contentW, poweredH, 'F');
+    const notesY = dataY + 20;
+    const notesW = 336;
+    const notesH = 112;
+    pdf.setDrawColor(180, 180, 180);
+    pdf.rect(marginX, notesY, notesW, notesH, 'S');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.setTextColor(22, 57, 119);
+    pdf.text('NOTES:', marginX + 12, notesY + 20);
+    const notesText = safeText(doc.terms_snapshot || companyInfoAll?.terms_and_conditions || '');
+    const noteLines = splitText(pdf, notesText.replace(/\\n/g, '\n'), notesW - 24);
+    let noteY = notesY + 40;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.setTextColor(17, 17, 17);
+    for (const line of noteLines) {
+      pdf.text(String(line), marginX + 12, noteY);
+      noteY += 11;
+      if (noteY > notesY + notesH - 10) break;
+    }
 
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  pdf.text(poweredText, marginX + contentW / 2, poweredY + 12, { align: 'center' });
-  {
-    const w = pdf.getTextWidth(poweredText);
-    const x = marginX + contentW / 2 - w / 2;
-    pdf.link(x, poweredY + 12 - 8, w, 10, { url: poweredUrl });
+    const totalsX = 394;
+    const totalsRight = pageWidth - marginX;
+    const drawTotalRow = (label, value, y, green) => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      pdf.setTextColor(17, 17, 17);
+      pdf.text(label, totalsX, y);
+      const textValue = safeMoney(value);
+      const valueWidth = pdf.getTextWidth(textValue);
+      const textX = totalsRight - valueWidth;
+      pdf.text(textValue, textX, y);
+      pdf.setDrawColor(...(green ? sectionLineColor : [170, 170, 170]));
+      pdf.line(totalsX + 96, y - 2, textX - 6, y - 2);
+    };
+
+    drawTotalRow('SUB TOTAL:', subtotalValue, notesY + 18, false);
+    drawTotalRow('SHIPPING:', 0, notesY + 44, false);
+    drawTotalRow('SALES TAX:', taxValue, notesY + 70, false);
+    drawTotalRow('GRAND TOTAL:', totalValue, notesY + 96, true);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(15);
+    pdf.setTextColor(22, 57, 119);
+    pdf.text('WE LOOK FORWARD TO YOUR BUSINESS!', pageWidth / 2, 722, { align: 'center' });
+    pdf.setFillColor(34, 197, 94);
+    pdf.rect(0, 756, pageWidth, 12, 'F');
+    pdf.setFillColor(11, 60, 148);
+    pdf.rect(0, 768, pageWidth, 24, 'F');
+  } else {
+    if (invoiceLogoDataUrl) {
+      try {
+        pdf.addImage(invoiceLogoDataUrl, 'PNG', marginX, 40, 135, 82);
+      } catch {}
+    }
+
+    const headerRightX = pageWidth - 230;
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.text(docLabel, headerRightX, 62);
+    pdf.setFontSize(11);
+    const headerRows = [
+      `ACCT. #: ${safeText(doc.account_number || '')}`,
+      `${docLabel} #: ${docNumber}`,
+      `${docLabel} DATE: ${dateStr}`,
+      `TIME: ${timeStr}`,
+      `${docLabel} COSTS: ${moneyWithCurrency(doc.total ?? 0, doc.currency)}`,
+    ];
+    let headerY = 86;
+    for (const row of headerRows) {
+      pdf.text(row, headerRightX, headerY);
+      headerY += 18;
+    }
+
+    const dividerY = 165;
+    pdf.setDrawColor(120, 120, 120);
+    pdf.setLineWidth(1);
+    pdf.line(marginX, dividerY, pageWidth - marginX, dividerY);
+
+    const sectionTopY = 210;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.text('SOLD TO:', marginX, sectionTopY);
+    pdf.text('SHIP TO:', pageWidth - marginX - 190, sectionTopY);
+    pdf.setFontSize(11);
+    pdf.text(`CUSTOMER ID: ${safeText(doc.account_number || '')}`, marginX, sectionTopY + 18);
+    pdf.text(`CUSTOMER NAME: ${truncateToWidth(pdf, safeText(doc.client_name || ''), 220)}`, marginX, sectionTopY + 36);
+    pdf.text(`ADDRESS ${truncateToWidth(pdf, addrLine1 || '-', 170)}`, pageWidth - marginX - 190, sectionTopY + 18);
+    pdf.text(`ADDRESS ${truncateToWidth(pdf, addrLine2 || '-', 170)}`, pageWidth - marginX - 190, sectionTopY + 36);
+    pdf.line(marginX, sectionTopY + 44, pageWidth - marginX, sectionTopY + 44);
+
+    const infoTopY = sectionTopY + 64;
+    const infoCols = [105, 82, 115, 100, 100, 98];
+    const infoLabels = ['SHIPPING\nMETHOD', 'TERMS', 'INVOICED BY:', 'PO#:', 'DEPT.', 'PAYMENT\nMETHOD'];
+    const createdByName = truncateToWidth(pdf, safeText(signature?.contractor_name || ''), 92);
+    const infoValues = [
+      '',
+      safeText(doc.terms_snapshot || ''),
+      createdByName,
+      '',
+      '',
+      '',
+    ];
+    let infoX = marginX;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    for (let i = 0; i < infoCols.length; i += 1) {
+      const w = infoCols[i];
+      pdf.rect(infoX, infoTopY, w, 38);
+      const labelParts = String(infoLabels[i]).split('\n');
+      pdf.text(labelParts[0], infoX + 6, infoTopY + 12);
+      if (labelParts[1]) pdf.text(labelParts[1], infoX + 6, infoTopY + 24);
+      if (infoValues[i]) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.text(infoValues[i], infoX + 6, infoTopY + 33);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+      }
+      infoX += w;
+    }
+
+    const linesY = infoTopY + 56;
+    const rows = safeLines.map((l) => [
+      String(l?.description ?? ''),
+      String(Number(l?.quantity ?? 0)),
+      moneyWithCurrency(l?.unit_price, doc.currency),
+      moneyWithCurrency(l?.line_total, doc.currency),
+    ]);
+    const tblX = marginX;
+    const tblW = contentW;
+    const colWidths = [36, tblW - 36 - 70 - 112 - 112, 70, 112, 112];
+    const headerH = 26;
+    const rowH = 20;
+    const headers = ['ID', 'DESCRIPTION', 'QTY', 'ORIGINAL PRICE', 'CURRENT PRICE'];
+    const headerAligns = ['left', 'left', 'center', 'right', 'right'];
+
+    pdf.setDrawColor(140, 140, 140);
+    pdf.setLineWidth(1);
+    pdf.rect(tblX, linesY, tblW, headerH, 'S');
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    let hColX = tblX;
+    for (let ci = 0; ci < headers.length; ci++) {
+      const cw = colWidths[ci];
+      const align = headerAligns[ci];
+      const tx = align === 'right' ? hColX + cw - 8 : align === 'center' ? hColX + cw / 2 : hColX + 8;
+      const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
+      pdf.text(headers[ci], tx, linesY + 17, opts);
+      if (ci < headers.length - 1) pdf.line(hColX + cw, linesY, hColX + cw, linesY + headerH);
+      hColX += cw;
+    }
+
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    let dataY = linesY + headerH;
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const r = [
+        String(rowIndex + 1),
+        String(rows[rowIndex][0] || ''),
+        String(rows[rowIndex][1] || ''),
+        String(rows[rowIndex][2] || ''),
+        String(rows[rowIndex][3] || ''),
+      ];
+      pdf.setDrawColor(140, 140, 140);
+      pdf.setLineWidth(1);
+      pdf.rect(tblX, dataY, tblW, rowH, 'S');
+      let dColX = tblX;
+      for (let ci = 0; ci < r.length; ci++) {
+        const cw = colWidths[ci];
+        const align = headerAligns[ci];
+        const tx = align === 'right' ? dColX + cw - 8 : align === 'center' ? dColX + cw / 2 : dColX + 8;
+        const opts = align === 'right' ? { align: 'right' } : align === 'center' ? { align: 'center' } : {};
+        const rawText = String(r[ci]);
+        const cellText = ci === 1 ? truncateToWidth(pdf, rawText, cw - 16) : rawText;
+        pdf.text(cellText, tx, dataY + 15, opts);
+        if (ci < r.length - 1) pdf.line(dColX + cw, dataY, dColX + cw, dataY + rowH);
+        dColX += cw;
+      }
+      dataY += rowH;
+    }
+    const minRows = 4;
+    while ((dataY - (linesY + headerH)) / rowH < minRows) {
+      pdf.setDrawColor(140, 140, 140);
+      pdf.setLineWidth(1);
+      pdf.rect(tblX, dataY, tblW, rowH, 'S');
+      let emptyX = tblX;
+      for (let ci = 0; ci < colWidths.length - 1; ci += 1) {
+        emptyX += colWidths[ci];
+        pdf.line(emptyX, dataY, emptyX, dataY + rowH);
+      }
+      dataY += rowH;
+    }
+    const afterTableY = dataY + 18;
+
+    const belowY = afterTableY;
+    const boxGap = 16;
+    const leftBoxW = contentW * 0.55;
+    const rightBoxW = contentW - leftBoxW - boxGap;
+    const leftBoxX = marginX;
+    const rightBoxX = marginX + leftBoxW + boxGap;
+    const boxH = 86;
+
+    pdf.setDrawColor(140, 140, 140);
+    pdf.setLineWidth(1);
+    pdf.rect(leftBoxX, belowY, leftBoxW, boxH);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(11);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('NOTES:', leftBoxX + 8, belowY + 15);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    const notesText = safeText(doc.terms_snapshot || companyInfoAll?.terms_and_conditions || '');
+    const noteLines = splitText(pdf, notesText.replace(/\\n/g, '\n'), leftBoxW - 16);
+    let noteY = belowY + 30;
+    for (const line of noteLines) {
+      pdf.text(String(line), leftBoxX + 8, noteY);
+      noteY += 11;
+      if (noteY > belowY + boxH - 8) break;
+    }
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    const t1 = 'SUBTOTAL:';
+    const t2 = 'SHIPPING:';
+    const t3 = 'SALES TAX:';
+    const t4 = 'GRAND TOTAL:';
+    const valX = rightBoxX + rightBoxW;
+    const grandTotalValue = totalValue;
+    let tY = belowY + 16;
+    pdf.text(t1, rightBoxX, tY);
+    pdf.text(moneyWithCurrency(subtotalValue, doc.currency), valX, tY, { align: 'right' });
+    tY += 18;
+    pdf.text(t2, rightBoxX, tY);
+    pdf.text(moneyWithCurrency(0, doc.currency), valX, tY, { align: 'right' });
+    tY += 18;
+    pdf.text(t3, rightBoxX, tY);
+    pdf.text(moneyWithCurrency(taxValue, doc.currency), valX, tY, { align: 'right' });
+    tY += 26;
+    pdf.text(t4, rightBoxX, tY);
+    pdf.text(moneyWithCurrency(grandTotalValue, doc.currency), valX, tY, { align: 'right' });
+    const footerY = pageHeight - 60;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('WE LOOK FORWARD TO YOUR BUSINESS!', pageWidth / 2, footerY, { align: 'center' });
   }
 
   const pdfAb = pdf.output('arraybuffer');
@@ -1196,3 +1251,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: msg });
   }
 }
+
+

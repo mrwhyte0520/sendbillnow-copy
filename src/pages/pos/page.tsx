@@ -1218,6 +1218,22 @@ export default function POSPage() {
 
 
 
+  const [showReceiptDeliveryModal, setShowReceiptDeliveryModal] = useState(false);
+
+
+
+  const [showSmsReceiptModal, setShowSmsReceiptModal] = useState(false);
+
+
+
+  const [smsReceiptPhone, setSmsReceiptPhone] = useState('');
+
+
+
+  const [smsReceiptSending, setSmsReceiptSending] = useState(false);
+
+
+
   const [completedSale, setCompletedSale] = useState<Sale | null>(null);
 
 
@@ -5193,7 +5209,7 @@ const payload = {
 
 
 
-            setShowPrintTypeModal(true);
+            setShowReceiptDeliveryModal(true);
 
 
 
@@ -5853,6 +5869,8 @@ const payload = {
 
                         sale: saleForEmail,
 
+                        phoneNumber: (posCheckoutCustomerPhone || selectedCustomerSnapshot?.phone || '').trim(),
+
 
 
                         invoiceHtml: html,
@@ -5951,7 +5969,7 @@ const payload = {
 
 
 
-            setShowPrintTypeModal(true);
+            setShowReceiptDeliveryModal(true);
 
 
 
@@ -6019,7 +6037,7 @@ const payload = {
 
 
 
-            setShowPrintTypeModal(true);
+            setShowReceiptDeliveryModal(true);
 
 
 
@@ -6271,6 +6289,10 @@ const payload = {
 
 
 
+      paymentMethod: completedSale.paymentMethod || null,
+
+
+
       notes: completedSale.notes || null,
 
 
@@ -6431,7 +6453,268 @@ const payload = {
 
 
 
+    setShowReceiptDeliveryModal(false);
+
+
+
     setCompletedSale(null);
+
+
+
+  };
+
+
+
+  const handleReceiptDeliveryClose = () => {
+
+
+
+    setShowReceiptDeliveryModal(false);
+
+
+
+    setShowPrintTypeModal(false);
+
+
+
+    setShowSmsReceiptModal(false);
+
+
+
+    setSmsReceiptPhone('');
+
+
+
+    setCompletedSale(null);
+
+
+
+    setReceiptCheckoutToken('');
+
+
+
+    setPosCheckoutCustomerEmail('');
+
+
+
+    setPosCheckoutCustomerSecondEmail('');
+
+
+
+  };
+
+
+
+  const handleReceiptDeliverySelect = (method: 'print' | 'email' | 'sms') => {
+
+
+
+    if (method === 'sms') {
+
+
+
+      setShowSmsReceiptModal(true);
+
+
+
+      setShowPrintTypeModal(false);
+
+
+
+      setSmsReceiptPhone((posCheckoutCustomerPhone || completedSale?.customer?.phone || '').trim());
+
+
+
+      return;
+
+
+
+    }
+
+
+
+    setShowSmsReceiptModal(false);
+
+
+
+    setShowReceiptDeliveryModal(false);
+
+
+    setShowPrintTypeModal(true);
+
+
+  };
+
+
+
+  const handleSendSmsReceipt = async () => {
+ 
+ 
+ 
+    if (!completedSale) return;
+ 
+ 
+ 
+    const phoneNumber = String(smsReceiptPhone || '').trim();
+ 
+ 
+ 
+
+
+
+    if (!phoneNumber) {
+
+
+
+      toast.error('Enter the mobile phone number including country code.');
+
+
+
+      return;
+
+
+
+    }
+
+
+
+    const name = String(completedSale.customer?.name || 'Customer').trim();
+
+
+
+    const amount = String(completedSale.total ?? '').trim();
+
+
+
+    const invoiceNumber = String(completedSale.invoiceNumber || completedSale.id || '').trim();
+
+
+
+    const url = `https://notifications.sendbillnow.com/invoice/${encodeURIComponent(invoiceNumber)}`;
+
+
+
+    setSmsReceiptSending(true);
+
+
+
+    try {
+
+
+
+      const response = await fetch('/api/pos/send-sms', {
+
+
+
+        method: 'POST',
+
+
+
+        headers: { 'Content-Type': 'application/json' },
+
+
+
+        body: JSON.stringify({
+
+
+
+          phoneNumber,
+
+
+
+          name,
+
+
+
+          amount,
+
+
+
+          url,
+
+
+
+        }),
+
+
+
+      });
+
+
+
+      const result = await response.json().catch(() => null);
+
+
+
+      if (!response.ok || !result?.ok) {
+
+
+
+        const message = typeof result?.error === 'string'
+
+
+
+          ? result.error
+
+
+
+          : typeof result?.sms?.error === 'string'
+
+
+
+            ? result.sms.error
+
+
+
+            : `Server response (HTTP ${response.status})`;
+
+
+
+        toast.error(message);
+
+
+
+        return;
+
+
+
+      }
+
+
+
+      setPosCheckoutCustomerPhone(phoneNumber);
+
+
+
+      toast.success(`Receipt sent by SMS to ${phoneNumber}`);
+
+
+
+      handleReceiptDeliveryClose();
+
+
+
+    } catch (error) {
+
+
+
+      const message = error instanceof Error ? error.message : 'Failed to send SMS receipt';
+
+
+
+      toast.error(message);
+
+
+
+    } finally {
+
+
+
+      setSmsReceiptSending(false);
+
+
+
+    }
 
 
 
@@ -16277,15 +16560,14 @@ const payload = {
 
 
           </div>,
-
-
-
+ 
+ 
+ 
           document.body
-
-
-
-        )}
-
+ 
+ 
+         )}
+ 
         {/* Quick Add (Phone Only) Modal */}
         {showQuickAddModal && createPortal(
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
@@ -16324,13 +16606,112 @@ const payload = {
                     </button>
                     <button
                       type="submit"
-                      disabled={quickAddSending}
-                      className="flex-1 px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#4a5e35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-2 bg-[#2f3e1e] text-white rounded-lg hover:bg-[#3d4f27] transition-colors"
                     >
-                      {quickAddSending ? 'Sending...' : 'Send SMS'}
+                      Send SMS Link
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {showReceiptDeliveryModal && createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={handleReceiptDeliveryClose} />
+            <div className="relative w-full max-w-md">
+              <div className="bg-white rounded-xl p-6 shadow-xl">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Choose Receipt Delivery</h3>
+                    <p className="text-sm text-gray-500 mt-1">Select how the customer would like to receive the receipt after payment.</p>
+                  </div>
+                  <button onClick={handleReceiptDeliveryClose} className="text-gray-400 hover:text-gray-600">
+                    <i className="ri-close-line"></i>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleReceiptDeliverySelect('print')}
+                    className="rounded-lg border border-gray-200 px-4 py-4 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="font-semibold text-gray-900">Print Receipt</div>
+                    <div className="text-xs text-gray-500 mt-1">Open the printable receipt format.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReceiptDeliverySelect('email')}
+                    className="rounded-lg border border-gray-200 px-4 py-4 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="font-semibold text-gray-900">Email Receipt</div>
+                    <div className="text-xs text-gray-500 mt-1">Send a digital receipt to the customer's email.</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReceiptDeliverySelect('sms')}
+                    className="rounded-lg border border-gray-200 px-4 py-4 text-left hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <div className="font-semibold text-gray-900">SMS Receipt</div>
+                    <div className="text-xs text-gray-500 mt-1">Collect a phone number and confirm SMS consent.</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {showSmsReceiptModal && createPortal(
+          <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50" onClick={handleReceiptDeliveryClose} />
+            <div className="relative w-full max-w-md">
+              <div className="bg-white rounded-xl p-6 shadow-xl">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <div className="font-bold text-lg text-gray-900">SendBillNow</div>
+                    <h3 className="text-lg font-semibold text-gray-900 mt-2">Digital Receipt via SMS</h3>
+                    <p className="text-sm text-gray-500 mt-1">Enter your mobile number to receive your transaction receipt for this purchase from SendBillNow.</p>
+                  </div>
+                  <button onClick={handleReceiptDeliveryClose} className="text-gray-400 hover:text-gray-600">
+                    <i className="ri-close-line"></i>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Phone Number</label>
+                    <input
+                      type="tel"
+                      value={smsReceiptPhone}
+                      onChange={(e) => setSmsReceiptPhone(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="+1 555 123 4567"
+                      autoFocus
+                    />
+                  </div>
+                  <p className="text-[11px] leading-5 text-gray-600">
+                    By entering your number, you agree to receive a digital receipt via SMS. Message and data rates may apply. Reply STOP to cancel.
+                  </p>
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleReceiptDeliveryClose}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendSmsReceipt}
+                      disabled={smsReceiptSending}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {smsReceiptSending ? 'Sending...' : 'Send Receipt'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>,
@@ -16353,23 +16734,7 @@ const payload = {
 
 
 
-            setShowPrintTypeModal(false);
-
-
-
-            setCompletedSale(null);
-
-
-
-            setReceiptCheckoutToken('');
-
-
-
-            setPosCheckoutCustomerEmail('');
-
-
-
-            setPosCheckoutCustomerSecondEmail('');
+            handleReceiptDeliveryClose();
 
 
 
@@ -16385,11 +16750,11 @@ const payload = {
 
 
 
-          allowedTypes={['classic', 'blue-invoice']}
+          allowedTypes={['classic', 'blue-invoice', 'cash-receipt']}
 
 
 
-          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours', 'rent-receipt', 'cash-receipt']}
+          hiddenTypes={['simple', 'detailed', 'quotation', 'corporate', 'job-estimate', 'service-hours', 'rent-receipt']}
 
 
 
@@ -16575,16 +16940,11 @@ const payload = {
 
 
                 total: item.total,
-
-
-
               })),
 
-
+              paymentMethod: completedSale.paymentMethod || null,
 
               notes: completedSale.notes || null,
-
-
 
             };
 
@@ -16788,6 +17148,8 @@ const payload = {
 
                   invoiceHtml,
 
+                  phoneNumber: (posCheckoutCustomerPhone || completedSale.customer?.phone || '').trim(),
+
 
 
                   sale: {
@@ -16819,6 +17181,8 @@ const payload = {
 
 
                     total: completedSale.total,
+
+                    customerPhone: (posCheckoutCustomerPhone || completedSale.customer?.phone || '').trim(),
 
 
 
@@ -17020,6 +17384,8 @@ const payload = {
 
                       invoiceHtml,
 
+                      phoneNumber: (posCheckoutCustomerPhone || completedSale.customer?.phone || '').trim(),
+
 
 
                       sale: {
@@ -17051,6 +17417,8 @@ const payload = {
 
 
                         total: completedSale.total,
+
+                        customerPhone: (posCheckoutCustomerPhone || completedSale.customer?.phone || '').trim(),
 
 
 
